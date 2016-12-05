@@ -1,0 +1,22 @@
+Corey Crosser – 5 DEC 2016
+
+HPCToolkit-NUMA (Xu Liu) (2014) http://dl.acm.org/citation.cfm?id=2555271
+Overview
+- Uses PMU to profile memory accesses. IF PMU support is unavailable, uses LLVM instrumentation to profile every nth memory access (SOFT-IBS Section 3).
+- Finds the ratio of remote memory accesses to local memory accesses per thread. If Mr is not much smaller than Ml, the thread may have a problem (Section 4.1). 
+- The cache may automatically fix the NUMA issue above, so the authors also incorporate a latency per instruction measurement to detect if the remote memory accesses are actually hampering performance (Section 4.2)
+- Extends HPCToolkit, which is a optimization tool for high performance computing
+
+NUMA Issues (Section 2)
+- Many Remote Accesses of a small object. Fix: Co-locate object with thread that manipulates it.
+- Many Remote Accesses of a Large Object. Fix: Break object up, or split it among all domains.
+
+NUMA Analysis
+- Code-centric: Associate NUMA Events with statements, functions and loops. (Often fails to provide enough guidance for NUMA optimization). How to implement: Associate NUMA Metrics with each memory access. (Section 5.1)
+- Data-centric: Gather instruction and data address pairs to associate memory access instructions with the variables that they touch. (Provides deeper insight into NUMA bottlenecks). How to implement: Associate NUMA Metrics with each variable/heap object. (Section 5.1)
+- Address-centric: Profile the memory access pattern of each thread to gain insight as to its behavior. Break large objects (bigger than 5 pages) into bins to find the “hot spots” in large objects. (Section 5.2)
+- Assess Impact of NUMA Bottlenecks on overall program performance. (To prioritize the code to fix first)
+
+My Thoughts
+- This is a very good paper and probably represents the best work in the field. 
+- One weakness is that they must observe the NUMA issues occurring on the specific hardware. If we can simulate the NUMA domains we have the advantage of testing code on different platforms quickly to identify possible issues. If we do not simulate the cache, we may have a few false positives, however, if we do simulate the cache, I think it will be very difficult and we will have performance similar to the NUMAGrind paper I sent you. I have found some papers on attacking this problem with linked libraries and OS modifications which seek to remedy the problem without modifying the source code. Another angle may be to try to improve OpenMP or one of the other multi-threading API’s to try to automatically fix NUMA issues. 
