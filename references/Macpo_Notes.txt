@@ -1,0 +1,69 @@
+Corey Crosser - 5 DEC 2016
+
+James Browne from UT Austin
+
+- Link
+http://dl.acm.org/citation.cfm?id=2588788
+
+- PerfExpert 
+Based on resource use measurement of code segments. This is another tool released by the author that finds bottlenecks in high performance computing software 
+Link: https://www.tacc.utexas.edu/research-development/tacc-projects/perfexpert
+
+- New trend in HPC -- USE GPU for computationally expensive segments
+Data structure-oriented measurement and analysis are also important for identifying code segments that can execute efficiently on the SIMT/SIMD accelerators (Section 1, page 2)
+
+- Data centric Analysis
+Because memory is much slower than processors, a full understanding of the memory access patterns of important data structures is critical to accurate diagnosis of performance bottlenecks and selection of performance optimizations.
+
+- Contributions (Section 1, page 2)
+(1) We define the role of and requirements for data structure access metrics in performance optimization for multicore chips and multichip nodes. We include reuse factors and number of streams in a loop nest into our metrics, neither of which, to the best of our knowledge, have been previously used for systematic performance optimization. A reuse factor is the number of times a cache line is accessed after it has been loaded and before it is evicted.
+(2) We provide an efficient, low-overhead and easy to use tool that resolves measurements of data structure behavior on code segments, including extensions to incorporate the requirements for performance optimization for multicore chips and multichip nodes.
+(3) We present a systematic process for combining performance information of code segments and data structures for bottleneck diagnosis and identification of optimizations and case studies illustrating this process.
+MACPO, in addition to reuse distance analysis, computes the other metrics needed for complete performance optimization including reuse factors (cache line sec 5.1), average latency for source code data structures, conflicts at the cache and package levels (sec 5.4), strides of accesses (prefetching & TLB sec 5.6), NUMA hit ratios (sec 5.3) and the number of streams in loop nests (cache capacity).
+
+-- Other Work (Section 2)
+
+- Simulators
+Simulators may not precisely model real-life scenarios such as cache thrashing and prefetching. The use of simulators often greatly increases the time to obtain the results because of the software emulation of instructions. CPU simulators cannot emulate some features of modern processors: “Based on our knowledge, no public-domain processor simulator exists that can model the prefetching logic and out-of-order instruction execution of an Intel Sandy Bridge processor or an Intel Westmere processor”
+
+- PIN
+PIN has a wide user base because of its ease of use. However, relating source-level data structures with trace analysis using PIN requires that the binary contain debug information (‘-g’ compilation flag). Using the -g compilation flag may introduce some degree of perturbation of memory access patterns during program execution.
+
+- ThreadSpotter
+ThreadSpotter is a commercial tool that runs analyses on memory traces without requiring source-level instrumentation. However, to be able to relate measurements back to source code, the binary has to be compiled with debug information.
+
+- Instruction Based Sampling
+However the value of performance counters in diagnosing the cause of the memory latency is limited; for instance level-3 cache misses could imply (without certainty) large working set size, exceeding memory bandwidth, cache thrashing, etc. Although these are useful metrics, they require that the programmer understand both the source code and the execution environment to identify the true cause of the latency (strided access, cache line invalidation, etc.).
+
+- Implementation
+Keep Overhead low by:
+ - Only Instrument data structures and code segments identified as bottlenecks by PerfExpert (Hardware Sampling)
+ - Sample in asymmetrically spaced windows.
+ - Only instrument Arrays, Unions and Structures (no scalar variables)
+
+1. First, gather metrics on target code with PerfExpert: “Evaluates program performance on the basis of Local Cycles Per Instruction (LCPI).” LCPI represents the cycles spent by the code segment in data accesses for each of its instructions.
+
+2. Next, instrument functions and loops with high LCPI using LLVM to capture memory trace. (Section 4.1)
+
+3. Examine offline: “Execution of the instrumented program generates a trace of memory addresses for the portions of the code that were instrumented. These logs are analyzed offline to minimize perturbations in program execution that would result from an online analysis.” (Section 4.2)
+
+- Performance: “We observed that the instrumented binary ran between 13% to 450% slower (Table I) than the uninstrumented binary.”
+
+- Instrumentation changes program behavior: “Through compile-time instrumentation, the program performs additional tasks like book-keeping and disk IO for writing logs to a file.” “The instrumentation does impact both register use and cache use and, of course, increases the running time of the program. However these changes do not influence the MACPO measurements because the instrumentation records only the memory references made by the user’s source code and not those made by the instrumentation itself.” “Instrumentation breaks certain compiler optimizations. Typically, optimizations like loop vectorization can no longer be applied after instrumentation because of the newly inserted function calls.”
+
+- Uses cache line granularity: “The analyses built into MACPO operate at the resolution of cache line sizes (usually
+64-bytes chunks) instead of a single byte- or word-resolution. We term our resulting analyses as “physical” reuse distance and “physical” strides as these values give a true account of the hardware.”
+
+- Benchmarks evaluated: “NAS Parallel Benchmarks (size B) [Bailey et al. 1992], ASCI Sweep3D benchmark5 and the OpenMP benchmarks from the Rodinia benchmark suite [Che et al. 2009]”
+
+- Difficulty troubleshooting issues: “In all cases, understanding the cause of the degradation and tuning the code
+simply based on measurement of code segments was difficult due to the following two main reasons. (1) Counter-based measurements were helpful in discovering the problems but not the causes. (2) Code segments commonly used multiple data structures making it difficult to determine the specific data structures with poor memory performance.”
+
+Future work: 
+- Profile code segments for SIMT/SIMD parallelism.
+- Incorporate lessons learned back into PerfExpert tool.
+
+My Thoughts:
+- Very good work. They profile to discover many possible code optimizations to improve memory hierarchy performance. 
+- Their process is still not very automated and requires significant human research to improve code efficencey. 
+- I like how they look at memory access patterns from the perspective of code blocks (loops and functions) as well as access patterns for data structures. I think their analysis could benefit from investigating per thread memory access patterns as well.
