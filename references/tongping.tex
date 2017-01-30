@@ -1,0 +1,7 @@
+Major difference:
+
+1. MACPO focus on the code with identified bottleneck, not the whole program.
+2. MACPO only works on arrays, unions, structures, not all variables. 
+3. They care about reuse-distance, and XXX. We may only care about the number of remote accesses
+4. They use offline analysis, not sure whether that is one of reason that cause substantial overhead sinceit will have tons of IO operations. We don't know whether the analysis online will have a better performance
+5. MACPO only output the reuse distance, remote access number, cycles per access (because they utilize the cycle-based cache simulation), access strides (for prefetching). They have output like Figure2. 
