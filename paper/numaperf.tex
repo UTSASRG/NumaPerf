@@ -1,40 +1,20 @@
-\documentclass[sigplan,10pt,review,anonymous]{acmart}\settopmatter{printfolios=true,printccs=false,printacmref=false}
+\documentclass[sigplan,10pt,review,anonymous]{acmart}
+\settopmatter{printfolios=true,printccs=false,printacmref=false}
 
 \usepackage{times}
 \usepackage{datetime}
 \usepackage{url}
 \usepackage{hyperref}
-%\usepackage[backend=bibtex,style=verbose-trad2,natbib=true]{biblatex}
 
 \usepackage[normalem]{ulem}
-
-%\usepackage{graphics} % for EPS, load graphicx instead
-%\usepackage{txfonts}
-%\usepackage{pslatex}    % comment if you want LaTeX's default font
-%\usepackage{dingbat}
-%\usepackage{url}
-%\usepackage{hyperref}
-%\usepackage{color}
-%\usepackage{textcomp}
-%\usepackage{booktabs}
-%\usepackage{ccicons}
-%\usepackage{subfigure}
-%\usepackage[tight,footnotesize]{subfigure}
-%\usepackage{pifont}
 \usepackage{multirow}
-%\usepackage{multicol}
-%\usepackage[justification=centering]{caption}
-%\usepackage{xspace}
 \usepackage{comment}
 \usepackage{listings}
 \usepackage{tikz}
-%\usepackage{calc}
-%\usepackage{xcolor}
 \usepackage{verbatimbox}
-\usepackage{amssymb}% http://ctan.org/pkg/amssymb
-\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage{amssymb}
+\usepackage{pifont}
 \usepackage{booktabs}
-%\usepackage{subcaption}
 \usepackage[keeplastbox]{flushend}
 \usepackage{enumitem}
 
@@ -84,49 +64,23 @@
 
 \setcopyright{none}
 
-
 \begin{document}
 
 
 \title{NumaPerf: Predictive NUMA Performance Issue Detection}
-\begin{CCSXML}
-<ccs2012>
-<concept>
-<concept_id>10011007.10011006.10011008</concept_id>
-<concept_desc>Software and its engineering~General programming languages</concept_desc>
-<concept_significance>500</concept_significance>
-</concept>
-<concept>
-<concept_id>10003456.10003457.10003521.10003525</concept_id>
-<concept_desc>Social and professional topics~History of programming languages</concept_desc>
-<concept_significance>300</concept_significance>
-</concept>
-</ccs2012>
-\end{CCSXML}
-
-\ccsdesc[500]{Software and its engineering~General programming languages}
-\ccsdesc[300]{Social and professional topics~History of programming languages}
 
 \input{abstract}
 
 \maketitle
 
-%\keywords
-%Dynamic Analysis, Software Quality, Concurrency Performance
 \input{intro}
 \input{tongping}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\IEEEpeerreviewmaketitle
-
-%\begin{comment}
-
+\input{relatedwork}
 
 {
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{tongping, corey, refs}
-%\bibliography{tongping,sam, jinpeng, hongyu, corey}
 }
 
 \end{document}
