@@ -1,15 +1,27 @@
 \section{Introduction}
 \label{sec:intro}
 
-~\cite{Bolosky:1991:NPR:106972.106994} 
+ Existing work is typically bound to a specific architecture. That is, they could identify partial NUMA performance issues in the current platform. However, they cannot predict whether an application will have the NUMA performance issues in future NUMA architecture. 
+ 
+ In addition, they could only identify one type of issue that a NUMA issue inside the application. However, they cannot explain whether a NUMA issue is caused by the allocator. 
+ 
+ We observe that NUMA performance issue is similar to cache contention, but can occur in both cache and page granularity. Therefore, we could utilize the same framework to identify both cache contention (false/true sharing) and page-level false sharing issue, instead of only on the page granularity. 
+ 
+ We also observe that existing profilers only work on a particular architecture. 
+ 
+ Third, existing profilers could not identify the issues caused by the allocator, which makes them cannot explain performance issue of an allocator. 
+ 
+ 
+ \NP{} will have the following differences. 
+ \begin{itemize}
+ \item \NP{} does not rely on a specific hardware, which could identify issues in any potential hardware. 
+ \item \NP{} could identify the issue caused by the memory allocator, such as passive and active false sharing of objects. 
+ \item \NP{} could even identify the metadata issues of a memory allocator. 
+ \item \NP{} could identify both cache and page sharing, where both of them have a significant performance impact on the application. 
+ \end{itemize}
 
-proposes to model NUMA performance issues based on the collected trace. It only focuses on four memory-latency parameters: g, r, G and R, and focuses on the local/global/remote NUMA architecture, which is different from local/remote architecture of modern hardware. 
+ 
 
-g is the latency of accessing a single word of  global memory. G is to move apage from global to a local memory or vice versa. \texttt{r} is to access a single word of remote memory, while  $R$ is go move a page from one local memory to another. 
-
-s. 
-But the common is to utilize a record of the data references made by a parallel program to derive the cost analysis. 
-We have different focuses with ~\cite{Bolosky:1991:NPR:106972.106994}, which is to model important aspect of real-world behavior, and then derive which NUMA placement policy can achieve better performance. Typically, this paper utilizes the offline analysis.   
 
 Our work is to derive some potential problems of existing applications on the given NUMA hardware, then provides an insight to users how to solve the problem by fixing existing applications. And our work will utilize the on-line analysis. 
 

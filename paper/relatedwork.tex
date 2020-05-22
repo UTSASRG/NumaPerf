@@ -2,3 +2,13 @@
 \label{sec:related}
 
 MemProf utilizes IBS performance counter to sample memory accesses, and then ~\cite{Lachaize:2012:MMP:2342821.2342826}
+
+~\cite{Bolosky:1991:NPR:106972.106994} 
+
+proposes to model NUMA performance issues based on the collected trace. It only focuses on four memory-latency parameters: g, r, G and R, and focuses on the local/global/remote NUMA architecture, which is different from local/remote architecture of modern hardware. 
+
+g is the latency of accessing a single word of  global memory. G is to move apage from global to a local memory or vice versa. \texttt{r} is to access a single word of remote memory, while  $R$ is go move a page from one local memory to another. 
+
+s. 
+But the common is to utilize a record of the data references made by a parallel program to derive the cost analysis. 
+We have different focuses with ~\cite{Bolosky:1991:NPR:106972.106994}, which is to model important aspect of real-world behavior, and then derive which NUMA placement policy can achieve better performance. Typically, this paper utilizes the offline analysis.  
