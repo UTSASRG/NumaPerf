@@ -43,8 +43,11 @@ public:
         lock.lock();
         int i = startCacheIndex;
         for (unsigned long cacheLineStartAddress = pageStartAddress + startCacheIndex * CACHE_LINE_SIZE;
-             cacheLineStartAddress <= _objectEndAddress; cacheLineStartAddress += CACHE_LINE_SIZE, i++) {
-            fprintf(stderr, "insert object(size:%lu,start address:%lu) into cache start adrress:%lu, index:%d\n", size,
+             cacheLineStartAddress <= _objectEndAddress &&
+             i < CACHE_NUM_IN_ONE_PAGE; cacheLineStartAddress += CACHE_LINE_SIZE, i++) {
+            fprintf(stderr,
+                    "page start address:%lu, insert object(size:%lu,start address:%lu) into cache start adrress:%lu, index:%d\n",
+                    pageStartAddress, size,
                     _objectStartAddress, cacheLineStartAddress, i);
             if (NULL == this->residentMemoryBlockAccessInfoPtr[i]) {
                 this->residentMemoryBlockAccessInfoPtr[i] = CacheLineAccessInfo::createNewCacheLineAccessInfo(
