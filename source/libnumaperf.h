@@ -34,7 +34,8 @@ __THROW __attribute_warn_unused_result__;
 extern void free(void *__ptr)
 __THROW;
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg);
+                   void *(*start_routine)(void *), void *arg)
+__THROW;
 
 void store_16bytes(unsigned long addr);
 void store_8bytes(unsigned long addr);

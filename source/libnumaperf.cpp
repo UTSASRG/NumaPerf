@@ -6,6 +6,7 @@
 #include "bean/cachelineaccessinfo.h"
 #include "utils/concurrency/spinlock.h"
 #include "utils/collection/hashfuncs.h"
+#include <assert.h>
 
 typedef HashMap<unsigned long, PageAccessInfo *, spinlock, localAllocator> PageAccessPatternMap;
 
@@ -16,6 +17,7 @@ thread_local unsigned long currentThreadIndex = 0;
 
 __attribute__ ((constructor)) void initializer(void) {
     inited = true;
+    Real::init();
     pageAccessPatternMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong);
 }
 
@@ -27,12 +29,16 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 extern void *malloc(size_t size) {
     fprintf(stderr, "malloc size:%lu\n", size);
-    if (!inited) {
-	Real::init();
-        return Real::malloc(size);
-    }
     if (size <= 0) {
         return NULL;
+    }
+    static char initBuf[INIT_BUFF_SIZE];
+    static int allocated = 0;
+    if (!inited) {
+        assert(allocated + size < INIT_BUFF_SIZE);
+        void *resultPtr = (void *) &initBuf[allocated];
+        allocated += size;
+        return resultPtr;
     }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
     void *objectStartAddress = Real::malloc(size);
@@ -66,8 +72,11 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr) __THROW{
+void free(void *ptr) {
     fprintf(stderr, "free size:%p\n", ptr);
+    if (!inited) {
+        return;
+    }
     Real::free(ptr);
 }
 
@@ -90,12 +99,16 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW {
+                   void *(*start_routine)(void *), void *arg) {
     fprintf(stderr, "pthread create\n");
     void *arguments = malloc(sizeof(void *) * 2);
-    ((void **) arguments)[0] = (void *) start_routine;
-    ((void **) arguments)[1] = arg;
-    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
+    ((void **) arguments)[0] = (void *)
+            start_routine;
+    ((void **) arguments)[1] =
+            arg;
+    return
+            Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
+            );
 }
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {
