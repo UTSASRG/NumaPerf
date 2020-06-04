@@ -149,16 +149,16 @@ public:
     // Look up whether an entry is existing or not.
     // If existing, return true. *value should be carried specific value for this key.
     // Otherwise, return false.
-    ValueType *find(const KeyType &key, size_t keylen) {
+    ValueType find(const KeyType &key, size_t keylen) {
         assert(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
         //fprintf(stderr, "find entry key %p hindex %d\n", key, hindex);
         struct Entry *entry = getEntry(first, key, keylen);
-        ValueType *ret = NULL;
+        ValueType ret = NULL;
 
         if (entry) {
-            ret = &entry->value;
+            ret = entry->value;
         }
 
         return ret;

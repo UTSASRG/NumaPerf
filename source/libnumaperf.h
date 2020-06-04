@@ -16,8 +16,6 @@ typedef enum e_access_type {
 
 extern char *__progname_full;
 
-__attribute__ ((constructor)) void initializer(void);
-
 __attribute__ ((destructor)) void finalizer(void);
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type);
