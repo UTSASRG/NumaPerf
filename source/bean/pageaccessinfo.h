@@ -46,7 +46,7 @@ public:
         for (int i = startCacheIndex; i <= endCacheIndex; i++) {
             if (NULL == this->residentMemoryBlockAccessInfoPtr[i]) {
                 this->residentMemoryBlockAccessInfoPtr[i] = CacheLineAccessInfo::createNewCacheLineAccessInfo(
-                        (pageStartAddress + i) >> CACHE_LINE_SHIFT_BITS);
+                        (pageStartAddress + i * CACHE_LINE_SIZE));
             }
             this->residentMemoryBlockAccessInfoPtr[i]->insertResidentObject(
                     ObjectAccessInfo::createNewObjectAccessInfo(objectStartAddress, mallocCallSite, size));

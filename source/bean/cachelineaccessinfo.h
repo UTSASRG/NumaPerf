@@ -32,6 +32,7 @@ public:
     void insertResidentObject(ObjectAccessInfo *residentObjectInfoPtr) {
         unsigned long objectStartAddress = (unsigned long) residentObjectInfoPtr->getStartAddress();
         int objectIndex = objectStartAddress < cacheLineStartAddress ? 0 : objectStartAddress - cacheLineStartAddress;
+        assert(objectIndex < CACHE_LINE_SIZE);
         residentObjectsInfoPtr[objectIndex] = residentObjectInfoPtr;
     }
 };
