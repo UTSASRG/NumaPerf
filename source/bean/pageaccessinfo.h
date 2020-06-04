@@ -39,14 +39,14 @@ public:
         unsigned long startCacheIndex =
                 _objectStartAddress < pageStartAddress ? 0 : (_objectStartAddress - pageStartAddress)
                         >> CACHE_LINE_SHIFT_BITS;
-        unsigned long endCacheIndex = _objectEndAddress > (pageStartAddress + PAGE_SIZE) ? CACHE_NUM_IN_ONE_PAGE - 1 :
-                                      (_objectEndAddress - pageStartAddress) >> CACHE_LINE_SHIFT_BITS;
 
         lock.lock();
-        for (int i = startCacheIndex; i <= endCacheIndex; i++) {
+        int i = startCacheIndex;
+        for (unsigned long cacheLineStartAddress = pageStartAddress + startCacheIndex * CACHE_LINE_SIZE;
+             cacheLineStartAddress <= _objectEndAddress; cacheLineStartAddress += CACHE_LINE_SIZE, i++) {
             if (NULL == this->residentMemoryBlockAccessInfoPtr[i]) {
                 this->residentMemoryBlockAccessInfoPtr[i] = CacheLineAccessInfo::createNewCacheLineAccessInfo(
-                        (pageStartAddress + i * CACHE_LINE_SIZE));
+                        cacheLineStartAddress);
             }
             this->residentMemoryBlockAccessInfoPtr[i]->insertResidentObject(
                     ObjectAccessInfo::createNewObjectAccessInfo(objectStartAddress, mallocCallSite, size));
