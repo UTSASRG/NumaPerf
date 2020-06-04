@@ -44,6 +44,8 @@ public:
         int i = startCacheIndex;
         for (unsigned long cacheLineStartAddress = pageStartAddress + startCacheIndex * CACHE_LINE_SIZE;
              cacheLineStartAddress <= _objectEndAddress; cacheLineStartAddress += CACHE_LINE_SIZE, i++) {
+            fprintf(stderr, "insert object(size:%lu,start address:%lu) into cache start adrress:%lu, index:%d\n", size,
+                    _objectStartAddress, cacheLineStartAddress, i);
             if (NULL == this->residentMemoryBlockAccessInfoPtr[i]) {
                 this->residentMemoryBlockAccessInfoPtr[i] = CacheLineAccessInfo::createNewCacheLineAccessInfo(
                         cacheLineStartAddress);

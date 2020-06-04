@@ -47,7 +47,7 @@ extern void *malloc(size_t size) {
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
     unsigned long objectStartPageAddress = (unsigned long) objectStartAddress >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
-    for (int i = 0; size - i * PAGE_SIZE > 0; i++) {
+    for (int i = 0; (long) (size - i * PAGE_SIZE) > 0; i++) {
         PageAccessInfo *pageAccessInfo = NULL;
         unsigned long currentPageStartAddress = objectStartPageAddress + i * PAGE_SIZE;
         if (NULL == (pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0))) {
