@@ -2,6 +2,6 @@
 **/build
 **/cmake-build-debug
 **/.DS_Store
-**/.so
-**/.o
-**/.a
+**/*.so
+**/*.o
+**/*.a
