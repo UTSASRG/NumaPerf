@@ -57,7 +57,13 @@ public:
     }
 
     ObjectAccessInfo *findObjectInCacheLine(unsigned long address) {
-
+        assert(address >= pageStartAddress);
+        assert(address <= pageStartAddress + PAGE_SIZE);
+        unsigned long cacheIndex = (address - pageStartAddress) >> CACHE_LINE_SHIFT_BITS;
+        if (NULL == residentMemoryBlockAccessInfoPtr[cacheIndex]) {
+            return NULL;
+        }
+        return residentMemoryBlockAccessInfoPtr[cacheIndex]->findObjectInCacheLine(address);
     }
 };
 

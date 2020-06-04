@@ -17,8 +17,8 @@ private:
 
     CacheLineAccessInfo(unsigned long cacheLineStartAddress) {
         this->cacheLineStartAddress = cacheLineStartAddress;
-        threadRead = NULL;
-        threadWrite = NULL;
+        this->threadRead = NULL;
+        this->threadWrite = NULL;
     }
 
 public:
@@ -32,8 +32,16 @@ public:
     void insertResidentObject(ObjectAccessInfo *residentObjectInfoPtr) {
         unsigned long objectStartAddress = (unsigned long) residentObjectInfoPtr->getStartAddress();
         int objectIndex = objectStartAddress < cacheLineStartAddress ? 0 : objectStartAddress - cacheLineStartAddress;
+        fprintf(stderr, "cache start address:%lu, index is: %d\n", cacheLineStartAddress, objectIndex);
         assert(objectIndex < CACHE_LINE_SIZE);
         residentObjectsInfoPtr[objectIndex] = residentObjectInfoPtr;
+    }
+
+    ObjectAccessInfo *findObjectInCacheLine(unsigned long address) {
+        assert(address >= cacheLineStartAddress);
+        assert(address <= cacheLineStartAddress + CACHE_LINE_SIZE);
+        unsigned long index = address - cacheLineStartAddress;
+        return residentObjectsInfoPtr[index];
     }
 };
 
