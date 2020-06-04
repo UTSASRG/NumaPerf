@@ -28,6 +28,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 extern void *malloc(size_t size) {
     fprintf(stderr, "malloc size:%lu\n", size);
     if (!inited) {
+	Real::init();
         return Real::malloc(size);
     }
     if (size <= 0) {
