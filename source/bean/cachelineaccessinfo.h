@@ -2,8 +2,8 @@
 #define ACCESSPATERN_CACHELINEACCESSINFO_H
 
 #include "objectacessinfo.h"
-#include "xdefines.h"
-#include "real.h"
+#include "../xdefines.h"
+#include "../utils/real.h"
 #include <new>
 
 class CacheLineAccessInfo {

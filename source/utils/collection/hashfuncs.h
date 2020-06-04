@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "xdefines.h"
+#include "../../xdefines.h"
 
 class HashFuncs {
 public:

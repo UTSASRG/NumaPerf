@@ -4,7 +4,7 @@
 #include "utils/collection/hashmap.h"
 #include "bean/pageaccessinfo.h"
 #include "bean/cachelineaccessinfo.h"
-#include "spinlock.h"
+#include "utils/concurrency/spinlock.h"
 #include "utils/collection/hashfuncs.h"
 
 typedef HashMap<unsigned long, PageAccessInfo *, spinlock, localAllocator> PageAccessPatternMap;
@@ -25,7 +25,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 #define MALLOC_CALL_SITE_OFFSET 0x18
 
-void *malloc(size_t size) {
+extern void *malloc(size_t size) {
     fprintf(stderr, "malloc size:%lu\n", size);
     if (!inited) {
         return Real::malloc(size);
@@ -51,6 +51,7 @@ void *malloc(size_t size) {
         }
         pageAccessInfo->insertObjectAccessInfo(objectStartAddress, size, callerAddress);
     }
+    return objectStartAddress;
 }
 
 void *calloc(size_t n, size_t size) {
@@ -64,7 +65,7 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr) {
+void free(void *ptr) __THROW{
     fprintf(stderr, "free size:%p\n", ptr);
     Real::free(ptr);
 }
@@ -88,12 +89,12 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) {
+                   void *(*start_routine)(void *), void *arg) __THROW {
     fprintf(stderr, "pthread create\n");
     void *arguments = malloc(sizeof(void *) * 2);
     ((void **) arguments)[0] = (void *) start_routine;
     ((void **) arguments)[1] = arg;
-    Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
+    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {

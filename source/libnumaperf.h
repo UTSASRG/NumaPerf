@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 
 typedef enum e_access_type {
@@ -22,10 +23,16 @@ __attribute__ ((destructor)) void finalizer(void);
 void handleAccess(unsigned long addr, size_t size, eAccessType type);
 
 extern "C" {
-void *malloc(size_t size);
-void *calloc(size_t n, size_t size);
-void *realloc(void *ptr, size_t size);
-void free(void *ptr);
+extern void *malloc(size_t __size)
+__THROW __attribute_malloc__
+__wur;
+extern void *calloc(size_t __nmemb, size_t __size)
+__THROW __attribute_malloc__
+__wur;
+extern void *realloc(void *__ptr, size_t __size)
+__THROW __attribute_warn_unused_result__;
+extern void free(void *__ptr)
+__THROW;
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg);
 
@@ -43,3 +50,4 @@ void load_1bytes(unsigned long addr);
 
 
 #endif //ACCESSPATERN_LIBNUMAPERF_H
+

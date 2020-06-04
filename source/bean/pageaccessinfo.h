@@ -2,11 +2,11 @@
 #ifndef ACCESSPATERN_PAGEACCESSINFO_H
 #define ACCESSPATERN_PAGEACCESSINFO_H
 
-#include "xdefines.h"
-#include "bean/cachelineaccessinfo.h"
-#include "spinlock.h"
-#include "bean/objectacessinfo.h"
-#include "real.h"
+#include "../xdefines.h"
+#include "cachelineaccessinfo.h"
+#include "../utils/concurrency/spinlock.h"
+#include "objectacessinfo.h"
+#include "../utils/real.h"
 #include <new>
 
 class PageAccessInfo {
