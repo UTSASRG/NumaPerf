@@ -72,15 +72,13 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr)
-
-__THROW{
-fprintf(stderr,
-"free size:%p\n", ptr);
-if (!inited) {
-return;
-}
-Real::free(ptr);
+void free(void *ptr) __THROW {
+    fprintf(stderr,
+            "free size:%p\n", ptr);
+    if (!inited) {
+        return;
+    }
+    Real::free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
@@ -102,19 +100,15 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg)
-
-__THROW{
-fprintf(stderr,
-"pthread create\n");
-void *arguments = malloc(sizeof(void *) * 2);
-((void **) arguments)[0] = (void *)
-start_routine;
-((void **) arguments)[1] =
-arg;
-return
-Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
-);
+                   void *(*start_routine)(void *), void *arg) __THROW {
+    fprintf(stderr, "pthread create\n");
+    if (!inited) {
+        initializer();
+    }
+    void *arguments = Real::malloc(sizeof(void *) * 2);
+    ((void **) arguments)[0] = (void *) start_routine;
+    ((void **) arguments)[1] = arg;
+    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {

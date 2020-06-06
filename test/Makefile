@@ -5,9 +5,9 @@ all: test
 SRCS = test.cpp
 
 test: $(SRCS)
-	../llvm/build/bin/clang++ -Xclang -load -Xclang ../llvm/build/lib/LLVMInstrumenter.so -Wl,../source/libnumaperf.so -g -O0 $(SRCS) -o test
+	../llvm/build/bin/clang++ -Xclang -load -Xclang ../llvm/build/lib/LLVMInstrumenter.so -Wl,../source/libnumaperf.so -g -O0 $(SRCS) -o test.exe
 	#../llvm/build/bin/clang++ -Xclang -load -Xclang ../llvm/build/lib/LLVMInstrumenter.so -Wl,../source/libnumaperf.so -g -O0 $(SRCS) -o test -I/usr/include/x86_64-linux-gnu/c++/7/
         #/media/umass/datasystem/xin/Numachy/evaluation/llvm/install/bin/clang++ -Wl,/media/umass/datasystem/xin/Numachy/accesspatern/libtrap.so -finstrumenter -g -O0 test.cpp -o test -I/usr/include/x86_64-linux-gnu/c++/7/
 
 clean:
-	rm test
+	rm test.exe
