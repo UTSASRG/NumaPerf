@@ -40,9 +40,12 @@ int main() {
 
 
 	char *buf3 = (char*)malloc(555*sizeof(char));
+	char *buf4 = (char*)malloc(1000000*sizeof(char));
+	buf4[0] = 'm'; 
 
 	free(buf);
 	free(buf2);
 	free(buf3);
+	free(buf4);
 	return 0;
 }

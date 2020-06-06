@@ -10,7 +10,7 @@
 
 class Logger {
 public:
-    inline static void debug(char *format, ...) {
+    inline static void debug(const char *format, ...) {
 #ifdef DEBUG_LOG
         va_list args;
         va_start (args, format);
