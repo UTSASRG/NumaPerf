@@ -72,13 +72,15 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr) __THROW {
-    fprintf(stderr,
-            "free size:%p\n", ptr);
-    if (!inited) {
-        return;
-    }
-    Real::free(ptr);
+void free(void *ptr)
+
+__THROW {
+fprintf(stderr,
+"free size:%p\n", ptr);
+if (!inited) {
+return;
+}
+Real::free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
@@ -100,19 +102,28 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW {
-    fprintf(stderr, "pthread create\n");
-    if (!inited) {
-        initializer();
-    }
-    void *arguments = Real::malloc(sizeof(void *) * 2);
-    ((void **) arguments)[0] = (void *) start_routine;
-    ((void **) arguments)[1] = arg;
-    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
+                   void *(*start_routine)(void *), void *arg)
+
+__THROW {
+fprintf(stderr,
+"pthread create\n");
+if (!inited) {
+initializer();
+
+}
+void *arguments = Real::malloc(sizeof(void *) * 2);
+((void **) arguments)[0] = (void *)
+start_routine;
+((void **) arguments)[1] =
+arg;
+return
+Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
+);
 }
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {
-    fprintf(stderr, "handle access addr:%lu, size:%lu, type:%d\n", addr, size, type);
+    fprintf(stderr, "thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
+            type);
     unsigned long pageStartAddress = addr >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
     PageAccessInfo *currentPageAccessInfo = pageAccessPatternMap.find(pageStartAddress, 0);
     if (currentPageAccessInfo == NULL) {
