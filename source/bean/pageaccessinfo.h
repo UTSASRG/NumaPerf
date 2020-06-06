@@ -8,20 +8,24 @@
 #include "objectacessinfo.h"
 #include "../utils/real.h"
 #include <new>
+#include <cstring>
+
 
 class PageAccessInfo {
 private:
-    unsigned long pageStartAddress;
+    const unsigned long pageStartAddress;
     unsigned long *threadRead;
     unsigned long *threadWrite;
     CacheLineAccessInfo *residentMemoryBlockAccessInfoPtr[CACHE_NUM_IN_ONE_PAGE];
     spinlock lock;
 
-    PageAccessInfo() {}
+    PageAccessInfo() : pageStartAddress(0) {}
 
-    PageAccessInfo(unsigned long pageStartAddress) {
-        this->pageStartAddress = pageStartAddress;
+    PageAccessInfo(unsigned long pageStartAddress) : pageStartAddress(pageStartAddress) {
         lock.init();
+        threadRead == NULL;
+        threadWrite == NULL;
+        memset(residentMemoryBlockAccessInfoPtr, NULL, CACHE_NUM_IN_ONE_PAGE * sizeof(void *));
     }
 
 public:

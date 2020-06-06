@@ -5,20 +5,21 @@
 #include "../xdefines.h"
 #include "../utils/real.h"
 #include <new>
+#include <cstring>
 
 class CacheLineAccessInfo {
 private:
-    unsigned long cacheLineStartAddress;
+    const unsigned long cacheLineStartAddress;
     unsigned long *threadRead;
     unsigned long *threadWrite;
     ObjectAccessInfo *residentObjectsInfoPtr[CACHE_LINE_SIZE];
 
-    CacheLineAccessInfo() {}
+    CacheLineAccessInfo() : cacheLineStartAddress(0) {}
 
-    CacheLineAccessInfo(unsigned long cacheLineStartAddress) {
-        this->cacheLineStartAddress = cacheLineStartAddress;
+    CacheLineAccessInfo(unsigned long cacheLineStartAddress) : cacheLineStartAddress(cacheLineStartAddress) {
         this->threadRead = NULL;
         this->threadWrite = NULL;
+        memset(residentObjectsInfoPtr, NULL, CACHE_LINE_SIZE * sizeof(void *));
     }
 
 public:
