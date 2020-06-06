@@ -31,3 +31,37 @@ This paper shares the similar target as our paper.
 
 ~\cite{Bolosky:1989:SBE:74850.74854} is their original work that talks about the page management. 
 
+
+We observe that the number of cache loading is the most important metrics.
+In order to evaluate the performance impact, we propose to utilize the number of cache invalidations to evaluate the seriousness of NUMA issues. A more intuitive metrics is the cache line loading operations. However, it is impossible to do this very easily. Thus, we proposes to utilize the number of cache invalidation as the metrics. 
+
+
+However, cache invalidations can be affected by two factors: cache-line based sharing, and size-related invalidations. 
+Since-related invalidations indicate that one core's cache is not sufficient to cover the memory footprint of the thread. Therefore, some cache lines will be evicted, which will cause cause invalidation. However, it is not easy to do this, which will be omitted by the \NP{}. 
+
+Instead, \NP{} focuses cache invalidations caused by sharing, either true or false sharing. Similarly, page-level sharing will end up with the same issue, due to the existence of cache. If the data is held in the cache line and the data is valid, then there will be no remote accesses even if the actual physical page is located remotely. 
+
+Therefore, we propose \NP{} to be a profiling tool that could identify both page and cache-level sharing. Also, \NP{} is based on the observation that applications may have performance issue even if it does not in the current architecture. 
+
+However, the challenge is to evaluate the number of cache invalidations correctly and efficiently. Predator also utilizes the similar mechanism, but cannot compute the number correctly. Then we will give an example about this. 
+
+\NP{} instead will compute the number differently. It will has the number of copies for all threads for each thread, and then the detailed information for each word (which helps to solve the issue). For each write operation, we will increment the number of copies correspondingly, instead of just one.
+
+However, there will be some efficiency issue on the performance and the memory. We can't have the information for each cache line, which will at least impose around $2\times$ memory overhead. Also, we could easily cause significant performance issue if we have to traverse the cache line for all memory writes. 
+ 
+\todo{Should we traverse the whole cache line? Or we will use the word-based structure? Then when there is invalidation, then we will clean the per-line flag. } Then we will guarantee that every access will only invoke $O(1)$ operations. 
+
+
+To reduce the memory overhead, we will utilize the number of cache misses and the number of threads as a metrics. If a cache line is only accessed by one thread, then it is possibly only accessed by a thread, then it should not cause the performance issue. 
+Also, if the number of writes on a cache line is small, it will never be the performance issue for most cases. 
+
+However, we may need to save the number of cache misses for each callsite together. Otherwise, some objects will be skipped. 
+
+
+\NP{} is different from existing work that it also profiles the performance issue caused by allocators.  
+
+
+
+
+
+
