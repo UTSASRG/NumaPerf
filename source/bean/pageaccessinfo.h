@@ -23,8 +23,8 @@ private:
 
     PageAccessInfo(unsigned long pageStartAddress) : pageStartAddress(pageStartAddress) {
         lock.init();
-        threadRead == NULL;
-        threadWrite == NULL;
+        threadRead = NULL;
+        threadWrite = NULL;
         memset(residentMemoryBlockAccessInfoPtr, NULL, CACHE_NUM_IN_ONE_PAGE * sizeof(void *));
     }
 

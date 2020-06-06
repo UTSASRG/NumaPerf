@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include "../xdefines.h"
 #include <new>
+#include <cstring>
 
 class ObjectAccessInfo {
 private:
@@ -19,6 +20,9 @@ private:
         this->startAddress = startAddress;
         this->mallocCallSite = mallocCallSite;
         this->size = size;
+        memset(threadRead, NULL, MAX_THREAD_NUM * sizeof(unsigned long));
+        memset(threadWrite, NULL, MAX_THREAD_NUM * sizeof(unsigned long));
+
     }
 
 public:
