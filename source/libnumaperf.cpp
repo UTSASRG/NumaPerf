@@ -7,6 +7,7 @@
 #include "utils/concurrency/spinlock.h"
 #include "utils/collection/hashfuncs.h"
 #include <assert.h>
+#include "utils/log/Logger.h"
 
 typedef HashMap<unsigned long, PageAccessInfo *, spinlock, localAllocator> PageAccessPatternMap;
 
@@ -31,7 +32,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 #define MALLOC_CALL_SITE_OFFSET 0x18
 
 extern void *malloc(size_t size) {
-    fprintf(stderr, "malloc size:%lu\n", size);
+    Logger::debug("malloc size:%lu\n", size);
     if (size <= 0) {
         return NULL;
     }
@@ -62,12 +63,12 @@ extern void *malloc(size_t size) {
 }
 
 void *calloc(size_t n, size_t size) {
-    fprintf(stderr, "calloc size:%lu\n", size);
+    Logger::debug("calloc size:%lu\n", size);
     return malloc(n * size);
 }
 
 void *realloc(void *ptr, size_t size) {
-    fprintf(stderr, "realloc size:%lu\n", size);
+    Logger::debug("realloc size:%lu\n", size);
     free(ptr);
     return malloc(size);
 }
@@ -75,7 +76,7 @@ void *realloc(void *ptr, size_t size) {
 void free(void *ptr)
 
 __THROW {
-fprintf(stderr,
+Logger::debug(
 "free size:%p\n", ptr);
 if (!inited) {
 return;
@@ -90,7 +91,7 @@ void *initThreadIndexRoutine(void *args) {
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
         if (currentThreadIndex > MAX_THREAD_NUM) {
-            fprintf(stderr, "tid %lu exceed max thread num %lu\n", currentThreadIndex, (unsigned long) MAX_THREAD_NUM);
+            Logger::debug("tid %lu exceed max thread num %lu\n", currentThreadIndex, (unsigned long) MAX_THREAD_NUM);
             exit(9);
         }
     }
@@ -105,7 +106,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 
 __THROW {
-fprintf(stderr,
+Logger::debug(
 "pthread create\n");
 if (!inited) {
 initializer();
@@ -122,8 +123,8 @@ Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
 }
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {
-    fprintf(stderr, "thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
-            type);
+    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
+                  type);
     unsigned long pageStartAddress = addr >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
     PageAccessInfo *currentPageAccessInfo = pageAccessPatternMap.find(pageStartAddress, 0);
     if (currentPageAccessInfo == NULL) {

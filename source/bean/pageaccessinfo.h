@@ -49,7 +49,7 @@ public:
         for (unsigned long cacheLineStartAddress = pageStartAddress + startCacheIndex * CACHE_LINE_SIZE;
              cacheLineStartAddress <= _objectEndAddress &&
              i < CACHE_NUM_IN_ONE_PAGE; cacheLineStartAddress += CACHE_LINE_SIZE, i++) {
-            fprintf(stderr,
+            Logger::debug(
                     "page start address:%lu, insert object(size:%lu,start address:%lu) into cache start adrress:%lu, index:%d\n",
                     pageStartAddress, size,
                     _objectStartAddress, cacheLineStartAddress, i);

@@ -20,5 +20,5 @@ add_executable(NumaPerf
         source/utils/real.h
         source/utils/concurrency/spinlock.h
         source/xdefines.h
-
+        source/utils/log/Logger.h
         test/test.cpp)

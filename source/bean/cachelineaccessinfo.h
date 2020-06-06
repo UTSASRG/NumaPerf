@@ -6,6 +6,7 @@
 #include "../utils/real.h"
 #include <new>
 #include <cstring>
+#include "../utils/log/Logger.h"
 
 class CacheLineAccessInfo {
 private:
@@ -33,7 +34,7 @@ public:
     void insertResidentObject(ObjectAccessInfo *residentObjectInfoPtr) {
         unsigned long objectStartAddress = (unsigned long) residentObjectInfoPtr->getStartAddress();
         int objectIndex = objectStartAddress < cacheLineStartAddress ? 0 : objectStartAddress - cacheLineStartAddress;
-        fprintf(stderr, "cache start address:%lu, index is: %d\n", cacheLineStartAddress, objectIndex);
+        Logger::debug("cache start address:%lu, index is: %d\n", cacheLineStartAddress, objectIndex);
         assert(objectIndex < CACHE_LINE_SIZE);
         residentObjectsInfoPtr[objectIndex] = residentObjectInfoPtr;
     }
