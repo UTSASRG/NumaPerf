@@ -7,11 +7,15 @@
 #include "../utils/concurrency/spinlock.h"
 #include "objectacessinfo.h"
 #include "../utils/real.h"
+#include "../utils/memorypool.h"
 #include <new>
 #include <cstring>
 
 
 class PageAccessInfo {
+private:
+    static MemoryPool localMemoryPool;
+
 private:
     const unsigned long pageStartAddress;
     unsigned long *threadRead;
@@ -31,7 +35,7 @@ private:
 public:
 
     static PageAccessInfo *createNewPageAccessInfo(unsigned long pageStartAddress) {
-        void *buff = Real::malloc(sizeof(PageAccessInfo));
+        void *buff = localMemoryPool.get();
         PageAccessInfo *pageAccessInfo = new(buff) PageAccessInfo(pageStartAddress);
         return pageAccessInfo;
     }
@@ -74,4 +78,5 @@ public:
     }
 };
 
+MemoryPool PageAccessInfo::localMemoryPool(sizeof(PageAccessInfo), 1000 * sizeof(PageAccessInfo));
 #endif //ACCESSPATERN_PAGEACCESSINFO_H
