@@ -67,6 +67,7 @@ private:
 
 public:
     MemoryPool(unsigned int sizeOfMemoryBlock, unsigned int initPoolSize) {
+        Logger::debug("memory pool init\n");
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->initPoolSize = initPoolSize;
         this->freeListHead = NULL;

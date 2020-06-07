@@ -78,5 +78,5 @@ public:
     }
 };
 
-MemoryPool PageAccessInfo::localMemoryPool(sizeof(PageAccessInfo), 1000 * sizeof(PageAccessInfo));
+MemoryPool PageAccessInfo::localMemoryPool(sizeof(PageAccessInfo), 1024 * sizeof(PageAccessInfo));
 #endif //ACCESSPATERN_PAGEACCESSINFO_H

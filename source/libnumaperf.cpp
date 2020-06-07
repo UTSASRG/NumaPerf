@@ -18,6 +18,7 @@ unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
 
 static void initializer(void) {
+    Logger::debug("global initializer\n");
     Real::init();
     pageAccessPatternMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong);
     inited = true;
