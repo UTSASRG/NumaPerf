@@ -8,8 +8,8 @@
 #include "../utils/memorypool.h"
 
 class ObjectAccessInfo {
-private:
-    static MemoryPool localMemoryPool;
+//private:
+//    static MemoryPool localMemoryPool;
 
 private:
     void *startAddress;
@@ -18,25 +18,29 @@ private:
     unsigned long threadRead[MAX_THREAD_NUM];
     unsigned long threadWrite[MAX_THREAD_NUM];
 
+public:
+
     ObjectAccessInfo() {}
 
-    ObjectAccessInfo(void *startAddress, void *mallocCallSite, size_t size) {
+    void init(void *startAddress, void *mallocCallSite, size_t size) {
         this->startAddress = startAddress;
         this->mallocCallSite = mallocCallSite;
         this->size = size;
-        memset(threadRead, NULL, MAX_THREAD_NUM * sizeof(unsigned long));
-        memset(threadWrite, NULL, MAX_THREAD_NUM * sizeof(unsigned long));
-
     }
 
-public:
-
-    static ObjectAccessInfo *createNewObjectAccessInfo(void *startAddress, void *mallocCallSite, size_t size) {
-//        void *buff = Real::malloc(sizeof(ObjectAccessInfo));
-        void *buff = localMemoryPool.get();
-        ObjectAccessInfo *objectAccessInfo = new(buff) ObjectAccessInfo(startAddress, mallocCallSite, size);
-        return objectAccessInfo;
+    void clear() {
+        this->startAddress = NULL;
+        this->mallocCallSite = NULL;
+        this->size = 0;
+        memset(this->threadRead, 0, MAX_THREAD_NUM * sizeof(unsigned long));
+        memset(this->threadWrite, 0, MAX_THREAD_NUM * sizeof(unsigned long));
     }
+
+//    static ObjectAccessInfo *createNewObjectAccessInfo(void *startAddress, void *mallocCallSite, size_t size) {
+//        void *buff = localMemoryPool.get();
+//        ObjectAccessInfo *objectAccessInfo = new(buff) ObjectAccessInfo(startAddress, mallocCallSite, size);
+//        return objectAccessInfo;
+//    }
 
     inline void *getStartAddress() const {
         return startAddress;

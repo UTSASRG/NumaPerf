@@ -80,6 +80,7 @@ public:
     void *get() {
         unsigned long start = Timer::getCurrentCycle();
         void *result = NULL;
+//        void *result = Real::malloc(this->sizeOfMemoryBlock);
         if (freeListHead != NULL) {
             result = automicGetFromFreeList();
         }
@@ -87,7 +88,7 @@ public:
             return result;
         }
         result = automicGetFromBumpPointer();
-        Logger::info("memory pool get total cycles:%lu\n", Timer::getCurrentCycle() - start);
+        Logger::debug("memory pool get total cycles:%lu\n", Timer::getCurrentCycle() - start);
         return result;
     }
 

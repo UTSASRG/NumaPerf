@@ -20,23 +20,23 @@ private:
     const unsigned long pageStartAddress;
     unsigned long *threadRead;
     unsigned long *threadWrite;
-    CacheLineAccessInfo *residentMemoryBlockAccessInfoPtr[CACHE_NUM_IN_ONE_PAGE];
-    spinlock lock;
+    CacheLineAccessInfo residentMemoryBlockAccessInfoPtr[CACHE_NUM_IN_ONE_PAGE];
 
     PageAccessInfo() : pageStartAddress(0) {}
 
     PageAccessInfo(unsigned long pageStartAddress) : pageStartAddress(pageStartAddress) {
-        lock.init();
         threadRead = NULL;
         threadWrite = NULL;
-        memset(residentMemoryBlockAccessInfoPtr, NULL, CACHE_NUM_IN_ONE_PAGE * sizeof(void *));
+        for (int i = 0; i < CACHE_NUM_IN_ONE_PAGE; i++) {
+            residentMemoryBlockAccessInfoPtr[i].init(pageStartAddress + i * CACHE_LINE_SIZE);
+        }
     }
 
 public:
 
     static PageAccessInfo *createNewPageAccessInfo(unsigned long pageStartAddress) {
         void *buff = localMemoryPool.get();
-//        buff = Real::malloc(sizeof(PageAccessInfo));
+        memset(buff, 0, sizeof(PageAccessInfo));
         PageAccessInfo *pageAccessInfo = new(buff) PageAccessInfo(pageStartAddress);
         return pageAccessInfo;
     }
@@ -49,7 +49,6 @@ public:
                 _objectStartAddress < pageStartAddress ? 0 : (_objectStartAddress - pageStartAddress)
                         >> CACHE_LINE_SHIFT_BITS;
 
-        lock.lock();
         int i = startCacheIndex;
         for (unsigned long cacheLineStartAddress = pageStartAddress + startCacheIndex * CACHE_LINE_SIZE;
              cacheLineStartAddress <= _objectEndAddress &&
@@ -58,24 +57,15 @@ public:
                     "page start address:%lu, insert object(size:%lu,start address:%lu) into cache start adrress:%lu, index:%d\n",
                     pageStartAddress, size,
                     _objectStartAddress, cacheLineStartAddress, i);
-            if (NULL == this->residentMemoryBlockAccessInfoPtr[i]) {
-                this->residentMemoryBlockAccessInfoPtr[i] = CacheLineAccessInfo::createNewCacheLineAccessInfo(
-                        cacheLineStartAddress);
-            }
-            this->residentMemoryBlockAccessInfoPtr[i]->insertResidentObject(
-                    ObjectAccessInfo::createNewObjectAccessInfo(objectStartAddress, mallocCallSite, size));
+            this->residentMemoryBlockAccessInfoPtr[i].insertResidentObject(objectStartAddress, mallocCallSite, size);
         }
-        lock.unlock();
     }
 
     ObjectAccessInfo *findObjectInCacheLine(unsigned long address) {
         assert(address >= pageStartAddress);
         assert(address <= pageStartAddress + PAGE_SIZE);
         unsigned long cacheIndex = (address - pageStartAddress) >> CACHE_LINE_SHIFT_BITS;
-        if (NULL == residentMemoryBlockAccessInfoPtr[cacheIndex]) {
-            return NULL;
-        }
-        return residentMemoryBlockAccessInfoPtr[cacheIndex]->findObjectInCacheLine(address);
+        return residentMemoryBlockAccessInfoPtr[cacheIndex].findObjectInCacheLine(address);
     }
 };
 
