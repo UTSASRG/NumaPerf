@@ -61,7 +61,7 @@ extern void *malloc(size_t size) {
         }
         pageAccessInfo->insertObjectAccessInfo(objectStartAddress, size, callerAddress);
     }
-    Logger::debug("malloc totcal cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
+    Logger::info("malloc totcal cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
 }
 
@@ -146,7 +146,7 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (type == E_ACCESS_WRITE) {
         Automics::automicIncrease(&(objectAccessInfoInCacheLine->getThreadWrite()[currentThreadIndex]), 1);
     }
-    Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
+    Logger::info("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
 
 /*

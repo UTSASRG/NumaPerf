@@ -9,13 +9,24 @@
 #include <stdarg.h>
 
 class Logger {
-public:
-    inline static void debug(const char *format, ...) {
-#ifdef DEBUG_LOG
+private:
+    inline static _log(const char *format, ...) {
         va_list args;
         va_start (args, format);
         vfprintf(stderr, format, args);
         va_end (args);
+    }
+
+public:
+    inline static void debug(const char *format, ...) {
+#ifdef DEBUG_LOG
+        _log(format);
+#endif
+    }
+
+    inline static void info(const char *format, ...) {
+#ifdef INFO_LOG
+        _log(format);
 #endif
     }
 };
