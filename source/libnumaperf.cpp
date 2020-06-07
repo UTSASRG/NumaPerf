@@ -8,6 +8,7 @@
 #include "utils/collection/hashfuncs.h"
 #include <assert.h>
 #include "utils/log/Logger.h"
+#include "utils/timer.h"
 
 typedef HashMap<unsigned long, PageAccessInfo *, spinlock, localAllocator> PageAccessPatternMap;
 
@@ -32,6 +33,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 #define MALLOC_CALL_SITE_OFFSET 0x18
 
 extern void *malloc(size_t size) {
+    unsigned long startCycle = Timer::getCurrentCycle();
     Logger::debug("malloc size:%lu\n", size);
     if (size <= 0) {
         return NULL;
@@ -59,6 +61,7 @@ extern void *malloc(size_t size) {
         }
         pageAccessInfo->insertObjectAccessInfo(objectStartAddress, size, callerAddress);
     }
+    Logger::debug("malloc totcal cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
 }
 
@@ -123,6 +126,7 @@ Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
 }
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {
+    unsigned long startCycle = Timer::getCurrentCycle();
     Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
                   type);
     unsigned long pageStartAddress = addr >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
@@ -142,7 +146,7 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (type == E_ACCESS_WRITE) {
         Automics::automicIncrease(&(objectAccessInfoInCacheLine->getThreadWrite()[currentThreadIndex]), 1);
     }
-
+    Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
 
 /*
