@@ -36,6 +36,7 @@ public:
 
     static PageAccessInfo *createNewPageAccessInfo(unsigned long pageStartAddress) {
         void *buff = localMemoryPool.get();
+//        buff = Real::malloc(sizeof(PageAccessInfo));
         PageAccessInfo *pageAccessInfo = new(buff) PageAccessInfo(pageStartAddress);
         return pageAccessInfo;
     }

@@ -5,8 +5,12 @@
 #include "../xdefines.h"
 #include <new>
 #include <cstring>
+#include "../utils/memorypool.h"
 
 class ObjectAccessInfo {
+private:
+    static MemoryPool localMemoryPool;
+
 private:
     void *startAddress;
     void *mallocCallSite;
@@ -28,7 +32,8 @@ private:
 public:
 
     static ObjectAccessInfo *createNewObjectAccessInfo(void *startAddress, void *mallocCallSite, size_t size) {
-        void *buff = Real::malloc(sizeof(ObjectAccessInfo));
+//        void *buff = Real::malloc(sizeof(ObjectAccessInfo));
+        void *buff = localMemoryPool.get();
         ObjectAccessInfo *objectAccessInfo = new(buff) ObjectAccessInfo(startAddress, mallocCallSite, size);
         return objectAccessInfo;
     }

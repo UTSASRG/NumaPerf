@@ -27,6 +27,8 @@ static void initializer(void) {
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 MemoryPool PageAccessInfo::localMemoryPool(sizeof(PageAccessInfo), 1024 * sizeof(PageAccessInfo));
+MemoryPool CacheLineAccessInfo::localMemoryPool(sizeof(CacheLineAccessInfo), 1024 * 1024 * sizeof(CacheLineAccessInfo));
+MemoryPool ObjectAccessInfo::localMemoryPool(sizeof(ObjectAccessInfo), 1024 * 1024 * sizeof(ObjectAccessInfo));
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;

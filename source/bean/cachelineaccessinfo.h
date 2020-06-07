@@ -7,8 +7,12 @@
 #include <new>
 #include <cstring>
 #include "../utils/log/Logger.h"
+#include "../utils/memorypool.h"
 
 class CacheLineAccessInfo {
+private:
+    static MemoryPool localMemoryPool;
+
 private:
     const unsigned long cacheLineStartAddress;
     unsigned long *threadRead;
@@ -26,7 +30,8 @@ private:
 public:
 
     static CacheLineAccessInfo *createNewCacheLineAccessInfo(unsigned long cacheLineStartAddress) {
-        void *buff = Real::malloc(sizeof(CacheLineAccessInfo));
+        void *buff = localMemoryPool.get();;
+//        void *buff = Real::malloc(sizeof(CacheLineAccessInfo));
         CacheLineAccessInfo *cacheLineAccessInfo = new(buff) CacheLineAccessInfo(cacheLineStartAddress);
         return cacheLineAccessInfo;
     }
