@@ -9,6 +9,8 @@
 #include <cstdlib>
 #include "real.h"
 #include "concurrency/spinlock.h"
+#include "log/Logger.h"
+#include "timer.h"
 
 class MemoryPool {
 private:
@@ -76,6 +78,7 @@ public:
     }
 
     void *get() {
+        unsigned long start = Timer::getCurrentCycle();
         void *result = NULL;
         if (freeListHead != NULL) {
             result = automicGetFromFreeList();
@@ -83,7 +86,9 @@ public:
         if (result != NULL) {
             return result;
         }
-        return automicGetFromBumpPointer();
+        result = automicGetFromBumpPointer();
+        Logger::info("memory pool get total cycles:%lu\n", Timer::getCurrentCycle() - start);
+        return result;
     }
 
     void release(void *memoryBlock) {
