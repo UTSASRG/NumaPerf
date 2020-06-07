@@ -80,7 +80,6 @@ public:
     void *get() {
         unsigned long start = Timer::getCurrentCycle();
         void *result = NULL;
-//        void *result = Real::malloc(this->sizeOfMemoryBlock);
         if (freeListHead != NULL) {
             result = automicGetFromFreeList();
         }
