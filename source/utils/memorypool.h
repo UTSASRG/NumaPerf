@@ -15,8 +15,9 @@
 class MemoryPool {
 private:
     unsigned int sizeOfMemoryBlock;
-    unsigned int initPoolSize;
+    unsigned long initPoolSize;
     void *bumpPointer;
+    void *bumpEndPointer;
     void *freeListHead;
     spinlock lock;
 private:
@@ -48,33 +49,44 @@ private:
         *((void **) memoryBlock) = nextBlock;
     }
 
+    inline void increaseCapacity() {
+        this->lock.lock();
+        if (bumpPointer == bumpEndPointer) {
+            bumpPointer = Real::malloc(initPoolSize);
+            bumpEndPointer = (char *) bumpPointer + initPoolSize * sizeOfMemoryBlock;
+            memset(bumpPointer, 0, initPoolSize);
+        }
+        this->lock.unlock();
+    }
+
     inline void *automicGetFromBumpPointer() {
         void *result = bumpPointer;
+        if (result == bumpEndPointer) {
+            increaseCapacity();
+            result = bumpPointer;
+        }
         while (!__atomic_compare_exchange_n(&bumpPointer, &result, (char *) result + sizeOfMemoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
-            if (bumpPointer == NULL) {
-                // increase capacity.
-                this->lock.lock();
-                if (bumpPointer == NULL) {
-                    bumpPointer = Real::malloc(initPoolSize);
-                    memset(bumpPointer, 0, initPoolSize);
-                }
-                this->lock.unlock();
-            }
             result = bumpPointer;
+            if (result == bumpEndPointer) {
+                // increase capacity.
+                increaseCapacity();
+                result = bumpPointer;
+            }
         }
         return result;
     }
 
 public:
-    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned int initPoolSize) {
+    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long initPoolSize) {
         Logger::debug("memory pool init\n");
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->initPoolSize = initPoolSize;
         this->freeListHead = NULL;
         this->bumpPointer = Real::malloc(initPoolSize);
+        this->bumpEndPointer = (char *) this->bumpPointer + initPoolSize * sizeOfMemoryBlock;
         memset(bumpPointer, 0, initPoolSize);
         this->lock.init();
     }

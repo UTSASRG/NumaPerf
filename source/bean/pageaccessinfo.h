@@ -28,8 +28,8 @@ private:
 public:
 
     static PageAccessInfo *createNewPageAccessInfo(unsigned long pageStartAddress) {
-        Logger::debug("new page access info page start address: %lu\n", pageStartAddress);
         void *buff = localMemoryPool.get();
+        Logger::debug("new page access info page start address: %lu, buff address:%lu \n", pageStartAddress, buff);
         PageAccessInfo *pageAccessInfo = new(buff) PageAccessInfo(pageStartAddress);
         return pageAccessInfo;
     }
