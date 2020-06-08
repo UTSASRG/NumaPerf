@@ -58,10 +58,11 @@ extern void *malloc(size_t size) {
         if (NULL == (pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0))) {
             pageAccessInfo = PageAccessInfo::createNewPageAccessInfo(currentPageStartAddress);
             if (!pageAccessPatternMap.insertIfAbsent(currentPageStartAddress, 0, pageAccessInfo)) {
-                pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0);
+//                pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0);
+                PageAccessInfo::release(pageAccessInfo);
             }
         }
-        pageAccessInfo->insertObjectAccessInfo(objectStartAddress, size, callerAddress);
+//        pageAccessInfo->insertObjectAccessInfo(objectStartAddress, size, callerAddress);
     }
     Logger::info("malloc totcal cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;

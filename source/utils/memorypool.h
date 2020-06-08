@@ -59,6 +59,7 @@ private:
                 this->lock.lock();
                 if (bumpPointer == NULL) {
                     bumpPointer = Real::malloc(initPoolSize);
+                    memset(bumpPointer, 0, initPoolSize);
                 }
                 this->lock.unlock();
             }
@@ -74,6 +75,7 @@ public:
         this->initPoolSize = initPoolSize;
         this->freeListHead = NULL;
         this->bumpPointer = Real::malloc(initPoolSize);
+        memset(bumpPointer, 0, initPoolSize);
         this->lock.init();
     }
 
@@ -82,6 +84,7 @@ public:
         void *result = NULL;
         if (freeListHead != NULL) {
             result = automicGetFromFreeList();
+            memset(result, 0, sizeOfMemoryBlock);
         }
         if (result != NULL) {
             return result;
