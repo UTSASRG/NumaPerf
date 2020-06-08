@@ -29,6 +29,12 @@ public:
         _log(format);
 #endif
     }
+
+    inline static void error(const char *format, ...) {
+#ifdef ERROR_LOG
+        _log(format);
+#endif
+    }
 };
 
 #endif //NUMAPERF_LOGGER_H
