@@ -103,11 +103,11 @@ public:
             memset(result, 0, sizeOfMemoryBlock);
         }
         if (result != NULL) {
-            Logger::info("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
+            Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
             return result;
         }
         result = automicGetFromBumpPointer();
-        Logger::info("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
+        Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
         return result;
     }
 

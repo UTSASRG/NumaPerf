@@ -41,7 +41,7 @@ public:
 
     static size_t hashSizeT(size_t x, size_t) { return x; }
 
-    static size_t hashUnsignedlong(unsigned long x, size_t) { return x; }
+    static size_t hashUnsignedlong(unsigned long x, size_t) { return hashAddr((void *) x, 0); }
 
     static size_t hashAddr(void *addr, size_t) {
         unsigned long key = (unsigned long) addr;

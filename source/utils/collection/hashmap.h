@@ -336,7 +336,7 @@ private:
         // Check all _buckets with the same hindex.
         int count = first->count;
         while (count > 0) {
-            if (_keycmp(entry->key, key, keylen) && (entry->keylen == keylen)) {
+            if (_keycmp(entry->key, key, keylen)) {
                 result = entry;
                 break;
             }
