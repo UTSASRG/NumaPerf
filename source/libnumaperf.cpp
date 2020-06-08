@@ -57,7 +57,7 @@ extern void *malloc(size_t size) {
         unsigned long currentPageStartAddress = objectStartPageAddress + i * PAGE_SIZE;
         if (NULL == (pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0))) {
             pageAccessInfo = PageAccessInfo::createNewPageAccessInfo(currentPageStartAddress);
-            if (!pageAccessPatternMap.insertIfAbsent(currentPageStartAddress, 0, pageAccessInfo)) {
+            if (pageAccessPatternMap.insertIfAbsent(currentPageStartAddress, 0, pageAccessInfo)) {
 //                pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0);
                 PageAccessInfo::release(pageAccessInfo);
             }
