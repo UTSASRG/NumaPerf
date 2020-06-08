@@ -55,7 +55,7 @@ private:
             bumpPointer = Real::malloc(initPoolSize);
             bumpEndPointer = (char *) bumpPointer + initPoolSize;
             memset(bumpPointer, 0, initPoolSize);
-            Logger::info("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
+            Logger::debug("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
                          bumpPointer, bumpEndPointer);
         }
         this->lock.unlock();
@@ -90,7 +90,7 @@ public:
         this->bumpPointer = Real::malloc(initPoolSize);
         this->bumpEndPointer = (char *) this->bumpPointer + initPoolSize;
         memset(bumpPointer, 0, initPoolSize);
-        Logger::info("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
+        Logger::debug("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
                      bumpPointer, bumpEndPointer);
         this->lock.init();
     }
