@@ -1,6 +1,8 @@
 Overheads:
-    1.Main overheads are from the invoking of real::malloc.(mallocation of pageInfo,cacheInfo,objectInfo,entryInHashMap)
-    2.Start counting some information after second thread writing
+    1.Overheads from the invoking of real::malloc.(mallocation of pageInfo,cacheInfo,objectInfo,entryInHashMap)
+    2.Overheads from too much memory access in the malloc function
+    3.Overheads in the handle access is higher after the program running a while(imbalance in the hashmap)
+    4.Start counting some information after second thread writing
 
 Function:
     1.how to output

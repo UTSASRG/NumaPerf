@@ -20,7 +20,7 @@ thread_local unsigned long currentThreadIndex = 0;
 static void initializer(void) {
     Logger::debug("global initializer\n");
     Real::init();
-    pageAccessPatternMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong);
+    pageAccessPatternMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     inited = true;
 }
 
@@ -51,13 +51,13 @@ extern void *malloc(size_t size) {
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
-    unsigned long objectStartPageAddress = (unsigned long) objectStartAddress >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
+    unsigned long objectStartPageIndex = (unsigned long) objectStartAddress >> PAGE_SHIFT_BITS;
     for (int i = 0; (long) (size - i * PAGE_SIZE) > 0; i++) {
         PageAccessInfo *pageAccessInfo = NULL;
-        unsigned long currentPageStartAddress = objectStartPageAddress + i * PAGE_SIZE;
-        if (NULL == (pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0))) {
-            pageAccessInfo = PageAccessInfo::createNewPageAccessInfo(currentPageStartAddress);
-            if (pageAccessPatternMap.insertIfAbsent(currentPageStartAddress, 0, pageAccessInfo)) {
+        unsigned long currentPageStartIndex = objectStartPageIndex + i;
+        if (NULL == (pageAccessInfo = pageAccessPatternMap.find(currentPageStartIndex, 0))) {
+            pageAccessInfo = PageAccessInfo::createNewPageAccessInfo(currentPageStartIndex << PAGE_SHIFT_BITS);
+            if (pageAccessPatternMap.insertIfAbsent(currentPageStartIndex, 0, pageAccessInfo)) {
 //                pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0);
                 PageAccessInfo::release(pageAccessInfo);
             }
@@ -132,8 +132,8 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     unsigned long startCycle = Timer::getCurrentCycle();
     Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
                   type);
-    unsigned long pageStartAddress = addr >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
-    PageAccessInfo *currentPageAccessInfo = pageAccessPatternMap.find(pageStartAddress, 0);
+    unsigned long pageStartIndex = addr >> PAGE_SHIFT_BITS;
+    PageAccessInfo *currentPageAccessInfo = pageAccessPatternMap.find(pageStartIndex, 0);
     if (currentPageAccessInfo == NULL) {
         return;
     }
