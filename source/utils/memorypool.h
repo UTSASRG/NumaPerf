@@ -53,8 +53,10 @@ private:
         this->lock.lock();
         if (bumpPointer == bumpEndPointer) {
             bumpPointer = Real::malloc(initPoolSize);
-            bumpEndPointer = (char *) bumpPointer + initPoolSize * sizeOfMemoryBlock;
+            bumpEndPointer = (char *) bumpPointer + initPoolSize;
             memset(bumpPointer, 0, initPoolSize);
+            Logger::info("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
+                         bumpPointer, bumpEndPointer);
         }
         this->lock.unlock();
     }
@@ -86,8 +88,10 @@ public:
         this->initPoolSize = initPoolSize;
         this->freeListHead = NULL;
         this->bumpPointer = Real::malloc(initPoolSize);
-        this->bumpEndPointer = (char *) this->bumpPointer + initPoolSize * sizeOfMemoryBlock;
+        this->bumpEndPointer = (char *) this->bumpPointer + initPoolSize;
         memset(bumpPointer, 0, initPoolSize);
+        Logger::info("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
+                     bumpPointer, bumpEndPointer);
         this->lock.init();
     }
 
@@ -99,10 +103,11 @@ public:
             memset(result, 0, sizeOfMemoryBlock);
         }
         if (result != NULL) {
+            Logger::info("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
             return result;
         }
         result = automicGetFromBumpPointer();
-        Logger::debug("memory pool get total cycles:%lu\n", Timer::getCurrentCycle() - start);
+        Logger::info("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
         return result;
     }
 
