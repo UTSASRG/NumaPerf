@@ -22,8 +22,6 @@ private:
     unsigned long *threadWrite;
     CacheLineAccessInfo residentMemoryBlockAccessInfoPtr[CACHE_NUM_IN_ONE_PAGE];
 
-    PageAccessInfo() : pageStartAddress(0) {}
-
     PageAccessInfo(unsigned long pageStartAddress) : pageStartAddress(pageStartAddress) {
     }
 
@@ -61,6 +59,7 @@ public:
 //    }
 
     ObjectAccessInfo *findObjectInCacheLine(unsigned long address) {
+        Logger::debug("findObjectInCacheLine address:%lu, page start address%lu\n", address, pageStartAddress);
         assert(address >= pageStartAddress);
         assert(address <= pageStartAddress + PAGE_SIZE);
         unsigned long cacheIndex = (address - pageStartAddress) >> CACHE_LINE_SHIFT_BITS;
