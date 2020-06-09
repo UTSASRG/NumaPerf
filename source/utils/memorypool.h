@@ -11,15 +11,15 @@
 #include "concurrency/spinlock.h"
 #include "log/Logger.h"
 #include "timer.h"
+#include "mm.hh"
 
 class MemoryPool {
 private:
     unsigned int sizeOfMemoryBlock;
-    unsigned long initPoolSize;
-    void *bumpPointer;
-    void *bumpEndPointer;
-    void *freeListHead;
-    spinlock lock;
+    unsigned long maxPoolSize;
+    void *volatile bumpPointer;
+    void *volatile bumpEndPointer;
+    void *volatile freeListHead;
 private:
     inline void *automicGetFromFreeList() {
         void *result = freeListHead;
@@ -35,7 +35,7 @@ private:
                 return NULL;
             }
         }
-        return result;
+        return (void *) result;
     }
 
     inline void automicInsertIntoFreeList(void *memoryBlock) {
@@ -46,53 +46,32 @@ private:
                                             __ATOMIC_SEQ_CST)) {
             nextBlock = freeListHead;
         }
-        *((void **) memoryBlock) = nextBlock;
-    }
-
-    inline void increaseCapacity() {
-        this->lock.lock();
-        if (bumpPointer == bumpEndPointer) {
-            bumpPointer = Real::malloc(initPoolSize);
-            bumpEndPointer = (char *) bumpPointer + initPoolSize;
-            memset(bumpPointer, 0, initPoolSize);
-            Logger::debug("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
-                         bumpPointer, bumpEndPointer);
-        }
-        this->lock.unlock();
+        *((void **) memoryBlock) = (void *) nextBlock;
     }
 
     inline void *automicGetFromBumpPointer() {
         void *result = bumpPointer;
-        if (result == bumpEndPointer) {
-            increaseCapacity();
-            result = bumpPointer;
-        }
         while (!__atomic_compare_exchange_n(&bumpPointer, &result, (char *) result + sizeOfMemoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
             result = bumpPointer;
-            if (result == bumpEndPointer) {
-                // increase capacity.
-                increaseCapacity();
-                result = bumpPointer;
-            }
         }
-        return result;
+        assert(result < bumpEndPointer);
+        return (void *) result;
     }
 
 public:
-    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long initPoolSize) {
+    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024 * 1024 * 1024) {
         Logger::debug("memory pool init\n");
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
-        this->initPoolSize = initPoolSize;
+        this->maxPoolSize = maxPoolSize;
         this->freeListHead = NULL;
-        this->bumpPointer = Real::malloc(initPoolSize);
-        this->bumpEndPointer = (char *) this->bumpPointer + initPoolSize;
-        memset(bumpPointer, 0, initPoolSize);
-        Logger::debug("memory pool increase capacity bumppointer:%lu, bumpendpointer:%lu\n",
-                     bumpPointer, bumpEndPointer);
-        this->lock.init();
+        this->bumpPointer = MM::mmapAllocateShared(maxPoolSize);
+        this->bumpEndPointer = (char *) this->bumpPointer + maxPoolSize;
+//        memset((void *) bumpPointer, 0, initPoolSize);
+        Logger::debug("memory pool init capacity bumppointer:%lu, bumpendpointer:%lu\n",
+                      bumpPointer, bumpEndPointer);
     }
 
     void *get() {

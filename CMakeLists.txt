@@ -23,4 +23,5 @@ add_executable(NumaPerf
         source/utils/log/Logger.h
         source/utils/timer.h
         source/utils/memorypool.h
+        source/utils/mm.hh
         test/test.cpp)
