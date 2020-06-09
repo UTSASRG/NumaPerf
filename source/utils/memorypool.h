@@ -62,7 +62,7 @@ private:
     }
 
 public:
-    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024 * 1024 * 1024) {
+    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul) {
         Logger::debug("memory pool init\n");
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->maxPoolSize = maxPoolSize;
@@ -70,8 +70,8 @@ public:
         this->bumpPointer = MM::mmapAllocateShared(maxPoolSize);
         this->bumpEndPointer = (char *) this->bumpPointer + maxPoolSize;
 //        memset((void *) bumpPointer, 0, initPoolSize);
-        Logger::debug("memory pool init capacity bumppointer:%lu, bumpendpointer:%lu\n",
-                      bumpPointer, bumpEndPointer);
+        Logger::info("memory pool init capacity bumppointer:%lu, bumpendpointer:%lu\n",
+                     bumpPointer, bumpEndPointer);
     }
 
     void *get() {

@@ -246,7 +246,7 @@ public:
         assert(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
-        fprintf(stderr, "hashmap insert hindex:%lu, count:%lu\n", hindex, first->count);
+//        fprintf(stderr, "hashmap insert hindex:%lu, count:%lu\n", hindex, first->count);
         struct Entry *entry;
         bool isFound = true;
 
