@@ -29,6 +29,7 @@ public:
 
     static PageAccessInfo *createNewPageAccessInfo(unsigned long pageStartAddress) {
         void *buff = localMemoryPool.get();
+        memset(buff, 0, sizeof(PageAccessInfo));
         Logger::debug("new page access info page start address: %lu, buff address:%lu \n", pageStartAddress, buff);
         PageAccessInfo *pageAccessInfo = new(buff) PageAccessInfo(pageStartAddress);
         return pageAccessInfo;
