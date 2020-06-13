@@ -16,6 +16,8 @@ bool inited = false;
 PageAccessPatternMap pageAccessPatternMap;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
+void *map = NULL;
+unsigned long mapSize = 0;
 
 static void initializer(void) {
     Logger::debug("global initializer\n");
@@ -133,6 +135,8 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
                   type);
     unsigned long pageStartIndex = addr >> PAGE_SHIFT_BITS;
+//    unsigned long cacheIndex = addr >> CACHE_LINE_SHIFT_BITS;
+//    *(int *) (((char *) map) + (cacheIndex << 2)) = 1;
     PageAccessInfo *currentPageAccessInfo = pageAccessPatternMap.find(pageStartIndex, 0);
     if (currentPageAccessInfo == NULL) {
         return;

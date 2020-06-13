@@ -111,8 +111,9 @@ static cl::opt<bool> toInstrumentAtomics("instrument-atomics",
 
 static RegisterPass<Instrumenter> X("Instrumenter", "Instrumenter Pass");
 
+// https://llvm.org/doxygen/classllvm_1_1PassManagerBuilder.html#a9c1dc350129dbf90debeeaa58754841e
 static RegisterStandardPasses Z(
-        PassManagerBuilder::EP_EarlyAsPossible,
+        PassManagerBuilder::EP_FullLinkTimeOptimizationLast,
         [](const PassManagerBuilder &Builder,
            legacy::PassManagerBase &PM) { PM.add(new Instrumenter()); });
 
@@ -281,6 +282,7 @@ bool isLocalVariable(Value *value) {
 
 bool Instrumenter::runOnFunction(Function &F) {
 // If the input function is the function added by myself, don't do anything.
+    // errs() << "Function name: " << F.getName() << "\n";
     if (&F == ctorFunction) return false;
     int NumInstrumented = 0;
 
