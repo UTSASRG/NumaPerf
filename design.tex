@@ -1,0 +1,70 @@
+Data Structure:
+
+        ObjectInfo {
+            startAddress;
+            size;
+            callSite;
+        }
+
+        DetailedAccessInfo {
+            reads[threadId];
+            writes[threadId];
+        }
+
+        HashMap<ObjectInfo> objectInfoMapping; (because they are only accessed in the malloc and free function)
+
+        AccessMapping:(shadow mapping: mmap a big chunk of memory form the first beginning)
+        ----------------------------------------------------------------------------------------------------------------------------
+        |                      |      (cache line base info)       |                                                               |
+        |            .....     |   writing number                  |             .......                                           |
+        |                      |   detailed info pointer           |                                                               |
+        |                      |                                   |                                                               |
+        ---------------------------------------------------------------------------------------------------------------------------
+                                                  |
+                                                  |  if writingNumber > threshold
+                                                  |
+                                                 \|/   (memories are from self-managed allocations to speed up this process
+                                                        and also reduce memory overheads)
+                    ---------------------------------------------------------
+                    |        |         (word base info)        |            |
+                    |  ....  |     reads[threadId]             |  ....      |
+                    |        |     writes[threadId]            |            |
+                    ---------------------------------------------------------
+
+
+Define the severity of numa issue:(multiple thread > single thread, write > read)
+        severityScore(){
+            if(single thread access){
+                return 0;
+            }
+            // not clear how to calculate the score.
+            return (sum(write number)*0.7 + sum(read number)*0.3)*threadNumber  ???
+        }
+
+
+Processing flow：
+
+        malloc(){
+            1. insert ObjectInfo into objectInfoMapping hashMap.   (very low overeheads)
+            2. return the allocated address.
+        }
+
+        free(){
+            1. get ObjectInfo from the hashMap-objectInfoMapping. (very low overeheads)
+            2. collect access info according the size and start address of this object from AccessMapping.  (may cause some overheads)
+                    a. sum up read and write number in the covered cache line level
+                    b. sum up read and write number in the covered page level
+                    c. determine weather there are sharing problems caused by allocator in both cache line and page level
+                        (if shared same cache line with other objects and the severityScores of self covered words are low, but the over
+                         all severityScores of this cache is high. it is same as the page level sharing problem.)
+            3. store the diagnose results.
+            4. free the object.
+        }
+
+        //todo: not sure if it is better to record severityScore directly into the word base info instead the read and write number?
+        handleAccess(){
+            1. increase the write number in the corresponding cache line slot.  (very low overeheads)
+            2. if the write number > certain threshold                          (very low overeheads)
+                      a. allocated DetailedAccessInfo
+                      b. recording the detailed read of write number.
+        }
