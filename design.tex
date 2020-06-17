@@ -1,4 +1,4 @@
-Data Structure:
+Basic Data Structure:
 
         ObjectInfo {
             startAddress;
@@ -6,65 +6,109 @@ Data Structure:
             callSite;
         }
 
-        DetailedAccessInfo {
-            reads[threadId];
-            writes[threadId];
+        PageAccessInfo{
+            firstTouchThreadId;
+            firstTouchAddress;
+            ifTotalCoveredBySingleObject;
+            structure {
+                writingNumber;
+                detailedCacheLineInfoPointer;
+                totalInvalidateNumberCausedByThisWordFirstTouched;
+            }CacheLineAccessInfo[CACHE_LINE_NUMBER]
         }
+
+        CacheLineDetailedAccessInfo {
+            lastWriteThreadId;
+            followingAccessThreadIdBitMask;
+            invalidateNumber[NumberOfWordsInCacheLine]
+        }   //focus on the number of cache line invalidation
+
+        DiagnosedInfo {
+            ObjectInfoPointer;
+            totalInvalidateNumberCauseedByThisObject;   // in overall level, tell people how bad this object is about numa issues.
+            // in cache line level:
+            invalidateNumberFromTotalCoverdCacheLines;   // in cache line level, issues caused by application it self.
+            invalidateNumberFromPartialCoverdCacheLines;  // in cache line level, issues may caused by allocators.
+            invalidateNumberFromThisObjectInPartialCoverdCacheLines;
+            // in page level:
+            invalidateNumberFromTotalCoverdPages;    // in page line level, issues caused by application it self.
+            invalidateNumberFromThisObjectInPartialCoverdPages;   // in page line level, issues may caused by allocators.
+            invalidateNumberFromThisObjectInPartialCoverdPagesWhenThePageFirstTouchedFromThisObject;
+        }
+
+
+Global Variable:
 
         HashMap<ObjectInfo> objectInfoMapping; (because they are only accessed in the malloc and free function)
 
-        AccessMapping:(shadow mapping: mmap a big chunk of memory form the first beginning)
+        HashMap<> diagnosedInfoMapping; (key:callSite, only accessed in the free function)
+
+        ShadowMapping<PageAccessInfo> accessMapping:(shadow mapping: mmap a big chunk of memory form the first beginning)
+
+                                    (accessMapping<PageAccessInfo>)
         ----------------------------------------------------------------------------------------------------------------------------
-        |                      |      (cache line base info)       |                                                               |
-        |            .....     |   writing number                  |             .......                                           |
-        |                      |   detailed info pointer           |                                                               |
-        |                      |                                   |                                                               |
+        |           |           |      (cache line base info)       |                                                               |
+        | first     |   .....   |   writing number;                 |             .......                                           |
+        | Touch     |           |   detailed info pointer;          |                                                               |
+        | ThreadId  |           |  totalInvalidateNumberCausedBy    |                                                               |
+        |           |           |   ThisWordFirstTouched;           |
         ---------------------------------------------------------------------------------------------------------------------------
                                                   |
                                                   |  if writingNumber > threshold
                                                   |
                                                  \|/   (memories are from self-managed allocations to speed up this process
-                                                        and also reduce memory overheads)
-                    ---------------------------------------------------------
-                    |        |         (word base info)        |            |
-                    |  ....  |     reads[threadId]             |  ....      |
-                    |        |     writes[threadId]            |            |
-                    ---------------------------------------------------------
+                    (CacheLineDetailedAccessInfo)       and also reduce memory overheads)
+                 --------------------------------------------------------------------------
+                 | lastWriteThreadId |             |    (word base info)     |            |
+                 |  followingAccess  |    ....     |   invalidateNumber      |  ....      |
+                 |   ThreadBitMask   |             |                         |            |
+                 |-------------------------------------------------------------------------
 
-
-Define the severity of numa issue:(multiple thread > single thread, write > read)
-        severityScore(){
-            if(single thread access){
-                return 0;
-            }
-            // not clear how to calculate the score.
-            return (sum(write number)*0.7 + sum(read number)*0.3)*threadNumber  ???
-        }
 
 
 Processing flow：
 
         malloc(){
             1. insert ObjectInfo into objectInfoMapping hashMap.   (very low overeheads)
-            2. return the allocated address.
+            2. set ifTotalCoveredBySingleObject in PageAccessInfo;
+            3. return the allocated address.
         }
 
-        free(){
-            1. get ObjectInfo from the hashMap-objectInfoMapping. (very low overeheads)
-            2. collect access info according the size and start address of this object from AccessMapping.  (may cause some overheads)
-                    a. sum up read and write number in the covered cache line level
-                    b. sum up read and write number in the covered page level
-                    c. determine weather there are sharing problems caused by allocator in both cache line and page level
-                        (if shared same cache line with other objects and the severityScores of self covered words are low, but the over
-                         all severityScores of this cache is high. it is same as the page level sharing problem.)
-            3. store the diagnose results.
-            4. free the object.
-        }
-
-        //todo: not sure if it is better to record severityScore directly into the word base info instead the read and write number?
         handleAccess(){
             1. increase the write number in the corresponding cache line slot.  (very low overeheads)
             2. if the write number > certain threshold                          (very low overeheads)
-                      a. allocated DetailedAccessInfo
-                      b. recording the detailed read of write number.
+                      a. allocated CacheLineDetailedAccessInfo
+                      b. if writing access:                  (may cause 2-3 cache line miss)
+                            1. set lastWriteThreadId
+                            2. followingAccessThreadBitMask = 1 << lastWriteThreadId (which means invalidate cache lines for other threads)
+                            3. update invalidateNumber() in the word level;
+                            4. if not TotalCoveredBySingleObject
+                                    update invalidateNumber() in totalInvalidateNumberCausedByThisWordFirstTouched;
+                      c. if reading access:                   (may cause 2-3 cache line miss)
+                            1. if followingAccessThreadBitMask & (1 << threadId) ==0: (which means first time access for this thread)
+                                    a.followingAccessThreadBitMask = (followingAccessThreadBitMask & (1 << threadId))
+                                    b.update invalidateNumber() in the word level;
+                                    c.update invalidateNumber() in totalInvalidateNumberFirstTouched;
+                                    d.if not TotalCoveredBySingleObject
+                                            update invalidateNumber() in totalInvalidateNumberCausedByThisWordFirstTouched;
+        }
+
+        update invalidateNumber(){
+            if currentThreadId == pageFirstTouchThreadId:
+                    invalidateNumber++;    (local node access)
+            else:
+                    invalidateNumber+=1.5;  (remote node access)
+        }
+
+        sigsegv handler() {
+            update the first touch thread id and the first touch address;
+        }
+
+        // data structure for the final results. how to collect the page level info....
+        free() {
+        1. get ObjectInfo from the hashMap-objectInfoMapping. (very low overeheads)
+        2. collect DiagnosedInfo data from the accessMapping. (can be easily summed up according to current data)
+        3. store the diagnose results to the diagnosedInfoMapping.
+        4. remove object from the hashMap-objectInfoMapping.
+        5. free the object.
         }
