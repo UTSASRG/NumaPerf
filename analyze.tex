@@ -1,0 +1,63 @@
+CacheLine Level Problems:
+        1. true-sharing:
+        2. false-sharing:
+
+How to determine if it is a true sharing or false sharing:
+        false-sharing: if only one thread access the words belong to this object in this cache line,
+but with a high access latency number in thie cache line.
+
+CacheLine Level Solutions:
+        1. true-sharing: reduce sharing between threads.
+        2. false-sharing:
+                        a. can be fixed by some allocators.
+                        b. align up memory size of false sharing objects.
+
+CacheLine Level Hints needed:
+        1. true-sharing: access threads id, (access number from each thread, access call site)
+        2. false-sharing: may only report it is a false sharing
+
+
+
+
+
+Page Level Problems:
+        1. true-sharing;
+        2. false-sharing: caused by allocators;
+
+How to determine if it is a true sharing or false sharing:
+        false-sharing: if only one thread access the words belong to this object in this page,
+but with a high access latency number in this page.
+
+Page Level Solutions:
+        1. true-sharing: reduce sharing between threads, or use some allocator to do interleaved allocation
+        2. false-sharing: use numa-allocators
+
+Page Level Hints needed:
+        1. true-sharing: access threads id, (access number from each thread, access call site)
+        2. false-sharing: may only report it is a false sharing
+
+
+
+How to define how serious it is about numa issue? ---- invalidation number, so in the cache line level is enough.
+
+
+
+
+In my previous design:
+    I also use the invalidation number to determine if it is false sharing or true sharing, so I need the invalidation number in word
+level------according the DiagnosedInfo. In this case, I always think about whether there are true sharing problems for this object
+if self, even in cache lines or pages occupied by multiple objects. But this one may can not differentiate it in the cache line level.
+In the page level, it may tells something valuable to people from another angle.
+In the another thinking, I determine it as false sharing as long as the there are single thread accesses, which is easier and more efficient I guess.
+        DiagnosedInfo {
+                ObjectInfoPointer;
+                totalInvalidateNumberCauseedByThisObject;   // in overall level, tell people how bad this object is about numa issues.
+                // in cache line level:
+                invalidateNumberFromTotalCoverdCacheLines;   // in cache line level, issues caused by application it self.
+                invalidateNumberFromPartialCoverdCacheLines;  // in cache line level, issues may caused by allocators.
+                invalidateNumberFromThisObjectInPartialCoverdCacheLines;
+                // in page level:
+                invalidateNumberFromTotalCoverdPages;    // in page line level, issues caused by application it self.
+                invalidateNumberFromThisObjectInPartialCoverdPages;   // in page line level, issues may caused by allocators.
+                invalidateNumberFromThisObjectInPartialCoverdPagesWhenThePageFirstTouchedFromThisObject;
+        }
