@@ -7,7 +7,7 @@ Basic Data Structure:
         }
 
         BasicPageAccessInfo{
-%            firstTouchThreadId;
+            firstTouchThreadId;
             partialOccupiedCacheLineBitMask;
             cacheLineWritingNumber[CACHE_LINE_NUMBER];
         }
@@ -46,7 +46,7 @@ Global Variable:
         ShadowMapping<PageDetailedAccessInfo> detailsAccessMapping:(shadow mapping: mmap a big chunk of memory form the first beginning)
 
 
-Processing flow：
+Processing flow:
 
         malloc(){
             1. insert ObjectInfo into objectInfoMapping hashMap.   (very low overeheads)
@@ -72,12 +72,12 @@ Processing flow：
                                             update totalAccessThreadBitMask in word level.
         }
 
-%        update invalidateNumber(){
-%            if currentThreadId == pageFirstTouchThreadId:
-%                    invalidateNumber++;    (local node access)
-%            else:
-%                    invalidateNumber+=1.5;  (remote node access)
-%        }
+        update totalCopyNumber() {
+            if currentThreadId == pageFirstTouchThreadId:
+                    copyNumber++;    (local access)
+            else:
+                    copyNumber+=1.5;  (remote access)
+        }
 
         sigsegv handler() {
             update the first touch thread id and the first touch address;
