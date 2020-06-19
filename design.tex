@@ -6,8 +6,6 @@ Basic Data Structure:
             callSite;
         }
 
-// page level: how to determine cause by allocator or application
-
         BasicPageAccessInfo {
             firstTouchThreadId;
             isPageContainMultipleObjects;  // 1bit
@@ -47,16 +45,18 @@ Basic Data Structure:
             totalInvalidationNumberForCacheLine;  // how serious this is
         }
 
+// page level: how to determine cause by allocator or application
         PageDiagnosedInfo {
             firstTouchThreadId;
             pageStartAddress;
-            totalAccessThreadBitMaskInPage;
-            totalAccessThreadBitMaskBySelf; // fix-helping info
+            accessThreadBitMaskInPage;
+            accessThreadBitMaskBySelf; // fix-helping info
 
             totalAccessNumberInFirstTouchThread;
             totalAccessNumberInOtherThread;
             // we can say it is caused by allocator if :
             // totalAccessNumberInFirstTouchThread >> accessNumberBySelfInFirstTouchThread
+            // which means the firstTouchThread is high possibly controlled by other objects.
             accessNumberBySelfInFirstTouchThread;
             accessNumberBySelfInOtherThread
         }
@@ -126,6 +126,7 @@ Processing flow:
             1. get ObjectInfo from the hashMap-objectInfoMapping. (very low overeheads)
             2. collect DiagnosedInfo data from the accessMapping. (can be easily summed up according to current data)
             //only if the object size is larger than cache line, collect the PageDiagnosedInfo.
+            // because in this case, the prime problem is from cache level, not page level.
             3. store the diagnose results to the diagnosedInfoMapping.
             4. remove object from the hashMap-objectInfoMapping.
             5. free the object.
