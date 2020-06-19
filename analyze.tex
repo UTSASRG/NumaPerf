@@ -7,7 +7,7 @@ How to determine if it is a true sharing or false sharing:
 but with a high access latency number in thie cache line.
 
 CacheLine Level Solutions:
-        1. true-sharing: reduce sharing between threads.
+        1. true-sharing: reduce sharing between threads, reduce write operation.
         2. false-sharing:
                         a. can be fixed by some allocators.
                         b. align up memory size of false sharing objects.
@@ -29,17 +29,26 @@ How to determine if it is a true sharing or false sharing:
 but with a high access latency number in this page.
 
 Page Level Solutions:
-        1. true-sharing: reduce sharing between threads, or use some allocator to do interleaved allocation
+        1. true-sharing: reduce sharing between threads, or use some allocator to do interleaved allocation,
+                         try to relocate the page to the most accessing thread.
         2. false-sharing: use numa-allocators
 
 Page Level Hints needed:
-        1. true-sharing: access threads id, (access number from each thread, access call site)
+        1. true-sharing: first touch thread id, access number from non-first-touch-thread and first-touch-thread, (access call site)
         2. false-sharing: may only report it is a false sharing
 
 
 
 How to define how serious it is about numa issue? ---- invalidation number, so in the cache line level is enough.
+But in the page level, we more focus on access number, why?
 
+----The difference between cache line and page is that the solution of true sharing is little different. In the cache line, we more
+focus on the cache hit rate in all cores, which is related to invalidation numbers here.So the solution includes reduce modifing
+the value, reduce copies(sharing) in cores.
+But in the page level, we more focus on which node the page is located, which also means we prefer to make the page closer to the
+most accessing thread, and reduce the access number from remote node. So the solution is to reduce access number from other threads,
+and make the page local with the main accessing thread.So I think we also concern why this page is located here (also means which
+object first touch this page.)
 
 
 

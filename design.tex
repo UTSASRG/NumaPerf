@@ -6,32 +6,67 @@ Basic Data Structure:
             callSite;
         }
 
-        BasicPageAccessInfo{
+// page level: how to determine cause by allocator or application
+
+        BasicPageAccessInfo {
             firstTouchThreadId;
+            isPageContainMultipleObjects;  // 1bit
+            accessNumberByFirstTouchThread;
+            accessNumberByOtherThread;
+            // if isPageContainMultipleObject
+            //       && accessNumberByFirstTouchThread > a threshold
+            //       && accessNumberByOtherThread >> accessNumberByFirstTouchThread
+            //       go to CacheLineDetailedInfoForPageSharing
+
             partialOccupiedCacheLineBitMask;
             cacheLineWritingNumber[CACHE_LINE_NUMBER];
         }
 
-        PageDetailedAccessInfo{
-            CacheLineDetailedAccessInfo[CACHE_LINE_NUMBER]
+        CacheLineDetailedInfoForPageSharing {
+            totalAccessThreadBitMask;
+            accessNumberByFirstTouchThread;
+            accessNumberByOtherThread;
         }
 
         CacheLineDetailedAccessInfo {
-            totalCopyNumber;
-            totalAccessThreadBitMask; or copyNumber[ThreadNumber]
+            totalInvalidationNumber;
+            totalAccessThreadBitMask;
             accessThreadBitMaskAfterWriting;
-            wordDetailedAccessInfoPointer;   // only allocate this info if this cache line is partially occupied.
+            wordDetailedAccessInfo;  // only touch this if this cache line is partially occupied.
         }
 
         wordDetailedAccessInfo {
-            totalAccessThreadBitMask[WORDS_NUMBER];
+            // one thread or more thread ? one byte for each word.
+            isTouchedBySingleThread[WORDS_NUMBER];
         }
 
-        DiagnosedInfo {
-            totalCopyNumber;
-            totalAccessThreadBitMask; or copyNumber[ThreadNumber];
-            totalCopyNumberInFalseSharingPages;
-            totalCopyNumberInFalseSharingCacheLines;
+        CacheLineDiagnosedInfo {
+            cacheLineStartAddress;  // fix-helping info
+            isFalseSharing;  // if the parts belong to this object is only accessed by single thread
+            totalAccessThreadBitMaskForCacheLine;   // fix-helping info
+            totalInvalidationNumberForCacheLine;  // how serious this is
+        }
+
+        PageDiagnosedInfo {
+            firstTouchThreadId;
+            pageStartAddress;
+            totalAccessThreadBitMaskInPage;
+            totalAccessThreadBitMaskBySelf; // fix-helping info
+
+            totalAccessNumberInFirstTouchThread;
+            totalAccessNumberInOtherThread;
+            // we can say it is caused by allocator if :
+            // totalAccessNumberInFirstTouchThread >> accessNumberBySelfInFirstTouchThread
+            accessNumberBySelfInFirstTouchThread;
+            accessNumberBySelfInOtherThread
+        }
+
+        ObjectDiagnosedInfo {
+            ObjectInfo;
+
+            List<CacheLineDiagnosedInfo> seriousCacheLineInfo;
+
+            List<PageDiagnosedInfo> seriousPageInfo;
         }
 
 
@@ -43,7 +78,9 @@ Global Variable:
 
         ShadowMapping<BasicPageAccessInfo> basicAccessMapping;
 
-        ShadowMapping<PageDetailedAccessInfo> detailsAccessMapping:(shadow mapping: mmap a big chunk of memory form the first beginning)
+        ShadowMapping<CacheLineDetailedInfoForPageSharing> cacheLineDetailedInfoForPageSharingMapping;
+
+        ShadowMapping<CacheLineDetailedAccessInfo> cacheLineDetailedAccessInfo:(shadow mapping: mmap a big chunk of memory form the first beginning)
 
 
 Processing flow:
@@ -72,12 +109,13 @@ Processing flow:
                                             update totalAccessThreadBitMask in word level.
         }
 
-        update totalCopyNumber() {
-            if currentThreadId == pageFirstTouchThreadId:
-                    copyNumber++;    (local access)
-            else:
-                    copyNumber+=1.5;  (remote access)
-        }
+%        update totalCopyNumber() {
+%            if currentThreadId == pageFirstTouchThreadId:
+%                    copyNumber++;    (local access)
+%            else:
+%                    copyNumber+=1.5;  (remote access)
+%        }
+%        // why this is not a good idea for page? it can tell the problem, but can not help fix the problem.
 
         sigsegv handler() {
             update the first touch thread id and the first touch address;
@@ -87,6 +125,7 @@ Processing flow:
         free() {
             1. get ObjectInfo from the hashMap-objectInfoMapping. (very low overeheads)
             2. collect DiagnosedInfo data from the accessMapping. (can be easily summed up according to current data)
+            //only if the object size is larger than cache line, collect the PageDiagnosedInfo.
             3. store the diagnose results to the diagnosedInfoMapping.
             4. remove object from the hashMap-objectInfoMapping.
             5. free the object.
