@@ -10,37 +10,39 @@ Basic Data Structure:
             firstTouchThreadId;
             isPageContainMultipleObjects;  // 1bit
             accessNumberByFirstTouchThread;
-            accessNumberByOtherThread;
-            // if isPageContainMultipleObject
-            //       && accessNumberByFirstTouchThread > a threshold
-            //       && accessNumberByOtherThread >> accessNumberByFirstTouchThread
+            accessNumberByOtherThreads;
+            //if accessNumberByOtherThread > a threshold
+            //  && isPageContainMultipleObjects? (depends on what information you will provide to developer)
             //       go to CacheLineDetailedInfoForPageSharing
 
-            partialOccupiedCacheLineBitMask;
             cacheLineWritingNumber[CACHE_LINE_NUMBER];
+            //if cacheLineWritingNumber > a threshold
+            //      go to CacheLineDetailedAccessInfo
         }
 
         CacheLineDetailedInfoForPageSharing {
-            totalAccessThreadBitMask;
+            // one thread or more thread ? one byte for each word.
+            isMultipleThreads; // this is also for developers, dependents on how detailed we want
             accessNumberByFirstTouchThread;
             accessNumberByOtherThread;
         }
-
+        // what is cache line false sharing, same as page false sharing. what kind of problem is caused by
+        // allocator, what is caused by application.
         CacheLineDetailedAccessInfo {
-            totalInvalidationNumber;
-            totalAccessThreadBitMask;
-            accessThreadBitMaskAfterWriting;
-            wordDetailedAccessInfo;  // only touch this if this cache line is partially occupied.
+            invalidationNumber;
+            accessThreads;  // or isMultipleThreads, not sure if need to provide to developer
+            accessThreadsBitMask;
+            wordDetailedAccessInfo;  // collect this if multiple threads in this cache line
         }
 
         wordDetailedAccessInfo {
             // one thread or more thread ? one byte for each word.
-            isTouchedBySingleThread[WORDS_NUMBER];
+            isMultipleThreads[CACHE_LINE_WORDS_NUMBER];
         }
 
         CacheLineDiagnosedInfo {
             cacheLineStartAddress;  // fix-helping info
-            isFalseSharing;  // if the parts belong to this object is only accessed by single thread
+            isFalseSharing;  // single word is sharied by different threads
             totalAccessThreadBitMaskForCacheLine;   // fix-helping info
             totalInvalidationNumberForCacheLine;  // how serious this is
         }
