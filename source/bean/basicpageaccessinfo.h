@@ -2,7 +2,7 @@
 #ifndef NUMAPERF_BASICPAGEACCESSINFO_H
 #define NUMAPERF_BASICPAGEACCESSINFO_H
 
-#include "xdefines.h"
+#include "../xdefines.h"
 #include "../utils/addresses.h"
 
 class BasicPageAccessInfo {
