@@ -42,7 +42,7 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo) * 1024ul * 1024ul);
+MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 20);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -93,12 +93,14 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr) __THROW {
-    Logger::debug("free size:%p\n", ptr);
-    if (!inited) {
-        return;
-    }
-    Real::free(ptr);
+void free(void *ptr)
+
+__THROW {
+Logger::debug("free size:%p\n", ptr);
+if (!inited) {
+return;
+}
+Real::free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
@@ -120,15 +122,22 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW {
-    Logger::debug("pthread create\n");
-    if (!inited) {
-        initializer();
-    }
-    void *arguments = Real::malloc(sizeof(void *) * 2);
-    ((void **) arguments)[0] = (void *) start_routine;
-    ((void **) arguments)[1] = arg;
-    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
+                   void *(*start_routine)(void *), void *arg)
+
+__THROW {
+Logger::debug("pthread create\n");
+if (!inited) {
+initializer();
+
+}
+void *arguments = Real::malloc(sizeof(void *) * 2);
+((void **) arguments)[0] = (void *)
+start_routine;
+((void **) arguments)[1] =
+arg;
+return
+Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
+);
 }
 
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
