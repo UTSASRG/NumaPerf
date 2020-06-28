@@ -1,5 +1,5 @@
 
-#include "libnumaperf.h"
+#include "libnumaperfempty.h"
 
 void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 }
