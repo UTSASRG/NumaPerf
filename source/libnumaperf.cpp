@@ -32,10 +32,10 @@ static void initializer(void) {
     Logger::info("global initializer\n");
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
-    basicPageAccessInfoShadowMap.initialize(1024ul * 1024ul * 1024ul * 1024ul, HashFuncs::hashAddrToPageIndex);
-    cacheLineDetailedInfoForPageSharingShadowMap.initialize(1024ul * 1024ul * 1024ul * 1024ul,
+    basicPageAccessInfoShadowMap.initialize(20 * 1024ul * 1024ul * 1024ul * 1024ul, HashFuncs::hashAddrToPageIndex);
+    cacheLineDetailedInfoForPageSharingShadowMap.initialize(20 * 1024ul * 1024ul * 1024ul * 1024ul,
                                                             HashFuncs::hashAddrToCacheIndex);
-    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(1024ul * 1024ul * 1024ul * 1024ul,
+    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(20 * 1024ul * 1024ul * 1024ul * 1024ul,
                                                              HashFuncs::hashAddrToCacheIndex);
     inited = true;
 }

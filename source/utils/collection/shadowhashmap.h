@@ -25,11 +25,15 @@ private:
     }
 
     inline bool *isInserted(unsigned long index) {
-        return (bool *) (((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool)));
+        void *address = ((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool));
+        assert(address - startAddress < size);
+        return (bool *) (address);
     }
 
     inline ValueType *getValue(unsigned long index) {
-        return (ValueType *) (((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool)) + sizeof(bool));
+        void *address = ((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool)) + sizeof(bool);
+        assert(address - startAddress < size);
+        return (ValueType *) (address);
     }
 
 public:
