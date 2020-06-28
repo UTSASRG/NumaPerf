@@ -14,7 +14,7 @@ private:
 
 private:
     ObjectInfo(unsigned long objectStartAddress, unsigned long size, void *mallocCallSite) {
-        this->startAddress = startAddress;
+        this->startAddress = objectStartAddress;
         this->size = size;
         this->mallocCallSite = mallocCallSite;
     }

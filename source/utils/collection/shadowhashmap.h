@@ -47,6 +47,7 @@ public:
         }
         ValueType *valuePtr = this->getValue(index);
         *valuePtr = value;
+        return true;
     }
 
     inline void insert(const KeyType &key, const ValueType &value) {
