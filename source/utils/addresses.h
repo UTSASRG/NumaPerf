@@ -1,7 +1,7 @@
 #ifndef NUMAPERF_ADDRESSES_H
 #define NUMAPERF_ADDRESSES_H
 
-#include "xdefines.h"
+#include "../xdefines.h"
 
 class ADDRESSES {
 public:

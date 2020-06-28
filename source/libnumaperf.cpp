@@ -93,7 +93,7 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr) {
+void free(void *ptr) __THROW {
     Logger::debug("free size:%p\n", ptr);
     if (!inited) {
         return;
@@ -120,7 +120,7 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) {
+                   void *(*start_routine)(void *), void *arg) __THROW {
     Logger::debug("pthread create\n");
     if (!inited) {
         initializer();

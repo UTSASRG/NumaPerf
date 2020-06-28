@@ -1,8 +1,8 @@
 #ifndef NUMAPERF_CACHELINEDETAILEDINFOFORCACHESHARING_H
 #define NUMAPERF_CACHELINEDETAILEDINFOFORCACHESHARING_H
 
-#include "xdefines.h"
-#include "utils/addresses.h"
+#include "../xdefines.h"
+#include "../utils/addresses.h"
 
 #define MULTIPLE_THREAD 0xffff
 

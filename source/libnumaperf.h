@@ -22,7 +22,8 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type);
 
 extern "C" {
 extern void *malloc(size_t __size)
-__THROW __attribute_malloc____wur;
+__THROW __attribute_malloc__
+__wur;
 extern void *calloc(size_t __nmemb, size_t __size)
 __THROW __attribute_malloc__
 __wur;
