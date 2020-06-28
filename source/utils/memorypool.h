@@ -86,7 +86,7 @@ public:
             return result;
         }
         result = automicGetFromBumpPointer();
-        Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
+        Logger::info("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
         return result;
     }
 
