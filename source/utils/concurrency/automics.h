@@ -3,11 +3,23 @@
 #ifndef ACCESSPATERN_AUTOMICS_H
 #define ACCESSPATERN_AUTOMICS_H
 
+#include <vector>
+
 class Automics {
 public:
 
+    template<class ValueType>
+    static inline bool compare_set(ValueType *valuePointer, ValueType expectValue, ValueType newValue) {
+        if (__atomic_compare_exchange_n(valuePointer, &expectValue, newValue, false,
+                                        __ATOMIC_SEQ_CST,
+                                        __ATOMIC_SEQ_CST)) {
+            return true;
+        }
+        return false;
+    }
 
-    static unsigned long automicIncrease(unsigned long *targetValue, unsigned long increaseNumber, int retry_num = 5) {
+    static inline unsigned long
+    automicIncrease(unsigned long *targetValue, unsigned long increaseNumber, int retry_num = 5) {
         if (retry_num < 0) {
             while (1) {
                 unsigned long expect_value = *targetValue;

@@ -18,12 +18,11 @@ extern char *__progname_full;
 
 __attribute__ ((destructor)) void finalizer(void);
 
-void handleAccess(unsigned long addr, size_t size, eAccessType type);
+inline void handleAccess(unsigned long addr, size_t size, eAccessType type);
 
 extern "C" {
 extern void *malloc(size_t __size)
-__THROW __attribute_malloc__
-__wur;
+__THROW __attribute_malloc____wur;
 extern void *calloc(size_t __nmemb, size_t __size)
 __THROW __attribute_malloc__
 __wur;

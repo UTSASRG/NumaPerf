@@ -9,15 +9,18 @@ include_directories(source/utils/concurrency)
 
 add_executable(NumaPerf
         source/utils/concurrency/automics.h
-        source/bean/cachelineaccessinfo.h
         source/utils/collection/hashfuncs.h
+        source/utils/collection/shadowhashmap.h
         source/utils/collection/list.h
         source/utils/collection/hashmap.h
         source/libnumaperf.cpp
         source/libnumaperf.h
-        source/bean/objectacessinfo.h
-        source/bean/pageaccessinfo.h
+        source/bean/objectInfo.h
+        source/bean/basicpageaccessinfo.h
+        source/bean/cachelinedetailedinfoforpagesharing.h
+        source/bean/cachelinedetailedinfoforcachesharing.h
         source/utils/real.h
+        source/utils/addresses.h
         source/utils/concurrency/spinlock.h
         source/xdefines.h
         source/utils/log/Logger.h

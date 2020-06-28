@@ -21,6 +21,14 @@ public:
 
     }
 
+    static inline unsigned long hashAddrToPageIndex(unsigned long addr) {
+        return addr >> PAGE_SHIFT_BITS;
+    }
+
+    static inline unsigned long hashAddrToCacheIndex(unsigned long addr) {
+        return addr >> CACHE_LINE_SHIFT_BITS;
+    }
+
     static size_t hashStackAddr(void *addr, size_t) {
         return (((intptr_t) addr) & 0x003FFF) >> 2;
     }

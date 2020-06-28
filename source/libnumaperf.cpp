@@ -2,33 +2,47 @@
 #include "utils/concurrency/automics.h"
 #include "libnumaperf.h"
 #include "utils/collection/hashmap.h"
-#include "bean/pageaccessinfo.h"
-#include "bean/cachelineaccessinfo.h"
 #include "utils/concurrency/spinlock.h"
 #include "utils/collection/hashfuncs.h"
 #include <assert.h>
+#include "utils/memorypool.h"
+#include "bean/basicpageaccessinfo.h"
+#include "bean/cachelinedetailedinfoforcachesharing.h"
+#include "bean/cachelinedetailedinfoforpagesharing.h"
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
+#include "bean/objectInfo.h"
+#include "utils/collection/shadowhashmap.h"
 
-typedef HashMap<unsigned long, PageAccessInfo *, spinlock, localAllocator> PageAccessPatternMap;
+typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
+typedef ShadowHashMap<unsigned long, BasicPageAccessInfo> BasicPageAccessInfoShadowMap;
+typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForPageSharing> CacheLineDetailedInfoForPageSharingShadowMap;
+typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForCacheSharing> CacheLineDetailedInfoForCacheSharingShadowMap;
 
 bool inited = false;
-PageAccessPatternMap pageAccessPatternMap;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
-void *map = NULL;
-unsigned long mapSize = 0;
+
+ObjectInfoMap objectInfoMap;
+BasicPageAccessInfoShadowMap basicPageAccessInfoShadowMap;
+CacheLineDetailedInfoForPageSharingShadowMap cacheLineDetailedInfoForPageSharingShadowMap;
+CacheLineDetailedInfoForCacheSharingShadowMap cacheLineDetailedInfoForCacheSharingShadowMap;
 
 static void initializer(void) {
-    Logger::debug("global initializer\n");
+    Logger::info("global initializer\n");
     Real::init();
-    pageAccessPatternMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
+    objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
+    basicPageAccessInfoShadowMap.initialize(1024ul * 1024ul * 1024ul * 1024ul, HashFuncs::hashAddrToPageIndex);
+    cacheLineDetailedInfoForPageSharingShadowMap.initialize(1024ul * 1024ul * 1024ul * 1024ul,
+                                                            HashFuncs::hashAddrToCacheIndex);
+    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(1024ul * 1024ul * 1024ul * 1024ul,
+                                                             HashFuncs::hashAddrToCacheIndex);
     inited = true;
 }
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-MemoryPool PageAccessInfo::localMemoryPool(sizeof(PageAccessInfo));
+MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo) * 1024ul * 1024ul);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -53,18 +67,16 @@ extern void *malloc(size_t size) {
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
-    unsigned long objectStartPageIndex = (unsigned long) objectStartAddress >> PAGE_SHIFT_BITS;
-    for (int i = 0; (long) (size - i * PAGE_SIZE) > 0; i++) {
-        PageAccessInfo *pageAccessInfo = NULL;
-        unsigned long currentPageStartIndex = objectStartPageIndex + i;
-        if (NULL == (pageAccessInfo = pageAccessPatternMap.find(currentPageStartIndex, 0))) {
-            pageAccessInfo = PageAccessInfo::createNewPageAccessInfo(currentPageStartIndex << PAGE_SHIFT_BITS);
-            if (pageAccessPatternMap.insertIfAbsent(currentPageStartIndex, 0, pageAccessInfo)) {
-//                pageAccessInfo = pageAccessPatternMap.find(currentPageStartAddress, 0);
-                PageAccessInfo::release(pageAccessInfo);
-            }
+    ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,
+                                                                 callerAddress);
+    objectInfoMap.insert((unsigned long) objectStartAddress, 0, objectInfoPtr);
+
+    for (unsigned long address = (unsigned long) objectStartAddress;
+         (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
+        if (NULL == basicPageAccessInfoShadowMap.find(address)) {
+            BasicPageAccessInfo basicPageAccessInfo(currentThreadIndex);
+            basicPageAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
-//        pageAccessInfo->insertObjectAccessInfo(objectStartAddress, size, callerAddress);
     }
     Logger::debug("malloc totcal cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
@@ -81,15 +93,12 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr)
-
-__THROW {
-Logger::debug(
-"free size:%p\n", ptr);
-if (!inited) {
-return;
-}
-Real::free(ptr);
+void free(void *ptr) {
+    Logger::debug("free size:%p\n", ptr);
+    if (!inited) {
+        return;
+    }
+    Real::free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
@@ -111,48 +120,51 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg)
-
-__THROW {
-Logger::debug(
-"pthread create\n");
-if (!inited) {
-initializer();
-
-}
-void *arguments = Real::malloc(sizeof(void *) * 2);
-((void **) arguments)[0] = (void *)
-start_routine;
-((void **) arguments)[1] =
-arg;
-return
-Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
-);
+                   void *(*start_routine)(void *), void *arg) {
+    Logger::debug("pthread create\n");
+    if (!inited) {
+        initializer();
+    }
+    void *arguments = Real::malloc(sizeof(void *) * 2);
+    ((void **) arguments)[0] = (void *) start_routine;
+    ((void **) arguments)[1] = arg;
+    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
-void handleAccess(unsigned long addr, size_t size, eAccessType type) {
+inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     unsigned long startCycle = Timer::getCurrentCycle();
     Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
                   type);
-    unsigned long pageStartIndex = addr >> PAGE_SHIFT_BITS;
-//    unsigned long cacheIndex = addr >> CACHE_LINE_SHIFT_BITS;
-//    *(int *) (((char *) map) + (cacheIndex << 2)) = 1;
-    PageAccessInfo *currentPageAccessInfo = pageAccessPatternMap.find(pageStartIndex, 0);
-    if (currentPageAccessInfo == NULL) {
+    BasicPageAccessInfo *basicPageAccessInfo = basicPageAccessInfoShadowMap.find(addr);
+    if (NULL == basicPageAccessInfo) {
         return;
-    }
-    ObjectAccessInfo *objectAccessInfoInCacheLine = currentPageAccessInfo->findObjectInCacheLine(addr);
-    if (NULL == objectAccessInfoInCacheLine) {
-        return;
-    }
-//    unsigned long callerAddress = *(unsigned long *) ((unsigned long) (&addr) + ACESS_CALL_SITE_OFFSET);
-    if (type == E_ACCESS_READ) {
-        Automics::automicIncrease(&(objectAccessInfoInCacheLine->getThreadRead()[currentThreadIndex]), 1);
     }
 
-    if (type == E_ACCESS_WRITE) {
-        Automics::automicIncrease(&(objectAccessInfoInCacheLine->getThreadWrite()[currentThreadIndex]), 1);
+    basicPageAccessInfo->recordAccess(addr, currentThreadIndex, type);
+    bool neddPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
+    bool neddCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
+    unsigned short firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+
+    if (neddPageDetailInfo) {
+        CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+        if (NULL == cacheLineInfoPtr) {
+            cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr, CacheLineDetailedInfoForPageSharing());
+            cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+        }
+        cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
     }
+
+    if (neddCahceDetailInfo) {
+        CacheLineDetailedInfoForCacheSharing *cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
+                addr);
+        if (NULL == cacheLineInfoPtr) {
+            cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr, CacheLineDetailedInfoForCacheSharing());
+            cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
+
+        }
+        cacheLineInfoPtr->recordAccess(currentThreadIndex, type, addr);
+    }
+
     Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
 
