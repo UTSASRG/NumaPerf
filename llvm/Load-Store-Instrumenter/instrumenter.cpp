@@ -113,7 +113,7 @@ static RegisterPass<Instrumenter> X("Instrumenter", "Instrumenter Pass");
 
 // https://llvm.org/doxygen/classllvm_1_1PassManagerBuilder.html#a9c1dc350129dbf90debeeaa58754841e
 static RegisterStandardPasses Z(
-        PassManagerBuilder::EP_FullLinkTimeOptimizationLast,
+        PassManagerBuilder::EP_ScalarOptimizerLate,
         [](const PassManagerBuilder &Builder,
            legacy::PassManagerBase &PM) { PM.add(new Instrumenter()); });
 

@@ -51,7 +51,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 #define MALLOC_CALL_SITE_OFFSET 0x18
 
 extern void *malloc(size_t size) {
-    unsigned long startCycle = Timer::getCurrentCycle();
+//    unsigned long startCycle = Timer::getCurrentCycle();
     Logger::debug("malloc size:%lu\n", size);
     if (size <= 0) {
         return NULL;
@@ -62,7 +62,7 @@ extern void *malloc(size_t size) {
         assert(allocated + size < INIT_BUFF_SIZE);
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
-//    	Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
+    	Logger::debug("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
@@ -79,7 +79,7 @@ extern void *malloc(size_t size) {
             basicPageAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
     }
-    Logger::debug("malloc address:%p, totcal cycles:%lu\n", objectStartAddress, Timer::getCurrentCycle() - startCycle);
+//    Logger::debug("malloc address:%p, totcal cycles:%lu\n", objectStartAddress, Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
 }
 
@@ -95,7 +95,7 @@ void *realloc(void *ptr, size_t size) {
 }
 
 void free(void *ptr) __THROW {
-//    Logger::info("free pointer:%p\n", ptr);
+    Logger::debug("free pointer:%p\n", ptr);
     if (!inited) {
         return;
     }
@@ -136,35 +136,38 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
-//    BasicPageAccessInfo *basicPageAccessInfo = basicPageAccessInfoShadowMap.find(addr);
-//    if (NULL == basicPageAccessInfo) {
-//        return;
-//    }
-//
-//    basicPageAccessInfo->recordAccess(addr, currentThreadIndex, type);
-//    bool neddPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
-//    bool neddCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
-//    unsigned short firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-//
-//    if (neddPageDetailInfo) {
-//        CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
-//        if (NULL == cacheLineInfoPtr) {
-//            cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr, CacheLineDetailedInfoForPageSharing());
-//            cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
-//        }
-//        cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
-//    }
-//
-//    if (neddCahceDetailInfo) {
-//        CacheLineDetailedInfoForCacheSharing *cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
-//                addr);
-//        if (NULL == cacheLineInfoPtr) {
-//            cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr, CacheLineDetailedInfoForCacheSharing());
-//            cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
-//
-//        }
-//        cacheLineInfoPtr->recordAccess(currentThreadIndex, type, addr);
-   // }
+    BasicPageAccessInfo *basicPageAccessInfo = basicPageAccessInfoShadowMap.find(addr);
+    if (NULL == basicPageAccessInfo) {
+        return;
+    }
+
+    bool neddPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
+    bool neddCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
+
+    if (neddPageDetailInfo) {
+        unsigned short firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+        CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+        if (NULL == cacheLineInfoPtr) {
+            cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr, CacheLineDetailedInfoForPageSharing());
+            cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+        }
+        cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
+    } else {
+        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+    }
+
+    if (neddCahceDetailInfo) {
+        CacheLineDetailedInfoForCacheSharing *cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
+                addr);
+        if (NULL == cacheLineInfoPtr) {
+            cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr, CacheLineDetailedInfoForCacheSharing());
+            cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
+
+        }
+        cacheLineInfoPtr->recordAccess(currentThreadIndex, type, addr);
+    } else {
+        basicPageAccessInfo->recordAccessForCacheSharing(addr,type);
+    }
 
    // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
