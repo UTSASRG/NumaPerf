@@ -26,17 +26,19 @@ private:
     }
 
     inline bool *isInserted(unsigned long index) {
-        void *address = ((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool));
+        unsigned long offset = index * (sizeof(ValueType) + sizeof(bool));
+        assert(offset < size);
+        void *address = ((char *) startAddress) + offset;
 //        Logger::info("shadow map startAddress:%lu, index:%lu, objectSize:%d, offset:%lu \n",
 //                     (unsigned long) startAddress,
 //                     index, sizeof(ValueType), index * (sizeof(ValueType) + sizeof(bool)));
-        assert(((unsigned long) address - (unsigned long) startAddress) < size);
         return (bool *) (address);
     }
 
     inline ValueType *getValue(unsigned long index) {
-        void *address = ((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool)) + sizeof(bool);
-        assert(((unsigned long) address - (unsigned long) startAddress) < size);
+        unsigned long offset = index * (sizeof(ValueType) + sizeof(bool)) + sizeof(bool);
+        assert(offset < size);
+        void *address = ((char *) startAddress) + offset;
         return (ValueType *) (address);
     }
 
