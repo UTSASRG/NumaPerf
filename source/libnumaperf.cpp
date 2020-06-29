@@ -134,6 +134,48 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
+inline void recordForPageSharing(unsigned long addr, bool needDetailedInfo, unsigned long firstTouchThreadId) {
+    if (!needDetailedInfo) {
+        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+        return;
+    }
+//    Logger::info("record page detailed info\n");
+    pageDetailSamplingFrequency++;
+    if (pageDetailSamplingFrequency <= 100) {
+        return;
+    }
+    pageDetailSamplingFrequency = 0;
+    CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+    if (NULL == cacheLineInfoPtr) {
+        cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr,
+                                                                    CacheLineDetailedInfoForPageSharing());
+        cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+    }
+    cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
+}
+
+inline void recordForCacheSharing(unsigned long addr, bool needDetailedInfo, eAccessType type) {
+    if (!needDetailedInfo) {
+        basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
+        return;
+    }
+    //    Logger::info("record cache detailed info\n");
+    cacheDetailSamplingFrequency++;
+    if (cacheDetailSamplingFrequency <= 100) {
+        return;
+    }
+    cacheDetailSamplingFrequency = 0;
+    CacheLineDetailedInfoForCacheSharing *cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
+            addr);
+    if (NULL == cacheLineInfoPtr) {
+        cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr,
+                                                                     CacheLineDetailedInfoForCacheSharing());
+        cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
+
+    }
+    cacheLineInfoPtr->recordAccess(currentThreadIndex, type, addr);
+}
+
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
@@ -143,45 +185,11 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         return;
     }
 
-    bool neddPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
-    bool neddCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
+    bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
+    bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
 
-    if (neddPageDetailInfo) {
-//        Logger::info("record page detailed info\n");
-        pageDetailSamplingFrequency++;
-        if (pageDetailSamplingFrequency > 100) {
-            pageDetailSamplingFrequency = 0;
-            unsigned short firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-            CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(
-                    addr);
-            if (NULL == cacheLineInfoPtr) {
-                cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr,
-                                                                            CacheLineDetailedInfoForPageSharing());
-                cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
-            }
-            cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
-        }
-    } else {
-        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
-    }
-
-    if (neddCahceDetailInfo) {
-        cacheDetailSamplingFrequency++;
-        if (cacheDetailSamplingFrequency > 100) {
-            cacheDetailSamplingFrequency=0;
-            CacheLineDetailedInfoForCacheSharing *cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
-                    addr);
-            if (NULL == cacheLineInfoPtr) {
-                cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr,
-                                                                             CacheLineDetailedInfoForCacheSharing());
-                cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
-
-            }
-            cacheLineInfoPtr->recordAccess(currentThreadIndex, type, addr);
-        }
-    } else {
-        basicPageAccessInfo->recordAccessForCacheSharing(addr,type);
-    }
+    recordForPageSharing(addr, needPageDetailInfo, basicPageAccessInfo->getFirstTouchThreadId());
+    recordForCacheSharing(addr, needCahceDetailInfo, type);
 
    // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
