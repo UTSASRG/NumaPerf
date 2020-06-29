@@ -134,11 +134,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
-inline void recordForPageSharing(unsigned long addr, bool needDetailedInfo, unsigned long firstTouchThreadId) {
-    if (!needDetailedInfo) {
-        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
-        return;
-    }
+inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstTouchThreadId) {
 //    Logger::info("record page detailed info\n");
     pageDetailSamplingFrequency++;
     if (pageDetailSamplingFrequency <= 100) {
@@ -154,11 +150,7 @@ inline void recordForPageSharing(unsigned long addr, bool needDetailedInfo, unsi
     cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
 }
 
-inline void recordForCacheSharing(unsigned long addr, bool needDetailedInfo, eAccessType type) {
-    if (!needDetailedInfo) {
-        basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
-        return;
-    }
+inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
     //    Logger::info("record cache detailed info\n");
     cacheDetailSamplingFrequency++;
     if (cacheDetailSamplingFrequency <= 100) {
@@ -187,11 +179,24 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
+    unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 
-    recordForPageSharing(addr, needPageDetailInfo, basicPageAccessInfo->getFirstTouchThreadId());
-    recordForCacheSharing(addr, needCahceDetailInfo, type);
+    if (!needPageDetailInfo) {
+        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+    }
 
-   // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
+    if (!needCahceDetailInfo) {
+        basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
+    }
+
+    if (needPageDetailInfo) {
+        recordDetailsForPageSharing(addr, firstTouchThreadId);
+    }
+
+    if (needCahceDetailInfo) {
+        recordDetailsForCacheSharing(addr, type);
+    }
+    // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
 
 /*
