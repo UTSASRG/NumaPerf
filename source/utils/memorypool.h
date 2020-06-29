@@ -70,7 +70,7 @@ public:
         this->bumpPointer = MM::mmapAllocateShared(maxPoolSize);
         this->bumpEndPointer = (char *) this->bumpPointer + maxPoolSize;
 //        memset((void *) bumpPointer, 0, initPoolSize);
-        Logger::info("memory pool init capacity:%lu, bumppointer:%lu, bumpendpointer:%lu\n", maxPoolSize,
+        Logger::debug("memory pool init capacity:%lu, bumppointer:%lu, bumpendpointer:%lu\n", maxPoolSize,
                      bumpPointer, bumpEndPointer);
     }
 

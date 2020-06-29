@@ -62,7 +62,7 @@ extern void *malloc(size_t size) {
         assert(allocated + size < INIT_BUFF_SIZE);
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
-    	Logger::debug("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
+//    	Logger::debug("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
