@@ -3,6 +3,7 @@
 
 #include "../mm.hh"
 #include <assert.h>
+#include "../log/Logger.h"
 #include "../concurrency/automics.h"
 
 /**
@@ -26,13 +27,16 @@ private:
 
     inline bool *isInserted(unsigned long index) {
         void *address = ((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool));
-        assert(((unsigned long)address - (unsigned long)startAddress) < size);
+//        Logger::info("shadow map startAddress:%lu, index:%lu, objectSize:%d, offset:%lu \n",
+//                     (unsigned long) startAddress,
+//                     index, sizeof(ValueType), index * (sizeof(ValueType) + sizeof(bool)));
+        assert(((unsigned long) address - (unsigned long) startAddress) < size);
         return (bool *) (address);
     }
 
     inline ValueType *getValue(unsigned long index) {
         void *address = ((char *) startAddress) + index * (sizeof(ValueType) + sizeof(bool)) + sizeof(bool);
-        assert(((unsigned long)address - (unsigned long)startAddress) < size);
+        assert(((unsigned long) address - (unsigned long) startAddress) < size);
         return (ValueType *) (address);
     }
 
