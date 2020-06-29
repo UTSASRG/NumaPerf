@@ -6,3 +6,4 @@
 **/*.o
 **/*.a
 **/*.exe
+**/llvm-project
