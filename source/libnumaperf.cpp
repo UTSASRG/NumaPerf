@@ -148,9 +148,9 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
     if (neddPageDetailInfo) {
 //        Logger::info("record page detailed info\n");
-        samplingFrequency++;
-        if (samplingFrequency > 100) {
-            samplingFrequency = 0;
+        pageDetailSamplingFrequency++;
+        if (pageDetailSamplingFrequency > 100) {
+            pageDetailSamplingFrequency = 0;
             unsigned short firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
             CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(
                     addr);
