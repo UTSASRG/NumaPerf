@@ -7,6 +7,12 @@
 
 #define INIT_BUFF_SIZE 1024*1024*1024
 
+#define KB 1024ul
+#define MB (1024ul * KB)
+#define GB (1024ul * MB)
+#define TB (1024ul * GB)
+
+
 // Normal page size is 4K
 #define PAGE_SHIFT_BITS 12
 #define PAGE_SIZE (1 << PAGE_SHIFT_BITS)

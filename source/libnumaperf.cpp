@@ -33,12 +33,11 @@ CacheLineDetailedInfoForCacheSharingShadowMap cacheLineDetailedInfoForCacheShari
 static void initializer(void) {
     Logger::info("global initializer\n");
     Real::init();
+    unsigned long shadowMappingSize = 32ul * TB;
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
-    basicPageAccessInfoShadowMap.initialize(40ul * 1024ul * 1024ul * 1024ul * 1024ul, HashFuncs::hashAddrToPageIndex);
-    cacheLineDetailedInfoForPageSharingShadowMap.initialize(40ul * 1024ul * 1024ul * 1024ul * 1024ul,
-                                                            HashFuncs::hashAddrToCacheIndex);
-    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(40ul * 1024ul * 1024ul * 1024ul * 1024ul,
-                                                             HashFuncs::hashAddrToCacheIndex);
+    basicPageAccessInfoShadowMap.initialize(shadowMappingSize, HashFuncs::hashAddrToPageIndex);
+    cacheLineDetailedInfoForPageSharingShadowMap.initialize(shadowMappingSize, HashFuncs::hashAddrToCacheIndex);
+    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(shadowMappingSize, HashFuncs::hashAddrToCacheIndex);
     inited = true;
 }
 
