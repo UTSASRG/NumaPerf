@@ -58,7 +58,9 @@ public:
         short *metaData = this->getMetaData(index);
         if (!Automics::compare_set(metaData, NOT_INSERT, INSERTING)) {
             // busy waiting, since this could be very quick
-            while (*metaData != INSERTED) {}
+            while (*metaData != INSERTED) {
+                Logger::warn("shadow map insertIfAbsent busy waiting\n");
+            }
             return false;
         }
         ValueType *valuePtr = this->getValue(index);
