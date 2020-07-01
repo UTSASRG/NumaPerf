@@ -20,6 +20,15 @@ public:
     static inline unsigned long getWordIndexInsideCache(unsigned long address) {
         return (address & WORD_INDEX_MASK) >> WORD_SHIFT_BITS;
     }
+
+    static inline unsigned long alignUpToCacheLine(unsigned long size) {
+        if ((size & CACHE_MASK) == 0) {
+            return size;
+        }
+        size = size & (~(unsigned long) CACHE_MASK);
+        size += CACHE_LINE_SIZE;
+        return size;
+    }
 };
 
 #endif //NUMAPERF_ADDRESSES_H

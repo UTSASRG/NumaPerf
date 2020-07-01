@@ -20,6 +20,7 @@
 // Normal cacheline size is still 64 bytes
 #define CACHE_LINE_SHIFT_BITS 6
 #define CACHE_LINE_SIZE (1 << CACHE_LINE_SHIFT_BITS)
+#define CACHE_MASK 0b111111
 #define CACHE_INDEX_MASK ((unsigned int)0b111111000000)
 
 // treate int as an normal word, 4bytes

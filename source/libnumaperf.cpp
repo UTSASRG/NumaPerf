@@ -17,7 +17,7 @@
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef ShadowHashMap<unsigned long, BasicPageAccessInfo> BasicPageAccessInfoShadowMap;
 typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForPageSharing> CacheLineDetailedInfoForPageSharingShadowMap;
-typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForCacheSharing> CacheLineDetailedInfoForCacheSharingShadowMap;
+typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForCacheSharing *> CacheLineDetailedInfoForCacheSharingShadowMap;
 
 thread_local int pageDetailSamplingFrequency = 0;
 thread_local int cacheDetailSamplingFrequency = 0;
@@ -33,17 +33,19 @@ CacheLineDetailedInfoForCacheSharingShadowMap cacheLineDetailedInfoForCacheShari
 static void initializer(void) {
     Logger::info("global initializer\n");
     Real::init();
-    unsigned long shadowMappingSize = 32ul * TB;
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
-    basicPageAccessInfoShadowMap.initialize(shadowMappingSize, HashFuncs::hashAddrToPageIndex);
-    cacheLineDetailedInfoForPageSharingShadowMap.initialize(shadowMappingSize, HashFuncs::hashAddrToCacheIndex);
-    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(shadowMappingSize, HashFuncs::hashAddrToCacheIndex);
+    // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
+    basicPageAccessInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToPageIndex);
+    cacheLineDetailedInfoForPageSharingShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
+    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
     inited = true;
 }
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 20);
+MemoryPool CacheLineDetailedInfoForCacheSharing::localMemoryPool(sizeof(CacheLineDetailedInfoForCacheSharing),
+                                                                 1024ul * 1024ul * 20);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -156,15 +158,17 @@ inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
         return;
     }
     cacheDetailSamplingFrequency = 0;
-    CacheLineDetailedInfoForCacheSharing *cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
+    CacheLineDetailedInfoForCacheSharing **cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
             addr);
     if (NULL == cacheLineInfoPtr) {
-        cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr,
-                                                                     CacheLineDetailedInfoForCacheSharing());
+        CacheLineDetailedInfoForCacheSharing *cacheInfo = CacheLineDetailedInfoForCacheSharing::createNewCacheLineDetailedInfoForCacheSharing();
+        if (!cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr, cacheInfo)) {
+            CacheLineDetailedInfoForCacheSharing::release(cacheInfo);
+        }
         cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
 
     }
-    cacheLineInfoPtr->recordAccess(currentThreadIndex, type, addr);
+    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, type, addr);
 }
 
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {

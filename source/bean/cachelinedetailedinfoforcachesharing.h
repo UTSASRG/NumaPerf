@@ -11,7 +11,16 @@ class CacheLineDetailedInfoForCacheSharing {
     unsigned int accessThreadsBitMask[2];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
+
 private:
+    static MemoryPool localMemoryPool;
+
+private:
+
+    CacheLineDetailedInfoForCacheSharing() {
+        memset(this, 0, sizeof(CacheLineDetailedInfoForCacheSharing));
+    }
+
     inline void resetThreadBitMask() {
         accessThreadsBitMask[0] = 0;
         accessThreadsBitMask[1] = 0;
@@ -32,8 +41,17 @@ private:
     }
 
 public:
-    CacheLineDetailedInfoForCacheSharing() {
-        memset(this, 0, sizeof(CacheLineDetailedInfoForCacheSharing));
+
+
+    static CacheLineDetailedInfoForCacheSharing *createNewCacheLineDetailedInfoForCacheSharing() {
+        void *buff = localMemoryPool.get();
+        Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
+        CacheLineDetailedInfoForCacheSharing *ret = new(buff) CacheLineDetailedInfoForCacheSharing();
+        return ret;
+    }
+
+    static void release(CacheLineDetailedInfoForCacheSharing *buff) {
+        localMemoryPool.release((void *) buff);
     }
 
     inline void recordAccess(unsigned long threadId, eAccessType type, unsigned long addr) {
