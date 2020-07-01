@@ -5,19 +5,19 @@
 #include "utils/concurrency/spinlock.h"
 #include "utils/collection/hashfuncs.h"
 #include <assert.h>
+#include "bean/pagedetailAccessInfo.h"
 #include "utils/memorypool.h"
-#include "bean/basicpageaccessinfo.h"
-#include "bean/cachelinedetailedinfoforcachesharing.h"
-#include "bean/cachelinedetailedinfoforpagesharing.h"
+#include "bean/pagebasicaccessinfo.h"
+#include "bean/cachelinedetailedinfo.h"
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include "bean/objectInfo.h"
 #include "utils/collection/shadowhashmap.h"
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
-typedef ShadowHashMap<unsigned long, BasicPageAccessInfo> BasicPageAccessInfoShadowMap;
-typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForPageSharing*> CacheLineDetailedInfoForPageSharingShadowMap;
-typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForCacheSharing *> CacheLineDetailedInfoForCacheSharingShadowMap;
+typedef ShadowHashMap<unsigned long, PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
+typedef ShadowHashMap<unsigned long, PageDetailedAccessInfo *> PageDetailedAccessInfoShadowMap;
+typedef ShadowHashMap<unsigned long, CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
 
 thread_local int pageDetailSamplingFrequency = 0;
 thread_local int cacheDetailSamplingFrequency = 0;
@@ -26,28 +26,28 @@ unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
 
 ObjectInfoMap objectInfoMap;
-BasicPageAccessInfoShadowMap basicPageAccessInfoShadowMap;
-CacheLineDetailedInfoForPageSharingShadowMap cacheLineDetailedInfoForPageSharingShadowMap;
-CacheLineDetailedInfoForCacheSharingShadowMap cacheLineDetailedInfoForCacheSharingShadowMap;
+PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
+PageDetailedAccessInfoShadowMap pageDetailedAccessInfoShadowMap;
+CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 
 static void initializer(void) {
     Logger::info("global initializer\n");
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
-    basicPageAccessInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToPageIndex);
-    cacheLineDetailedInfoForPageSharingShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
-    cacheLineDetailedInfoForCacheSharingShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
+    pageBasicAccessInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToPageIndex);
+    pageDetailedAccessInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
+    cacheLineDetailedInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
     inited = true;
 }
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 20);
-MemoryPool CacheLineDetailedInfoForCacheSharing::localMemoryPool(sizeof(CacheLineDetailedInfoForCacheSharing),
+MemoryPool CacheLineDetailedInfo::localMemoryPool(sizeof(CacheLineDetailedInfo),
                                                                  1024ul * 1024ul * 20);
-MemoryPool CacheLineDetailedInfoForPageSharing::localMemoryPool(sizeof(CacheLineDetailedInfoForPageSharing),
-                                                                1024ul * 1024ul * 20);
+MemoryPool PageDetailedAccessInfo::localMemoryPool(sizeof(PageDetailedAccessInfo),
+                                                   1024ul * 1024ul * 20);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -79,9 +79,9 @@ extern void *malloc(size_t size) {
 
     for (unsigned long address = (unsigned long) objectStartAddress;
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
-        if (NULL == basicPageAccessInfoShadowMap.find(address)) {
-            BasicPageAccessInfo basicPageAccessInfo(currentThreadIndex);
-            basicPageAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
+        if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
+            PageBasicAccessInfo basicPageAccessInfo(currentThreadIndex);
+            pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
     }
 //    Logger::debug("malloc address:%p, totcal cycles:%lu\n", objectStartAddress, Timer::getCurrentCycle() - startCycle);
@@ -99,7 +99,7 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 }
 
-void free(void *ptr) __THROW {
+void free(void *ptr) {
     Logger::debug("free pointer:%p\n", ptr);
     if (!inited) {
         return;
@@ -126,7 +126,7 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW {
+                   void *(*start_routine)(void *), void *arg) {
     Logger::debug("pthread create\n");
     if (!inited) {
         initializer();
@@ -144,15 +144,15 @@ inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstT
         return;
     }
     pageDetailSamplingFrequency = 0;
-    CacheLineDetailedInfoForPageSharing **cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
-    if (NULL == cacheLineInfoPtr) {
-        CacheLineDetailedInfoForPageSharing *cacheInfo = CacheLineDetailedInfoForPageSharing::createNewCacheLineDetailedInfoForPageSharing();
-        if (!cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr, cacheInfo)) {
-            CacheLineDetailedInfoForPageSharing::release(cacheLineInfoPtr);
+    PageDetailedAccessInfo **pageDetailInfoPtr = pageDetailedAccessInfoShadowMap.find(addr);
+    if (NULL == pageDetailInfoPtr) {
+        PageDetailedAccessInfo *pageDetailedAccessInfo = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
+        if (!pageDetailedAccessInfoShadowMap.insertIfAbsent(addr, pageDetailedAccessInfo)) {
+            PageDetailedAccessInfo::release(pageDetailedAccessInfo);
         }
-        cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+        pageDetailInfoPtr = pageDetailedAccessInfoShadowMap.find(addr);
     }
-    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, firstTouchThreadId);
+    (*pageDetailInfoPtr)->recordAccess(addr, currentThreadIndex, firstTouchThreadId);
 }
 
 inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
@@ -162,14 +162,14 @@ inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
         return;
     }
     cacheDetailSamplingFrequency = 0;
-    CacheLineDetailedInfoForCacheSharing **cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(
+    CacheLineDetailedInfo **cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(
             addr);
     if (NULL == cacheLineInfoPtr) {
-        CacheLineDetailedInfoForCacheSharing *cacheInfo = CacheLineDetailedInfoForCacheSharing::createNewCacheLineDetailedInfoForCacheSharing();
-        if (!cacheLineDetailedInfoForCacheSharingShadowMap.insertIfAbsent(addr, cacheInfo)) {
-            CacheLineDetailedInfoForCacheSharing::release(cacheInfo);
+        CacheLineDetailedInfo *cacheInfo = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing();
+        if (!cacheLineDetailedInfoShadowMap.insertIfAbsent(addr, cacheInfo)) {
+            CacheLineDetailedInfo::release(cacheInfo);
         }
-        cacheLineInfoPtr = cacheLineDetailedInfoForCacheSharingShadowMap.find(addr);
+        cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
 
     }
     (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, type, addr);
@@ -179,7 +179,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
-    BasicPageAccessInfo *basicPageAccessInfo = basicPageAccessInfoShadowMap.find(addr);
+    PageBasicAccessInfo *basicPageAccessInfo = pageBasicAccessInfoShadowMap.find(addr);
     if (NULL == basicPageAccessInfo) {
         return;
     }

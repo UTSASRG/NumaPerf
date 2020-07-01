@@ -1,11 +1,11 @@
 
-#ifndef NUMAPERF_BASICPAGEACCESSINFO_H
-#define NUMAPERF_BASICPAGEACCESSINFO_H
+#ifndef NUMAPERF_PAGEBASICACCESSINFO_H
+#define NUMAPERF_PAGEBASICACCESSINFO_H
 
 #include "../xdefines.h"
 #include "../utils/addresses.h"
 
-class BasicPageAccessInfo {
+class PageBasicAccessInfo {
     unsigned short firstTouchThreadId;
 //    bool isPageContainMultipleObjects;
 //    unsigned long accessNumberByFirstTouchThread;
@@ -13,14 +13,14 @@ class BasicPageAccessInfo {
     unsigned long cacheLineWritingNumber[CACHE_NUM_IN_ONE_PAGE];
 
 public:
-    BasicPageAccessInfo(unsigned short firstTouchThreadId) {
+    PageBasicAccessInfo(unsigned short firstTouchThreadId) {
         this->firstTouchThreadId = firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = 0;
         this->accessNumberByOtherThreads = 0;
         memset(this->cacheLineWritingNumber, 0, CACHE_NUM_IN_ONE_PAGE * sizeof(unsigned long));
     }
 
-    BasicPageAccessInfo(const BasicPageAccessInfo &basicPageAccessInfo) {
+    PageBasicAccessInfo(const PageBasicAccessInfo &basicPageAccessInfo) {
         this->firstTouchThreadId = basicPageAccessInfo.firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = basicPageAccessInfo.accessNumberByFirstTouchThread;
         this->accessNumberByOtherThreads = basicPageAccessInfo.accessNumberByOtherThreads;
@@ -54,4 +54,4 @@ public:
     }
 };
 
-#endif //NUMAPERF_BASICPAGEACCESSINFO_H
+#endif //NUMAPERF_PAGEBASICACCESSINFO_H

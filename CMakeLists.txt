@@ -16,9 +16,9 @@ add_executable(NumaPerf
         source/libnumaperf.cpp
         source/libnumaperf.h
         source/bean/objectInfo.h
-        source/bean/basicpageaccessinfo.h
-        source/bean/cachelinedetailedinfoforpagesharing.h
-        source/bean/cachelinedetailedinfoforcachesharing.h
+        source/bean/pagebasicaccessinfo.h
+        source/bean/pagedetailAccessInfo.h
+        source/bean/cachelinedetailedinfo.h
         source/utils/real.h
         source/utils/addresses.h
         source/utils/concurrency/spinlock.h

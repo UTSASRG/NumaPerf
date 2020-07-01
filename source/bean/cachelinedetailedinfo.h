@@ -1,12 +1,12 @@
-#ifndef NUMAPERF_CACHELINEDETAILEDINFOFORCACHESHARING_H
-#define NUMAPERF_CACHELINEDETAILEDINFOFORCACHESHARING_H
+#ifndef NUMAPERF_CACHELINEDETAILEDINFO_H
+#define NUMAPERF_CACHELINEDETAILEDINFO_H
 
 #include "../xdefines.h"
 #include "../utils/addresses.h"
 
 #define MULTIPLE_THREAD 0xffff
 
-class CacheLineDetailedInfoForCacheSharing {
+class CacheLineDetailedInfo {
     unsigned long invalidationNumber;
     unsigned int accessThreadsBitMask[2];
     unsigned short threadIdAndIsMultipleThreadsUnion;
@@ -17,8 +17,8 @@ private:
 
 private:
 
-    CacheLineDetailedInfoForCacheSharing() {
-        memset(this, 0, sizeof(CacheLineDetailedInfoForCacheSharing));
+    CacheLineDetailedInfo() {
+        memset(this, 0, sizeof(CacheLineDetailedInfo));
     }
 
     inline void resetThreadBitMask() {
@@ -43,14 +43,14 @@ private:
 public:
 
 
-    static CacheLineDetailedInfoForCacheSharing *createNewCacheLineDetailedInfoForCacheSharing() {
+    static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing() {
         void *buff = localMemoryPool.get();
         Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
-        CacheLineDetailedInfoForCacheSharing *ret = new(buff) CacheLineDetailedInfoForCacheSharing();
+        CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo();
         return ret;
     }
 
-    static void release(CacheLineDetailedInfoForCacheSharing *buff) {
+    static void release(CacheLineDetailedInfo *buff) {
         localMemoryPool.release((void *) buff);
     }
 
@@ -93,4 +93,4 @@ public:
     }
 };
 
-#endif //NUMAPERF_CACHELINEDETAILEDINFOFORCACHESHARING_H
+#endif //NUMAPERF_CACHELINEDETAILEDINFO_H
