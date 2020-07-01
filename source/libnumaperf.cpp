@@ -143,7 +143,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 }
 
 inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstTouchThreadId) {
-//    Logger::info("record page detailed info\n");
+    Logger::debug("record page detailed info\n");
     pageDetailSamplingFrequency++;
     if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
         return;
@@ -161,7 +161,7 @@ inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstT
 }
 
 inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
-    //    Logger::info("record cache detailed info\n");
+    Logger::debug("record cache detailed info\n");
     cacheDetailSamplingFrequency++;
     if (cacheDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
         return;
