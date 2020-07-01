@@ -45,9 +45,9 @@ static void initializer(void) {
 static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 20);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(sizeof(CacheLineDetailedInfo),
-                                                                 1024ul * 1024ul * 20);
+                                                  1024ul * 1024ul * 20);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(sizeof(PageDetailedAccessInfo),
-                                                   1024ul * 1024ul * 20);
+                                                   1024ul * 1024ul * 1024ul * 1024ul);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;

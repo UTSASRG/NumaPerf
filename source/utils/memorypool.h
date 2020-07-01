@@ -6,7 +6,6 @@
 #define NUMAPERF_MEMORYPOOL_H
 
 
-#include <cstdlib>
 #include "real.h"
 #include "concurrency/spinlock.h"
 #include "log/Logger.h"
@@ -57,7 +56,7 @@ private:
                                             __ATOMIC_SEQ_CST)) {
             result = bumpPointer;
         }
-        assert(result < bumpEndPointer);
+        assert(bumpPointer < bumpEndPointer);
         return (void *) result;
     }
 
@@ -79,9 +78,9 @@ public:
         void *result = NULL;
         if (freeListHead != NULL) {
             result = automicGetFromFreeList();
-            memset(result, 0, sizeOfMemoryBlock);
         }
         if (result != NULL) {
+            memset(result, 0, sizeOfMemoryBlock);
             Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
             return result;
         }

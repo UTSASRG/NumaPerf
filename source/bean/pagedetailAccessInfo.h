@@ -1,7 +1,6 @@
 #ifndef NUMAPERF_PAGEDETAILACCESSINFO_H
 #define NUMAPERF_PAGEDETAILACCESSINFO_H
 
-#include <cstring>
 #include "../utils/memorypool.h"
 #include "../xdefines.h"
 #include "../utils/addresses.h"
