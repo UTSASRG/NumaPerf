@@ -113,6 +113,7 @@ void *initThreadIndexRoutine(void *args) {
 
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
+        Logger::debug("new thread index:%lu\n", currentThreadIndex);
         if (currentThreadIndex > MAX_THREAD_NUM) {
             Logger::debug("tid %lu exceed max thread num %lu\n", currentThreadIndex, (unsigned long) MAX_THREAD_NUM);
             exit(9);
@@ -121,7 +122,7 @@ void *initThreadIndexRoutine(void *args) {
 
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];
     void *result = startRoutineFunPtr(((void **) args)[1]);
-    free(args);
+    Real::free(args);
     return result;
 }
 
