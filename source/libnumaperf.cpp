@@ -16,7 +16,7 @@
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef ShadowHashMap<unsigned long, BasicPageAccessInfo> BasicPageAccessInfoShadowMap;
-typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForPageSharing> CacheLineDetailedInfoForPageSharingShadowMap;
+typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForPageSharing*> CacheLineDetailedInfoForPageSharingShadowMap;
 typedef ShadowHashMap<unsigned long, CacheLineDetailedInfoForCacheSharing *> CacheLineDetailedInfoForCacheSharingShadowMap;
 
 thread_local int pageDetailSamplingFrequency = 0;
@@ -46,6 +46,8 @@ static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 20);
 MemoryPool CacheLineDetailedInfoForCacheSharing::localMemoryPool(sizeof(CacheLineDetailedInfoForCacheSharing),
                                                                  1024ul * 1024ul * 20);
+MemoryPool CacheLineDetailedInfoForPageSharing::localMemoryPool(sizeof(CacheLineDetailedInfoForPageSharing),
+                                                                1024ul * 1024ul * 20);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -142,13 +144,15 @@ inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstT
         return;
     }
     pageDetailSamplingFrequency = 0;
-    CacheLineDetailedInfoForPageSharing *cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
+    CacheLineDetailedInfoForPageSharing **cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
     if (NULL == cacheLineInfoPtr) {
-        cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr,
-                                                                    CacheLineDetailedInfoForPageSharing());
+        CacheLineDetailedInfoForPageSharing *cacheInfo = CacheLineDetailedInfoForPageSharing::createNewCacheLineDetailedInfoForPageSharing();
+        if (!cacheLineDetailedInfoForPageSharingShadowMap.insertIfAbsent(addr, cacheInfo)) {
+            CacheLineDetailedInfoForPageSharing::release(cacheLineInfoPtr);
+        }
         cacheLineInfoPtr = cacheLineDetailedInfoForPageSharingShadowMap.find(addr);
     }
-    cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId);
+    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, firstTouchThreadId);
 }
 
 inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
