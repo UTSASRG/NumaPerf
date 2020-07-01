@@ -43,11 +43,11 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 20);
+MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 1024ul * 1024ul * 5);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(sizeof(CacheLineDetailedInfo),
-                                                  1024ul * 1024ul * 20);
+                                                  1024ul * 1024ul * 1024ul * 1024ul * 5);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(sizeof(PageDetailedAccessInfo),
-                                                   1024ul * 1024ul * 1024ul * 1024ul);
+                                                   1024ul * 1024ul * 1024ul * 1024ul * 5);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -140,7 +140,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstTouchThreadId) {
 //    Logger::info("record page detailed info\n");
     pageDetailSamplingFrequency++;
-    if (pageDetailSamplingFrequency <= 100) {
+    if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
         return;
     }
     pageDetailSamplingFrequency = 0;
@@ -158,7 +158,7 @@ inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstT
 inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
     //    Logger::info("record cache detailed info\n");
     cacheDetailSamplingFrequency++;
-    if (cacheDetailSamplingFrequency <= 100) {
+    if (cacheDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
         return;
     }
     cacheDetailSamplingFrequency = 0;

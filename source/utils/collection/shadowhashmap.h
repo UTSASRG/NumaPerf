@@ -19,24 +19,28 @@ class ShadowHashMap {
     void *startAddress;
     unsigned long size;
     hashFuncPtrType hashFuncPtr;
+    const static int META_DATA_SIZE = sizeof(short);
+    const static short NOT_INSERT = 0;
+    const static short INSERTING = 1;
+    const static short INSERTED = 2;
 
 private:
     inline unsigned long hashKey(KeyType key) {
         return hashFuncPtr(key);
     }
 
-    inline bool *isInserted(unsigned long index) {
-        unsigned long offset = index * (sizeof(ValueType) + sizeof(bool));
+    inline short *getMetaData(unsigned long index) {
+        unsigned long offset = index * (sizeof(ValueType) + META_DATA_SIZE);
         assert(offset < size);
         void *address = ((char *) startAddress) + offset;
 //        Logger::info("shadow map startAddress:%lu, index:%lu, objectSize:%d, offset:%lu \n",
 //                     (unsigned long) startAddress,
-//                     index, sizeof(ValueType), index * (sizeof(ValueType) + sizeof(bool)));
-        return (bool *) (address);
+//                     index, sizeof(ValueType), index * (sizeof(ValueType) + META_DATA_SIZE));
+        return (short *) (address);
     }
 
     inline ValueType *getValue(unsigned long index) {
-        unsigned long offset = index * (sizeof(ValueType) + sizeof(bool)) + sizeof(bool);
+        unsigned long offset = index * (sizeof(ValueType) + META_DATA_SIZE) + META_DATA_SIZE;
         assert(offset < size);
         void *address = ((char *) startAddress) + offset;
         return (ValueType *) (address);
@@ -51,12 +55,15 @@ public:
 
     inline bool insertIfAbsent(const KeyType &key, const ValueType &value) {
         unsigned long index = hashKey(key);
-        bool *isInserted = this->isInserted(index);
-        if (!Automics::compare_set(isInserted, false, true)) {
+        short *metaData = this->getMetaData(index);
+        if (!Automics::compare_set(metaData, NOT_INSERT, INSERTING)) {
+            // busy waiting, since this could be very quick
+            while (*metaData != INSERTED) {}
             return false;
         }
         ValueType *valuePtr = this->getValue(index);
         *valuePtr = value;
+        *metaData = INSERTED;
         return true;
     }
 
@@ -64,13 +71,13 @@ public:
         unsigned long index = hashKey(key);
         ValueType *valuePtr = this->getValue(index);
         *valuePtr = value;
-        bool *isInserted = this->isInserted(index);
-        *isInserted = true;
+        short *metaData = this->getMetaData(index);
+        *metaData = INSERTED;
     }
 
     inline ValueType *find(const KeyType &key) {
         unsigned long index = hashKey(key);
-        if (!*(this->isInserted(index))) {
+        if (*(this->getMetaData(index)) != INSERTED) {
             return NULL;
         }
         return this->getValue(index);
