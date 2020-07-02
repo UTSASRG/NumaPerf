@@ -28,7 +28,7 @@ private:
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
-        BitMasks::setBit(accessThreadsBitMask, 2 * sizeof(unsigned int), threadIndex);
+        return BitMasks::setBit(accessThreadsBitMask, 2 * sizeof(unsigned int), threadIndex);
     }
 
 public:

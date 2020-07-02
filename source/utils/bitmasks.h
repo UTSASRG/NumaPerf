@@ -1,21 +1,33 @@
 #ifndef NUMAPERF_BITMASKS_H
 #define NUMAPERF_BITMASKS_H
 
+#include "concurrency/automics.h"
 #include <assert.h>
 
 class BitMasks {
 public:
-    static inline void setBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex) {
+    // return true if the bit is new set.
+    static inline bool setBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex) {
         assert(bitIndex < bitMaskLentgh);
         if (bitIndex == 0) {
-            return;
+            return false;
         }
         unsigned long *currentBitPtr = (unsigned long *) bitMaskPtr;
         while (bitIndex > (8 * sizeof(unsigned long) + 1)) {
             bitIndex -= 8 * sizeof(unsigned long);
             currentBitPtr++;
         }
-        *currentBitPtr = (*currentBitPtr) | (1ul << (bitIndex - 1));
+        for (int i = 0; i < 100; i++) {
+            unsigned long originalValue = *currentBitPtr;
+            unsigned long newValue = originalValue | (1ul << (bitIndex - 1));
+            if (originalValue == newValue) {
+                return false;
+            }
+            if (Automics::compare_set(currentBitPtr, originalValue, newValue)) {
+                return true;
+            }
+        }
+        assert(false);
     }
 
 //    static inline void unsetBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex) {
