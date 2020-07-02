@@ -99,8 +99,17 @@ void *calloc(size_t n, size_t size) {
 
 void *realloc(void *ptr, size_t size) {
     Logger::debug("realloc size:%lu\n", size);
+    ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
+    if (obj == NULL) {
+        Logger::warn("realloc no original obj info\n");
+        free(ptr);
+        return malloc(size);
+    }
+    unsigned long oldSize = obj->getSize();
+    void *newObjPtr = malloc(size);
+    memcpy(newObjPtr, ptr, oldSize < size ? oldSize : size);
     free(ptr);
-    return malloc(size);
+    return newObjPtr;
 }
 
 void free(void *ptr) __THROW{

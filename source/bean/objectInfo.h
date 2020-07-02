@@ -31,6 +31,10 @@ public:
     static void release(ObjectInfo *buff) {
         localMemoryPool.release((void *) buff);
     }
+
+    inline unsigned long getSize() {
+        return this->size;
+    }
 };
 
 #endif //NUMAPERF_OBJECTINFO_H
