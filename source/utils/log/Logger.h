@@ -20,10 +20,12 @@
 #define ERROR_LOG
 #endif
 
-#define LOG(format) va_list args; \
-            va_start (args, format); \
-            vfprintf(stderr, format, args); \
-            va_end (args);
+#define LOG( format ) \
+{	va_list args; \
+	va_start (args, format); \
+	vfprintf(stderr, format, args); \
+	va_end (args); \
+}
 
 #include <stdio.h>
 #include <stdarg.h>

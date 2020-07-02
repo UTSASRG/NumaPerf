@@ -57,7 +57,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 extern void *malloc(size_t size) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
-    Logger::debug("malloc size:%lu\n", size);
+//    Logger::info("malloc size:%lu\n", size);
     if (size <= 0) {
         return NULL;
     }
@@ -67,7 +67,7 @@ extern void *malloc(size_t size) {
         assert(allocated + size < INIT_BUFF_SIZE);
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
-//    	Logger::debug("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
+    	//Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
@@ -84,7 +84,7 @@ extern void *malloc(size_t size) {
             pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
     }
-//    Logger::debug("malloc address:%p, totcal cycles:%lu\n", objectStartAddress, Timer::getCurrentCycle() - startCycle);
+//    Logger::info("malloc address:%p, totcal cycles:%lu\n", objectStartAddress, Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
 }
 
