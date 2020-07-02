@@ -9,7 +9,7 @@
 
 class CacheLineDetailedInfo {
     unsigned long invalidationNumber;
-    unsigned int accessThreadsBitMask[2];
+    unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
@@ -28,7 +28,7 @@ private:
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
-        return BitMasks::setBit(accessThreadsBitMask, 2 * sizeof(unsigned int), threadIndex);
+        return BitMasks::setBit(accessThreadsBitMask, MAX_THREAD_NUM, threadIndex);
     }
 
 public:
