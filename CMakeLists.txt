@@ -20,6 +20,7 @@ add_executable(NumaPerf
         source/bean/pagedetailAccessInfo.h
         source/bean/cachelinedetailedinfo.h
         source/utils/real.h
+        source/utils/bitmasks.h
         source/utils/addresses.h
         source/utils/concurrency/spinlock.h
         source/xdefines.h

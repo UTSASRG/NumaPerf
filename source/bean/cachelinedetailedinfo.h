@@ -3,6 +3,7 @@
 
 #include "../xdefines.h"
 #include "../utils/addresses.h"
+#include "../utils/bitmasks.h"
 
 #define MULTIPLE_THREAD 0xffff
 
@@ -26,18 +27,8 @@ private:
         accessThreadsBitMask[1] = 0;
     }
 
-    inline bool setThreadBitMask(unsigned long index) {
-        if (index <= 8 * sizeof(int)) {
-            unsigned int bit = 1 << index;
-            bool result = bit && accessThreadsBitMask[0];
-            accessThreadsBitMask[0] = accessThreadsBitMask[0] && bit;
-            return !result;
-        }
-        index = index - 8 * sizeof(int);
-        unsigned int bit = 1 << index;
-        bool result = bit && accessThreadsBitMask[1];
-        accessThreadsBitMask[1] = accessThreadsBitMask[1] && bit;
-        return !result;
+    inline bool setThreadBitMask(unsigned long threadIndex) {
+        BitMasks::setBit(accessThreadsBitMask, 2 * sizeof(unsigned int), threadIndex);
     }
 
 public:
