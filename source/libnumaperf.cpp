@@ -84,7 +84,7 @@ extern void *malloc(size_t size) {
             pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
     }
-//    Logger::info("malloc address:%p, totcal cycles:%lu\n", objectStartAddress, Timer::getCurrentCycle() - startCycle);
+    Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
 }
 
