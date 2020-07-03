@@ -57,7 +57,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 extern void *malloc(size_t size) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
-//    Logger::info("malloc size:%lu\n", size);
+    Logger::debug("malloc size:%lu\n", size);
     if (size <= 0) {
         size = 1;
     }
@@ -67,7 +67,7 @@ extern void *malloc(size_t size) {
         assert(allocated + size < INIT_BUFF_SIZE);
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
-    	//Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
+        //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
@@ -101,11 +101,11 @@ void *realloc(void *ptr, size_t size) {
     Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
     if (ptr == NULL) {
         free(ptr);
-        return malloc(size); 
+        return malloc(size);
     }
     ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
     if (obj == NULL) {
-        Logger::warn("realloc no original obj info,ptr:%p\n",ptr);
+        Logger::warn("realloc no original obj info,ptr:%p\n", ptr);
         free(ptr);
         return malloc(size);
     }
