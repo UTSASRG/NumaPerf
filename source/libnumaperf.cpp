@@ -59,7 +59,7 @@ extern void *malloc(size_t size) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::info("malloc size:%lu\n", size);
     if (size <= 0) {
-        return NULL;
+        size = 1;
     }
     static char initBuf[INIT_BUFF_SIZE];
     static int allocated = 0;
@@ -84,12 +84,12 @@ extern void *malloc(size_t size) {
             pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
     }
-    Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
+    //Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
 }
 
 void *calloc(size_t n, size_t size) {
-    Logger::debug("calloc size:%lu\n", size);
+    Logger::debug("calloc N:%lu, size:%lu\n", n, size);
     void *ptr = malloc(n * size);
     if (ptr != NULL) {
         memset(ptr, 0, n * size);
@@ -98,10 +98,14 @@ void *calloc(size_t n, size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
-    Logger::debug("realloc size:%lu\n", size);
+    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
+    if (ptr == NULL) {
+        free(ptr);
+        return malloc(size); 
+    }
     ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
     if (obj == NULL) {
-        Logger::warn("realloc no original obj info\n");
+        Logger::warn("realloc no original obj info,ptr:%p\n",ptr);
         free(ptr);
         return malloc(size);
     }
