@@ -35,28 +35,28 @@ class Logger {
 public:
     inline static void debug(const char *format, ...) {
 #ifdef DEBUG_LOG
-        LOG("DEBUG: ");
+        fprintf(stderr, "DEBUG: ");
         LOG(format);
 #endif
     }
 
     inline static void warn(const char *format, ...) {
 #ifdef WARN_LOG
-        LOG("WARN: ");
+        fprintf(stderr, "WARN: ");
         LOG(format);
 #endif
     }
 
     inline static void info(const char *format, ...) {
 #ifdef INFO_LOG
-        LOG("INFO: ");
+        fprintf(stderr, "INFO: ");
         LOG(format);
 #endif
     }
 
     inline static void error(const char *format, ...) {
 #ifdef ERROR_LOG
-        LOG("ERROR: ");
+        fprintf(stderr, "ERROR: ");
         LOG(format);
 #endif
     }
