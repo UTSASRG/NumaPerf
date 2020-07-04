@@ -34,7 +34,7 @@ CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 #define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
 
 static void initializer(void) {
-    Logger::info("global initializer\n");
+    Logger::info("NumaPerf initializer\n");
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
