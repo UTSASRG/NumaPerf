@@ -30,14 +30,17 @@ PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 PageDetailedAccessInfoShadowMap pageDetailedAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 
+#define SHADOW_MAP_SIZE (32ul * TB)
+#define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
+
 static void initializer(void) {
     Logger::info("global initializer\n");
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
-    pageBasicAccessInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToPageIndex);
-    pageDetailedAccessInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
-    cacheLineDetailedInfoShadowMap.initialize(32ul * TB, HashFuncs::hashAddrToCacheIndex);
+    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToPageIndex);
+    pageDetailedAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToCacheIndex);
+    cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToCacheIndex);
     inited = true;
 }
 
@@ -194,6 +197,10 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
+    if (addr > MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP) {
+        Logger::warn("the access address is bigger than basic page shadow map, address:%p\n", addr);
+        return;
+    }
     PageBasicAccessInfo *basicPageAccessInfo = pageBasicAccessInfoShadowMap.find(addr);
     if (NULL == basicPageAccessInfo) {
         return;
