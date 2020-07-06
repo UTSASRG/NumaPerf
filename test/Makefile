@@ -13,4 +13,8 @@ test: $(SRCS)
         #/media/umass/datasystem/xin/Numachy/evaluation/llvm/install/bin/clang++ -Wl,/media/umass/datasystem/xin/Numachy/accesspatern/libtrap.so -finstrumenter -g -O0 test.cpp -o test -I/usr/include/x86_64-linux-gnu/c++/7/
 
 clean:
-	rm test.exe
+	rm *.exe
+	rm *.so
+	rm *.o
+	rm *.bc
+	rm *.ll
