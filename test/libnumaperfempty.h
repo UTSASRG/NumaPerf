@@ -14,6 +14,9 @@ typedef enum e_access_type {
     E_ACCESS_WRITE
 } eAccessType;
 
+__attribute__ ((destructor)) void finalizer(void);
+
+
 void handleAccess(unsigned long addr, size_t size, eAccessType type);
 
 extern "C" {
