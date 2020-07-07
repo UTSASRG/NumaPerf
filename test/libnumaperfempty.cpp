@@ -16,7 +16,7 @@ static void initializer(void) {
     Logger::info("Test NumaPerf initializer\n");
     store_num = 0;
     load_num = 0;
-    sum_frequency = 1000;
+    sum_frequency = 10000;
 }
 
 __attribute__ ((destructor)) void finalizer(void) {
@@ -32,6 +32,7 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         threadLoadNum++;
         if (threadLoadNum > sum_frequency) {
             Automics::automicIncrease(&load_num, threadLoadNum);
+            threadLoadNum = 0;
         }
         Logger::debug("NumaPerf handleAccess read\n");
         return;
@@ -39,6 +40,7 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     threadStoreNum++;
     if (threadStoreNum > sum_frequency) {
         Automics::automicIncrease(&store_num, threadStoreNum);
+        threadStoreNum = 0;
     }
     Logger::debug("NumaPerf handleAccess write\n");
 }

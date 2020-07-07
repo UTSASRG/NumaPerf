@@ -18,3 +18,4 @@ clean:
 	rm *.o
 	rm *.bc
 	rm *.ll
+	rm *.s
