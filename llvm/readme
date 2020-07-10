@@ -1,15 +1,16 @@
 How to build llvm:
 
-1. copy Load-Store-Instrumenter to llvm-project/llvm/lib/Transforms/
-2. add to add_subdirectory(Load-Store-Instrumenter) into llvm-project/llvm/lib/Transforms/CMakeLists.txt
+
+1. download llvm-project-10.0.0
+2. apply llvm-project-10.0.0.patch
 3. mkdir a build directory in which you will build your llvm
 4. cd your build directory
-5. cmake -G 'Unix Makefiles' -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_INSTALL_PREFIX=/media/umass/datasystem/xin/llvm-project/install -DCMAKE_BUILD_TYPE=Release ../llvm
-6. make -j40
+4. cmake -G 'Unix Makefiles' -DLLVM_ENABLE_PROJECTS="clang;compiler-rt" -DCMAKE_INSTALL_PREFIX=/media/umass/datasystem/xin/llvm-project/install -DCMAKE_BUILD_TYPE=Release ../llvm
+5. make -j40
 
 
 
 How to use llvm after building:
 build your program by this command, and this will active your new instrumenter.
 
-1. build/bin/clang++ -Xclang -load -Xclang build/lib/LLVMInstrumenter.so -Wl,/media/umass/datasystem/xin/Numachy/accesspatern/libtrap.so -g -O2 -fno-omit-frame-pointer -ldl -lpthread ~/test.cpp -o test
+/media/umass/datasystem/xin/llvm-project-10.0.0/build/bin/clang++ -finstrumenter -rdynamic /media/umass/datasystem/xin/NumaPerf/source/libnumaperf.so
