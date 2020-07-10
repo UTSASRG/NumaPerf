@@ -126,7 +126,7 @@ diff -ruN llvm-project-10.0.0.old/llvm/lib/Transforms/Instrumentation/CMakeLists
    ControlHeightReduction.cpp
 diff -ruN llvm-project-10.0.0.old/llvm/lib/Transforms/Instrumentation/RWInstrumenter.cpp llvm-project-10.0.0/llvm/lib/Transforms/Instrumentation/RWInstrumenter.cpp
 --- llvm-project-10.0.0.old/llvm/lib/Transforms/Instrumentation/RWInstrumenter.cpp	1969-12-31 19:00:00.000000000 -0500
-+++ llvm-project-10.0.0/llvm/lib/Transforms/Instrumentation/RWInstrumenter.cpp	2020-07-09 22:16:09.557832576 -0400
++++ llvm-project-10.0.0/llvm/lib/Transforms/Instrumentation/RWInstrumenter.cpp	2020-07-09 22:27:50.346286735 -0400
 @@ -0,0 +1,962 @@
 +//===- AddressSanitizer.cpp - memory error detector -----------------------===//
 +//
@@ -628,7 +628,7 @@ diff -ruN llvm-project-10.0.0.old/llvm/lib/Transforms/Instrumentation/RWInstrume
 +                                                     bool Recover,
 +                                                     bool UseAfterScope) {
 +    assert(!CompileKernel || Recover);
-+    errs() << "RWInstrumenter created" << F.getName() << "\n";
++    errs() << "RWInstrumenter created" << "\n";
 +    return new RWInstrumenter(CompileKernel, Recover, UseAfterScope);
 +}
 +
