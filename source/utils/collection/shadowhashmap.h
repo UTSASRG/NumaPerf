@@ -53,8 +53,12 @@ public:
         hashFuncPtr = hashFunc;
         this->size = size;
         if (needAlignToCacheLine) {
+            Logger::debug("AlignToCacheLine, original Size:%lu, result Size:%lu \n", sizeof(ValueType) + META_DATA_SIZE,
+                         ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE));
             blockSize = ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE);
         } else {
+            Logger::debug("AlignToWord, original Size:%lu, result Size:%lu \n", sizeof(ValueType) + META_DATA_SIZE,
+                         ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE));
             blockSize = ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE);
         }
     }

@@ -20,6 +20,10 @@
 #define ERROR_LOG
 #endif
 
+#ifndef ERROR_LOG
+#define ERROR_LOG
+#endif
+
 #define LOG( format ) \
 {	va_list args; \
 	va_start (args, format); \
