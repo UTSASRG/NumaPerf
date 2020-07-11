@@ -19,11 +19,16 @@ private:
     void *volatile bumpPointer;
     void *volatile bumpEndPointer;
     void *volatile freeListHead;
+    const bool needThreadSafe;
 private:
-    inline void *automicGetFromFreeList() {
+    inline void *_getFromFreeList() {
         void *result = freeListHead;
         if (NULL == result) {
             return NULL;
+        }
+        if (!needThreadSafe) {
+            freeListHead = *((void **) result);
+            return freeListHead;
         }
         while (!__atomic_compare_exchange_n(&freeListHead, &result, *((void **) result),
                                             false,
@@ -37,8 +42,12 @@ private:
         return (void *) result;
     }
 
-    inline void automicInsertIntoFreeList(void *memoryBlock) {
+    inline void _insertIntoFreeList(void *memoryBlock) {
         void *nextBlock = freeListHead;
+        if (!needThreadSafe) {
+            freeListHead = memoryBlock;
+            return;
+        }
         while (!__atomic_compare_exchange_n(&freeListHead, &nextBlock, memoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
@@ -48,8 +57,12 @@ private:
         *((void **) memoryBlock) = (void *) nextBlock;
     }
 
-    inline void *automicGetFromBumpPointer() {
+    inline void *_getFromBumpPointer() {
         void *result = bumpPointer;
+        if (!needThreadSafe) {
+            bumpPointer = (char *) result + sizeOfMemoryBlock;
+            return result;
+        }
         while (!__atomic_compare_exchange_n(&bumpPointer, &result, (char *) result + sizeOfMemoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
@@ -61,7 +74,8 @@ private:
     }
 
 public:
-    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul) {
+    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul,
+               bool needThreadSafe = true) : needThreadSafe(needThreadSafe) {
         Logger::debug("memory pool init\n");
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->maxPoolSize = maxPoolSize;
@@ -70,27 +84,27 @@ public:
         this->bumpEndPointer = (char *) this->bumpPointer + maxPoolSize;
 //        memset((void *) bumpPointer, 0, initPoolSize);
         Logger::debug("memory pool init capacity:%lu, bumppointer:%lu, bumpendpointer:%lu\n", maxPoolSize,
-                     bumpPointer, bumpEndPointer);
+                      bumpPointer, bumpEndPointer);
     }
 
     void *get() {
         unsigned long start = Timer::getCurrentCycle();
         void *result = NULL;
         if (freeListHead != NULL) {
-            result = automicGetFromFreeList();
+            result = _getFromFreeList();
         }
         if (result != NULL) {
             memset(result, 0, sizeOfMemoryBlock);
             Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
             return result;
         }
-        result = automicGetFromBumpPointer();
+        result = _getFromBumpPointer();
         Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
         return result;
     }
 
     void release(void *memoryBlock) {
-        automicInsertIntoFreeList(memoryBlock);
+        _insertIntoFreeList(memoryBlock);
     }
 };
 
