@@ -38,7 +38,7 @@ static void initializer(void) {
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
-    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToPageIndex);
+    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToPageIndex, true);
     pageDetailedAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToCacheIndex);
     cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToCacheIndex);
     inited = true;

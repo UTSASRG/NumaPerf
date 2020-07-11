@@ -29,6 +29,15 @@ public:
         size += CACHE_LINE_SIZE;
         return size;
     }
+
+    static inline unsigned long alignUpToWord(unsigned long size) {
+        if ((size & WORD_MASK) == 0) {
+            return size;
+        }
+        size = size & (~(unsigned long) WORD_MASK);
+        size += WORD_SIZE;
+        return size;
+    }
 };
 
 #endif //NUMAPERF_ADDRESSES_H

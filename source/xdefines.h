@@ -26,6 +26,7 @@
 // treate int as an normal word, 4bytes
 #define WORD_SHIFT_BITS 2
 #define WORD_SIZE (1 << WORD_SHIFT_BITS)
+#define WORD_MASK 0b11
 #define WORD_INDEX_MASK ((unsigned int)0b111100)
 
 

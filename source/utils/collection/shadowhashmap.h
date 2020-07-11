@@ -18,6 +18,7 @@ class ShadowHashMap {
 
     void *startAddress;
     unsigned long size;
+    unsigned long blockSize;
     hashFuncPtrType hashFuncPtr;
     const static int META_DATA_SIZE = sizeof(short);
     const static short NOT_INSERT = 0;
@@ -30,7 +31,7 @@ private:
     }
 
     inline short *getMetaData(unsigned long index) {
-        unsigned long offset = index * (sizeof(ValueType) + META_DATA_SIZE);
+        unsigned long offset = index * blockSize;
         assert(offset < size);
         void *address = ((char *) startAddress) + offset;
 //        Logger::info("shadow map startAddress:%lu, index:%lu, objectSize:%d, offset:%lu \n",
@@ -40,17 +41,22 @@ private:
     }
 
     inline ValueType *getValue(unsigned long index) {
-        unsigned long offset = index * (sizeof(ValueType) + META_DATA_SIZE) + META_DATA_SIZE;
+        unsigned long offset = index * blockSize + META_DATA_SIZE;
         assert(offset < size);
         void *address = ((char *) startAddress) + offset;
         return (ValueType *) (address);
     }
 
 public:
-    void initialize(unsigned long size, hashFuncPtrType hashFunc) {
+    void initialize(unsigned long size, hashFuncPtrType hashFunc, bool needAlignToCacheLine = false) {
         startAddress = MM::mmapAllocatePrivate(size);
         hashFuncPtr = hashFunc;
         this->size = size;
+        if (needAlignToCacheLine) {
+            blockSize = ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE);
+        } else {
+            blockSize = ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE);
+        }
     }
 
     inline bool insertIfAbsent(const KeyType &key, const ValueType &value) {
