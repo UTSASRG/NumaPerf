@@ -46,10 +46,11 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-MemoryPool ObjectInfo::localMemoryPool(sizeof(ObjectInfo), 1024ul * 1024ul * 1024ul * 1024ul * 5);
-MemoryPool CacheLineDetailedInfo::localMemoryPool(sizeof(CacheLineDetailedInfo),
+MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
+                                       1024ul * 1024ul * 1024ul * 1024ul * 5);
+MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
                                                   1024ul * 1024ul * 1024ul * 1024ul * 5);
-MemoryPool PageDetailedAccessInfo::localMemoryPool(sizeof(PageDetailedAccessInfo),
+MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
                                                    1024ul * 1024ul * 1024ul * 1024ul * 5);
 
 __attribute__ ((destructor)) void finalizer(void) {
