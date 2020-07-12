@@ -30,21 +30,10 @@ private:
         return hashFuncPtr(key);
     }
 
-    inline short *getMetaData(unsigned long index) {
+    inline void *getDataBlock(unsigned long index) {
         unsigned long offset = index * blockSize;
         assert(offset < size);
-        void *address = ((char *) startAddress) + offset;
-//        Logger::info("shadow map startAddress:%lu, index:%lu, objectSize:%d, offset:%lu \n",
-//                     (unsigned long) startAddress,
-//                     index, sizeof(ValueType), index * (sizeof(ValueType) + META_DATA_SIZE));
-        return (short *) (address);
-    }
-
-    inline ValueType *getValue(unsigned long index) {
-        unsigned long offset = index * blockSize + META_DATA_SIZE;
-        assert(offset < size);
-        void *address = ((char *) startAddress) + offset;
-        return (ValueType *) (address);
+        return ((char *) startAddress) + offset;
     }
 
 public:
@@ -54,18 +43,19 @@ public:
         this->size = size;
         if (needAlignToCacheLine) {
             Logger::debug("AlignToCacheLine, original Size:%lu, result Size:%lu \n", sizeof(ValueType) + META_DATA_SIZE,
-                         ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE));
+                          ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE));
             blockSize = ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE);
         } else {
             Logger::debug("AlignToWord, original Size:%lu, result Size:%lu \n", sizeof(ValueType) + META_DATA_SIZE,
-                         ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE));
+                          ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE));
             blockSize = ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE);
         }
     }
 
     inline bool insertIfAbsent(const KeyType &key, const ValueType &value) {
         unsigned long index = hashKey(key);
-        short *metaData = this->getMetaData(index);
+        void *dataBlock = this->getDataBlock(index);
+        short *metaData = (short *) dataBlock;
         if (!Automics::compare_set(metaData, NOT_INSERT, INSERTING)) {
             // busy waiting, since this could be very quick
             while (*metaData != INSERTED) {
@@ -73,7 +63,7 @@ public:
             }
             return false;
         }
-        ValueType *valuePtr = this->getValue(index);
+        ValueType *valuePtr = (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
         *valuePtr = value;
         *metaData = INSERTED;
         return true;
@@ -81,18 +71,20 @@ public:
 
     inline void insert(const KeyType &key, const ValueType &value) {
         unsigned long index = hashKey(key);
-        ValueType *valuePtr = this->getValue(index);
+        void *dataBlock = this->getDataBlock(index);
+        ValueType *valuePtr = (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
         *valuePtr = value;
-        short *metaData = this->getMetaData(index);
+        short *metaData = (short *) dataBlock;
         *metaData = INSERTED;
     }
 
     inline ValueType *find(const KeyType &key) {
         unsigned long index = hashKey(key);
-        if (*(this->getMetaData(index)) != INSERTED) {
+        void *dataBlock = this->getDataBlock(index);
+        if (*((short *) dataBlock) != INSERTED) {
             return NULL;
         }
-        return this->getValue(index);
+        return *((ValueType *) (((char *) dataBlock) + META_DATA_SIZE));
     }
 };
 
