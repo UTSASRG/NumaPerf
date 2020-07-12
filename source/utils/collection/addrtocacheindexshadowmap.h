@@ -1,9 +1,9 @@
-#ifndef NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H
-#define NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H
+#ifndef NUMAPERF_ADDRTOCACHEINDEXSHADOWMAP_H
+#define NUMAPERF_ADDRTOCACHEINDEXSHADOWMAP_H
 
 #include "../mm.hh"
 #include <assert.h>
-#include "../utils/addresses.h"
+#include "../addresses.h"
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 
@@ -85,4 +85,4 @@ public:
     }
 };
 
-#endif //NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H
+#endif //NUMAPERF_ADDRTOCACHEINDEXSHADOWMAP_H

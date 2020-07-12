@@ -3,7 +3,7 @@
 
 #include "../mm.hh"
 #include <assert.h>
-#include "../utils/addresses.h"
+#include "../addresses.h"
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 
