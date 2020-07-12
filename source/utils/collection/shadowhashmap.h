@@ -84,7 +84,7 @@ public:
         if (*((short *) dataBlock) != INSERTED) {
             return NULL;
         }
-        return *((ValueType *) (((char *) dataBlock) + META_DATA_SIZE));
+        return (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
     }
 };
 
