@@ -1,8 +1,9 @@
-#ifndef NUMAPERF_SHADOWHASHMAP_H
-#define NUMAPERF_SHADOWHASHMAP_H
+#ifndef NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H
+#define NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H
 
 #include "../mm.hh"
 #include <assert.h>
+#include "../utils/addresses.h"
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 
@@ -11,23 +12,20 @@
  * @tparam KeyType
  * @tparam ValueType
  */
-template<class KeyType, class ValueType>
-class ShadowHashMap {
-
-    typedef unsigned long (*hashFuncPtrType)(KeyType);
+template<class ValueType>
+class AddressToPageIndexShadowMap {
 
     void *startAddress;
     unsigned long size;
     unsigned long blockSize;
-    hashFuncPtrType hashFuncPtr;
     const static int META_DATA_SIZE = sizeof(short);
     const static short NOT_INSERT = 0;
     const static short INSERTING = 1;
     const static short INSERTED = 2;
 
 private:
-    inline unsigned long hashKey(KeyType key) {
-        return hashFuncPtr(key);
+    inline unsigned long hashKey(unsigned long key) {
+        return ADDRESSES::getPageIndex(key);
     }
 
     inline void *getDataBlock(unsigned long index) {
@@ -37,9 +35,8 @@ private:
     }
 
 public:
-    void initialize(unsigned long size, hashFuncPtrType hashFunc, bool needAlignToCacheLine = false) {
+    void initialize(unsigned long size, bool needAlignToCacheLine = false) {
         startAddress = MM::mmapAllocatePrivate(size);
-        hashFuncPtr = hashFunc;
         this->size = size;
         if (needAlignToCacheLine) {
             Logger::debug("AlignToCacheLine, original Size:%lu, result Size:%lu \n", sizeof(ValueType) + META_DATA_SIZE,
@@ -52,7 +49,7 @@ public:
         }
     }
 
-    inline bool insertIfAbsent(const KeyType &key, const ValueType &value) {
+    inline bool insertIfAbsent(const unsigned long &key, const ValueType &value) {
         unsigned long index = hashKey(key);
         void *dataBlock = this->getDataBlock(index);
         short *metaData = (short *) dataBlock;
@@ -69,7 +66,7 @@ public:
         return true;
     }
 
-    inline void insert(const KeyType &key, const ValueType &value) {
+    inline void insert(const unsigned long &key, const ValueType &value) {
         unsigned long index = hashKey(key);
         void *dataBlock = this->getDataBlock(index);
         ValueType *valuePtr = (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
@@ -78,7 +75,7 @@ public:
         *metaData = INSERTED;
     }
 
-    inline ValueType *find(const KeyType &key) {
+    inline ValueType *find(const unsigned long &key) {
         unsigned long index = hashKey(key);
         void *dataBlock = this->getDataBlock(index);
         if (*((short *) dataBlock) != INSERTED) {
@@ -88,4 +85,4 @@ public:
     }
 };
 
-#endif //NUMAPERF_SHADOWHASHMAP_H
+#endif //NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H

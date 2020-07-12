@@ -12,12 +12,13 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include "bean/objectInfo.h"
-#include "utils/collection/shadowhashmap.h"
+#include "utils/collection/addrtopageindexshadowmap.h"
+#include "utils/collection/addrtocacheindexshadowmap.h"
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
-typedef ShadowHashMap<unsigned long, PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
-typedef ShadowHashMap<unsigned long, PageDetailedAccessInfo *> PageDetailedAccessInfoShadowMap;
-typedef ShadowHashMap<unsigned long, CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
+typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
+typedef AddressToCacheIndexShadowMap<PageDetailedAccessInfo *> PageDetailedAccessInfoShadowMap;
+typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
 
 thread_local int pageDetailSamplingFrequency = 0;
 thread_local int cacheDetailSamplingFrequency = 0;
@@ -38,9 +39,9 @@ static void initializer(void) {
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
-    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToPageIndex, true);
-    pageDetailedAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToCacheIndex);
-    cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE, HashFuncs::hashAddrToCacheIndex);
+    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
+    pageDetailedAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE);
+    cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE);
     inited = true;
 }
 
