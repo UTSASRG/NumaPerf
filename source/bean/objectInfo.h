@@ -21,8 +21,9 @@ private:
 
 public:
     static ObjectInfo *
-    createNewObjectInfoo(unsigned long objectStartAddress, unsigned long size, void *mallocCallSite) {
-        void *buff = localMemoryPool.get();
+    createNewObjectInfoo(unsigned long objectStartAddress, unsigned long size, void *mallocCallSite,
+                         unsigned long threadId = -1) {
+        void *buff = localMemoryPool.get(threadId);
         Logger::debug("new ObjectInfo start address: %lu, buff address:%lu \n", objectStartAddress, buff);
         ObjectInfo *objectInfo = new(buff) ObjectInfo(objectStartAddress, size, mallocCallSite);
         return objectInfo;

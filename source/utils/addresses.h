@@ -21,6 +21,15 @@ public:
         return (address & WORD_INDEX_MASK) >> WORD_SHIFT_BITS;
     }
 
+    static inline unsigned long alignUpToPage(unsigned long size) {
+        if ((size & PAGE_MASK) == 0) {
+            return size;
+        }
+        size = size & (~(unsigned long) PAGE_MASK);
+        size += PAGE_SIZE;
+        return size;
+    }
+
     static inline unsigned long alignUpToCacheLine(unsigned long size) {
         if ((size & CACHE_MASK) == 0) {
             return size;

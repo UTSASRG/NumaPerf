@@ -79,7 +79,7 @@ extern void *malloc(size_t size) {
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
     ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,
-                                                                 callerAddress);
+                                                                 callerAddress, currentThreadIndex);
     objectInfoMap.insert((unsigned long) objectStartAddress, 0, objectInfoPtr);
 
     for (unsigned long address = (unsigned long) objectStartAddress;
@@ -121,12 +121,14 @@ void *realloc(void *ptr, size_t size) {
     return newObjPtr;
 }
 
-void free(void *ptr) __THROW{
-    Logger::debug("free pointer:%p\n", ptr);
-    if (!inited) {
-        return;
-    }
-    Real::free(ptr);
+void free(void *ptr)
+
+__THROW{
+Logger::debug("free pointer:%p\n", ptr);
+if (!inited) {
+return;
+}
+Real::free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
@@ -146,15 +148,22 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW{
-    Logger::debug("pthread create\n");
-    if (!inited) {
-        initializer();
-    }
-    void *arguments = Real::malloc(sizeof(void *) * 2);
-    ((void **) arguments)[0] = (void *) start_routine;
-    ((void **) arguments)[1] = arg;
-    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
+                   void *(*start_routine)(void *), void *arg)
+
+__THROW{
+Logger::debug("pthread create\n");
+if (!inited) {
+initializer();
+
+}
+void *arguments = Real::malloc(sizeof(void *) * 2);
+((void **) arguments)[0] = (void *)
+start_routine;
+((void **) arguments)[1] =
+arg;
+return
+Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
+);
 }
 
 inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstTouchThreadId) {
@@ -166,7 +175,8 @@ inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstT
     pageDetailSamplingFrequency = 0;
     PageDetailedAccessInfo **pageDetailInfoPtr = pageDetailedAccessInfoShadowMap.find(addr);
     if (NULL == pageDetailInfoPtr) {
-        PageDetailedAccessInfo *pageDetailedAccessInfo = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
+        PageDetailedAccessInfo *pageDetailedAccessInfo = PageDetailedAccessInfo::createNewPageDetailedAccessInfo(
+                currentThreadIndex);
         if (!pageDetailedAccessInfoShadowMap.insertIfAbsent(addr, pageDetailedAccessInfo)) {
             PageDetailedAccessInfo::release(pageDetailedAccessInfo);
         }
@@ -185,7 +195,8 @@ inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
     CacheLineDetailedInfo **cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(
             addr);
     if (NULL == cacheLineInfoPtr) {
-        CacheLineDetailedInfo *cacheInfo = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing();
+        CacheLineDetailedInfo *cacheInfo = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing(
+                currentThreadIndex);
         if (!cacheLineDetailedInfoShadowMap.insertIfAbsent(addr, cacheInfo)) {
             CacheLineDetailedInfo::release(cacheInfo);
         }

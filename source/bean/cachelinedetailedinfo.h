@@ -34,8 +34,8 @@ private:
 public:
 
 
-    static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing() {
-        void *buff = localMemoryPool.get();
+    static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing(unsigned long threadId = -1) {
+        void *buff = localMemoryPool.get(threadId);
         Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
         CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo();
         return ret;

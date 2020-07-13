@@ -18,10 +18,10 @@ private:
 
 public:
 
-    static PageDetailedAccessInfo *createNewPageDetailedAccessInfo() {
-        void *buff = localMemoryPool.get();
+    static PageDetailedAccessInfo *createNewPageDetailedAccessInfo(unsigned long threadId = -1) {
+        void *buff = localMemoryPool.get(threadId);
         Logger::debug("new PageDetailedAccessInfo buff address:%lu \n", buff);
-        PageDetailedAccessInfo *ret = new (buff) PageDetailedAccessInfo();
+        PageDetailedAccessInfo *ret = new(buff) PageDetailedAccessInfo();
         return ret;
     }
 

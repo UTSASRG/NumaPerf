@@ -16,6 +16,8 @@
 // Normal page size is 4K
 #define PAGE_SHIFT_BITS 12
 #define PAGE_SIZE (1 << PAGE_SHIFT_BITS)
+#define PAGE_MASK 0b111111111111
+
 
 // Normal cacheline size is still 64 bytes
 #define CACHE_LINE_SHIFT_BITS 6
