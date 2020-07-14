@@ -1,0 +1,23 @@
+bodytrack:
+
+with-out-numaperf: 8.26
+empty-numaperf: 16.88
+numaperf-with-calloc,realloc,free: 17.4
+add malloc:17
+add thread_local num ++ in handle access: 27
+replace thread_local with an  array[threadindex*CACHELINE_SIZE]: 32
+thread_local with CAS: 52.....   CAS is slow.
+array[threadindex*CACHELINE_SIZE] with CAS: 55
+array[8*CACHELINE_SIZE] with CAS: super slow
+with-sampling: 77
+cache detailed with-out-sampling: 88
+with-out-sampling: 587
+
+
+
+stream-cluster:
+with-out-numaperf:
+empty-numaperf:
+with-sampling:
+cache detailed with-out-sampling:
+with-out-sampling: 1477
