@@ -5,13 +5,9 @@
 #include "../xdefines.h"
 #include "../utils/addresses.h"
 
-typedef struct {
-    unsigned long accessNumberByFirstTouchThread;
-    unsigned long accessNumberByOtherThread;
-} CacheLineStatics;
-
 class PageDetailedAccessInfo {
-    CacheLineStatics cacheLineStatics[CACHE_NUM_IN_ONE_PAGE];
+    unsigned long accessNumberByFirstTouchThread[CACHE_NUM_IN_ONE_PAGE];
+    unsigned long accessNumberByOtherThread[CACHE_NUM_IN_ONE_PAGE];
 
 private:
     static MemoryPool localMemoryPool;
@@ -25,7 +21,7 @@ public:
     static PageDetailedAccessInfo *createNewPageDetailedAccessInfo() {
         void *buff = localMemoryPool.get();
         Logger::debug("new PageDetailedAccessInfo buff address:%lu \n", buff);
-        PageDetailedAccessInfo *ret = new(buff) PageDetailedAccessInfo();
+        PageDetailedAccessInfo *ret = new (buff) PageDetailedAccessInfo();
         return ret;
     }
 
@@ -36,10 +32,10 @@ public:
     inline void recordAccess(unsigned long addr, unsigned long accessThreadId, unsigned long firstTouchThreadId) {
         unsigned long index = ADDRESSES::getCacheIndexInsidePage(addr);
         if (accessThreadId == firstTouchThreadId) {
-            cacheLineStatics[index].accessNumberByFirstTouchThread++;
+            accessNumberByFirstTouchThread[index]++;
             return;
         }
-        cacheLineStatics[index].accessNumberByOtherThread++;
+        accessNumberByOtherThread[index]++;
     }
 };
 
