@@ -4,12 +4,15 @@
 
 #include "../xdefines.h"
 #include "../utils/addresses.h"
+#include "pagedetailAccessInfo.h"
+#include "../utils/concurrency/automics.h"
 
 class PageBasicAccessInfo {
     unsigned short firstTouchThreadId;
 //    bool isPageContainMultipleObjects;
 //    unsigned long accessNumberByFirstTouchThread;
     unsigned long accessNumberByOtherThreads;
+    PageDetailedAccessInfo *pageDetailedAccessInfo;
     unsigned long cacheLineWritingNumber[CACHE_NUM_IN_ONE_PAGE];
 
 public:
@@ -17,6 +20,7 @@ public:
         this->firstTouchThreadId = firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = 0;
         this->accessNumberByOtherThreads = 0;
+        pageDetailedAccessInfo = NULL;
         memset(this->cacheLineWritingNumber, 0, CACHE_NUM_IN_ONE_PAGE * sizeof(unsigned long));
     }
 
@@ -24,6 +28,7 @@ public:
         this->firstTouchThreadId = basicPageAccessInfo.firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = basicPageAccessInfo.accessNumberByFirstTouchThread;
         this->accessNumberByOtherThreads = basicPageAccessInfo.accessNumberByOtherThreads;
+        this->pageDetailedAccessInfo = basicPageAccessInfo.pageDetailedAccessInfo;
         for (int i = 0; i < CACHE_NUM_IN_ONE_PAGE; i++) {
             this->cacheLineWritingNumber[i] = basicPageAccessInfo.cacheLineWritingNumber[i];
         }
@@ -51,6 +56,15 @@ public:
 
     inline unsigned short getFirstTouchThreadId() {
         return firstTouchThreadId;
+    }
+
+    inline PageDetailedAccessInfo *getPageDetailedAccessInfo() {
+        return pageDetailedAccessInfo;
+    }
+
+    inline bool setIfBasentPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
+        return Automics::compare_set<PageDetailedAccessInfo *>(&(this->pageDetailedAccessInfo), NULL,
+                                                               pageDetailedAccessInfo);
     }
 };
 

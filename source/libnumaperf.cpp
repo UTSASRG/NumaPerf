@@ -17,7 +17,6 @@
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
-typedef AddressToCacheIndexShadowMap<PageDetailedAccessInfo *> PageDetailedAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
 
 thread_local int pageDetailSamplingFrequency = 0;
@@ -28,7 +27,6 @@ thread_local unsigned long currentThreadIndex = 0;
 
 ObjectInfoMap objectInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
-PageDetailedAccessInfoShadowMap pageDetailedAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 
 #define SHADOW_MAP_SIZE (32ul * TB)
@@ -40,7 +38,6 @@ static void initializer(void) {
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
-    pageDetailedAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE);
     cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE);
     inited = true;
 }
@@ -157,22 +154,21 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
-inline void recordDetailsForPageSharing(unsigned long addr, unsigned long firstTouchThreadId) {
+inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
     Logger::debug("record page detailed info\n");
     pageDetailSamplingFrequency++;
     if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
         return;
     }
     pageDetailSamplingFrequency = 0;
-    PageDetailedAccessInfo **pageDetailInfoPtr = pageDetailedAccessInfoShadowMap.find(addr);
-    if (NULL == pageDetailInfoPtr) {
-        PageDetailedAccessInfo *pageDetailedAccessInfo = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
-        if (!pageDetailedAccessInfoShadowMap.insertIfAbsent(addr, pageDetailedAccessInfo)) {
-            PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+    if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
+        PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
+        if (!pageBasicAccessInfo->setIfBasentPageDetailedAccessInfo(pageDetailInfoPtr)) {
+            PageDetailedAccessInfo::release(pageDetailInfoPtr);
         }
-        pageDetailInfoPtr = pageDetailedAccessInfoShadowMap.find(addr);
     }
-    (*pageDetailInfoPtr)->recordAccess(addr, currentThreadIndex, firstTouchThreadId);
+    (pageBasicAccessInfo->getPageDetailedAccessInfo())->recordAccess(addr, currentThreadIndex,
+                                                                     pageBasicAccessInfo->getFirstTouchThreadId());
 }
 
 inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
@@ -210,7 +206,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
-    unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 
     if (!needPageDetailInfo) {
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
@@ -221,7 +216,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     }
 
     if (needPageDetailInfo) {
-        recordDetailsForPageSharing(addr, firstTouchThreadId);
+        recordDetailsForPageSharing(basicPageAccessInfo, addr);
     }
 
     if (needCahceDetailInfo) {
