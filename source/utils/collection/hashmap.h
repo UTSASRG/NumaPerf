@@ -146,6 +146,23 @@ public:
         return hkey & (_bucketsTotal - 1);
     }
 
+    ValueType findAndRemove(const KeyType &key, size_t keylen) {
+        assert(_initialized == true);
+        size_t hindex = hashIndex(key, keylen);
+        struct HashBucket *first = getHashBucket(hindex);
+        //fprintf(stderr, "find entry key %p hindex %d\n", key, hindex);
+        struct Entry *entry = getEntry(first, key, keylen);
+        ValueType ret = NULL;
+
+        if (entry) {
+            ret = entry->value;
+            entry->erase();
+            SourceHeap::free(entry);
+        }
+
+        return ret;
+    }
+
     // Look up whether an entry is existing or not.
     // If existing, return true. *value should be carried specific value for this key.
     // Otherwise, return false.

@@ -8,7 +8,8 @@
 #define MULTIPLE_THREAD 0xffff
 
 class CacheLineDetailedInfo {
-    unsigned long invalidationNumber;
+    unsigned long invalidationNumberInFirstThread;
+    unsigned long invalidationNumberInOtherThreads;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
@@ -31,6 +32,19 @@ private:
         return BitMasks::setBit(accessThreadsBitMask, MAX_THREAD_NUM, threadIndex);
     }
 
+    inline bool recordNewInvalidation(unsigned long threadId, eAccessType type) {
+        if (type == E_ACCESS_WRITE) {
+            resetThreadBitMask();
+            setThreadBitMask(threadId);
+            return true;
+        } else {
+            if (setThreadBitMask(threadId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 public:
 
 
@@ -45,14 +59,19 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    inline void recordAccess(unsigned long threadId, eAccessType type, unsigned long addr) {
-        if (type == E_ACCESS_WRITE) {
-            resetThreadBitMask();
-            setThreadBitMask(threadId);
-            invalidationNumber++;
+    inline unsigned long getSeriousScore() {
+        return invalidationNumberInFirstThread + (2 * invalidationNumberInOtherThreads);
+    }
+
+    inline void
+    recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
+        if (firstTouchThreadId == threadId) {
+            if (recordNewInvalidation(threadId, type)) {
+                invalidationNumberInFirstThread++;
+            }
         } else {
-            if (setThreadBitMask(threadId)) {
-                invalidationNumber++;
+            if (recordNewInvalidation(threadId, type)) {
+                invalidationNumberInOtherThreads++;
             }
         }
 

@@ -171,7 +171,7 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
                                                                      pageBasicAccessInfo->getFirstTouchThreadId());
 }
 
-inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
+inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
     Logger::debug("record cache detailed info\n");
     cacheDetailSamplingFrequency++;
     if (cacheDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
@@ -188,7 +188,7 @@ inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
         cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
 
     }
-    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, type, addr);
+    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
 }
 
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
@@ -206,7 +206,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
-
+    unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
     if (!needPageDetailInfo) {
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
     }
@@ -220,7 +220,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     }
 
     if (needCahceDetailInfo) {
-        recordDetailsForCacheSharing(addr, type);
+        recordDetailsForCacheSharing(addr, firstTouchThreadId, type);
     }
     // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
