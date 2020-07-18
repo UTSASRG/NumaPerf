@@ -118,10 +118,45 @@ void *realloc(void *ptr, size_t size) {
     return newObjPtr;
 }
 
-void free(void *ptr) __THROW{
+void collectAndClearObjInfo(ObjectInfo *objectInfo) {
+    unsigned long startAddress = objectInfo->getStartAddress();
+    unsigned long size = objectInfo->getSize();
+    unsigned long allInvalidNumInMainThread = 0;
+    unsigned long allInvalidNumInOtherThreads = 0;
+    for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
+        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
+        if (NULL == pageBasicAccessInfo) {
+            Logger::warn("pageBasicAccessInfo is lost\n");
+            continue;
+        }
+        for (unsigned long cacheLineAddress = address;
+             (cacheLineAddress - startAddress) < size; cacheLineAddress += CACHE_LINE_SIZE) {
+            if (!pageBasicAccessInfo->needCacheLineSharingDetailInfo(cacheLineAddress)) {
+                continue;
+            }
+            CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+            if (NULL == cacheLineDetailedInfo) {
+                Logger::warn("cacheLineDetailedInfo is lost\n");
+                continue;
+            }
+            allInvalidNumInMainThread += (*cacheLineDetailedInfo)->getInvalidationNumberInFirstThread();
+            allInvalidNumInOtherThreads += (*cacheLineDetailedInfo)->getInvalidationNumberInOtherThreads();
+            cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
+        }
+        if (pageBasicAccessInfo->needPageSharingDetailInfo()) {
+
+        }
+    }
+}
+
+void free(void *ptr) {
     Logger::debug("free pointer:%p\n", ptr);
     if (!inited) {
         return;
+    }
+    ObjectInfo *objectInfo = objectInfoMap.findAndRemove((unsigned long) ptr, 0);
+    if (NULL != objectInfo) {
+        collectAndClearObjInfo(objectInfo);
     }
     Real::free(ptr);
 }
@@ -143,7 +178,7 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW{
+                   void *(*start_routine)(void *), void *arg) {
     Logger::debug("pthread create\n");
     if (!inited) {
         initializer();

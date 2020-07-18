@@ -59,6 +59,14 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
+    inline unsigned long getInvalidationNumberInFirstThread() {
+        return invalidationNumberInFirstThread;
+    }
+
+    inline unsigned long getInvalidationNumberInOtherThreads() {
+        return invalidationNumberInOtherThreads;
+    }
+
     inline unsigned long getSeriousScore() {
         return invalidationNumberInFirstThread + (2 * invalidationNumberInOtherThreads);
     }

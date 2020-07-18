@@ -20,6 +20,9 @@ add_executable(NumaPerf
         source/bean/pagebasicaccessinfo.h
         source/bean/pagedetailAccessInfo.h
         source/bean/cachelinedetailedinfo.h
+        source/bean/diagnoseobjinfo.h
+        source/bean/diagnosecachelineinfo.h
+        source/bean/diagnosepageinfo.h
         source/utils/real.h
         source/utils/bitmasks.h
         source/utils/addresses.h

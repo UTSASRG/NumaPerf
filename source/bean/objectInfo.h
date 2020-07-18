@@ -35,6 +35,10 @@ public:
     inline unsigned long getSize() {
         return this->size;
     }
+
+    inline unsigned long getStartAddress() {
+        return startAddress;
+    }
 };
 
 #endif //NUMAPERF_OBJECTINFO_H
