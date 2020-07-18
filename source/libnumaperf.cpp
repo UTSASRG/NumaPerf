@@ -48,7 +48,7 @@ MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(Obje
                                        TB * 5);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
                                                   TB * 5);
-//MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
+MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
                                                    TB * 5);
 
 __attribute__ ((destructor)) void finalizer(void) {
@@ -154,24 +154,24 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
 }
 
-//inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
-//    Logger::debug("record page detailed info\n");
-//    pageDetailSamplingFrequency++;
-//    if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
-//        return;
-//    }
-//    pageDetailSamplingFrequency = 0;
-//    if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
-//        PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
-//        if (!pageBasicAccessInfo->setIfBasentPageDetailedAccessInfo(pageDetailInfoPtr)) {
-//            PageDetailedAccessInfo::release(pageDetailInfoPtr);
-//        }
-//    }
-//    (pageBasicAccessInfo->getPageDetailedAccessInfo())->recordAccess(addr, currentThreadIndex,
-//                                                                     pageBasicAccessInfo->getFirstTouchThreadId());
-//}
+inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
+    Logger::debug("record page detailed info\n");
+    pageDetailSamplingFrequency++;
+    if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
+        return;
+    }
+    pageDetailSamplingFrequency = 0;
+    if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
+        PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
+        if (!pageBasicAccessInfo->setIfBasentPageDetailedAccessInfo(pageDetailInfoPtr)) {
+            PageDetailedAccessInfo::release(pageDetailInfoPtr);
+        }
+    }
+    (pageBasicAccessInfo->getPageDetailedAccessInfo())->recordAccess(addr, currentThreadIndex,
+                                                                     pageBasicAccessInfo->getFirstTouchThreadId());
+}
 
-inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long fitstTouchThreadId, eAccessType type) {
+inline void recordDetailsForCacheSharing(unsigned long addr, eAccessType type) {
     Logger::debug("record cache detailed info\n");
     cacheDetailSamplingFrequency++;
     if (cacheDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
@@ -188,7 +188,7 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long fitst
         cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
 
     }
-    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, fitstTouchThreadId, type, addr);
+    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, type, addr);
 }
 
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
@@ -204,20 +204,20 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         return;
     }
 
-//    bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
+    bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
 
-//    if (!needPageDetailInfo) {
-//        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
-//    }
+    if (!needPageDetailInfo) {
+        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+    }
 
     if (!needCahceDetailInfo) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
 
-//    if (needPageDetailInfo) {
-//        recordDetailsForPageSharing(basicPageAccessInfo, addr);
-//    }
+    if (needPageDetailInfo) {
+        recordDetailsForPageSharing(basicPageAccessInfo, addr);
+    }
 
     if (needCahceDetailInfo) {
         recordDetailsForCacheSharing(addr, type);
