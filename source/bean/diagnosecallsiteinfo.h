@@ -15,8 +15,8 @@ class DiagnoseCallSiteInfo {
 private:
     static MemoryPool localMemoryPool;
 
-    DiagnoseCallSiteInfo() : topObjInfoQueue(MAX_TOP_OBJ_INFO) {
-        callsiteAddress = 0;
+    DiagnoseCallSiteInfo(unsigned long callsiteAddress) : topObjInfoQueue(MAX_TOP_OBJ_INFO) {
+        callsiteAddress = callsiteAddress;
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
@@ -24,10 +24,10 @@ private:
     }
 
 public:
-    inline static DiagnoseCallSiteInfo *createNewDiagnoseCallSiteInfo() {
+    inline static DiagnoseCallSiteInfo *createNewDiagnoseCallSiteInfo(unsigned long callsiteAddress) {
         void *buff = localMemoryPool.get();
         Logger::debug("new DiagnoseCallSiteInfo buff address:%lu \n", buff);
-        DiagnoseCallSiteInfo *ret = new(buff) DiagnoseCallSiteInfo();
+        DiagnoseCallSiteInfo *ret = new(buff) DiagnoseCallSiteInfo(callsiteAddress);
         return ret;
     }
 

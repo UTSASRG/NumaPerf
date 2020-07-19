@@ -126,7 +126,7 @@ void *realloc(void *ptr, size_t size) {
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     unsigned long startAddress = objectInfo->getStartAddress();
     unsigned long size = objectInfo->getSize();
-    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo();
+    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
     for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
         if (NULL == pageBasicAccessInfo) {

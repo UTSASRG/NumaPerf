@@ -19,8 +19,8 @@ class DiagnoseObjInfo {
 private:
     static MemoryPool localMemoryPool;
 
-    DiagnoseObjInfo() : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO) {
-        objectInfo = NULL;
+    DiagnoseObjInfo(ObjectInfo *objectInfo) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO) {
+        objectInfo = objectInfo;
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
@@ -28,10 +28,10 @@ private:
     }
 
 public:
-    inline static DiagnoseObjInfo *createNewDiagnoseObjInfo() {
+    inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
         void *buff = localMemoryPool.get();
         Logger::debug("new DiagnoseObjInfo buff address:%lu \n", buff);
-        DiagnoseObjInfo *ret = new(buff) DiagnoseObjInfo();
+        DiagnoseObjInfo *ret = new(buff) DiagnoseObjInfo(objectInfo);
         return ret;
     }
 
