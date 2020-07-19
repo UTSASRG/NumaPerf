@@ -45,6 +45,21 @@ private:
         }
     }
 
+    inline bool _insert(ValueType *value) {
+        if (endIndex < MAX_SIZE) {
+            values[endIndex] = value;
+            pop(endIndex);
+            endIndex++;
+            return true;
+        }
+        if (*value < *(values[0])) {
+            return false;
+        }
+        values[0] = value;
+        sink(0);
+        return true;
+    }
+
 public:
     PriorityQueue(int maxSize) : MAX_SIZE(maxSize) {
         assert(maxSize < PRI_QUEUE_MAX_CAPACITY);
@@ -61,23 +76,18 @@ public:
      * if full and new value is bigger than the head , replace the head with the new value and sink the new head
      * @param value
      */
-    inline bool insert(ValueType *value) {
-        lock.lock();
-        if (endIndex < MAX_SIZE) {
-            values[endIndex] = value;
-            pop(endIndex);
-            endIndex++;
-            lock.unlock();
-            return true;
-        }
-        if (*value < *(values[0])) {
-            lock.unlock();
+    inline bool insert(ValueType *value, bool withLock = false) {
+        // fast fail
+        if (endIndex >= MAX_SIZE && *value < *(values[0])) {
             return false;
         }
-        values[0] = value;
-        sink(0);
+        if (!withLock) {
+            return _insert(value);
+        }
+        lock.lock();
+        bool ret = _insert(value);
         lock.unlock();
-        return true;
+        return ret;
     }
 
     inline int getSize() {

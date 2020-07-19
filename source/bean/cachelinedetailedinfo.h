@@ -49,14 +49,14 @@ private:
 
 public:
 
-    static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing() {
+    inline static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing() {
         void *buff = localMemoryPool.get();
         Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
         CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo();
         return ret;
     }
 
-    static void release(CacheLineDetailedInfo *buff) {
+    inline static void release(CacheLineDetailedInfo *buff) {
         localMemoryPool.release((void *) buff);
     }
 
@@ -73,19 +73,19 @@ public:
                                                this->invalidationNumberInOtherThreads);
     }
 
-    bool operator<(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator<(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() < cacheLineDetailedInfo.getSeriousScore();
     }
 
-    bool operator>(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator>(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() > cacheLineDetailedInfo.getSeriousScore();
     }
 
-    bool operator>=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator>=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() >= cacheLineDetailedInfo.getSeriousScore();
     }
 
-    bool operator==(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator==(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() == cacheLineDetailedInfo.getSeriousScore();
     }
 

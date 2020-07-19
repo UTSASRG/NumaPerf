@@ -163,7 +163,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             ->setAllInvalidNumInMainThread(allInvalidNumInMainThread)
             ->setAllInvalidNumInOtherThreads(allInvalidNumInOtherThreads)
             ->setCacheLineDetailedInfo(cacheLinePriorityQueue.getValues(), cacheLinePriorityQueue.getSize());
-    if (!objDiagnoseQueue.insert(diagnoseObjInfo)) {
+    if (!objDiagnoseQueue.insert(diagnoseObjInfo, true)) {
         DiagnoseObjInfo::release(diagnoseObjInfo);
     }
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
