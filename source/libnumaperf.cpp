@@ -11,6 +11,7 @@
 #include "utils/memorypool.h"
 #include "bean/pagebasicaccessinfo.h"
 #include "bean/cachelinedetailedinfo.h"
+#include "bean/diagnosecallsiteinfo.h"
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include "bean/objectInfo.h"
@@ -18,6 +19,7 @@
 #include "utils/collection/addrtocacheindexshadowmap.h"
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
+typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
 
@@ -28,6 +30,7 @@ unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
 
 ObjectInfoMap objectInfoMap;
+CallSiteInfoMap callSiteInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 PriorityQueue<DiagnoseObjInfo> objDiagnoseQueue(10);
@@ -38,6 +41,7 @@ static void initializer(void) {
     Logger::info("NumaPerf initializer\n");
     Real::init();
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
+    callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE);
@@ -80,6 +84,14 @@ extern void *malloc(size_t size) {
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
+
+    if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {
+        DiagnoseCallSiteInfo *diagnoseCallSiteInfo = DiagnoseCallSiteInfo::createNewDiagnoseCallSiteInfo(
+                (unsigned long) callerAddress);
+        if (!callSiteInfoMap.insertIfAbsent((unsigned long) callerAddress, 0, diagnoseCallSiteInfo)) {
+            DiagnoseCallSiteInfo::release(diagnoseCallSiteInfo);
+        }
+    }
     ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,
                                                                  callerAddress);
     objectInfoMap.insert((unsigned long) objectStartAddress, 0, objectInfoPtr);
