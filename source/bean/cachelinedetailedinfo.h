@@ -9,6 +9,7 @@
 #define MULTIPLE_THREAD 0xffff
 
 class CacheLineDetailedInfo {
+    unsigned long startAddress;
     unsigned long invalidationNumberInFirstThread;
     unsigned long invalidationNumberInOtherThreads;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
@@ -78,6 +79,10 @@ public:
 
     bool operator>(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() > cacheLineDetailedInfo.getSeriousScore();
+    }
+
+    bool operator>=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        return this->getSeriousScore() >= cacheLineDetailedInfo.getSeriousScore();
     }
 
     bool operator==(const CacheLineDetailedInfo &cacheLineDetailedInfo) {

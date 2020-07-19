@@ -72,6 +72,15 @@ public:
         sink(0);
         return true;
     }
+
+    inline int getSize() {
+        return endIndex;
+    }
+
+    inline ValueType **getValues() {
+        return values;
+    }
+
 };
 
 #endif //NUMAPERF_PRIORITYQUEUE_H

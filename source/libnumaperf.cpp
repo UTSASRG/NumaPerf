@@ -7,6 +7,7 @@
 #include <assert.h>
 #include "utils/collection/priorityqueue.h"
 #include "bean/pagedetailAccessInfo.h"
+#include "bean/diagnoseobjinfo.h"
 #include "utils/memorypool.h"
 #include "bean/pagebasicaccessinfo.h"
 #include "bean/cachelinedetailedinfo.h"
@@ -51,6 +52,9 @@ MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(
                                                   TB * 5);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
                                                    TB * 5);
+
+MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
+                                            TB * 1);
 
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
@@ -155,6 +159,11 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         allInvalidNumInOtherThreads < CACHE_SHARING_DETAIL_THRESHOLD) {
         return;
     }
+    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo()->setObjectInfo(objectInfo)
+            ->setAllInvalidNumInMainThread(allInvalidNumInMainThread)
+            ->setAllInvalidNumInOtherThreads(allInvalidNumInOtherThreads)
+            ->setCacheLineDetailedInfo(cacheLinePriorityQueue.getValues(), cacheLinePriorityQueue.getSize());
+
     Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
                  allInvalidNumInOtherThreads);
 }
