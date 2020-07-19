@@ -1,19 +1,21 @@
 2020-06-xx
 Overheads:
-    1.Overheads from the invoking of real::malloc.(mallocation of pageInfo,cacheInfo,objectInfo,entryInHashMap)
-        a. too much number of invo
-    2.Overheads from too much memory access in the malloc function
-    3.Overheads in the handle access is higher after the program running a while(imbalance in the hashmap)
-    4.Start counting some information after second thread writing
-    5.shadow mapping?
+1.Overheads from the invoking of real::malloc.(mallocation of pageInfo,cacheInfo,objectInfo,entryInHashMap)
+a. too much number of invo
+2.Overheads from too much memory access in the malloc function
+3.Overheads in the handle access is higher after the program running a while(imbalance in the hashmap)
+4.Start counting some information after second thread writing
+5.shadow mapping?
 Function:
-    1.how to output
+1.how to output
 
-The key to reduce overheads is to reduce cache miss(small footprint and small cache invalidation). And also reduce lock contention.
+The key to reduce overheads is to reduce cache miss(not necessary memory touch, small footprint, small cache invalidation, cache line align up).
+And also reduce lock contention, use of lock and also use of CAS...
 
 
 2020-07-18 Overheads:
 Overheads
 1. overheads from MemoryPool:
-    solution: add thread local cache , or try ptmalloc
-2. I guess samling is necessary, but with a smart sampling which do not influence it effects
+solution: add thread local cache , or try ptmalloc
+2. overheads from hashmap-allocater, which is Real::malloc. that is super slow.
+3. I guess samling is necessary, but with a smart sampling which do not influence it effects

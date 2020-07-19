@@ -14,9 +14,11 @@
 #include "bean/diagnosecallsiteinfo.h"
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
+#include <execinfo.h>
 #include "bean/objectInfo.h"
 #include "utils/collection/addrtopageindexshadowmap.h"
 #include "utils/collection/addrtocacheindexshadowmap.h"
+#include "utils/programs.h"
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
@@ -60,6 +62,9 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine
 MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
                                             TB * 1);
 
+MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
+                                                 TB * 1);
+
 __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
 }
@@ -82,6 +87,16 @@ extern void *malloc(size_t size) {
         return resultPtr;
     }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
+    Logger::info("malloc callsite: %lu\n", callerAddress);
+    void *callStacks[3];
+    backtrace(callStacks, 3);
+    Logger::info("malloc call stack1: %lu\n", (unsigned long) callStacks[0]);
+    Logger::info("malloc call stack2: %lu\n", (unsigned long) callStacks[1]);
+    Logger::info("malloc call stack3: %lu\n", (unsigned long) callStacks[2]);
+    backtrace_symbols_fd(callStacks, 3, 2);
+    Programs::address2Line((unsigned long) callStacks[0]);
+    Programs::address2Line((unsigned long) callStacks[1]);
+    Programs::address2Line((unsigned long) callStacks[2]);
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
 
