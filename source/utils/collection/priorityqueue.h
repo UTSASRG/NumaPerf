@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "../concurrency/spinlock.h"
 
-#define PRI_QUEUE_MAX_CAPACITY 100
+#define PRI_QUEUE_MAX_CAPACITY 11
 
 template<class ValueType>
 class PriorityQueue {

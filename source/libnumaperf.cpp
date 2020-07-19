@@ -124,13 +124,9 @@ void *realloc(void *ptr, size_t size) {
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
-    thread_local PriorityQueue<CacheLineDetailedInfo> cacheLinePriorityQueue(10);
-    cacheLinePriorityQueue.reset();
-
     unsigned long startAddress = objectInfo->getStartAddress();
     unsigned long size = objectInfo->getSize();
-    unsigned long allInvalidNumInMainThread = 0;
-    unsigned long allInvalidNumInOtherThreads = 0;
+    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo();
     for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
         if (NULL == pageBasicAccessInfo) {
@@ -146,23 +142,15 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             if (NULL == cacheLineDetailedInfo) {
                 continue;
             }
-            cacheLinePriorityQueue.insert(*cacheLineDetailedInfo);
-            allInvalidNumInMainThread += (*cacheLineDetailedInfo)->getInvalidationNumberInFirstThread();
-            allInvalidNumInOtherThreads += (*cacheLineDetailedInfo)->getInvalidationNumberInOtherThreads();
+            if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo)) {
+                CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
+            }
             cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
         }
         if (pageBasicAccessInfo->needPageSharingDetailInfo()) {
 
         }
     }
-    if (allInvalidNumInMainThread < CACHE_SHARING_DETAIL_THRESHOLD &&
-        allInvalidNumInOtherThreads < CACHE_SHARING_DETAIL_THRESHOLD) {
-        return;
-    }
-    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo()->setObjectInfo(objectInfo)
-            ->setAllInvalidNumInMainThread(allInvalidNumInMainThread)
-            ->setAllInvalidNumInOtherThreads(allInvalidNumInOtherThreads)
-            ->setCacheLineDetailedInfo(cacheLinePriorityQueue.getValues(), cacheLinePriorityQueue.getSize());
     if (!objDiagnoseQueue.insert(diagnoseObjInfo, true)) {
         DiagnoseObjInfo::release(diagnoseObjInfo);
     }

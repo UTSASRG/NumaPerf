@@ -5,6 +5,7 @@
 #include "cachelinedetailedinfo.h"
 #include "pagedetailAccessInfo.h"
 #include "../xdefines.h"
+#include "../utils/collection/priorityqueue.h"
 
 class DiagnoseObjInfo {
 
@@ -13,13 +14,17 @@ class DiagnoseObjInfo {
     unsigned long allInvalidNumInOtherThreads;
     unsigned long allAccessNumInMainThread;
     unsigned long allAccessNumInOtherThread;
-    CacheLineDetailedInfo *cacheLineDetailedInfo[MAX_TOP_CACHELINE_DETAIL_INFO];
+    PriorityQueue<CacheLineDetailedInfo> topCacheLineDetailQueue;
 
 private:
     static MemoryPool localMemoryPool;
 
-    DiagnoseObjInfo() {
-        memset(this, 0, sizeof(DiagnoseObjInfo));
+    DiagnoseObjInfo() : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO) {
+        objectInfo = NULL;
+        allInvalidNumInMainThread = 0;
+        allInvalidNumInOtherThreads = 0;
+        allAccessNumInMainThread = 0;
+        allAccessNumInOtherThread = 0;
     }
 
 public:
@@ -31,17 +36,20 @@ public:
     }
 
     inline static void release(DiagnoseObjInfo *buff) {
-        for (int i = 0; i < MAX_TOP_CACHELINE_DETAIL_INFO; i++) {
-            if (NULL == buff->cacheLineDetailedInfo[i]) {
-                break;
-            }
-            CacheLineDetailedInfo::release(buff->cacheLineDetailedInfo[i]);
+        for (int i = 0; i < buff->topCacheLineDetailQueue.getSize(); i++) {
+            CacheLineDetailedInfo::release(buff->topCacheLineDetailQueue.getValues()[i]);
         }
         localMemoryPool.release((void *) buff);
     }
 
     inline unsigned long getSeriousScore() const {
         return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
+    }
+
+    inline bool insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
+        this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
+        this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
     }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
@@ -58,39 +66,6 @@ public:
 
     inline bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
         return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
-    }
-
-    inline DiagnoseObjInfo *setObjectInfo(ObjectInfo *objectInfo) {
-        DiagnoseObjInfo::objectInfo = objectInfo;
-        return this;
-    }
-
-    inline DiagnoseObjInfo *setAllInvalidNumInMainThread(unsigned long allInvalidNumInMainThread) {
-        DiagnoseObjInfo::allInvalidNumInMainThread = allInvalidNumInMainThread;
-        return this;
-    }
-
-    inline DiagnoseObjInfo *setAllInvalidNumInOtherThreads(unsigned long allInvalidNumInOtherThreads) {
-        DiagnoseObjInfo::allInvalidNumInOtherThreads = allInvalidNumInOtherThreads;
-        return this;
-    }
-
-    inline DiagnoseObjInfo *setAllAccessNumInMainThread(unsigned long allAccessNumInMainThread) {
-        DiagnoseObjInfo::allAccessNumInMainThread = allAccessNumInMainThread;
-        return this;
-    }
-
-    inline DiagnoseObjInfo *setAllAccessNumInOtherThread(unsigned long allAccessNumInOtherThread) {
-        DiagnoseObjInfo::allAccessNumInOtherThread = allAccessNumInOtherThread;
-        return this;
-    }
-
-    inline DiagnoseObjInfo *setCacheLineDetailedInfo(CacheLineDetailedInfo **cacheLineDetailedInfo, int size) {
-        assert(size <= MAX_TOP_CACHELINE_DETAIL_INFO);
-        for (int i = 0; i < size; i++) {
-            DiagnoseObjInfo::cacheLineDetailedInfo[i] = cacheLineDetailedInfo[i];
-        }
-        return this;
     }
 };
 
