@@ -43,6 +43,7 @@ public:
     }
 
     inline unsigned long getSeriousScore() const {
+        //todo
         return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
     }
 
@@ -66,6 +67,22 @@ public:
 
     inline bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
         return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
+    }
+
+    inline unsigned long getAllInvalidNumInMainThread() const {
+        return allInvalidNumInMainThread;
+    }
+
+    inline unsigned long getAllInvalidNumInOtherThreads() const {
+        return allInvalidNumInOtherThreads;
+    }
+
+    inline unsigned long getAllAccessNumInMainThread() const {
+        return allAccessNumInMainThread;
+    }
+
+    inline unsigned long getAllAccessNumInOtherThread() const {
+        return allAccessNumInOtherThread;
     }
 };
 

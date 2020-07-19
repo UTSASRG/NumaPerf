@@ -1,8 +1,0 @@
-#ifndef NUMAPERF_DIAGNOSEPAGEINFO_H
-#define NUMAPERF_DIAGNOSEPAGEINFO_H
-
-class DiagnosePageInfo {
-
-};
-
-#endif //NUMAPERF_DIAGNOSEPAGEINFO_H
