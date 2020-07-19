@@ -4,6 +4,7 @@
 #include "../xdefines.h"
 #include "../utils/addresses.h"
 #include "../utils/bitmasks.h"
+#include "scores.h"
 
 #define MULTIPLE_THREAD 0xffff
 
@@ -47,7 +48,6 @@ private:
 
 public:
 
-
     static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing() {
         void *buff = localMemoryPool.get();
         Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
@@ -67,8 +67,21 @@ public:
         return invalidationNumberInOtherThreads;
     }
 
-    inline unsigned long getSeriousScore() {
-        return invalidationNumberInFirstThread + (2 * invalidationNumberInOtherThreads);
+    inline unsigned long getSeriousScore() const {
+        return Scores::getScoreForCacheInvalid(this->invalidationNumberInFirstThread,
+                                               this->invalidationNumberInOtherThreads);
+    }
+
+    bool operator<(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        return this->getSeriousScore() < cacheLineDetailedInfo.getSeriousScore();
+    }
+
+    bool operator>(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        return this->getSeriousScore() > cacheLineDetailedInfo.getSeriousScore();
+    }
+
+    bool operator==(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        return this->getSeriousScore() == cacheLineDetailedInfo.getSeriousScore();
     }
 
     inline void

@@ -5,6 +5,7 @@
 #include "utils/concurrency/spinlock.h"
 #include "utils/collection/hashfuncs.h"
 #include <assert.h>
+#include "utils/collection/priorityqueue.h"
 #include "bean/pagedetailAccessInfo.h"
 #include "utils/memorypool.h"
 #include "bean/pagebasicaccessinfo.h"
@@ -28,7 +29,7 @@ thread_local unsigned long currentThreadIndex = 0;
 ObjectInfoMap objectInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
-
+PriorityQueue<int> priorityQueue(10);
 #define SHADOW_MAP_SIZE (32ul * TB)
 #define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
 
@@ -118,7 +119,10 @@ void *realloc(void *ptr, size_t size) {
     return newObjPtr;
 }
 
-void collectAndClearObjInfo(ObjectInfo *objectInfo) {
+inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
+    thread_local PriorityQueue<CacheLineDetailedInfo> cacheLinePriorityQueue(10);
+    cacheLinePriorityQueue.reset();
+
     unsigned long startAddress = objectInfo->getStartAddress();
     unsigned long size = objectInfo->getSize();
     unsigned long allInvalidNumInMainThread = 0;
@@ -136,9 +140,9 @@ void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             }
             CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
             if (NULL == cacheLineDetailedInfo) {
-                Logger::warn("cacheLineDetailedInfo is lost\n");
                 continue;
             }
+            cacheLinePriorityQueue.insert(*cacheLineDetailedInfo);
             allInvalidNumInMainThread += (*cacheLineDetailedInfo)->getInvalidationNumberInFirstThread();
             allInvalidNumInOtherThreads += (*cacheLineDetailedInfo)->getInvalidationNumberInOtherThreads();
             cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
@@ -147,6 +151,12 @@ void collectAndClearObjInfo(ObjectInfo *objectInfo) {
 
         }
     }
+    if (allInvalidNumInMainThread < CACHE_SHARING_DETAIL_THRESHOLD &&
+        allInvalidNumInOtherThreads < CACHE_SHARING_DETAIL_THRESHOLD) {
+        return;
+    }
+    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
+                 allInvalidNumInOtherThreads);
 }
 
 void free(void *ptr) {

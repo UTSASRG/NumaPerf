@@ -14,8 +14,10 @@ add_executable(NumaPerf
         source/utils/collection/addrtocacheindexshadowmap.h
         source/utils/collection/list.h
         source/utils/collection/hashmap.h
+        source/utils/collection/priorityqueue.h
         source/libnumaperf.cpp
         source/libnumaperf.h
+        source/bean/scores.h
         source/bean/objectInfo.h
         source/bean/pagebasicaccessinfo.h
         source/bean/pagedetailAccessInfo.h

@@ -12,6 +12,8 @@ class DiagnoseObjInfo {
     unsigned long allInvalidNumInOtherThreads;
     unsigned long allAccessNumInMainThread;
     unsigned long allAccessNumInOtherThread;
+
+
 };
 
 #endif //NUMAPERF_DIAGNOSEOBJINFO_H
