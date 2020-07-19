@@ -151,6 +151,9 @@ public:
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
         //fprintf(stderr, "find entry key %p hindex %d\n", key, hindex);
+#if LOCK_PROTECTION
+        first->Lock();
+#endif
         struct Entry *entry = getEntry(first, key, keylen);
         ValueType ret = NULL;
 
@@ -159,6 +162,9 @@ public:
             entry->erase();
             SourceHeap::free(entry);
         }
+#if LOCK_PROTECTION
+        first->Unlock();
+#endif
 
         return ret;
     }

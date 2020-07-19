@@ -2,11 +2,13 @@
 #define NUMAPERF_PRIORITYQUEUE_H
 
 #include <assert.h>
+#include "../concurrency/spinlock.h"
 
 #define PRI_QUEUE_MAX_CAPACITY 100
 
 template<class ValueType>
 class PriorityQueue {
+    spinlock lock;
     const int MAX_SIZE;
     int endIndex;
     ValueType *values[PRI_QUEUE_MAX_CAPACITY];
@@ -47,6 +49,7 @@ public:
     PriorityQueue(int maxSize) : MAX_SIZE(maxSize) {
         assert(maxSize < PRI_QUEUE_MAX_CAPACITY);
         endIndex = 0;
+        lock.init();
     }
 
     inline void reset() {
@@ -59,17 +62,21 @@ public:
      * @param value
      */
     inline bool insert(ValueType *value) {
+        lock.lock();
         if (endIndex < MAX_SIZE) {
             values[endIndex] = value;
             pop(endIndex);
             endIndex++;
+            lock.unlock();
             return true;
         }
         if (*value < *(values[0])) {
+            lock.unlock();
             return false;
         }
         values[0] = value;
         sink(0);
+        lock.unlock();
         return true;
     }
 

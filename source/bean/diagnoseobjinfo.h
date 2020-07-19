@@ -30,6 +30,33 @@ public:
         return ret;
     }
 
+    static void release(DiagnoseObjInfo *buff) {
+        for (int i = 0; i < MAX_TOP_CACHELINE_DETAIL_INFO; i++) {
+            CacheLineDetailedInfo::release(buff->cacheLineDetailedInfo[i]);
+        }
+        localMemoryPool.release((void *) buff);
+    }
+
+    inline unsigned long getSeriousScore() const {
+        return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
+    }
+
+    inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
+        return this->getSeriousScore() < diagnoseObjInfo.getSeriousScore();
+    }
+
+    bool operator>(const DiagnoseObjInfo &diagnoseObjInfo) {
+        return this->getSeriousScore() > diagnoseObjInfo.getSeriousScore();
+    }
+
+    bool operator>=(const DiagnoseObjInfo &diagnoseObjInfo) {
+        return this->getSeriousScore() >= diagnoseObjInfo.getSeriousScore();
+    }
+
+    bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
+        return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
+    }
+
     DiagnoseObjInfo *setObjectInfo(ObjectInfo *objectInfo) {
         DiagnoseObjInfo::objectInfo = objectInfo;
         return this;

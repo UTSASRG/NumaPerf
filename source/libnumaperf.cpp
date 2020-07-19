@@ -30,7 +30,7 @@ thread_local unsigned long currentThreadIndex = 0;
 ObjectInfoMap objectInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
-PriorityQueue<int> priorityQueue(10);
+PriorityQueue<DiagnoseObjInfo> objDiagnoseQueue(10);
 #define SHADOW_MAP_SIZE (32ul * TB)
 #define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
 
@@ -163,9 +163,11 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             ->setAllInvalidNumInMainThread(allInvalidNumInMainThread)
             ->setAllInvalidNumInOtherThreads(allInvalidNumInOtherThreads)
             ->setCacheLineDetailedInfo(cacheLinePriorityQueue.getValues(), cacheLinePriorityQueue.getSize());
-
-    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
-                 allInvalidNumInOtherThreads);
+    if (!objDiagnoseQueue.insert(diagnoseObjInfo)) {
+        DiagnoseObjInfo::release(diagnoseObjInfo);
+    }
+//    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
+//                 allInvalidNumInOtherThreads);
 }
 
 void free(void *ptr) {
