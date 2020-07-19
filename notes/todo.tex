@@ -1,3 +1,4 @@
+2020-06-xx
 Overheads:
     1.Overheads from the invoking of real::malloc.(mallocation of pageInfo,cacheInfo,objectInfo,entryInHashMap)
         a. too much number of invo
@@ -7,3 +8,12 @@ Overheads:
     5.shadow mapping?
 Function:
     1.how to output
+
+The key to reduce overheads is to reduce cache miss(small footprint and small cache invalidation). And also reduce lock contention.
+
+
+2020-07-18 Overheads:
+Overheads
+1. overheads from MemoryPool:
+    solution: add thread local cache , or try ptmalloc
+2. I guess samling is necessary, but with a smart sampling which do not influence it effects
