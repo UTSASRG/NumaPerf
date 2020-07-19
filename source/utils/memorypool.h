@@ -70,7 +70,7 @@ public:
         this->bumpEndPointer = (char *) this->bumpPointer + maxPoolSize;
 //        memset((void *) bumpPointer, 0, initPoolSize);
         Logger::debug("memory pool init capacity:%lu, bumppointer:%lu, bumpendpointer:%lu\n", maxPoolSize,
-                     bumpPointer, bumpEndPointer);
+                      bumpPointer, bumpEndPointer);
     }
 
     void *get() {
@@ -90,6 +90,9 @@ public:
     }
 
     void release(void *memoryBlock) {
+        if (NULL == memoryBlock) {
+            return;
+        }
         automicInsertIntoFreeList(memoryBlock);
     }
 };
