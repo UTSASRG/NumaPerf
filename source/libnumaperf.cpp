@@ -24,7 +24,7 @@ typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInf
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
-
+bool interceptMalloc = true;
 thread_local int pageDetailSamplingFrequency = 0;
 thread_local int cacheDetailSamplingFrequency = 0;
 bool inited = false;
@@ -42,6 +42,8 @@ PriorityQueue<DiagnoseObjInfo> objDiagnoseQueue(10);
 static void initializer(void) {
     Logger::info("NumaPerf initializer\n");
     Real::init();
+    void *callStacks[1];
+    backtrace(callStacks, 1);
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
@@ -86,6 +88,11 @@ extern void *malloc(size_t size) {
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
+    void *objectStartAddress = Real::malloc(size);
+    assert(objectStartAddress != NULL);
+    if (!interceptMalloc) {
+        return objectStartAddress;
+    }
     void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
     Logger::info("malloc callsite: %lu\n", callerAddress);
     void *callStacks[3];
@@ -97,8 +104,7 @@ extern void *malloc(size_t size) {
     Programs::address2Line((unsigned long) callStacks[0]);
     Programs::address2Line((unsigned long) callStacks[1]);
     Programs::address2Line((unsigned long) callStacks[2]);
-    void *objectStartAddress = Real::malloc(size);
-    assert(objectStartAddress != NULL);
+
 
     if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {
         DiagnoseCallSiteInfo *diagnoseCallSiteInfo = DiagnoseCallSiteInfo::createNewDiagnoseCallSiteInfo(
