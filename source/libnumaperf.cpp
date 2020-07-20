@@ -73,9 +73,9 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 #define MALLOC_CALL_SITE_OFFSET 0x18
 
-extern void *malloc(size_t size) {
+inline void *__malloc(size_t size, unsigned long callerAddress) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
-    Logger::debug("malloc size:%lu\n", size);
+    Logger::debug("__malloc size:%lu\n", size);
     if (size <= 0) {
         size = 1;
     }
@@ -93,17 +93,16 @@ extern void *malloc(size_t size) {
     if (!interceptMalloc) {
         return objectStartAddress;
     }
-    void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
-    Logger::info("malloc callsite: %lu\n", callerAddress);
-    void *callStacks[3];
-    backtrace(callStacks, 3);
-    Logger::info("malloc call stack1: %lu\n", (unsigned long) callStacks[0]);
-    Logger::info("malloc call stack2: %lu\n", (unsigned long) callStacks[1]);
-    Logger::info("malloc call stack3: %lu\n", (unsigned long) callStacks[2]);
-    backtrace_symbols_fd(callStacks, 3, 2);
-    Programs::address2Line((unsigned long) callStacks[0]);
-    Programs::address2Line((unsigned long) callStacks[1]);
-    Programs::address2Line((unsigned long) callStacks[2]);
+//    Logger::info("malloc callsite: %lu\n", callerAddress);
+//    void *callStacks[3];
+//    backtrace(callStacks, 3);
+//    Logger::info("malloc call stack1: %lu\n", (unsigned long) callStacks[0]);
+//    Logger::info("malloc call stack2: %lu\n", (unsigned long) callStacks[1]);
+//    Logger::info("malloc call stack3: %lu\n", (unsigned long) callStacks[2]);
+//    backtrace_symbols_fd(callStacks, 3, 2);
+//    Programs::address2Line((unsigned long) callStacks[0]);
+//    Programs::address2Line((unsigned long) callStacks[1]);
+//    Programs::address2Line((unsigned long) callStacks[2]);
 
 
     if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {
@@ -126,34 +125,6 @@ extern void *malloc(size_t size) {
     }
     //Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
-}
-
-void *calloc(size_t n, size_t size) {
-    Logger::debug("calloc N:%lu, size:%lu\n", n, size);
-    void *ptr = malloc(n * size);
-    if (ptr != NULL) {
-        memset(ptr, 0, n * size);
-    }
-    return ptr;
-}
-
-void *realloc(void *ptr, size_t size) {
-    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
-    if (ptr == NULL) {
-        free(ptr);
-        return malloc(size);
-    }
-    ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
-    if (obj == NULL) {
-        Logger::warn("realloc no original obj info,ptr:%p\n", ptr);
-        free(ptr);
-        return malloc(size);
-    }
-    unsigned long oldSize = obj->getSize();
-    void *newObjPtr = malloc(size);
-    memcpy(newObjPtr, ptr, oldSize < size ? oldSize : size);
-    free(ptr);
-    return newObjPtr;
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
@@ -191,8 +162,8 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
 //                 allInvalidNumInOtherThreads);
 }
 
-void free(void *ptr) {
-    Logger::debug("free pointer:%p\n", ptr);
+inline void __free(void *ptr) {
+    Logger::debug("__free pointer:%p\n", ptr);
     if (!inited) {
         return;
     }
@@ -201,6 +172,60 @@ void free(void *ptr) {
         collectAndClearObjInfo(objectInfo);
     }
     Real::free(ptr);
+}
+
+
+void *operator new(size_t sz) {
+    return __malloc(sz, NULL);
+}
+
+void *operator new(size_t sz, const std::nothrow_t &) throw() {
+    return __malloc(sz, NULL);
+}
+
+void operator delete(void *ptr) {
+    __free(ptr);
+}
+
+void *operator new[](size_t sz) {
+    return __malloc(sz, NULL);
+}
+
+extern void *malloc(size_t size) {
+    void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
+    return __malloc(size, (unsigned long) callerAddress);
+}
+
+void *calloc(size_t n, size_t size) {
+    Logger::debug("calloc N:%lu, size:%lu\n", n, size);
+    void *ptr = __malloc(n * size, NULL);
+    if (ptr != NULL) {
+        memset(ptr, 0, n * size);
+    }
+    return ptr;
+}
+
+void *realloc(void *ptr, size_t size) {
+    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
+    if (ptr == NULL) {
+        free(ptr);
+        return __malloc(size, NULL);
+    }
+    ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
+    if (obj == NULL) {
+//        Logger::warn("realloc no original obj info,ptr:%p\n", ptr);
+        free(ptr);
+        return __malloc(size, NULL);
+    }
+    unsigned long oldSize = obj->getSize();
+    void *newObjPtr = __malloc(size, NULL);
+    memcpy(newObjPtr, ptr, oldSize < size ? oldSize : size);
+    free(ptr);
+    return newObjPtr;
+}
+
+void free(void *ptr) {
+    __free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);

@@ -7,13 +7,13 @@ class ObjectInfo {
 private:
     unsigned long startAddress;
     unsigned long size;
-    void *mallocCallSite;
+    unsigned long mallocCallSite;
 
 private:
     static MemoryPool localMemoryPool;
 
 private:
-    ObjectInfo(unsigned long objectStartAddress, unsigned long size, void *mallocCallSite) {
+    ObjectInfo(unsigned long objectStartAddress, unsigned long size, unsigned long mallocCallSite) {
         this->startAddress = objectStartAddress;
         this->size = size;
         this->mallocCallSite = mallocCallSite;
@@ -21,7 +21,7 @@ private:
 
 public:
     static ObjectInfo *
-    createNewObjectInfoo(unsigned long objectStartAddress, unsigned long size, void *mallocCallSite) {
+    createNewObjectInfoo(unsigned long objectStartAddress, unsigned long size, unsigned long mallocCallSite) {
         void *buff = localMemoryPool.get();
         Logger::debug("new ObjectInfo start address: %lu, buff address:%lu \n", objectStartAddress, buff);
         ObjectInfo *objectInfo = new(buff) ObjectInfo(objectStartAddress, size, mallocCallSite);
