@@ -28,6 +28,7 @@ public:
     static inline unsigned long getLastEip(void *firtArgAddress) {
         void **ripAddress = (void **) (((unsigned long) firtArgAddress) + MALLOC_CALL_SITE_OFFSET);
         unsigned long callerAddress = (unsigned long) (*ripAddress);
+        return callerAddress;
     }
 };
 

@@ -210,19 +210,19 @@ void *realloc(void *ptr, size_t size) {
     Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
     unsigned long callerAddress = Programs::getLastEip(&ptr);
     if (ptr == NULL) {
-        free(ptr);
+        __free(ptr);
         return __malloc(size, callerAddress);
     }
     ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
     if (obj == NULL) {
 //        Logger::warn("realloc no original obj info,ptr:%p\n", ptr);
-        free(ptr);
+        __free(ptr);
         return __malloc(size, callerAddress);
     }
     unsigned long oldSize = obj->getSize();
     void *newObjPtr = __malloc(size, callerAddress);
     memcpy(newObjPtr, ptr, oldSize < size ? oldSize : size);
-    free(ptr);
+    __free(ptr);
     return newObjPtr;
 }
 
