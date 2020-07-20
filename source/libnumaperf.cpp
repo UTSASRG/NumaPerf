@@ -35,7 +35,6 @@ ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
-PriorityQueue<DiagnoseObjInfo> objDiagnoseQueue(10);
 #define SHADOW_MAP_SIZE (32ul * TB)
 #define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
 
@@ -92,18 +91,21 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     if (!interceptMalloc) {
         return objectStartAddress;
     }
-//    Logger::info("malloc callsite: %lu\n", callerAddress);
-//    void *callStacks[3];
-//    backtrace(callStacks, 3);
-//    Logger::info("malloc call stack1: %lu\n", (unsigned long) callStacks[0]);
-//    Logger::info("malloc call stack2: %lu\n", (unsigned long) callStacks[1]);
-//    Logger::info("malloc call stack3: %lu\n", (unsigned long) callStacks[2]);
-//    backtrace_symbols_fd(callStacks, 3, 2);
-//    Programs::address2Line((unsigned long) callStacks[0]);
-//    Programs::address2Line((unsigned long) callStacks[1]);
-//    Programs::address2Line((unsigned long) callStacks[2]);
-
-
+#if 0
+    void *callStacks[3];
+    backtrace(callStacks, 3);
+    if (callerAddress != (unsigned long) callStacks[2]) {
+        Logger::info("malloc callsite not same\n");
+        Logger::info("malloc callsite: %lu\n", callerAddress);
+        Logger::info("malloc call stack1: %lu\n", (unsigned long) callStacks[0]);
+        Logger::info("malloc call stack2: %lu\n", (unsigned long) callStacks[1]);
+        Logger::info("malloc call stack3: %lu\n", (unsigned long) callStacks[2]);
+        backtrace_symbols_fd(callStacks, 3, 2);
+        Programs::address2Line((unsigned long) callStacks[0]);
+        Programs::address2Line((unsigned long) callStacks[1]);
+        Programs::address2Line((unsigned long) callStacks[2]);
+    }
+#endif
     if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {
         DiagnoseCallSiteInfo *diagnoseCallSiteInfo = DiagnoseCallSiteInfo::createNewDiagnoseCallSiteInfo(
                 (unsigned long) callerAddress);
@@ -129,6 +131,12 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     unsigned long startAddress = objectInfo->getStartAddress();
     unsigned long size = objectInfo->getSize();
+    unsigned long mallocCallSite = objectInfo->getMallocCallSite();
+    DiagnoseCallSiteInfo *diagnoseCallSiteInfo = callSiteInfoMap.find(mallocCallSite, 0);
+    if (NULL == diagnoseCallSiteInfo) {
+        Logger::warn("diagnoseCallSiteInfo is lost\n");
+        return;
+    }
     DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
     for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
@@ -154,7 +162,8 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
 
         }
     }
-    if (!objDiagnoseQueue.insert(diagnoseObjInfo, true)) {
+
+    if (!diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true)) {
         DiagnoseObjInfo::release(diagnoseObjInfo);
     }
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
@@ -226,7 +235,7 @@ void *realloc(void *ptr, size_t size) {
     return newObjPtr;
 }
 
-void free(void *ptr) {
+void free(void *ptr) __THROW {
     __free(ptr);
 }
 
@@ -247,7 +256,7 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) {
+                   void *(*start_routine)(void *), void *arg) __THROW {
     Logger::debug("pthread create\n");
     if (!inited) {
         initializer();

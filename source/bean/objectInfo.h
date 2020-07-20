@@ -39,6 +39,10 @@ public:
     inline unsigned long getStartAddress() {
         return startAddress;
     }
+
+    inline unsigned long getMallocCallSite() {
+        return mallocCallSite;
+    }
 };
 
 #endif //NUMAPERF_OBJECTINFO_H

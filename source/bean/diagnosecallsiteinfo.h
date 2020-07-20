@@ -43,12 +43,12 @@ public:
         return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
     }
 
-    inline bool insertCacheLineDetailedInfo(DiagnoseObjInfo *diagnoseObjInfo) {
+    inline bool insertDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo, bool withLock = false) {
         this->allInvalidNumInMainThread += diagnoseObjInfo->getAllInvalidNumInMainThread();
         this->allInvalidNumInOtherThreads += diagnoseObjInfo->getAllInvalidNumInOtherThreads();
         this->allAccessNumInMainThread += diagnoseObjInfo->getAllAccessNumInMainThread();
         this->allAccessNumInOtherThread += diagnoseObjInfo->getAllAccessNumInOtherThread();
-        return topObjInfoQueue.insert(diagnoseObjInfo);
+        return topObjInfoQueue.insert(diagnoseObjInfo, withLock);
     }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
