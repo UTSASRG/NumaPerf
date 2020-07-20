@@ -5,6 +5,14 @@
 
 class ADDRESSES {
 public:
+    static inline unsigned long getPageStartAddress(unsigned long address) {
+        return address >> PAGE_SHIFT_BITS << PAGE_SHIFT_BITS;
+    }
+
+    static inline unsigned long getCacheLineStartAddress(unsigned long address) {
+        return address >> CACHE_LINE_SHIFT_BITS << CACHE_LINE_SHIFT_BITS;
+    }
+
     static inline unsigned long getPageIndex(unsigned long address) {
         return address >> PAGE_SHIFT_BITS;
     }
@@ -13,7 +21,7 @@ public:
         return address >> CACHE_LINE_SHIFT_BITS;
     }
 
-    static inline unsigned long getCacheIndexInsidePage(unsigned long address) {
+    static inline unsigned int getCacheIndexInsidePage(unsigned long address) {
         return (address & CACHE_INDEX_MASK) >> CACHE_LINE_SHIFT_BITS;
     }
 

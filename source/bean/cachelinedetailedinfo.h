@@ -21,8 +21,9 @@ private:
 
 private:
 
-    CacheLineDetailedInfo() {
+    CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
         memset(this, 0, sizeof(CacheLineDetailedInfo));
+        this->startAddress = cacheLineStartAddress;
     }
 
     inline void resetThreadBitMask() {
@@ -49,10 +50,11 @@ private:
 
 public:
 
-    inline static CacheLineDetailedInfo *createNewCacheLineDetailedInfoForCacheSharing() {
+    inline static CacheLineDetailedInfo *
+    createNewCacheLineDetailedInfoForCacheSharing(unsigned long cacheLineStartAddress) {
         void *buff = localMemoryPool.get();
         Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
-        CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo();
+        CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo(cacheLineStartAddress);
         return ret;
     }
 

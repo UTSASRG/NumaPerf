@@ -15,11 +15,13 @@ class DiagnoseObjInfo {
     unsigned long allAccessNumInMainThread;
     unsigned long allAccessNumInOtherThread;
     PriorityQueue<CacheLineDetailedInfo> topCacheLineDetailQueue;
+    PriorityQueue<PageDetailedAccessInfo> topPageDetailedAccessInfoQueue;
 
 private:
     static MemoryPool localMemoryPool;
 
-    DiagnoseObjInfo(ObjectInfo *objectInfo) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO) {
+    DiagnoseObjInfo(ObjectInfo *objectInfo) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO),
+                                              topPageDetailedAccessInfoQueue(MAX_TOP_PAGE_DETAIL_INFO) {
         objectInfo = objectInfo;
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
@@ -39,6 +41,9 @@ public:
         for (int i = 0; i < buff->topCacheLineDetailQueue.getSize(); i++) {
             CacheLineDetailedInfo::release(buff->topCacheLineDetailQueue.getValues()[i]);
         }
+        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
+            PageDetailedAccessInfo::release(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
+        }
         localMemoryPool.release((void *) buff);
     }
 
@@ -51,6 +56,14 @@ public:
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
         return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
+    }
+
+    inline bool insertPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
+        this->allAccessNumInMainThread += pageDetailedAccessInfo->getAccessNumberByFirstTouchThread(
+                objectInfo->getStartAddress(), objectInfo->getSize());
+        this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
+                objectInfo->getStartAddress(), objectInfo->getSize());
+        return topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo);
     }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {

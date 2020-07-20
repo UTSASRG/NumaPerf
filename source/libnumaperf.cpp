@@ -275,7 +275,8 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
     }
     pageDetailSamplingFrequency = 0;
     if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
-        PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo();
+        PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo(
+                ADDRESSES::getPageStartAddress(addr));
         if (!pageBasicAccessInfo->setIfBasentPageDetailedAccessInfo(pageDetailInfoPtr)) {
             PageDetailedAccessInfo::release(pageDetailInfoPtr);
         }
@@ -294,7 +295,8 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long first
     CacheLineDetailedInfo **cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(
             addr);
     if (NULL == cacheLineInfoPtr) {
-        CacheLineDetailedInfo *cacheInfo = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing();
+        CacheLineDetailedInfo *cacheInfo = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing(
+                ADDRESSES::getCacheLineStartAddress(addr));
         if (!cacheLineDetailedInfoShadowMap.insertIfAbsent(addr, cacheInfo)) {
             CacheLineDetailedInfo::release(cacheInfo);
         }
