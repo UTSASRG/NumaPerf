@@ -24,6 +24,11 @@ public:
         fprintf(stderr, "%s", out);
         interceptMalloc = true;
     }
+
+    static inline unsigned long getLastEip(void *firtArgAddress) {
+        void **ripAddress = (void **) (((unsigned long) firtArgAddress) + MALLOC_CALL_SITE_OFFSET);
+        unsigned long callerAddress = (unsigned long) (*ripAddress);
+    }
 };
 
 #endif //NUMAPERF_PROGRAMS_H
