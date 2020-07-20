@@ -71,7 +71,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
 }
 
-#define MALLOC_CALL_SITE_OFFSET 0x18
+#define MALLOC_CALL_SITE_OFFSET 16
 
 inline void *__malloc(size_t size, unsigned long callerAddress) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
@@ -192,7 +192,7 @@ void *operator new[](size_t sz) {
 }
 
 extern void *malloc(size_t size) {
-    void *callerAddress = ((&size) + MALLOC_CALL_SITE_OFFSET);
+    unsigned long callerAddress = (((unsigned long) &size) + MALLOC_CALL_SITE_OFFSET);
     return __malloc(size, (unsigned long) callerAddress);
 }
 
