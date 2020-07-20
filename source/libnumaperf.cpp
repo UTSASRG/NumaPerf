@@ -175,30 +175,34 @@ inline void __free(void *ptr) {
 }
 
 
-void *operator new(size_t sz) {
-    return __malloc(sz, NULL);
+void *operator new(size_t size) {
+    unsigned long callerAddress = (((unsigned long) &size) + MALLOC_CALL_SITE_OFFSET);
+    return __malloc(size, callerAddress);
 }
 
-void *operator new(size_t sz, const std::nothrow_t &) throw() {
-    return __malloc(sz, NULL);
+void *operator new(size_t size, const std::nothrow_t &) throw() {
+    unsigned long callerAddress = (((unsigned long) &size) + MALLOC_CALL_SITE_OFFSET);
+    return __malloc(size, callerAddress);
 }
 
 void operator delete(void *ptr) {
     __free(ptr);
 }
 
-void *operator new[](size_t sz) {
-    return __malloc(sz, NULL);
+void *operator new[](size_t size) {
+    unsigned long callerAddress = (((unsigned long) &size) + MALLOC_CALL_SITE_OFFSET);
+    return __malloc(size, callerAddress);
 }
 
 extern void *malloc(size_t size) {
     unsigned long callerAddress = (((unsigned long) &size) + MALLOC_CALL_SITE_OFFSET);
-    return __malloc(size, (unsigned long) callerAddress);
+    return __malloc(size, callerAddress);
 }
 
 void *calloc(size_t n, size_t size) {
     Logger::debug("calloc N:%lu, size:%lu\n", n, size);
-    void *ptr = __malloc(n * size, NULL);
+    unsigned long callerAddress = (((unsigned long) &n) + MALLOC_CALL_SITE_OFFSET);
+    void *ptr = __malloc(n * size, callerAddress);
     if (ptr != NULL) {
         memset(ptr, 0, n * size);
     }
@@ -207,18 +211,19 @@ void *calloc(size_t n, size_t size) {
 
 void *realloc(void *ptr, size_t size) {
     Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
+    unsigned long callerAddress = (((unsigned long) &ptr) + MALLOC_CALL_SITE_OFFSET);
     if (ptr == NULL) {
         free(ptr);
-        return __malloc(size, NULL);
+        return __malloc(size, callerAddress);
     }
     ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
     if (obj == NULL) {
 //        Logger::warn("realloc no original obj info,ptr:%p\n", ptr);
         free(ptr);
-        return __malloc(size, NULL);
+        return __malloc(size, callerAddress);
     }
     unsigned long oldSize = obj->getSize();
-    void *newObjPtr = __malloc(size, NULL);
+    void *newObjPtr = __malloc(size, callerAddress);
     memcpy(newObjPtr, ptr, oldSize < size ? oldSize : size);
     free(ptr);
     return newObjPtr;
