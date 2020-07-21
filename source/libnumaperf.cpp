@@ -153,7 +153,8 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             if (NULL == cacheLineDetailedInfo) {
                 continue;
             }
-            if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo)) {
+            if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo) &&
+                (*cacheLineDetailedInfo)->isCoveredByObj(startAddress, size)) {
                 CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
             }
             cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
@@ -235,8 +236,10 @@ void *realloc(void *ptr, size_t size) {
     return newObjPtr;
 }
 
-void free(void *ptr) __THROW {
-    __free(ptr);
+void free(void *ptr)
+
+__THROW {
+__free(ptr);
 }
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
@@ -256,15 +259,22 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg) __THROW {
-    Logger::debug("pthread create\n");
-    if (!inited) {
-        initializer();
-    }
-    void *arguments = Real::malloc(sizeof(void *) * 2);
-    ((void **) arguments)[0] = (void *) start_routine;
-    ((void **) arguments)[1] = arg;
-    return Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments);
+                   void *(*start_routine)(void *), void *arg)
+
+__THROW {
+Logger::debug("pthread create\n");
+if (!inited) {
+initializer();
+
+}
+void *arguments = Real::malloc(sizeof(void *) * 2);
+((void **) arguments)[0] = (void *)
+start_routine;
+((void **) arguments)[1] =
+arg;
+return
+Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
+);
 }
 
 inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {

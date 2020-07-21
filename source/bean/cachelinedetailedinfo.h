@@ -62,6 +62,17 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
+    // not a good design ....
+    inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
+        if (objStartAddress > this->startAddress) {
+            return false;
+        }
+        if ((objStartAddress + objSize) < (this->startAddress + CACHE_LINE_SIZE)) {
+            return false;
+        }
+        return true;
+    }
+
     inline unsigned long getInvalidationNumberInFirstThread() {
         return invalidationNumberInFirstThread;
     }
