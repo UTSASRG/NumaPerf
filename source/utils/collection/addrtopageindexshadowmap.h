@@ -83,6 +83,12 @@ public:
         }
         return (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
     }
+
+    inline void remove(const unsigned long &key) {
+        unsigned long index = hashKey(key);
+        void *dataBlock = this->getDataBlock(index);
+        *((short *) dataBlock) = NOT_INSERT;
+    }
 };
 
 #endif //NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H

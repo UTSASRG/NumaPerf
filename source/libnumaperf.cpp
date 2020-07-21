@@ -155,12 +155,21 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             }
             if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo) &&
                 (*cacheLineDetailedInfo)->isCoveredByObj(startAddress, size)) {
+                // not a good design ....
                 CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
             }
             cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
         }
         if (pageBasicAccessInfo->needPageSharingDetailInfo()) {
+            PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+            if (pageDetailedAccessInfo->isCoveredByObj(startAddress, size)) {
+                if (!diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo)) {
+                    PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+                }
+                pageBasicAccessInfoShadowMap.remove(address);
+            } else {
 
+            }
         }
     }
 

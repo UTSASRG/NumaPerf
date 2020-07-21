@@ -60,6 +60,16 @@ public:
         accessNumberByOtherThread[index]++;
     }
 
+    inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
+        if (objStartAddress > this->startAddress) {
+            return false;
+        }
+        if ((objStartAddress + objSize) < (this->startAddress + PAGE_SIZE)) {
+            return false;
+        }
+        return true;
+    }
+
     inline unsigned long getAccessNumberByFirstTouchThread(unsigned long objStartAddress, unsigned long size) const {
         unsigned long accessNumInMainThread = 0;
         int startIndex = getStartIndex(objStartAddress, size);

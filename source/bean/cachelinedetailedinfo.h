@@ -62,7 +62,6 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    // not a good design ....
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
         if (objStartAddress > this->startAddress) {
             return false;
