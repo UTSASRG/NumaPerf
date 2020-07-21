@@ -51,6 +51,12 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
+    PageDetailedAccessInfo *copy() {
+        void *buff = localMemoryPool.get();
+        memcpy(buff, this, sizeof(PageDetailedAccessInfo));
+        return (PageDetailedAccessInfo *) buff;
+    }
+
     inline void recordAccess(unsigned long addr, unsigned long accessThreadId, unsigned long firstTouchThreadId) {
         unsigned int index = ADDRESSES::getCacheIndexInsidePage(addr);
         if (accessThreadId == firstTouchThreadId) {
@@ -68,6 +74,15 @@ public:
             return false;
         }
         return true;
+    }
+
+    inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
+        int startIndex = getStartIndex(objAddress, size);
+        int endIndex = getEndIndex(objAddress, size);
+        for (int i = startIndex; i <= endIndex; i++) {
+            this->accessNumberByFirstTouchThread[i] = 0;
+            this->accessNumberByOtherThread[i] = 0;
+        }
     }
 
     inline unsigned long getAccessNumberByFirstTouchThread(unsigned long objStartAddress, unsigned long size) const {

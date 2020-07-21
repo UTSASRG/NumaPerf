@@ -62,6 +62,12 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
+    CacheLineDetailedInfo *copy() {
+        void *buff = localMemoryPool.get();
+        memcpy(buff, this, sizeof(CacheLineDetailedInfo));
+        return (CacheLineDetailedInfo *) buff;
+    }
+
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
         if (objStartAddress > this->startAddress) {
             return false;

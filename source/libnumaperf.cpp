@@ -120,12 +120,64 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     for (unsigned long address = (unsigned long) objectStartAddress;
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
         if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
-            PageBasicAccessInfo basicPageAccessInfo(currentThreadIndex);
+            PageBasicAccessInfo basicPageAccessInfo(currentThreadIndex, ADDRESSES::getPageStartAddress(address));
             pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
         }
     }
     //Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
     return objectStartAddress;
+}
+
+inline void collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
+                                          DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
+    unsigned long objStartAddress = objectInfo->getStartAddress();
+    unsigned long objSize = objectInfo->getSize();
+    PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+    pageBasicAccessInfoShadowMap.remove(beginningAddress);
+    if (NULL != pageDetailedAccessInfo &&
+        !diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo)) {
+        PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+    }
+    for (unsigned long cacheLineAddress = beginningAddress;
+         (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
+        CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+        if (NULL == cacheLineDetailedInfo) {
+            continue;
+        }
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
+        if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo)) {
+            CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
+        }
+    }
+}
+
+inline void collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
+                                              DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
+    unsigned long objStartAddress = objectInfo->getStartAddress();
+    unsigned long objSize = objectInfo->getSize();
+    pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+    PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+    if (NULL != pageDetailedAccessInfo &&
+        diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo)) {
+        PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
+        newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
+        pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
+    }
+    for (unsigned long cacheLineAddress = beginningAddress;
+         (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
+        CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+        if (NULL == cacheLineDetailedInfo) {
+            continue;
+        }
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
+        // remove the info in cache level, even there maybe are more objs inside it.
+        if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo)) {
+//            if ((*cacheLineDetailedInfo)->isCoveredByObj(objStartAddress, objSize)) {
+            // may have some problems
+            CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
+//            }
+        }
+    }
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
@@ -144,35 +196,14 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             Logger::warn("pageBasicAccessInfo is lost\n");
             continue;
         }
-        for (unsigned long cacheLineAddress = address;
-             (cacheLineAddress - startAddress) < size; cacheLineAddress += CACHE_LINE_SIZE) {
-            if (!pageBasicAccessInfo->needCacheLineSharingDetailInfo(cacheLineAddress)) {
-                continue;
-            }
-            CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
-            if (NULL == cacheLineDetailedInfo) {
-                continue;
-            }
-            if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo) &&
-                (*cacheLineDetailedInfo)->isCoveredByObj(startAddress, size)) {
-                // not a good design ....
-                CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
-            }
-            cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
-        }
-        if (pageBasicAccessInfo->needPageSharingDetailInfo()) {
-            PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-            if (pageDetailedAccessInfo->isCoveredByObj(startAddress, size)) {
-                if (!diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo)) {
-                    PageDetailedAccessInfo::release(pageDetailedAccessInfo);
-                }
-                pageBasicAccessInfoShadowMap.remove(address);
-            } else {
+        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(startAddress, size);
 
-            }
+        if (allPageCoveredByObj) {
+            collectAndClearAllCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
+        } else {
+            collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
         }
     }
-
     if (!diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true)) {
         DiagnoseObjInfo::release(diagnoseObjInfo);
     }

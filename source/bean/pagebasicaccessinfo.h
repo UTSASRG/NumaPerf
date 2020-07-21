@@ -8,6 +8,7 @@
 #include "../utils/concurrency/automics.h"
 
 class PageBasicAccessInfo {
+    unsigned long pageStartAddress;
     unsigned short firstTouchThreadId;
 //    bool isPageContainMultipleObjects;
 //    unsigned long accessNumberByFirstTouchThread;
@@ -15,8 +16,28 @@ class PageBasicAccessInfo {
     PageDetailedAccessInfo *pageDetailedAccessInfo;
     unsigned long cacheLineWritingNumber[CACHE_NUM_IN_ONE_PAGE];
 
+private:
+    inline int getStartIndex(unsigned long objStartAddress, unsigned long size) const {
+        if (objStartAddress <= pageStartAddress) {
+            return 0;
+        }
+        return ADDRESSES::getCacheIndexInsidePage(objStartAddress);
+    }
+
+    inline int getEndIndex(unsigned long objStartAddress, unsigned long size) const {
+        if (objStartAddress <= 0) {
+            return CACHE_NUM_IN_ONE_PAGE - 1;
+        }
+        unsigned long objEndAddress = objStartAddress + size;
+        if (objEndAddress >= (pageStartAddress + PAGE_SIZE)) {
+            return CACHE_NUM_IN_ONE_PAGE - 1;
+        }
+        return ADDRESSES::getCacheIndexInsidePage(objEndAddress);
+    }
+
 public:
-    PageBasicAccessInfo(unsigned short firstTouchThreadId) {
+    PageBasicAccessInfo(unsigned short firstTouchThreadId, unsigned long pageStartAddress) {
+        this->pageStartAddress = pageStartAddress;
         this->firstTouchThreadId = firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = 0;
         this->accessNumberByOtherThreads = 0;
@@ -25,6 +46,7 @@ public:
     }
 
     PageBasicAccessInfo(const PageBasicAccessInfo &basicPageAccessInfo) {
+        this->pageStartAddress = basicPageAccessInfo.pageStartAddress;
         this->firstTouchThreadId = basicPageAccessInfo.firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = basicPageAccessInfo.accessNumberByFirstTouchThread;
         this->accessNumberByOtherThreads = basicPageAccessInfo.accessNumberByOtherThreads;
@@ -58,8 +80,30 @@ public:
         return firstTouchThreadId;
     }
 
+    inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
+        if (objStartAddress > this->pageStartAddress) {
+            return false;
+        }
+        if ((objStartAddress + objSize) < (this->pageStartAddress + PAGE_SIZE)) {
+            return false;
+        }
+        return true;
+    }
+
+    inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
+        int startIndex = getStartIndex(objAddress, size);
+        int endIndex = getEndIndex(objAddress, size);
+        for (int i = startIndex; i <= endIndex; i++) {
+            this->cacheLineWritingNumber[i] = 0;
+        }
+    }
+
     inline PageDetailedAccessInfo *getPageDetailedAccessInfo() {
         return pageDetailedAccessInfo;
+    }
+
+    inline PageDetailedAccessInfo *setPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
+        return this->pageDetailedAccessInfo = pageDetailedAccessInfo;
     }
 
     inline bool setIfBasentPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
