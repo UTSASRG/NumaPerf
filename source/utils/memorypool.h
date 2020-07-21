@@ -39,13 +39,14 @@ private:
 
     inline void automicInsertIntoFreeList(void *memoryBlock) {
         void *nextBlock = freeListHead;
+        *((void **) memoryBlock) = (void *) nextBlock;
         while (!__atomic_compare_exchange_n(&freeListHead, &nextBlock, memoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
             nextBlock = freeListHead;
+            *((void **) memoryBlock) = (void *) nextBlock;
         }
-        *((void **) memoryBlock) = (void *) nextBlock;
     }
 
     inline void *automicGetFromBumpPointer() {
