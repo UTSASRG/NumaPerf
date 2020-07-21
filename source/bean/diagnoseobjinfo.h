@@ -22,7 +22,7 @@ private:
 
     DiagnoseObjInfo(ObjectInfo *objectInfo) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO),
                                               topPageDetailedAccessInfoQueue(MAX_TOP_PAGE_DETAIL_INFO) {
-        objectInfo = objectInfo;
+        this->objectInfo = objectInfo;
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
