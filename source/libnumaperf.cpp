@@ -162,7 +162,10 @@ inline void collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasicA
         PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
         newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
         pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
+    } else if (NULL != pageDetailedAccessInfo) {
+        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
     }
+
     for (unsigned long cacheLineAddress = beginningAddress;
          (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
         CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);

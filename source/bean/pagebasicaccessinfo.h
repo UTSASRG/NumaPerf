@@ -93,6 +93,10 @@ public:
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
         int startIndex = getStartIndex(objAddress, size);
         int endIndex = getEndIndex(objAddress, size);
+//        int num = endIndex - startIndex + 1;
+//        if (num > (CACHE_NUM_IN_ONE_PAGE / 2)) {
+//            accessNumberByOtherThreads = accessNumberByOtherThreads / 2;
+//        }
         for (int i = startIndex; i <= endIndex; i++) {
             this->cacheLineWritingNumber[i] = 0;
         }
