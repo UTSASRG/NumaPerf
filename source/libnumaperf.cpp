@@ -24,7 +24,6 @@ typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInf
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
-bool interceptMalloc = true;
 thread_local int pageDetailSamplingFrequency = 0;
 thread_local int cacheDetailSamplingFrequency = 0;
 bool inited = false;
@@ -71,6 +70,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
     PriorityQueue<DiagnoseCallSiteInfo> topDiadCallSiteInfoQueue(MAX_TOP_CALL_SITE_INFO);
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
+        Logger::info("callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
         topDiadCallSiteInfoQueue.insert(iterator.getData());
     }
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
@@ -104,9 +104,6 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     }
     void *objectStartAddress = Real::malloc(size);
     assert(objectStartAddress != NULL);
-    if (!interceptMalloc) {
-        return objectStartAddress;
-    }
 #if 0
     void *callStacks[3];
     backtrace(callStacks, 3);

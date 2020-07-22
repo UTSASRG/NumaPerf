@@ -6,12 +6,10 @@
 #include "../xdefines.h"
 
 extern char *__progname_full;
-extern bool interceptMalloc;
 
 class Programs {
 public:
     static inline void printAddress2Line(unsigned long sourceAddress) {
-        interceptMalloc = false;
         char cmd[BUFSZ];
         char out[BUFSZ];
         FILE *pFile;
@@ -22,7 +20,6 @@ public:
         while (fgets(out, BUFSZ, pFile) != NULL);
         pclose(pFile);
         fprintf(stderr, "%s", out);
-        interceptMalloc = true;
     }
 
     static inline unsigned long getLastEip(void *firtArgAddress) {

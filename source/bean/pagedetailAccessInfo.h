@@ -118,6 +118,10 @@ public:
         return this->getSeriousScore(0, 0) > pageDetailedAccessInfo.getSeriousScore(0, 0);
     }
 
+    inline bool operator<=(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
+        return this->getSeriousScore(0, 0) <= pageDetailedAccessInfo.getSeriousScore(0, 0);
+    }
+
     inline bool operator>=(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
         return this->getSeriousScore(0, 0) >= pageDetailedAccessInfo.getSeriousScore(0, 0);
     }

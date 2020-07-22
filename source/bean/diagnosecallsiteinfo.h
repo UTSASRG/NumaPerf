@@ -51,20 +51,24 @@ public:
         return topObjInfoQueue.insert(diagnoseObjInfo, withLock);
     }
 
-    inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() < diagnoseObjInfo.getSeriousScore();
+    inline bool operator<(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
+        return this->getSeriousScore() < diagnoseCallSiteInfo.getSeriousScore();
     }
 
-    inline bool operator>(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() > diagnoseObjInfo.getSeriousScore();
+    inline bool operator>(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
+        return this->getSeriousScore() > diagnoseCallSiteInfo.getSeriousScore();
     }
 
-    inline bool operator>=(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() >= diagnoseObjInfo.getSeriousScore();
+    inline bool operator<=(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
+        return this->getSeriousScore() <= diagnoseCallSiteInfo.getSeriousScore();
     }
 
-    inline bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
+    inline bool operator>=(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
+        return this->getSeriousScore() >= diagnoseCallSiteInfo.getSeriousScore();
+    }
+
+    inline bool operator==(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
+        return this->getSeriousScore() == diagnoseCallSiteInfo.getSeriousScore();
     }
 
     inline unsigned long getCallSiteAddress() {

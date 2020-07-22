@@ -77,6 +77,10 @@ public:
         return this->getSeriousScore() > diagnoseObjInfo.getSeriousScore();
     }
 
+    inline bool operator<=(const DiagnoseObjInfo &diagnoseObjInfo) {
+        return this->getSeriousScore() <= diagnoseObjInfo.getSeriousScore();
+    }
+
     inline bool operator>=(const DiagnoseObjInfo &diagnoseObjInfo) {
         return this->getSeriousScore() >= diagnoseObjInfo.getSeriousScore();
     }

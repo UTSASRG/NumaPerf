@@ -264,7 +264,7 @@ public:
     }
 
     // Insert a hash table entry if it is not existing.
-    // If the entry is already existing, return true
+    // If the insert success, return true
     bool insertIfAbsent(const KeyType &key, size_t keylen, ValueType value) {
         assert(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
@@ -287,7 +287,7 @@ public:
 #if LOCK_PROTECTION
         first->Unlock();
 #endif
-        return isFound;
+        return !isFound;
     }
 
     // Free an entry with specified key

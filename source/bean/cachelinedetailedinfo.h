@@ -99,6 +99,10 @@ public:
         return this->getSeriousScore() > cacheLineDetailedInfo.getSeriousScore();
     }
 
+    inline bool operator<=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        return this->getSeriousScore() <= cacheLineDetailedInfo.getSeriousScore();
+    }
+
     inline bool operator>=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() >= cacheLineDetailedInfo.getSeriousScore();
     }

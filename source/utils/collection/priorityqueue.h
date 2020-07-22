@@ -30,6 +30,9 @@ private:
             if ((child + 1) < endIndex && (*(values[child]) > *(values[child + 1]))) {
                 child++;
             }
+            if (*(values[targetIndex]) <= *(values[child])) {
+                return;
+            }
             swap(targetIndex, child);
             targetIndex = child;
         }
@@ -53,7 +56,7 @@ private:
             endIndex++;
             return true;
         }
-        if (*value < *(values[0])) {
+        if (*value <= *(values[0])) {
             return false;
         }
         values[0] = value;
@@ -79,7 +82,7 @@ public:
      */
     inline bool insert(ValueType *value, bool withLock = false) {
         // fast fail
-        if (endIndex >= MAX_SIZE && *value < *(values[0])) {
+        if (endIndex >= MAX_SIZE && *value <= *(values[0])) {
             return false;
         }
         if (!withLock) {
