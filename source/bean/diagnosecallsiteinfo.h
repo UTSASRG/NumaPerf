@@ -16,7 +16,7 @@ private:
     static MemoryPool localMemoryPool;
 
     DiagnoseCallSiteInfo(unsigned long callsiteAddress) : topObjInfoQueue(MAX_TOP_OBJ_INFO) {
-        callsiteAddress = callsiteAddress;
+        this->callsiteAddress = callsiteAddress;
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
@@ -65,6 +65,26 @@ public:
 
     inline bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
         return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
+    }
+
+    inline unsigned long getCallSiteAddress() {
+        return callsiteAddress;
+    }
+
+    inline unsigned long getInvalidNumInMainThread() {
+        return allInvalidNumInMainThread;
+    }
+
+    inline unsigned long getInvalidNumInOtherThread() {
+        return allInvalidNumInOtherThreads;
+    }
+
+    inline unsigned long getAccessNumInMainThread() {
+        return allAccessNumInMainThread;
+    }
+
+    inline unsigned long getAccessNumInOtherThread() {
+        return allAccessNumInOtherThread;
     }
 
 };

@@ -6,6 +6,7 @@
 
 #define PRI_QUEUE_MAX_CAPACITY 11
 
+// save big values in this queue
 template<class ValueType>
 class PriorityQueue {
     spinlock lock;

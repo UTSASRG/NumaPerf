@@ -10,7 +10,7 @@ extern bool interceptMalloc;
 
 class Programs {
 public:
-    static inline void address2Line(unsigned long sourceAddress) {
+    static inline void printAddress2Line(unsigned long sourceAddress) {
         interceptMalloc = false;
         char cmd[BUFSZ];
         char out[BUFSZ];
