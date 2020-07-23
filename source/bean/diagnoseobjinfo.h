@@ -114,11 +114,11 @@ public:
         fprintf(file, "    AccessNumInMainThread:    %lu\n", this->getAllAccessNumInMainThread());
         fprintf(file, "    AccessNumInOtherThreads:  %lu\n", this->getAllAccessNumInOtherThread());
         for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
-            fprintf(stderr, "      Top CacheLines %d:\n", i);
+            fprintf(file, "      Top CacheLines %d:\n", i);
             topCacheLineDetailQueue.getValues()[i]->dump(file);
         }
         for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
-            fprintf(stderr, "      Top Pages %d:\n", i);
+            fprintf(file, "      Top Pages %d:\n", i);
             topPageDetailedAccessInfoQueue.getValues()[i]->dump(file);
         }
 

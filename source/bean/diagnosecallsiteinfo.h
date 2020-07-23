@@ -100,7 +100,7 @@ public:
         fprintf(file, "  AccessNumInMainThread:    %lu\n", this->getAccessNumInMainThread());
         fprintf(file, "  AccessNumInOtherThreads:  %lu\n", this->getAccessNumInOtherThread());
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
-            fprintf(stderr, "  Top Object %d:\n", i);
+            fprintf(file, "  Top Object %d:\n", i);
             topObjInfoQueue.getValues()[i]->dump(file);
         }
     }
