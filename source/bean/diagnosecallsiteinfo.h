@@ -1,6 +1,7 @@
 #ifndef NUMAPERF_DIAGNOSECALLSITEINFO_H
 #define NUMAPERF_DIAGNOSECALLSITEINFO_H
 
+#include <utils/programs.h>
 #include "../utils/collection/priorityqueue.h"
 #include "diagnoseobjinfo.h"
 
@@ -89,6 +90,18 @@ public:
 
     inline unsigned long getAccessNumInOtherThread() {
         return allAccessNumInOtherThread;
+    }
+
+    inline void dump(FILE *file) {
+        Programs::printAddress2Line(this->getCallSiteAddress(), file);
+        fprintf(file, "        SeriousScore:   %lu\n", this->getSeriousScore());
+        fprintf(file, "        InvalidNumInMainThread:   %lu\n", this->getInvalidNumInMainThread());
+        fprintf(file, "        InvalidNumInOtherThreads: %lu\n", this->getInvalidNumInOtherThread());
+        fprintf(file, "        AccessNumInMainThread:    %lu\n", this->getAccessNumInMainThread());
+        fprintf(file, "        AccessNumInOtherThreads:  %lu\n", this->getAccessNumInOtherThread());
+        for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
+
+        }
     }
 
 };

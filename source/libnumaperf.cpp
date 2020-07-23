@@ -76,13 +76,13 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
         DiagnoseCallSiteInfo *diagnoseCallSiteInfo = topDiadCallSiteInfoQueue.getValues()[i];
-        fprintf(stderr, "Top %d Malloc Site: ", i);
-        Programs::printAddress2Line(diagnoseCallSiteInfo->getCallSiteAddress());
+        fprintf(stderr, "Top Malloc CallSite %d:\n", i);
 //        fprintf(stderr, "        callSiteAddress:%lu", diagnoseCallSiteInfo->getCallSiteAddress());
-        fprintf(stderr, "        InvalidNumInMainThread:   %lu\n", diagnoseCallSiteInfo->getInvalidNumInMainThread());
-        fprintf(stderr, "        InvalidNumInOtherThreads: %lu\n", diagnoseCallSiteInfo->getInvalidNumInOtherThread());
-        fprintf(stderr, "        AccessNumInMainThread:    %lu\n", diagnoseCallSiteInfo->getAccessNumInMainThread());
-        fprintf(stderr, "        AccessNumInOtherThreads:  %lu\n", diagnoseCallSiteInfo->getAccessNumInOtherThread());
+        topDiadCallSiteInfoQueue.getValues()[i]->dump(stderr);
+        fprintf(stderr,
+                "----------------------------------------------------------------------------------------------");
+        fprintf(stderr,
+                "----------------------------------------------------------------------------------------------");
         fprintf(stderr, "\n");
         fprintf(stderr, "\n");
     }

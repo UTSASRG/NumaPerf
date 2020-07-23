@@ -9,7 +9,7 @@ extern char *__progname_full;
 
 class Programs {
 public:
-    static inline void printAddress2Line(unsigned long sourceAddress) {
+    static inline void printAddress2Line(unsigned long sourceAddress, FILE *file = stderr) {
         char cmd[BUFSZ];
         char out[BUFSZ];
         FILE *pFile;
@@ -19,7 +19,7 @@ public:
         pFile = popen(cmd, "r");
         while (fgets(out, BUFSZ, pFile) != NULL);
         pclose(pFile);
-        fprintf(stderr, "%s", out);
+        fprintf(file, "%s", out);
     }
 
     static inline unsigned long getLastEip(void *firtArgAddress) {
