@@ -74,17 +74,22 @@ __attribute__ ((destructor)) void finalizer(void) {
 //        fprintf(stderr, "callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
         topDiadCallSiteInfoQueue.insert(iterator.getData());
     }
+    FILE *dumpFile = fopen("NumaPerf.dump", "w");
+    if (!dumpFile) {
+        Logger::error("can not reate dump file:NumaPerf.dump\n");
+        exit(9);
+    }
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
         DiagnoseCallSiteInfo *diagnoseCallSiteInfo = topDiadCallSiteInfoQueue.getValues()[i];
-        fprintf(stderr, "Top Malloc CallSite %d:\n", i);
+        fprintf(dumpFile, "Top Malloc CallSite %d:\n", i);
 //        fprintf(stderr, "        callSiteAddress:%lu", diagnoseCallSiteInfo->getCallSiteAddress());
-        topDiadCallSiteInfoQueue.getValues()[i]->dump(stderr);
-        fprintf(stderr,
+        topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile);
+        fprintf(dumpFile,
                 "----------------------------------------------------------------------------------------------");
-        fprintf(stderr,
+        fprintf(dumpFile,
                 "----------------------------------------------------------------------------------------------");
-        fprintf(stderr, "\n");
-        fprintf(stderr, "\n");
+        fprintf(dumpFile, "\n");
+        fprintf(dumpFile, "\n");
     }
 }
 
