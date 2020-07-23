@@ -131,11 +131,13 @@ public:
     }
 
     inline void dump(FILE *file) {
+        fprintf(file, "        PageStartAddress:         %p\n", (void *) (this->startAddress));
         fprintf(file, "        SeriousScore:             %lu\n", this->getSeriousScore(0, 0));
         fprintf(file, "        AccessNumInMainThread:    %lu\n",
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "        AccessNumInOtherThreads:  %lu\n",
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
+        // print access num in cacheline level
     }
 };
 

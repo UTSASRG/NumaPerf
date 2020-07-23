@@ -151,9 +151,11 @@ public:
     }
 
     inline void dump(FILE *file) {
+        fprintf(file, "        CacheLineStartAddress:    %p\n", (void *) (this->startAddress));
         fprintf(file, "        SeriousScore:             %lu\n", this->getSeriousScore());
         fprintf(file, "        InvalidNumInMainThread:   %lu\n", this->getInvalidationNumberInFirstThread());
         fprintf(file, "        InvalidNumInOtherThreads: %lu\n", this->getInvalidationNumberInOtherThreads());
+        // print concurrent word index
     }
 };
 

@@ -106,6 +106,8 @@ public:
     }
 
     inline void dump(FILE *file) {
+        fprintf(file, "    ObjectStartAddress:       %p,    size:%lu\n",
+                (void *) (this->objectInfo->getStartAddress()), this->objectInfo->getSize());
         fprintf(file, "    SeriousScore:             %lu\n", this->getSeriousScore());
         fprintf(file, "    InvalidNumInMainThread:   %lu\n", this->getAllInvalidNumInMainThread());
         fprintf(file, "    InvalidNumInOtherThreads: %lu\n", this->getAllInvalidNumInOtherThreads());
