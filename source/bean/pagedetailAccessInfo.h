@@ -129,6 +129,14 @@ public:
     inline bool operator==(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
         return this->getSeriousScore(0, 0) == pageDetailedAccessInfo.getSeriousScore(0, 0);
     }
+
+    inline void dump(FILE *file) {
+        fprintf(file, "        SeriousScore:             %lu\n", this->getSeriousScore(0, 0));
+        fprintf(file, "        AccessNumInMainThread:    %lu\n",
+                this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
+        fprintf(file, "        AccessNumInOtherThreads:  %lu\n",
+                this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
+    }
 };
 
 #endif //NUMAPERF_PAGEDETAILACCESSINFO_H

@@ -104,6 +104,23 @@ public:
     inline unsigned long getAllAccessNumInOtherThread() const {
         return allAccessNumInOtherThread;
     }
+
+    inline void dump(FILE *file) {
+        fprintf(file, "    SeriousScore:             %lu\n", this->getSeriousScore());
+        fprintf(file, "    InvalidNumInMainThread:   %lu\n", this->getAllInvalidNumInMainThread());
+        fprintf(file, "    InvalidNumInOtherThreads: %lu\n", this->getAllInvalidNumInOtherThreads());
+        fprintf(file, "    AccessNumInMainThread:    %lu\n", this->getAllAccessNumInMainThread());
+        fprintf(file, "    AccessNumInOtherThreads:  %lu\n", this->getAllAccessNumInOtherThread());
+        for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
+            fprintf(stderr, "      Top CacheLines %d:\n", i);
+            topCacheLineDetailQueue.getValues()[i]->dump(file);
+        }
+        for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
+            fprintf(stderr, "      Top Pages %d:\n", i);
+            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file);
+        }
+
+    }
 };
 
 #endif //NUMAPERF_DIAGNOSEOBJINFO_H

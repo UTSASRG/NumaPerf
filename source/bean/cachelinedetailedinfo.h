@@ -149,6 +149,12 @@ public:
             return;
         }
     }
+
+    inline void dump(FILE *file) {
+        fprintf(file, "        SeriousScore:             %lu\n", this->getSeriousScore());
+        fprintf(file, "        InvalidNumInMainThread:   %lu\n", this->getInvalidationNumberInFirstThread());
+        fprintf(file, "        InvalidNumInOtherThreads: %lu\n", this->getInvalidationNumberInOtherThreads());
+    }
 };
 
 #endif //NUMAPERF_CACHELINEDETAILEDINFO_H
