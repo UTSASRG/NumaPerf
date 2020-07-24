@@ -127,10 +127,13 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     }
 #endif
     if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {
-        DiagnoseCallSiteInfo *diagnoseCallSiteInfo = DiagnoseCallSiteInfo::createNewDiagnoseCallSiteInfo(
-                (unsigned long) callerAddress);
+        DiagnoseCallSiteInfo *diagnoseCallSiteInfo = DiagnoseCallSiteInfo::createNewDiagnoseCallSiteInfo();
         if (!callSiteInfoMap.insertIfAbsent((unsigned long) callerAddress, 0, diagnoseCallSiteInfo)) {
             DiagnoseCallSiteInfo::release(diagnoseCallSiteInfo);
+        } else {
+            void *callStacks[MAX_BACK_TRACE_NUM];
+            int size = backtrace(callStacks, MAX_BACK_TRACE_NUM);
+            diagnoseCallSiteInfo->setCallStack((unsigned long *) callStacks, 2, size - 2);
         }
     }
     ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,

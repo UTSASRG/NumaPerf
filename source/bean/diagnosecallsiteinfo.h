@@ -6,7 +6,7 @@
 #include "diagnoseobjinfo.h"
 
 class DiagnoseCallSiteInfo {
-    unsigned long callsiteAddress;
+    unsigned long callStack[MAX_CALL_STACK_NUM];
     unsigned long allInvalidNumInMainThread;
     unsigned long allInvalidNumInOtherThreads;
     unsigned long allAccessNumInMainThread;
@@ -16,8 +16,10 @@ class DiagnoseCallSiteInfo {
 private:
     static MemoryPool localMemoryPool;
 
-    DiagnoseCallSiteInfo(unsigned long callsiteAddress) : topObjInfoQueue(MAX_TOP_OBJ_INFO) {
-        this->callsiteAddress = callsiteAddress;
+    DiagnoseCallSiteInfo() : topObjInfoQueue(MAX_TOP_OBJ_INFO) {
+        for (int i = 0; i < MAX_CALL_STACK_NUM; i++) {
+            callStack[i] = MAX_CALL_STACK_NUM;
+        }
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
@@ -25,10 +27,10 @@ private:
     }
 
 public:
-    inline static DiagnoseCallSiteInfo *createNewDiagnoseCallSiteInfo(unsigned long callsiteAddress) {
+    inline static DiagnoseCallSiteInfo *createNewDiagnoseCallSiteInfo() {
         void *buff = localMemoryPool.get();
         Logger::debug("new DiagnoseCallSiteInfo buff address:%lu \n", buff);
-        DiagnoseCallSiteInfo *ret = new(buff) DiagnoseCallSiteInfo(callsiteAddress);
+        DiagnoseCallSiteInfo *ret = new(buff) DiagnoseCallSiteInfo();
         return ret;
     }
 
@@ -72,8 +74,11 @@ public:
         return this->getSeriousScore() == diagnoseCallSiteInfo.getSeriousScore();
     }
 
-    inline unsigned long getCallSiteAddress() {
-        return callsiteAddress;
+    inline void setCallStack(unsigned long *callStack, int startIndex, int size) {
+        int num = size > MAX_CALL_STACK_NUM ? MAX_CALL_STACK_NUM : size;
+        for (int i = 0; i < num; i++) {
+            this->callStack[i] = callStack[i + startIndex];
+        }
     }
 
     inline unsigned long getInvalidNumInMainThread() {
@@ -93,7 +98,12 @@ public:
     }
 
     inline void dump(FILE *file) {
-        Programs::printAddress2Line(this->getCallSiteAddress(), file);
+        for (int i = 0; i < MAX_CALL_STACK_NUM; i++) {
+            if (this->callStack[i] == 0) {
+                break;
+            }
+            Programs::printAddress2Line(this->callStack[i], file);
+        }
         fprintf(file, "  SeriousScore:             %lu\n", this->getSeriousScore());
         fprintf(file, "  InvalidNumInMainThread:   %lu\n", this->getInvalidNumInMainThread());
         fprintf(file, "  InvalidNumInOtherThreads: %lu\n", this->getInvalidNumInOtherThread());
