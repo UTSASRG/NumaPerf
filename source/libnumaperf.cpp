@@ -25,7 +25,6 @@ typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator>
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
 thread_local int pageDetailSamplingFrequency = 0;
-thread_local int cacheDetailSamplingFrequency = 0;
 bool inited = false;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
@@ -363,11 +362,6 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
 
 inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
     Logger::debug("record cache detailed info\n");
-    cacheDetailSamplingFrequency++;
-    if (cacheDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
-        return;
-    }
-    cacheDetailSamplingFrequency = 0;
     CacheLineDetailedInfo **cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(
             addr);
     if (NULL == cacheLineInfoPtr) {
