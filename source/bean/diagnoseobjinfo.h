@@ -55,13 +55,13 @@ public:
         return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
     }
 
-    inline bool insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
+    inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
         return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
     }
 
-    inline bool insertPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
+    inline PageDetailedAccessInfo *insertPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
         this->allAccessNumInMainThread += pageDetailedAccessInfo->getAccessNumberByFirstTouchThread(
                 objectInfo->getStartAddress(), objectInfo->getSize());
         this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(

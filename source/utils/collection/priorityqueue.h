@@ -49,19 +49,20 @@ private:
         }
     }
 
-    inline bool _insert(ValueType *value) {
+    inline ValueType *_insert(ValueType *value) {
         if (endIndex < MAX_SIZE) {
             values[endIndex] = value;
             pop(endIndex);
             endIndex++;
-            return true;
+            return NULL;
         }
         if (*value <= *(values[0])) {
-            return false;
+            return value;
         }
+        ValueType *old = values[0];
         values[0] = value;
         sink(0);
-        return true;
+        return old;
     }
 
 public:
@@ -78,18 +79,21 @@ public:
     /**
      * min heap: if not full, insert new value into end and then pop it.
      * if full and new value is bigger than the head , replace the head with the new value and sink the new head
+     *
+     * return the old value which are evicted, or the new value that are not inserted.
+     * return null if the queue is not full
      * @param value
      */
-    inline bool insert(ValueType *value, bool withLock = false) {
+    inline ValueType *insert(ValueType *value, bool withLock = false) {
         // fast fail
         if (endIndex >= MAX_SIZE && *value <= *(values[0])) {
-            return false;
+            return value;
         }
         if (!withLock) {
             return _insert(value);
         }
         lock.lock();
-        bool ret = _insert(value);
+        ValueType *ret = _insert(value);
         lock.unlock();
         return ret;
     }

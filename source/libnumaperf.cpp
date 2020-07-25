@@ -164,9 +164,11 @@ inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAcc
     unsigned long objSize = objectInfo->getSize();
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
     pageBasicAccessInfoShadowMap.remove(beginningAddress);
-    if (NULL != pageDetailedAccessInfo &&
-        !diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo)) {
-        PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+    if (NULL != pageDetailedAccessInfo) {
+        PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
+        if (NULL != pageInfo) {
+            PageDetailedAccessInfo::release(pageInfo);
+        }
     }
     for (unsigned long cacheLineAddress = beginningAddress;
          (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
@@ -175,8 +177,9 @@ inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAcc
             continue;
         }
         cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
-        if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo)) {
-            CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
+        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        if (cacheLine != NULL) {
+            CacheLineDetailedInfo::release(cacheLine);
         }
     }
 }
@@ -187,13 +190,18 @@ inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasi
     unsigned long objSize = objectInfo->getSize();
     pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-    if (NULL != pageDetailedAccessInfo &&
-        diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo)) {
-        PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
-        newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
-        pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
-    } else if (NULL != pageDetailedAccessInfo) {
-        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+    if (NULL != pageDetailedAccessInfo) {
+        PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
+        if (pageInfo != pageDetailedAccessInfo) {  // new value insert successfully
+            PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
+            newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
+            pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
+        } else {
+            pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+        }
+        if (pageInfo != NULL) {
+            PageDetailedAccessInfo::release(pageInfo);
+        }
     }
 
     for (unsigned long cacheLineAddress = beginningAddress;
@@ -204,10 +212,11 @@ inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasi
         }
         cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
         // remove the info in cache level, even there maybe are more objs inside it.
-        if (!diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo)) {
+        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        if (cacheLine != NULL) {
 //            if ((*cacheLineDetailedInfo)->isCoveredByObj(objStartAddress, objSize)) {
             // may have some problems
-            CacheLineDetailedInfo::release(*cacheLineDetailedInfo);
+            CacheLineDetailedInfo::release(cacheLine);
 //            }
         }
     }
@@ -237,8 +246,9 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             __collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
         }
     }
-    if (!diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true)) {
-        DiagnoseObjInfo::release(diagnoseObjInfo);
+    DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
+    if (obj != NULL) {
+        DiagnoseObjInfo::release(obj);
     }
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);

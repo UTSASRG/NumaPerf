@@ -46,7 +46,7 @@ public:
         return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
     }
 
-    inline bool insertDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo, bool withLock = false) {
+    inline DiagnoseObjInfo *insertDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo, bool withLock = false) {
         this->allInvalidNumInMainThread += diagnoseObjInfo->getAllInvalidNumInMainThread();
         this->allInvalidNumInOtherThreads += diagnoseObjInfo->getAllInvalidNumInOtherThreads();
         this->allAccessNumInMainThread += diagnoseObjInfo->getAllAccessNumInMainThread();
