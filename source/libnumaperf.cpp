@@ -163,6 +163,7 @@ inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAcc
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+    pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
     pageBasicAccessInfoShadowMap.remove(beginningAddress);
     if (NULL != pageDetailedAccessInfo) {
         PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
@@ -196,11 +197,11 @@ inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasi
             PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
             newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
             pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
+            if (pageInfo != NULL) {
+                PageDetailedAccessInfo::release(pageInfo);
+            }
         } else {
             pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-        }
-        if (pageInfo != NULL) {
-            PageDetailedAccessInfo::release(pageInfo);
         }
     }
 
