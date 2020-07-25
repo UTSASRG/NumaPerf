@@ -160,6 +160,7 @@ public:
         if (entry) {
             ret = entry->value;
             entry->erase();
+            first->count--;
             SourceHeap::free(entry);
         }
 #if LOCK_PROTECTION
@@ -311,10 +312,11 @@ public:
             // Remove this entry if existing.
             entry->erase();
 
+            first->count--;
+
             SourceHeap::free(entry);
         }
 
-        first->count--;
 
 #if LOCK_PROTECTION
         first->Unlock();
