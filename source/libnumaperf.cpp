@@ -20,6 +20,8 @@
 #include "utils/collection/addrtocacheindexshadowmap.h"
 #include "utils/programs.h"
 
+inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
+
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
@@ -64,9 +66,15 @@ MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof
 MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
                                                  TB * 1);
 
+
 __attribute__ ((destructor)) void finalizer(void) {
     Logger::info("NumaPerf finalizer\n");
     inited = false;
+    // collect and clear some objects that are not explicitly freed.
+    for (auto iterator = objectInfoMap.begin(); iterator != objectInfoMap.end(); iterator++) {
+        collectAndClearObjInfo(iterator.getData());
+    }
+
     PriorityQueue<DiagnoseCallSiteInfo> topDiadCallSiteInfoQueue(MAX_TOP_CALL_SITE_INFO);
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
 //        fprintf(stderr, "%lu ,", iterator.getData()->getSeriousScore());
@@ -150,8 +158,8 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     return objectStartAddress;
 }
 
-inline void collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                          DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
+inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
+                                            DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
@@ -173,8 +181,8 @@ inline void collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAcces
     }
 }
 
-inline void collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                              DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
+inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
+                                                DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
     pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
@@ -224,9 +232,9 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(startAddress, size);
 
         if (allPageCoveredByObj) {
-            collectAndClearAllCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
+            __collectAndClearAllCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
         } else {
-            collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
+            __collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
         }
     }
     if (!diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true)) {
