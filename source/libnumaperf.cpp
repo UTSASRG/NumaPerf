@@ -177,31 +177,41 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInf
     unsigned long objSize = objectInfo->getSize();
     bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+    if (pageDetailedAccessInfo == NULL) {
+        if (allPageCoveredByObj) {
+            pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
+            pageBasicAccessInfoShadowMap.remove(beginningAddress);
+        }
+        return;
+    }
+
+    DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo, diagnoseCallSiteInfo);
+    diagnosePageInfo->setPageDetailedAccessInfo(pageDetailedAccessInfo);
+    DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
+    if (NULL != diagnosePageInfoOld) {
+        DiagnosePageInfo::release(diagnosePageInfoOld);
+    }
 
     if (allPageCoveredByObj) {
         pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
         pageBasicAccessInfoShadowMap.remove(beginningAddress);
-        if (NULL != pageDetailedAccessInfo) {
-            PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
-            if (NULL != pageInfo) {
-                PageDetailedAccessInfo::release(pageInfo);
-            }
+        PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
+        if (NULL != pageInfo) {
+            PageDetailedAccessInfo::release(pageInfo);
         }
         return;
     }
     // else
-    if (NULL != pageDetailedAccessInfo) {
-        PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
-        if (pageInfo != pageDetailedAccessInfo) {  // new value insert successfully
-            PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
-            newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
-            pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
-            if (pageInfo != NULL) {
-                PageDetailedAccessInfo::release(pageInfo);
-            }
-        } else {
-            pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+    PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
+    if (pageInfo != pageDetailedAccessInfo) {  // new value insert successfully
+        PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
+        newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
+        pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
+        if (pageInfo != NULL) {
+            PageDetailedAccessInfo::release(pageInfo);
         }
+    } else {
+        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
     }
 }
 
