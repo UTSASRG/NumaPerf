@@ -170,50 +170,26 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     return objectStartAddress;
 }
 
-inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                            DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
-                                            DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
+inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
+                                      DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+                                      DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
+    bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-    pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
-    pageBasicAccessInfoShadowMap.remove(beginningAddress);
-    if (NULL != pageDetailedAccessInfo) {
-        PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
-        if (NULL != pageInfo) {
-            PageDetailedAccessInfo::release(pageInfo);
-        }
-    }
-    DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                                      diagnoseCallSiteInfo);
-    for (unsigned long cacheLineAddress = beginningAddress;
-         (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
-        CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
-        if (NULL == cacheLineDetailedInfo) {
-            continue;
-        }
-        diagnoseCacheLineInfo->setCacheLineDetailedInfo(*cacheLineDetailedInfo);
-        DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
-        // new values is inserted
-        if (oldTopCacheLine != diagnoseCacheLineInfo) {
-            diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                       diagnoseCallSiteInfo);
-        }
-        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
-        if (cacheLine != NULL) {
-            CacheLineDetailedInfo::release(cacheLine);
-        }
-    }
-}
 
-inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                                DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
-                                                DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
-    unsigned long objStartAddress = objectInfo->getStartAddress();
-    unsigned long objSize = objectInfo->getSize();
-    pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-    PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+    if (allPageCoveredByObj) {
+        pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
+        pageBasicAccessInfoShadowMap.remove(beginningAddress);
+        if (NULL != pageDetailedAccessInfo) {
+            PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
+            if (NULL != pageInfo) {
+                PageDetailedAccessInfo::release(pageInfo);
+            }
+        }
+        return;
+    }
+    // else
     if (NULL != pageDetailedAccessInfo) {
         PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
         if (pageInfo != pageDetailedAccessInfo) {  // new value insert successfully
@@ -227,6 +203,13 @@ inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasi
             pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
         }
     }
+}
+
+inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
+                                       DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+                                       DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
+    unsigned long objStartAddress = objectInfo->getStartAddress();
+    unsigned long objSize = objectInfo->getSize();
     DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
                                                                                                       diagnoseCallSiteInfo);
     for (unsigned long cacheLineAddress = beginningAddress;
@@ -270,15 +253,10 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             Logger::warn("pageBasicAccessInfo is lost\n");
             continue;
         }
-        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(startAddress, size);
-
-        if (allPageCoveredByObj) {
-            __collectAndClearAllCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
-                                            diagnoseCallSiteInfo);
-        } else {
-            __collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
-                                                diagnoseCallSiteInfo);
-        }
+        __collectAndClearPageInfo(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
+                                  diagnoseCallSiteInfo);
+        __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, address,
+                                   diagnoseCallSiteInfo);
     }
     DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
     if (obj != NULL) {
