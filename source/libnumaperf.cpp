@@ -229,6 +229,9 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
             if (oldTopCacheLine != diagnoseCacheLineInfo) {
                 diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
                                                                                            diagnoseCallSiteInfo);
+                if (oldTopCacheLine != NULL) {
+                    DiagnoseCacheLineInfo::release(oldTopCacheLine);
+                }
             }
         }
         if (cacheLine != NULL) {
@@ -239,6 +242,7 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         }
 
     }
+    DiagnoseCacheLineInfo::release(diagnoseCacheLineInfo);
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
