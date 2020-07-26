@@ -220,20 +220,24 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        diagnoseCacheLineInfo->setCacheLineDetailedInfo(*cacheLineDetailedInfo);
-        DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
-        // new values is inserted
-        if (oldTopCacheLine != diagnoseCacheLineInfo) {
-            diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                       diagnoseCallSiteInfo);
-        }
         CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        // insert successfully
+        if (cacheLine != *cacheLineDetailedInfo) {
+            diagnoseCacheLineInfo->setCacheLineDetailedInfo(*cacheLineDetailedInfo);
+            DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
+            // new values is inserted
+            if (oldTopCacheLine != diagnoseCacheLineInfo) {
+                diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
+                                                                                           diagnoseCallSiteInfo);
+            }
+        }
         if (cacheLine != NULL) {
 //            if ((*cacheLineDetailedInfo)->isCoveredByObj(objStartAddress, objSize)) {
             // may have some problems
             CacheLineDetailedInfo::release(cacheLine);
 //            }
         }
+
     }
 }
 
