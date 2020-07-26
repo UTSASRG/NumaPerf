@@ -8,6 +8,7 @@
 #include "utils/collection/priorityqueue.h"
 #include "bean/pagedetailAccessInfo.h"
 #include "bean/diagnoseobjinfo.h"
+#include "bean/diagnosecacheinfo.h"
 #include "utils/memorypool.h"
 #include "bean/pagebasicaccessinfo.h"
 #include "bean/cachelinedetailedinfo.h"
@@ -22,21 +23,25 @@
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
+#define SHADOW_MAP_SIZE (32ul * TB)
+#define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
+
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
+
+
 thread_local int pageDetailSamplingFrequency = 0;
 bool inited = false;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
-
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
-#define SHADOW_MAP_SIZE (32ul * TB)
-#define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
+PriorityQueue<DiagnoseCacheLineInfo> topCacheLineQueue(MAX_TOP_GLOBAL_CACHELINE_DETAIL_INFO);
+
 
 static void initializer(void) {
     Logger::info("NumaPerf initializer\n");
@@ -65,6 +70,9 @@ MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof
 
 MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
                                                  TB * 1);
+
+MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
+                                                  GB * 1);
 
 
 __attribute__ ((destructor)) void finalizer(void) {
@@ -159,7 +167,8 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
 }
 
 inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                            DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
+                                            DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+                                            DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
     PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
@@ -171,13 +180,22 @@ inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAcc
             PageDetailedAccessInfo::release(pageInfo);
         }
     }
+    DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
+                                                                                                      diagnoseCallSiteInfo);
     for (unsigned long cacheLineAddress = beginningAddress;
          (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
         CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
+        diagnoseCacheLineInfo->setCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
+        // new values is inserted
+        if (oldTopCacheLine != diagnoseCacheLineInfo) {
+            diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
+                                                                                       diagnoseCallSiteInfo);
+        }
         CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
         if (cacheLine != NULL) {
             CacheLineDetailedInfo::release(cacheLine);
@@ -186,7 +204,8 @@ inline void __collectAndClearAllCoveredPage(ObjectInfo *objectInfo, PageBasicAcc
 }
 
 inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                                DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress) {
+                                                DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+                                                DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
     pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
@@ -204,15 +223,23 @@ inline void __collectAndClearPartialCoveredPage(ObjectInfo *objectInfo, PageBasi
             pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
         }
     }
-
+    DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
+                                                                                                      diagnoseCallSiteInfo);
     for (unsigned long cacheLineAddress = beginningAddress;
          (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
         CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+        // remove the info in cache level, even there maybe are more objs inside it.
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
-        // remove the info in cache level, even there maybe are more objs inside it.
+        diagnoseCacheLineInfo->setCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
+        // new values is inserted
+        if (oldTopCacheLine != diagnoseCacheLineInfo) {
+            diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
+                                                                                       diagnoseCallSiteInfo);
+        }
         CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
         if (cacheLine != NULL) {
 //            if ((*cacheLineDetailedInfo)->isCoveredByObj(objStartAddress, objSize)) {
@@ -242,9 +269,11 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(startAddress, size);
 
         if (allPageCoveredByObj) {
-            __collectAndClearAllCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
+            __collectAndClearAllCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
+                                            diagnoseCallSiteInfo);
         } else {
-            __collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address);
+            __collectAndClearPartialCoveredPage(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
+                                                diagnoseCallSiteInfo);
         }
     }
     DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);

@@ -24,6 +24,7 @@ add_executable(NumaPerf
         source/bean/cachelinedetailedinfo.h
         source/bean/diagnosecallsiteinfo.h
         source/bean/diagnoseobjinfo.h
+        source/bean/diagnosecacheinfo.h
         source/utils/programs.h
         source/utils/real.h
         source/utils/bitmasks.h
