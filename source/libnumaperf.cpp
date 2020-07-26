@@ -16,6 +16,7 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
+#include "bean/diagnosepageinfo.h"
 #include "bean/objectInfo.h"
 #include "utils/collection/addrtopageindexshadowmap.h"
 #include "utils/collection/addrtocacheindexshadowmap.h"
@@ -41,7 +42,7 @@ CallSiteInfoMap callSiteInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 PriorityQueue<DiagnoseCacheLineInfo> topCacheLineQueue(MAX_TOP_GLOBAL_CACHELINE_DETAIL_INFO);
-
+PriorityQueue<DiagnosePageInfo> topPageQueue(MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
 
 static void initializer(void) {
     Logger::info("NumaPerf initializer\n");
@@ -73,6 +74,9 @@ MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(s
 
 MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
                                                   GB * 1);
+
+MemoryPool DiagnosePageInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnosePageInfo)),
+                                             GB * 1);
 
 
 __attribute__ ((destructor)) void finalizer(void) {
