@@ -52,7 +52,8 @@ public:
 
     inline unsigned long getSeriousScore() const {
         //todo
-        return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads);
+        return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads) +
+               allAccessNumInOtherThread;
     }
 
     inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
