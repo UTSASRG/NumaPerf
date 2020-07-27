@@ -62,6 +62,9 @@ public:
     inline void setCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfor) {
         this->cacheLineDetailedInfo = cacheLineDetailedInfor;
     }
+
+    inline void dump(FILE *file) {
+    }
 };
 
 #endif //NUMAPERF_DIAGNOSECACHEINFO_H

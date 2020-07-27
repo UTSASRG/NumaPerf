@@ -61,6 +61,9 @@ public:
     inline void setPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
         this->pageDetailedAccessInfo = pageDetailedAccessInfo;
     }
+
+    inline void dump(FILE *file) {
+    }
 };
 
 #endif //NUMAPERF_DIAGNOSEPAGEINFO_H

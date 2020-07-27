@@ -98,17 +98,30 @@ __attribute__ ((destructor)) void finalizer(void) {
         Logger::error("can not reate dump file:NumaPerf.dump\n");
         exit(9);
     }
+    fprintf(dumpFile, "Table of Contents\n");
+    fprintf(dumpFile, "    One: Top %d problematical pages.\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
+    fprintf(dumpFile, "    Two: Top %d problematical cachelines.\n", MAX_TOP_CACHELINE_DETAIL_INFO);
+    fprintf(dumpFile, "    Three: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
+
+    fprintf(dumpFile, "One: Top %d problematical pages:\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
+    for (int i = 0; i < topPageQueue.getSize(); i++) {
+        fprintf(dumpFile, "  Top problematical pages %d:\n", i);
+        topPageQueue.getValues()[i]->dump(dumpFile);
+        fprintf(dumpFile, "\n\n");
+    }
+
+    fprintf(dumpFile, "Two: Top %d problematical cachelines:\n", MAX_TOP_CACHELINE_DETAIL_INFO);
+    for (int i = 0; i < topCacheLineQueue.getSize(); i++) {
+        fprintf(dumpFile, "  Top problematical cachelines %d:\n", i);
+        topCacheLineQueue.getValues()[i]->dump(dumpFile);
+        fprintf(dumpFile, "\n\n");
+    }
+
+    fprintf(dumpFile, "Three: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
-        DiagnoseCallSiteInfo *diagnoseCallSiteInfo = topDiadCallSiteInfoQueue.getValues()[i];
-        fprintf(dumpFile, "Top Malloc CallSite %d:\n", i);
-//        fprintf(stderr, "        callSiteAddress:%lu", diagnoseCallSiteInfo->getCallSiteAddress());
+        fprintf(dumpFile, "Top problematical callsites %d:\n", i);
         topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile);
-        fprintf(dumpFile,
-                "----------------------------------------------------------------------------------------------");
-        fprintf(dumpFile,
-                "----------------------------------------------------------------------------------------------");
-        fprintf(dumpFile, "\n");
-        fprintf(dumpFile, "\n");
+        fprintf(dumpFile, "\n\n");
     }
 }
 
