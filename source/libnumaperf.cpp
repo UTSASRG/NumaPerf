@@ -91,6 +91,9 @@ __attribute__ ((destructor)) void finalizer(void) {
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
 //        fprintf(stderr, "%lu ,", iterator.getData()->getSeriousScore());
 //        fprintf(stderr, "callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
+        if (iterator.getData()->getSeriousScore() == 0) {
+            continue;
+        }
         topDiadCallSiteInfoQueue.insert(iterator.getData());
     }
     FILE *dumpFile = fopen("NumaPerf.dump", "w");
