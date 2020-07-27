@@ -112,8 +112,7 @@ public:
             prefix[i] = ' ';
         }
 
-        fprintf(file, "%sObjectStartAddress:       %p,    size:%lu\n", prefix,
-                (void *) (this->objectInfo->getStartAddress()), this->objectInfo->getSize());
+        this->objectInfo->dump(file, blackSpaceNum);
         fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getAllInvalidNumInMainThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getAllInvalidNumInOtherThreads());

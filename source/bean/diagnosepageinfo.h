@@ -69,7 +69,7 @@ public:
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
         }
-        fprintf(file, "%scall site stacks:\n", prefix);
+        fprintf(file, "%sCall Site Stacks:\n", prefix);
         this->diagnoseCallSiteInfo->dump_call_stacks(file);
     }
 };

@@ -49,8 +49,8 @@ public:
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
         }
-        fprintf(file, "%sobject start address:   %p\n", prefix, (void *) (this->startAddress));
-        fprintf(file, "%sobject size:            %lu\n", prefix, this->size);
+        fprintf(file, "%sObject Start Address:   %p\n", prefix, (void *) (this->startAddress));
+        fprintf(file, "%sObject Size:            %lu\n", prefix, this->size);
     }
 };
 
