@@ -114,7 +114,7 @@ public:
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAccessNumInMainThread());
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAccessNumInOtherThread());
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
-            fprintf(file, "%sTop Object %d:\n", blackSpaceNum, i);
+            fprintf(file, "%sTop Object %d:\n", prefix, i);
             topObjInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
         }
     }
