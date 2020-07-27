@@ -62,7 +62,9 @@ public:
         this->pageDetailedAccessInfo = pageDetailedAccessInfo;
     }
 
-    inline void dump(FILE *file) {
+    inline void dump(FILE *file, int blackSpaceNum) {
+        this->pageDetailedAccessInfo->dump(file, blackSpaceNum + 2);
+
     }
 };
 

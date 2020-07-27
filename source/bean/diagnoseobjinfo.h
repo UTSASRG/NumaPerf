@@ -105,21 +105,26 @@ public:
         return allAccessNumInOtherThread;
     }
 
-    inline void dump(FILE *file) {
-        fprintf(file, "    ObjectStartAddress:       %p,    size:%lu\n",
+    inline void dump(FILE *file, int blackSpaceNum) {
+        char prefix[blackSpaceNum];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+        }
+
+        fprintf(file, "%sObjectStartAddress:       %p,    size:%lu\n", prefix,
                 (void *) (this->objectInfo->getStartAddress()), this->objectInfo->getSize());
-        fprintf(file, "    SeriousScore:             %lu\n", this->getSeriousScore());
-        fprintf(file, "    InvalidNumInMainThread:   %lu\n", this->getAllInvalidNumInMainThread());
-        fprintf(file, "    InvalidNumInOtherThreads: %lu\n", this->getAllInvalidNumInOtherThreads());
-        fprintf(file, "    AccessNumInMainThread:    %lu\n", this->getAllAccessNumInMainThread());
-        fprintf(file, "    AccessNumInOtherThreads:  %lu\n", this->getAllAccessNumInOtherThread());
+        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
+        fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getAllInvalidNumInMainThread());
+        fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getAllInvalidNumInOtherThreads());
+        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAllAccessNumInMainThread());
+        fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAllAccessNumInOtherThread());
         for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
-            fprintf(file, "      Top CacheLines %d:\n", i);
+            fprintf(file, "%sTop CacheLines %d:\n", prefix, i);
             topCacheLineDetailQueue.getValues()[i]->dump(file);
         }
         for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
-            fprintf(file, "      Top Pages %d:\n", i);
-            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file);
+            fprintf(file, "%sTop Pages %d:\n", prefix, i);
+            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
         }
 
     }

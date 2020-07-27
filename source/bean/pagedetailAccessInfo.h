@@ -130,12 +130,16 @@ public:
         return this->getSeriousScore(0, 0) == pageDetailedAccessInfo.getSeriousScore(0, 0);
     }
 
-    inline void dump(FILE *file) {
-        fprintf(file, "        PageStartAddress:         %p\n", (void *) (this->startAddress));
-        fprintf(file, "        SeriousScore:             %lu\n", this->getSeriousScore(0, 0));
-        fprintf(file, "        AccessNumInMainThread:    %lu\n",
+    inline void dump(FILE *file, int blackSpaceNum) {
+        char prefix[blackSpaceNum];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+        }
+        fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
+        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore(0, 0));
+        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
-        fprintf(file, "        AccessNumInOtherThreads:  %lu\n",
+        fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
         // print access num in cacheline level
     }

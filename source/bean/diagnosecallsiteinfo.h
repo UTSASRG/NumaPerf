@@ -97,21 +97,25 @@ public:
         return allAccessNumInOtherThread;
     }
 
-    inline void dump(FILE *file) {
+    inline void dump(FILE *file, int blackSpaceNum) {
         for (int i = 0; i < MAX_CALL_STACK_NUM; i++) {
             if (this->callStack[i] == 0) {
                 break;
             }
             Programs::printAddress2Line(this->callStack[i], file);
         }
-        fprintf(file, "  SeriousScore:             %lu\n", this->getSeriousScore());
-        fprintf(file, "  InvalidNumInMainThread:   %lu\n", this->getInvalidNumInMainThread());
-        fprintf(file, "  InvalidNumInOtherThreads: %lu\n", this->getInvalidNumInOtherThread());
-        fprintf(file, "  AccessNumInMainThread:    %lu\n", this->getAccessNumInMainThread());
-        fprintf(file, "  AccessNumInOtherThreads:  %lu\n", this->getAccessNumInOtherThread());
+        char prefix[blackSpaceNum];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+        }
+        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
+        fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidNumInMainThread());
+        fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidNumInOtherThread());
+        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAccessNumInMainThread());
+        fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAccessNumInOtherThread());
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
-            fprintf(file, "  Top Object %d:\n", i);
-            topObjInfoQueue.getValues()[i]->dump(file);
+            fprintf(file, "%sTop Object %d:\n", blackSpaceNum, i);
+            topObjInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
         }
     }
 

@@ -63,7 +63,8 @@ public:
         this->cacheLineDetailedInfo = cacheLineDetailedInfor;
     }
 
-    inline void dump(FILE *file) {
+    inline void dump(FILE *file, int blackSpaceNum) {
+        this->cacheLineDetailedInfo->dump(file, blackSpaceNum + 2);
     }
 };
 
