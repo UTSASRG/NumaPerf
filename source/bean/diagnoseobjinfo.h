@@ -120,7 +120,7 @@ public:
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAllAccessNumInOtherThread());
         for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
             fprintf(file, "%sTop CacheLines %d:\n", prefix, i);
-            topCacheLineDetailQueue.getValues()[i]->dump(file);
+            topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
         }
         for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
             fprintf(file, "%sTop Pages %d:\n", prefix, i);

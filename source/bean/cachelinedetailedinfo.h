@@ -150,11 +150,15 @@ public:
         }
     }
 
-    inline void dump(FILE *file) {
-        fprintf(file, "        CacheLineStartAddress:    %p\n", (void *) (this->startAddress));
-        fprintf(file, "        SeriousScore:             %lu\n", this->getSeriousScore());
-        fprintf(file, "        InvalidNumInMainThread:   %lu\n", this->getInvalidationNumberInFirstThread());
-        fprintf(file, "        InvalidNumInOtherThreads: %lu\n", this->getInvalidationNumberInOtherThreads());
+    inline void dump(FILE *file, int blackSpaceNum) {
+        char prefix[blackSpaceNum];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+        }
+        fprintf(file, "%sCacheLineStartAddress:    %p\n", prefix, (void *) (this->startAddress));
+        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
+        fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
+        fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
         // print concurrent word index
     }
 };
