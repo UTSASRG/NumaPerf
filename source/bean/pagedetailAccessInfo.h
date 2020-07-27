@@ -106,8 +106,9 @@ public:
     }
 
     inline unsigned long getSeriousScore(unsigned long objStartAddress, unsigned long size) const {
-        return Scores::getScoreForAccess(this->getAccessNumberByFirstTouchThread(objStartAddress, size),
-                                         this->getAccessNumberByOtherTouchThread(objStartAddress, size));
+//        return Scores::getScoreForAccess(this->getAccessNumberByFirstTouchThread(objStartAddress, size),
+//                                         this->getAccessNumberByOtherTouchThread(objStartAddress, size));
+        return this->getAccessNumberByOtherTouchThread(objStartAddress, size);
     }
 
     inline bool operator<(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
@@ -136,7 +137,7 @@ public:
             prefix[i] = ' ';
         }
         fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
-        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore(0, 0));
+//        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore(0, 0));
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,

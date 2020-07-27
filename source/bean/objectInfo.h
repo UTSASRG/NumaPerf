@@ -43,6 +43,15 @@ public:
     inline unsigned long getMallocCallSite() {
         return mallocCallSite;
     }
+
+    inline void dump(FILE *file, int blackSpaceNum) {
+        char prefix[blackSpaceNum];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+        }
+        fprintf(file, "%sobject start address:   %lu\n", prefix, this->startAddress);
+        fprintf(file, "%sobject size:            %lu\n", prefix, this->size);
+    }
 };
 
 #endif //NUMAPERF_OBJECTINFO_H

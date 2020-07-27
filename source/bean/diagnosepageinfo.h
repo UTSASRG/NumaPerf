@@ -64,7 +64,13 @@ public:
 
     inline void dump(FILE *file, int blackSpaceNum) {
         this->pageDetailedAccessInfo->dump(file, blackSpaceNum + 2);
-
+        this->objectInfo->dump(file, blackSpaceNum + 2);
+        char prefix[blackSpaceNum];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+        }
+        fprintf(file, "%scall site stacks:\n", prefix);
+        this->diagnoseCallSiteInfo->dump_call_stacks(file);
     }
 };
 

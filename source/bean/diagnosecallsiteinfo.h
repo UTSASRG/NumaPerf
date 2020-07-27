@@ -97,13 +97,17 @@ public:
         return allAccessNumInOtherThread;
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
+    inline void dump_call_stacks(FILE *file) {
         for (int i = 0; i < MAX_CALL_STACK_NUM; i++) {
             if (this->callStack[i] == 0) {
                 break;
             }
             Programs::printAddress2Line(this->callStack[i], file);
         }
+    }
+
+    inline void dump(FILE *file, int blackSpaceNum) {
+        this->dump_call_stacks(file);
         char prefix[blackSpaceNum];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
