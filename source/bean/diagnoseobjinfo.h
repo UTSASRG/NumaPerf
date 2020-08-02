@@ -38,15 +38,15 @@ public:
     }
 
     inline static void release(DiagnoseObjInfo *buff) {
-        for (int i = 0; i < buff->topCacheLineDetailQueue.getSize(); i++) {
-            if (buff->topCacheLineDetailQueue.getValues()[i]->isCoveredByObj(buff->objectInfo->getStartAddress(),
-                                                                             buff->objectInfo->getSize())) {
-                CacheLineDetailedInfo::release(buff->topCacheLineDetailQueue.getValues()[i]);
-            }
-        }
-        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
-            PageDetailedAccessInfo::release(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
-        }
+//        for (int i = 0; i < buff->topCacheLineDetailQueue.getSize(); i++) {
+//            if (buff->topCacheLineDetailQueue.getValues()[i]->isCoveredByObj(buff->objectInfo->getStartAddress(),
+//                                                                             buff->objectInfo->getSize())) {
+//                CacheLineDetailedInfo::release(buff->topCacheLineDetailQueue.getValues()[i]);
+//            }
+//        }
+//        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
+//            PageDetailedAccessInfo::release(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
+//        }
         localMemoryPool.release((void *) buff);
     }
 
