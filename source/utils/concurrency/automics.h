@@ -10,7 +10,7 @@ public:
 
     template<class ValueType>
     static inline bool compare_set(ValueType *valuePointer, volatile ValueType expectValue, ValueType newValue) {
-        if (__atomic_compare_exchange_n(valuePointer, &expectValue, newValue, false,
+        if (__atomic_compare_exchange_n(valuePointer, (ValueType *) &expectValue, newValue, false,
                                         __ATOMIC_SEQ_CST,
                                         __ATOMIC_SEQ_CST)) {
             return true;
