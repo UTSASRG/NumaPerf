@@ -75,18 +75,18 @@ public:
     }
 
     void *get() {
-        unsigned long start = Timer::getCurrentCycle();
+//        unsigned long start = Timer::getCurrentCycle();
         void *result = NULL;
         if (freeListHead != NULL) {
             result = automicGetFromFreeList();
         }
         if (result != NULL) {
             memset(result, 0, sizeOfMemoryBlock);
-            Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
+//            Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
             return result;
         }
         result = automicGetFromBumpPointer();
-        Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
+//        Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
         return result;
     }
 
