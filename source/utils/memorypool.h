@@ -21,11 +21,11 @@ private:
     void *volatile freeListHead;
 private:
     inline void *automicGetFromFreeList() {
-        void *result = freeListHead;
+        void *volatile result = freeListHead;
         if (NULL == result) {
             return NULL;
         }
-        while (!__atomic_compare_exchange_n(&freeListHead, &result, *((void **) result),
+        while (!__atomic_compare_exchange_n(&freeListHead, (void **) &result, *((void **) result),
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
@@ -38,9 +38,9 @@ private:
     }
 
     inline void automicInsertIntoFreeList(void *memoryBlock) {
-        void *nextBlock = freeListHead;
+        void *volatile nextBlock = freeListHead;
         *((void **) memoryBlock) = (void *) nextBlock;
-        while (!__atomic_compare_exchange_n(&freeListHead, &nextBlock, memoryBlock,
+        while (!__atomic_compare_exchange_n(&freeListHead, (void **) &nextBlock, memoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
@@ -50,8 +50,8 @@ private:
     }
 
     inline void *automicGetFromBumpPointer() {
-        void *result = bumpPointer;
-        while (!__atomic_compare_exchange_n(&bumpPointer, &result, (char *) result + sizeOfMemoryBlock,
+        void *volatile result = bumpPointer;
+        while (!__atomic_compare_exchange_n(&bumpPointer, (void **) &result, (char *) result + sizeOfMemoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
