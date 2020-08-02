@@ -72,7 +72,7 @@ MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof
 MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
                                                  TB * 1);
 
-MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
+MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCacheLineInfo)),
                                                   GB * 1);
 
 MemoryPool DiagnosePageInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnosePageInfo)),
@@ -277,7 +277,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     unsigned long mallocCallSite = objectInfo->getMallocCallSite();
     DiagnoseCallSiteInfo *diagnoseCallSiteInfo = callSiteInfoMap.find(mallocCallSite, 0);
     if (NULL == diagnoseCallSiteInfo) {
-        Logger::warn("diagnoseCallSiteInfo is lost\n");
+        Logger::warn("diagnoseCallSiteInfo is lost, mallocCallSite:%lu\n", (unsigned long) mallocCallSite);
         return;
     }
     DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
@@ -308,8 +308,8 @@ inline void __free(void *ptr) {
     ObjectInfo *objectInfo = objectInfoMap.findAndRemove((unsigned long) ptr, 0);
     if (NULL != objectInfo) {
         collectAndClearObjInfo(objectInfo);
+        Real::free(ptr);
     }
-    Real::free(ptr);
 }
 
 void operator delete(void *ptr) throw() {
@@ -349,13 +349,13 @@ void *realloc(void *ptr, size_t size) {
     Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
     unsigned long callerAddress = Programs::getLastEip(&ptr);
     if (ptr == NULL) {
-        __free(ptr);
+//        __free(ptr);
         return __malloc(size, callerAddress);
     }
     ObjectInfo *obj = objectInfoMap.find((unsigned long) ptr, 0);
     if (obj == NULL) {
 //        Logger::warn("realloc no original obj info,ptr:%p\n", ptr);
-        __free(ptr);
+//        __free(ptr);
         return __malloc(size, callerAddress);
     }
     unsigned long oldSize = obj->getSize();
