@@ -9,7 +9,7 @@ class Automics {
 public:
 
     template<class ValueType>
-    static inline bool compare_set(ValueType *valuePointer, ValueType expectValue, ValueType newValue) {
+    static inline bool compare_set(ValueType *valuePointer, volatile ValueType expectValue, ValueType newValue) {
         if (__atomic_compare_exchange_n(valuePointer, &expectValue, newValue, false,
                                         __ATOMIC_SEQ_CST,
                                         __ATOMIC_SEQ_CST)) {
@@ -22,8 +22,9 @@ public:
     automicIncrease(unsigned long *targetValue, unsigned long increaseNumber, int retry_num = 5) {
         if (retry_num < 0) {
             while (1) {
-                unsigned long expect_value = *targetValue;
-                if (__atomic_compare_exchange_n(targetValue, &expect_value, expect_value + increaseNumber, false,
+                volatile unsigned long expect_value = *targetValue;
+                if (__atomic_compare_exchange_n(targetValue, (unsigned long *) &expect_value,
+                                                expect_value + increaseNumber, false,
                                                 __ATOMIC_SEQ_CST,
                                                 __ATOMIC_SEQ_CST)) {
                     return expect_value + increaseNumber;
@@ -32,8 +33,9 @@ public:
         }
 
         for (int i = 0; i < retry_num; i++) {
-            unsigned long expect_value = *targetValue;
-            if (__atomic_compare_exchange_n(targetValue, &expect_value, expect_value + increaseNumber, false,
+            volatile unsigned long expect_value = *targetValue;
+            if (__atomic_compare_exchange_n(targetValue, (unsigned long *) &expect_value, expect_value + increaseNumber,
+                                            false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
                 return expect_value + increaseNumber;
