@@ -19,33 +19,38 @@ private:
     void *volatile bumpPointer;
     void *volatile bumpEndPointer;
     void *volatile freeListHead;
+    spinlock lock;
 private:
     inline void *automicGetFromFreeList() {
+        lock.lock();
         void *volatile result = freeListHead;
         if (NULL == result) {
+            lock.unlock();
             return NULL;
         }
-        while (!__atomic_compare_exchange_n(&freeListHead, (void **) &result, *((void **) result),
+        while (!__atomic_compare_exchange_n(&freeListHead, (void **) &result, *(void **) result,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
             result = freeListHead;
             if (NULL == result) {
+                lock.unlock();
                 return NULL;
             }
         }
+        lock.unlock();
         return (void *) result;
     }
 
     inline void automicInsertIntoFreeList(void *memoryBlock) {
         void *volatile nextBlock = freeListHead;
-        *((void **) memoryBlock) = (void *) nextBlock;
+        *((void *volatile *) memoryBlock) = (void *) nextBlock;
         while (!__atomic_compare_exchange_n(&freeListHead, (void **) &nextBlock, memoryBlock,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
             nextBlock = freeListHead;
-            *((void **) memoryBlock) = (void *) nextBlock;
+            *((void *volatile *) memoryBlock) = (void *) nextBlock;
         }
     }
 
@@ -64,6 +69,7 @@ private:
 public:
     MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul) {
         Logger::debug("memory pool init\n");
+        lock.init();
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->maxPoolSize = maxPoolSize;
         this->freeListHead = NULL;
