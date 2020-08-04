@@ -10,6 +10,7 @@ include_directories(source/utils/concurrency)
 add_executable(NumaPerf
         source/utils/concurrency/automics.h
         source/utils/collection/hashfuncs.h
+        source/utils/collection/abstractShadowMap.h
         source/utils/collection/addrtopageindexshadowmap.h
         source/utils/collection/addrtocacheindexshadowmap.h
         source/utils/collection/list.h
