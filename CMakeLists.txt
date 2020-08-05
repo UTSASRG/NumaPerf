@@ -28,6 +28,7 @@ add_executable(NumaPerf
         source/bean/diagnosepageinfo.h
         source/utils/programs.h
         source/utils/real.h
+        source/utils/maths.h
         source/utils/bitmasks.h
         source/utils/addresses.h
         source/utils/concurrency/spinlock.h

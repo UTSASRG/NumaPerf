@@ -7,7 +7,7 @@
 class BitMasks {
 public:
     // return true if the bit is new set.
-    static inline bool setBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex) {
+    static inline bool setBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex, int tryNum = 10) {
         assert(bitIndex < bitMaskLentgh);
         if (bitIndex == 0) {
             return false;
@@ -17,7 +17,7 @@ public:
             bitIndex -= 8 * sizeof(unsigned long);
             currentBitPtr++;
         }
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < tryNum; i++) {
             unsigned long originalValue = *currentBitPtr;
             unsigned long newValue = originalValue | (1ul << (bitIndex - 1));
             if (originalValue == newValue) {
@@ -27,7 +27,7 @@ public:
                 return true;
             }
         }
-        assert(false);
+        return false;
     }
 
 //    static inline void unsetBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex) {
