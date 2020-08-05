@@ -18,6 +18,7 @@ public:
         for (unsigned long i = 0; i < upBoundPowerOf2; i++) {
             mask = mask | (1lu << i);
         }
+        return mask;
     }
 };
 
