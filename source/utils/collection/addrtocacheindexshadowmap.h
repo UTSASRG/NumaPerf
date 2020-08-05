@@ -15,7 +15,6 @@
  * @tparam ValueType
  */
 
-#define MAX_FRAGMENTS 10
 
 template<class ValueType>
 class AddressToCacheIndexShadowMap {
