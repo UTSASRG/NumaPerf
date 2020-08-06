@@ -8,6 +8,7 @@
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 #include "../concurrency/spinlock.h"
+#include "xdefines.h"
 
 /**
  * memory layout: bool-value-bool-value-bool-value
@@ -19,11 +20,11 @@
 template<class ValueType>
 class AddressToCacheIndexShadowMap {
 
-    void *startAddress[MAX_FRAGMENTS];
     unsigned long fragmentSize;
     unsigned long fragmentMappingBitMask;
     unsigned long fragmentMappingBitNum;
     unsigned long blockSize;
+    void *startAddress[MAX_FRAGMENTS];
     spinlock lock;
 
     const static int META_DATA_SIZE = sizeof(short);
@@ -59,7 +60,7 @@ private:
             return;
         }
         startAddress[fragmentIndex] = MM::mmapAllocatePrivate(this->fragmentSize);
-        Logger::info("create Fragment index:%d\n", fragmentIndex);
+        Logger::info("AddressToCacheIndexShadowMap create Fragment index:%d\n", fragmentIndex);
         lock.unlock();
     }
 
