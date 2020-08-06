@@ -7,7 +7,7 @@
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 #include "../maths.h"
-#include "xdefines.h"
+#include "../../xdefines.h"
 
 /**
  * memory layout: bool-value-bool-value-bool-value

@@ -31,7 +31,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef AddressToPageIndexSingleFragShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
-typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
+typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInfoShadowMap;
 
 
 thread_local int pageDetailSamplingFrequency = 0;
@@ -54,7 +54,7 @@ static void initializer(void) {
     callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE);
+    cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
     inited = true;
 }
 
@@ -241,16 +241,19 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
                                                                                                       diagnoseCallSiteInfo);
     for (unsigned long cacheLineAddress = beginningAddress;
          (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
-        CacheLineDetailedInfo **cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+        CacheLineDetailedInfo *cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
         // remove the info in cache level, even there maybe are more objs inside it.
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        CacheLineDetailedInfo *cacheLineDetail = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing(
+                1);
+        *cacheLineDetail = *cacheLineDetailedInfo;
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
+        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetail);
         // insert successfully
-        if (cacheLine != *cacheLineDetailedInfo) {
-            diagnoseCacheLineInfo->setCacheLineDetailedInfo(*cacheLineDetailedInfo);
+        if (cacheLine != cacheLineDetail) {
+            diagnoseCacheLineInfo->setCacheLineDetailedInfo(cacheLineDetail);
             DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
             // new values is inserted
             if (oldTopCacheLine != diagnoseCacheLineInfo) {
@@ -427,16 +430,11 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
 
 inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
     Logger::debug("record cache detailed info\n");
-    CacheLineDetailedInfo **cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(
-            addr);
+    CacheLineDetailedInfo *cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
     if (NULL == cacheLineInfoPtr) {
-        CacheLineDetailedInfo *cacheInfo = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing(
-                ADDRESSES::getCacheLineStartAddress(addr));
-        if (!cacheLineDetailedInfoShadowMap.insertIfAbsent(addr, cacheInfo)) {
-            CacheLineDetailedInfo::release(cacheInfo);
-        }
+        CacheLineDetailedInfo newCacheLineDetail = CacheLineDetailedInfo(ADDRESSES::getCacheLineStartAddress(addr));
+        cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
         cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
-
     }
     (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
 }

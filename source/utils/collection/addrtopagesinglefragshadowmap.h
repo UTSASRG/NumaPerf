@@ -40,9 +40,6 @@ private:
 
 public:
     void initialize(unsigned long fragmentSize, bool needAlignToCacheLine = false) {
-        for (int i = 0; i < MAX_FRAGMENTS; i++) {
-            startAddress[i] = NULL;
-        }
         this->fragmentSize = fragmentSize;
         this->startAddress = MM::mmapAllocatePrivate(this->fragmentSize);
         if (needAlignToCacheLine) {

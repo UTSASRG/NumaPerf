@@ -21,11 +21,6 @@ private:
 
 private:
 
-    CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
-        memset(this, 0, sizeof(CacheLineDetailedInfo));
-        this->startAddress = cacheLineStartAddress;
-    }
-
     inline void resetThreadBitMask() {
         accessThreadsBitMask[0] = 0;
         accessThreadsBitMask[1] = 0;
@@ -49,6 +44,15 @@ private:
     }
 
 public:
+
+    CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
+        memset(this, 0, sizeof(CacheLineDetailedInfo));
+        this->startAddress = cacheLineStartAddress;
+    }
+
+    CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
+    }
 
     inline static CacheLineDetailedInfo *
     createNewCacheLineDetailedInfoForCacheSharing(unsigned long cacheLineStartAddress) {
