@@ -54,7 +54,7 @@ static void initializer(void) {
     callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
+    cacheLineDetailedInfoShadowMap.initialize(4ul * TB, true);
     inited = true;
 }
 
@@ -436,7 +436,7 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long first
         cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
         cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
     }
-    (*cacheLineInfoPtr)->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
+    cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
 }
 
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {

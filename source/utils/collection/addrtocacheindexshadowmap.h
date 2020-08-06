@@ -40,7 +40,9 @@ private:
 
     inline void *getDataBlock(unsigned long key) {
         unsigned int fragmentIndex = key >> fragmentMappingBitNum;
-        assert(fragmentIndex < MAX_FRAGMENTS);
+        if (fragmentIndex >= MAX_FRAGMENTS) {
+            return NULL;
+        }
         if (startAddress[fragmentIndex] == NULL) {
             return NULL;
         }
