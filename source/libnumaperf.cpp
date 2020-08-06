@@ -20,6 +20,7 @@
 #include "bean/objectInfo.h"
 #include "utils/collection/addrtopageindexshadowmap.h"
 #include "utils/collection/addrtocacheindexshadowmap.h"
+#include "utils/collection/addrtopagesinglefragshadowmap.h"
 #include "utils/programs.h"
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
@@ -29,7 +30,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
-typedef AddressToPageIndexShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
+typedef AddressToPageIndexSingleFragShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo *> CacheLineDetailedInfoShadowMap;
 
 

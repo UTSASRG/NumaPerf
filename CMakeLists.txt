@@ -15,6 +15,7 @@ add_executable(NumaPerf
         source/utils/collection/list.h
         source/utils/collection/hashmap.h
         source/utils/collection/priorityqueue.h
+        source/utils/collection/addrtopagesinglefragshadowmap.h
         source/libnumaperf.cpp
         source/libnumaperf.h
         source/bean/scores.h
