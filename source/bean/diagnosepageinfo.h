@@ -21,7 +21,7 @@ public:
     inline static DiagnosePageInfo *
     createDiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
         void *buff = localMemoryPool.get();
-        Logger::debug("new DiagnosePageInfo buff address:%lu \n", buff);
+//        Logger::debug("new DiagnosePageInfo buff address:%lu \n", buff);
         DiagnosePageInfo *ret = new(buff) DiagnosePageInfo(objectInfo, diagnoseCallSiteInfo);
         return ret;
     }

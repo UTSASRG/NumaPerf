@@ -42,7 +42,7 @@ public:
 
     static PageDetailedAccessInfo *createNewPageDetailedAccessInfo(unsigned long pageStartAddress) {
         void *buff = localMemoryPool.get();
-        Logger::debug("new PageDetailedAccessInfo buff address:%lu \n", buff);
+//        Logger::debug("new PageDetailedAccessInfo buff address:%lu \n", buff);
         PageDetailedAccessInfo *ret = new(buff) PageDetailedAccessInfo(pageStartAddress);
         return ret;
     }

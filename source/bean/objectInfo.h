@@ -23,7 +23,7 @@ public:
     static ObjectInfo *
     createNewObjectInfoo(unsigned long objectStartAddress, unsigned long size, unsigned long mallocCallSite) {
         void *buff = localMemoryPool.get();
-        Logger::debug("new ObjectInfo start address: %lu, buff address:%lu \n", objectStartAddress, buff);
+//        Logger::debug("new ObjectInfo start address: %lu, buff address:%lu \n", objectStartAddress, buff);
         ObjectInfo *objectInfo = new(buff) ObjectInfo(objectStartAddress, size, mallocCallSite);
         return objectInfo;
     }

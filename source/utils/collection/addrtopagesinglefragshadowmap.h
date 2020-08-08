@@ -43,14 +43,14 @@ public:
         this->fragmentSize = fragmentSize;
         this->startAddress = MM::mmapAllocatePrivate(this->fragmentSize);
         if (needAlignToCacheLine) {
-            Logger::debug("AddressToPageIndexSingleFragShadowMap, original Size:%lu, result Size:%lu \n",
-                          sizeof(ValueType) + META_DATA_SIZE,
-                          ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE));
+//            Logger::debug("AddressToPageIndexSingleFragShadowMap, original Size:%lu, result Size:%lu \n",
+//                          sizeof(ValueType) + META_DATA_SIZE,
+//                          ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE));
             blockSize = ADDRESSES::alignUpToCacheLine(sizeof(ValueType) + META_DATA_SIZE);
         } else {
-            Logger::debug("AddressToPageIndexSingleFragShadowMap, original Size:%lu, result Size:%lu \n",
-                          sizeof(ValueType) + META_DATA_SIZE,
-                          ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE));
+//            Logger::debug("AddressToPageIndexSingleFragShadowMap, original Size:%lu, result Size:%lu \n",
+//                          sizeof(ValueType) + META_DATA_SIZE,
+//                          ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE));
             blockSize = ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE);
         }
     }
@@ -61,7 +61,7 @@ public:
         if (!Automics::compare_set(metaData, NOT_INSERT, INSERTING)) {
             // busy waiting, since this could be very quick
             while (*metaData != INSERTED) {
-                Logger::debug("shadow map insertIfAbsent busy waiting\n");
+                Logger::warn("shadow map insertIfAbsent busy waiting\n");
             }
             return false;
         }

@@ -57,7 +57,7 @@ public:
     inline static CacheLineDetailedInfo *
     createNewCacheLineDetailedInfoForCacheSharing(unsigned long cacheLineStartAddress) {
         void *buff = localMemoryPool.get();
-        Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
+//        Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
         CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo(cacheLineStartAddress);
         return ret;
     }

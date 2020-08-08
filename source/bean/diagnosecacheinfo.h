@@ -22,7 +22,7 @@ public:
     inline static DiagnoseCacheLineInfo *
     createDiagnoseCacheLineInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
         void *buff = localMemoryPool.get();
-        Logger::debug("new DiagnoseCacheLineInfo buff address:%lu \n", buff);
+//        Logger::debug("new DiagnoseCacheLineInfo buff address:%lu \n", buff);
         DiagnoseCacheLineInfo *ret = new(buff) DiagnoseCacheLineInfo(objectInfo, diagnoseCallSiteInfo);
         return ret;
     }

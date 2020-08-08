@@ -29,7 +29,7 @@ private:
 public:
     inline static DiagnoseCallSiteInfo *createNewDiagnoseCallSiteInfo() {
         void *buff = localMemoryPool.get();
-        Logger::debug("new DiagnoseCallSiteInfo buff address:%lu \n", buff);
+//        Logger::debug("new DiagnoseCallSiteInfo buff address:%lu \n", buff);
         DiagnoseCallSiteInfo *ret = new(buff) DiagnoseCallSiteInfo();
         return ret;
     }

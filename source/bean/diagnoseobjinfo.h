@@ -32,7 +32,7 @@ private:
 public:
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
         void *buff = localMemoryPool.get();
-        Logger::debug("new DiagnoseObjInfo buff address:%lu \n", buff);
+//        Logger::debug("new DiagnoseObjInfo buff address:%lu \n", buff);
         DiagnoseObjInfo *ret = new(buff) DiagnoseObjInfo(objectInfo);
         return ret;
     }

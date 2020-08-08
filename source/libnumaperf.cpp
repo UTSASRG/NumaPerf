@@ -26,7 +26,6 @@
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
 #define SHADOW_MAP_SIZE (32ul * TB)
-#define MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP (SHADOW_MAP_SIZE / (sizeof(PageBasicAccessInfo)+1) * PAGE_SIZE)
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
@@ -132,7 +131,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 inline void *__malloc(size_t size, unsigned long callerAddress) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
-    Logger::debug("__malloc size:%lu\n", size);
+//    Logger::debug("__malloc size:%lu\n", size);
     if (size <= 0) {
         size = 1;
     }
@@ -305,7 +304,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
 }
 
 inline void __free(void *ptr) {
-    Logger::debug("__free pointer:%p\n", ptr);
+//    Logger::debug("__free pointer:%p\n", ptr);
     if (!inited) {
         return;
     }
@@ -341,7 +340,7 @@ extern void *malloc(size_t size) {
 }
 
 void *calloc(size_t n, size_t size) {
-    Logger::debug("calloc N:%lu, size:%lu\n", n, size);
+//    Logger::debug("calloc N:%lu, size:%lu\n", n, size);
     void *ptr = __malloc(n * size, Programs::getLastEip(&n));
     if (ptr != NULL) {
         memset(ptr, 0, n * size);
@@ -350,7 +349,7 @@ void *calloc(size_t n, size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
-    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
+//    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
     unsigned long callerAddress = Programs::getLastEip(&ptr);
     if (ptr == NULL) {
 //        __free(ptr);
@@ -381,7 +380,7 @@ void *initThreadIndexRoutine(void *args) {
 
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
-        Logger::debug("new thread index:%lu\n", currentThreadIndex);
+//        Logger::debug("new thread index:%lu\n", currentThreadIndex);
         assert(currentThreadIndex < MAX_THREAD_NUM);
     }
 
@@ -395,7 +394,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 
 __THROW {
-Logger::debug("pthread create\n");
+//Logger::debug("pthread create\n");
 if (!inited) {
 initializer();
 
@@ -411,7 +410,7 @@ Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
 }
 
 inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
-    Logger::debug("record page detailed info\n");
+//    Logger::debug("record page detailed info\n");
     pageDetailSamplingFrequency++;
     if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
         return;
@@ -429,7 +428,7 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
 }
 
 inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
-    Logger::debug("record cache detailed info\n");
+//    Logger::debug("record cache detailed info\n");
     CacheLineDetailedInfo *cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
     if (NULL == cacheLineInfoPtr) {
         CacheLineDetailedInfo newCacheLineDetail = CacheLineDetailedInfo(ADDRESSES::getCacheLineStartAddress(addr));
@@ -443,10 +442,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
-    if (addr > MAX_ADDRESS_IN_PAGE_BASIC_SHADOW_MAP) {
-        Logger::warn("the access address is bigger than basic page shadow map, address:%p\n", addr);
-        return;
-    }
     PageBasicAccessInfo *basicPageAccessInfo = pageBasicAccessInfoShadowMap.find(addr);
     if (NULL == basicPageAccessInfo) {
         return;
