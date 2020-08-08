@@ -444,21 +444,29 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-
+#ifdef SAMPLING
     pageDetailSamplingFrequency++;
     if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
         pageDetailSamplingFrequency = 0;
     }
+#endif
 
+#ifdef SAMPLING
     if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+#else
+    if (!needPageDetailInfo) {
+#endif
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
     }
 
     if (!needCahceDetailInfo) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
-
+#ifdef SAMPLING
     if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+#else
+    if (needPageDetailInfo) {
+#endif
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
     }
 
