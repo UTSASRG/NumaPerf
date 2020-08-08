@@ -411,11 +411,6 @@ Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
 
 inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
 //    Logger::debug("record page detailed info\n");
-    pageDetailSamplingFrequency++;
-    if (pageDetailSamplingFrequency <= SAMPLING_FREQUENCY) {
-        return;
-    }
-    pageDetailSamplingFrequency = 0;
     if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
         PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo(
                 ADDRESSES::getPageStartAddress(addr));
@@ -446,11 +441,16 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (NULL == basicPageAccessInfo) {
         return;
     }
-
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-    if (!needPageDetailInfo) {
+
+    pageDetailSamplingFrequency++;
+    if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
+        pageDetailSamplingFrequency = 0;
+    }
+
+    if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
     }
 
@@ -458,7 +458,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
 
-    if (needPageDetailInfo) {
+    if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
     }
 

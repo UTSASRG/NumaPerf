@@ -46,7 +46,7 @@ private:
 
         unsigned long index = hashKey(key);
         unsigned long offset = index * blockSize;
-        assert(offset < fragmentSize);
+//        assert(offset < fragmentSize);
         return ((char *) startAddress[fragmentIndex]) + offset;
     }
 
