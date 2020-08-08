@@ -427,8 +427,7 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long first
     CacheLineDetailedInfo *cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
     if (NULL == cacheLineInfoPtr) {
         CacheLineDetailedInfo newCacheLineDetail = CacheLineDetailedInfo(ADDRESSES::getCacheLineStartAddress(addr));
-        cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
-        cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
+        cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
     }
     cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
 }

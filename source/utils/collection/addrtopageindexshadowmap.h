@@ -104,7 +104,7 @@ public:
         return true;
     }
 
-    inline void insert(const unsigned long &key, const ValueType &value) {
+    inline ValueType *insert(const unsigned long &key, const ValueType &value) {
         void *dataBlock = this->getDataBlock(key);
         if (NULL == dataBlock) {
             this->createFragment(key);
@@ -114,6 +114,7 @@ public:
         *valuePtr = value;
         short *metaData = (short *) dataBlock;
         *metaData = INSERTED;
+        return valuePtr;
     }
 
     inline ValueType *find(const unsigned long &key) {
