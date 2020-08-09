@@ -133,7 +133,7 @@ public:
         if (NULL == dataBlock) {
             return;
         }
-        *((short *) dataBlock) = NOT_INSERT;
+        memset(dataBlock, 0, this->blockSize);
     }
 };
 

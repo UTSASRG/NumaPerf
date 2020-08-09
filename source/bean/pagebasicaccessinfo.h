@@ -40,20 +40,20 @@ public:
         this->pageStartAddress = pageStartAddress;
         this->firstTouchThreadId = firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = 0;
-        this->accessNumberByOtherThreads = 0;
-        pageDetailedAccessInfo = NULL;
-        memset(this->cacheLineWritingNumber, 0, CACHE_NUM_IN_ONE_PAGE * sizeof(unsigned long));
+//        this->accessNumberByOtherThreads = 0;
+//        pageDetailedAccessInfo = NULL;
+//        memset(this->cacheLineWritingNumber, 0, CACHE_NUM_IN_ONE_PAGE * sizeof(unsigned long));
     }
 
     PageBasicAccessInfo(const PageBasicAccessInfo &basicPageAccessInfo) {
         this->pageStartAddress = basicPageAccessInfo.pageStartAddress;
         this->firstTouchThreadId = basicPageAccessInfo.firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = basicPageAccessInfo.accessNumberByFirstTouchThread;
-        this->accessNumberByOtherThreads = basicPageAccessInfo.accessNumberByOtherThreads;
-        this->pageDetailedAccessInfo = basicPageAccessInfo.pageDetailedAccessInfo;
-        for (int i = 0; i < CACHE_NUM_IN_ONE_PAGE; i++) {
-            this->cacheLineWritingNumber[i] = basicPageAccessInfo.cacheLineWritingNumber[i];
-        }
+//        this->accessNumberByOtherThreads = basicPageAccessInfo.accessNumberByOtherThreads;
+//        this->pageDetailedAccessInfo = basicPageAccessInfo.pageDetailedAccessInfo;
+//        for (int i = 0; i < CACHE_NUM_IN_ONE_PAGE; i++) {
+//            this->cacheLineWritingNumber[i] = basicPageAccessInfo.cacheLineWritingNumber[i];
+//        }
     }
 
     inline void recordAccessForPageSharing(unsigned long accessThreadId) {

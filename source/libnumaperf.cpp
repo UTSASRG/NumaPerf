@@ -32,6 +32,7 @@ typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator>
 typedef AddressToPageIndexSingleFragShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInfoShadowMap;
 
+#define SAMPLING
 
 thread_local int pageDetailSamplingFrequency = 0;
 bool inited = false;

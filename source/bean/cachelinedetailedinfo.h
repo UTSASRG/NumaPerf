@@ -46,12 +46,13 @@ private:
 public:
 
     CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
-        memset(this, 0, sizeof(CacheLineDetailedInfo));
+//        memset(this, 0, sizeof(CacheLineDetailedInfo));
         this->startAddress = cacheLineStartAddress;
     }
 
     CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
+//        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
+        this->startAddress = cacheLineDetailedInfo.startAddress;
     }
 
     inline static CacheLineDetailedInfo *

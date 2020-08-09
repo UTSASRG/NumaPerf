@@ -107,7 +107,7 @@ public:
         return true;
     }
 
-    inline ValueType* insert(const unsigned long &key, const ValueType &value) {
+    inline ValueType *insert(const unsigned long &key, const ValueType &value) {
         void *dataBlock = this->getDataBlock(key);
         if (NULL == dataBlock) {
             this->createFragment(key);
@@ -136,7 +136,7 @@ public:
         if (NULL == dataBlock) {
             return;
         }
-        *((short *) dataBlock) = NOT_INSERT;
+        memset(dataBlock, 0, this->blockSize);
     }
 };
 
