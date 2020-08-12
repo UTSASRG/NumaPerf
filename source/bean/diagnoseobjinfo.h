@@ -62,12 +62,25 @@ public:
         return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
     }
 
-    inline PageDetailedAccessInfo *insertPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
-        this->allAccessNumInMainThread += pageDetailedAccessInfo->getAccessNumberByFirstTouchThread(
-                objectInfo->getStartAddress(), objectInfo->getSize());
-        this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
-                objectInfo->getStartAddress(), objectInfo->getSize());
-        return topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo);
+    inline void
+    insertPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo, bool wholePageCoveredByObj) {
+        if (wholePageCoveredByObj) {
+            this->allAccessNumInMainThread += pageDetailedAccessInfo->getAccessNumberByFirstTouchThread(
+                    0, 0);
+            this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
+                    0, 0);
+        } else {
+            this->allAccessNumInMainThread += pageDetailedAccessInfo->getAccessNumberByFirstTouchThread(
+                    objectInfo->getStartAddress(), objectInfo->getSize());
+            this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
+                    objectInfo->getStartAddress(), objectInfo->getSize());
+        }
+        if (topPageDetailedAccessInfoQueue.mayCanInsert(pageDetailedAccessInfo->getSeriousScore())) {
+            PageDetailedAccessInfo *oldPageInfo = topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo->copy());
+            if (NULL != oldPageInfo) {
+                PageDetailedAccessInfo::release(oldPageInfo);
+            }
+        }
     }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {

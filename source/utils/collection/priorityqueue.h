@@ -98,6 +98,13 @@ public:
         return ret;
     }
 
+    inline bool mayCanInsert(unsigned long value) {
+        if (endIndex >= MAX_SIZE && value <= *(values[0])) {
+            return false;
+        }
+        return true;
+    }
+
     inline int getSize() {
         return endIndex;
     }

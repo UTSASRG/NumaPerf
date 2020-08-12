@@ -25,6 +25,8 @@
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
+#define SAMPLING
+
 #define SHADOW_MAP_SIZE (32ul * TB)
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
@@ -200,35 +202,29 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInf
         }
         return;
     }
+    unsigned long seriousScore = pageDetailedAccessInfo->getSeriousScore();
 
-    DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo, diagnoseCallSiteInfo);
-    diagnosePageInfo->setPageDetailedAccessInfo(pageDetailedAccessInfo);
-    DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
-    if (NULL != diagnosePageInfoOld) {
-        DiagnosePageInfo::release(diagnosePageInfoOld);
+    // insert into global top page queue
+    if (topPageQueue.mayCanInsert(seriousScore)) {
+        DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo, diagnoseCallSiteInfo,
+                                                                                      pageDetailedAccessInfo);
+        DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
+        if (NULL != diagnosePageInfoOld) {
+            DiagnosePageInfo::release(diagnosePageInfoOld);
+        }
     }
+
+    // insert into obj's top page queue
+    diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
 
     if (allPageCoveredByObj) {
         pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
         pageBasicAccessInfoShadowMap.remove(beginningAddress);
-        PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
-        if (NULL != pageInfo) {
-            PageDetailedAccessInfo::release(pageInfo);
-        }
         return;
     }
-    // else
-    PageDetailedAccessInfo *pageInfo = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo);
-    if (pageInfo != pageDetailedAccessInfo) {  // new value insert successfully
-        PageDetailedAccessInfo *newPageDetailInfo = pageDetailedAccessInfo->copy();
-        newPageDetailInfo->clearResidObjInfo(objStartAddress, objSize);
-        pageBasicAccessInfo->setPageDetailedAccessInfo(newPageDetailInfo);
-        if (pageInfo != NULL) {
-            PageDetailedAccessInfo::release(pageInfo);
-        }
-    } else {
-        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-    }
+// else
+    pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+    pageDetailedAccessInfo->clearSumValue();
 }
 
 inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
@@ -280,7 +276,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     unsigned long mallocCallSite = objectInfo->getMallocCallSite();
     DiagnoseCallSiteInfo *diagnoseCallSiteInfo = callSiteInfoMap.find(mallocCallSite, 0);
     if (NULL == diagnoseCallSiteInfo) {
-        Logger::warn("diagnoseCallSiteInfo is lost, mallocCallSite:%lu\n", (unsigned long) mallocCallSite);
+        Logger::error("diagnoseCallSiteInfo is lost, mallocCallSite:%lu\n", (unsigned long) mallocCallSite);
         return;
     }
     DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
@@ -453,7 +449,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #ifdef SAMPLING
     if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
 #else
-    if (!needPageDetailInfo) {
+        if (!needPageDetailInfo) {
 #endif
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
     }
@@ -464,7 +460,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #ifdef SAMPLING
     if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
 #else
-    if (needPageDetailInfo) {
+        if (needPageDetailInfo) {
 #endif
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
     }

@@ -8,21 +8,24 @@ class DiagnosePageInfo {
 private:
     ObjectInfo *objectInfo;
     DiagnoseCallSiteInfo *diagnoseCallSiteInfo;
-    PageDetailedAccessInfo *pageDetailedAccessInfo;
+    PageDetailedAccessInfo pageDetailedAccessInfo;
 
     static MemoryPool localMemoryPool;
 
-    DiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
+    DiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo,
+                     PageDetailedAccessInfo *pageDetailedAccessInfo) {
         this->objectInfo = objectInfo;
         this->diagnoseCallSiteInfo = diagnoseCallSiteInfo;
+        memcpy(&(this->pageDetailedAccessInfo), pageDetailedAccessInfo, sizeof(PageDetailedAccessInfo));
     }
 
 public:
     inline static DiagnosePageInfo *
-    createDiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
+    createDiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo,
+                           PageDetailedAccessInfo *pageDetailedAccessInfo1) {
         void *buff = localMemoryPool.get();
 //        Logger::debug("new DiagnosePageInfo buff address:%lu \n", buff);
-        DiagnosePageInfo *ret = new(buff) DiagnosePageInfo(objectInfo, diagnoseCallSiteInfo);
+        DiagnosePageInfo *ret = new(buff) DiagnosePageInfo(objectInfo, diagnoseCallSiteInfo, pageDetailedAccessInfo1);
         return ret;
     }
 
@@ -30,40 +33,36 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    inline unsigned long getSeriousScore() const {
-        return this->pageDetailedAccessInfo->getSeriousScore(0, 0);
+    inline unsigned long getSeriousScore() {
+        return this->pageDetailedAccessInfo.getSeriousScore();
     }
 
-    inline bool operator<(const DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return *(this->pageDetailedAccessInfo) < *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+    inline bool operator<(DiagnosePageInfo &diagnoseCacheLineInfo) {
+        return (this->pageDetailedAccessInfo) < *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
     }
 
-    inline bool operator>(const DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return *(this->pageDetailedAccessInfo) > *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+    inline bool operator>(DiagnosePageInfo &diagnoseCacheLineInfo) {
+        return (this->pageDetailedAccessInfo) > *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
     }
 
-    inline bool operator<=(const DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return *(this->pageDetailedAccessInfo) <= *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+    inline bool operator<=(DiagnosePageInfo &diagnoseCacheLineInfo) {
+        return (this->pageDetailedAccessInfo) <= *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
     }
 
-    inline bool operator>=(const DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return *(this->pageDetailedAccessInfo) >= *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+    inline bool operator>=(DiagnosePageInfo &diagnoseCacheLineInfo) {
+        return (this->pageDetailedAccessInfo) >= *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
     }
 
-    inline bool operator==(const DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return *(this->pageDetailedAccessInfo) == *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+    inline bool operator==(DiagnosePageInfo &diagnoseCacheLineInfo) {
+        return (this->pageDetailedAccessInfo) == *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
     }
 
-    inline PageDetailedAccessInfo *pagePageDetailedAccessInfo() const {
-        return pageDetailedAccessInfo;
-    }
-
-    inline void setPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
-        this->pageDetailedAccessInfo = pageDetailedAccessInfo;
+    inline PageDetailedAccessInfo *pagePageDetailedAccessInfo() {
+        return &pageDetailedAccessInfo;
     }
 
     inline void dump(FILE *file, int blackSpaceNum) {
-        this->pageDetailedAccessInfo->dump(file, blackSpaceNum + 2);
+        this->pageDetailedAccessInfo.dump(file, blackSpaceNum + 2);
         this->objectInfo->dump(file, blackSpaceNum + 2);
         char prefix[blackSpaceNum];
         for (int i = 0; i < blackSpaceNum; i++) {
