@@ -9,6 +9,7 @@
 class PageDetailedAccessInfo {
 //    unsigned long seriousScore;
     unsigned long startAddress;
+    unsigned long allAccessNumByOtherThread;
     unsigned long accessNumberByFirstTouchThread[CACHE_NUM_IN_ONE_PAGE];
     unsigned long accessNumberByOtherThread[CACHE_NUM_IN_ONE_PAGE];
 
@@ -50,6 +51,8 @@ public:
     static void release(PageDetailedAccessInfo *buff) {
         localMemoryPool.release((void *) buff);
     }
+
+    PageDetailedAccessInfo() {}
 
     PageDetailedAccessInfo *copy() {
         void *buff = localMemoryPool.get();
@@ -95,40 +98,54 @@ public:
         return accessNumInMainThread;
     }
 
-    inline unsigned long getAccessNumberByOtherTouchThread(unsigned long objStartAddress, unsigned long size) const {
+    inline unsigned long getAccessNumberByOtherTouchThread(unsigned long objStartAddress, unsigned long size) {
+        if (0 == objStartAddress && 0 == size && 0 != allAccessNumByOtherThread) {
+            return allAccessNumByOtherThread;
+        }
         unsigned long accessNumInOtherThread = 0;
         int startIndex = getStartIndex(objStartAddress, size);
         int endIndex = getEndIndex(objStartAddress, size);
         for (unsigned int i = startIndex; i <= endIndex; i++) {
             accessNumInOtherThread += this->accessNumberByOtherThread[i];
         }
+        if (0 == objStartAddress && 0 == size) {
+            allAccessNumByOtherThread = accessNumInOtherThread;
+        }
         return accessNumInOtherThread;
     }
 
-    inline unsigned long getSeriousScore(unsigned long objStartAddress, unsigned long size) const {
+    inline unsigned long getSeriousScore() {
 //        return Scores::getScoreForAccess(this->getAccessNumberByFirstTouchThread(objStartAddress, size),
 //                                         this->getAccessNumberByOtherTouchThread(objStartAddress, size));
-        return this->getAccessNumberByOtherTouchThread(objStartAddress, size);
+        return this->getAccessNumberByOtherTouchThread(0, 0);
     }
 
-    inline bool operator<(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore(0, 0) < pageDetailedAccessInfo.getSeriousScore(0, 0);
+    inline void clearSumValue() {
+        this->allAccessNumByOtherThread = 0;
     }
 
-    inline bool operator>(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore(0, 0) > pageDetailedAccessInfo.getSeriousScore(0, 0);
+    inline bool operator<(PageDetailedAccessInfo &pageDetailedAccessInfo) {
+        return this->getSeriousScore() < pageDetailedAccessInfo.getSeriousScore();
     }
 
-    inline bool operator<=(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore(0, 0) <= pageDetailedAccessInfo.getSeriousScore(0, 0);
+    inline bool operator>(PageDetailedAccessInfo &pageDetailedAccessInfo) {
+        return this->getSeriousScore() > pageDetailedAccessInfo.getSeriousScore();
     }
 
-    inline bool operator>=(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore(0, 0) >= pageDetailedAccessInfo.getSeriousScore(0, 0);
+    inline bool operator<=(PageDetailedAccessInfo &pageDetailedAccessInfo) {
+        return this->getSeriousScore() <= pageDetailedAccessInfo.getSeriousScore();
     }
 
-    inline bool operator==(const PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore(0, 0) == pageDetailedAccessInfo.getSeriousScore(0, 0);
+    inline bool operator>=(PageDetailedAccessInfo &pageDetailedAccessInfo) {
+        return this->getSeriousScore() >= pageDetailedAccessInfo.getSeriousScore();
+    }
+
+    inline bool operator==(PageDetailedAccessInfo &pageDetailedAccessInfo) {
+        return this->getSeriousScore() == pageDetailedAccessInfo.getSeriousScore();
+    }
+
+    inline bool operator>=(unsigned long seriousScore) {
+        return this->getSeriousScore() >= seriousScore;
     }
 
     inline void dump(FILE *file, int blackSpaceNum) {
