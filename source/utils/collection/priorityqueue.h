@@ -86,7 +86,7 @@ public:
      */
     inline ValueType *insert(ValueType *value, bool withLock = false) {
         // fast fail
-        if (endIndex >= MAX_SIZE && *value <= *(values[0])) {
+        if (endIndex >= MAX_SIZE && *(values[0]) >= *value) {
             return value;
         }
         if (!withLock) {
@@ -99,7 +99,7 @@ public:
     }
 
     inline bool mayCanInsert(unsigned long value) {
-        if (endIndex >= MAX_SIZE && value <= *(values[0])) {
+        if (endIndex >= MAX_SIZE && *(values[0]) >= value) {
             return false;
         }
         return true;

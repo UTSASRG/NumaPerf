@@ -57,6 +57,10 @@ public:
         return (this->pageDetailedAccessInfo) == *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
     }
 
+    inline bool operator>=(unsigned long seriousScore) {
+        return this->pageDetailedAccessInfo >= seriousScore;
+    }
+
     inline PageDetailedAccessInfo *pagePageDetailedAccessInfo() {
         return &pageDetailedAccessInfo;
     }
