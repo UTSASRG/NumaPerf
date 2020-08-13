@@ -188,44 +188,53 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     return objectStartAddress;
 }
 
-inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                      DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnoseObjInfo,
                                       DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
-    bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
-    PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-    if (pageDetailedAccessInfo == NULL) {
+    unsigned long objEndAddress = objStartAddress + objSize;
+    for (unsigned long beginningAddress = objStartAddress;
+         beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
+        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
+        if (NULL == pageBasicAccessInfo) {
+            Logger::error("pageBasicAccessInfo is lost\n");
+            continue;
+        }
+        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
+        PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+        if (pageDetailedAccessInfo == NULL) {
+            if (allPageCoveredByObj) {
+                pageBasicAccessInfoShadowMap.remove(beginningAddress);
+            }
+            continue;
+        }
+
+        unsigned long seriousScore = pageDetailedAccessInfo->getSeriousScore();
+
+        // insert into global top page queue
+        if (topPageQueue.mayCanInsert(seriousScore)) {
+            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo,
+                                                                                          diagnoseCallSiteInfo,
+                                                                                          pageDetailedAccessInfo);
+            DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
+            if (NULL != diagnosePageInfoOld) {
+                DiagnosePageInfo::release(diagnosePageInfoOld);
+            }
+        }
+
+        // insert into obj's top page queue
+        diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
+
         if (allPageCoveredByObj) {
             pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
             pageBasicAccessInfoShadowMap.remove(beginningAddress);
+            PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+            return;
         }
-        return;
-    }
-    unsigned long seriousScore = pageDetailedAccessInfo->getSeriousScore();
-
-    // insert into global top page queue
-    if (topPageQueue.mayCanInsert(seriousScore)) {
-        DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo, diagnoseCallSiteInfo,
-                                                                                      pageDetailedAccessInfo);
-        DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
-        if (NULL != diagnosePageInfoOld) {
-            DiagnosePageInfo::release(diagnosePageInfoOld);
-        }
-    }
-
-    // insert into obj's top page queue
-    diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
-
-    if (allPageCoveredByObj) {
-        pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
-        pageBasicAccessInfoShadowMap.remove(beginningAddress);
-        PageDetailedAccessInfo::release(pageDetailedAccessInfo);
-        return;
-    }
 // else
-    pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-    pageDetailedAccessInfo->clearSumValue();
+        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+        pageDetailedAccessInfo->clearSumValue();
+    }
 }
 
 inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
@@ -269,17 +278,8 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         return;
     }
     DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
-    for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
-        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
-        if (NULL == pageBasicAccessInfo) {
-            Logger::error("pageBasicAccessInfo is lost\n");
-            continue;
-        }
-        __collectAndClearPageInfo(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
-                                  diagnoseCallSiteInfo);
-    }
-    __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo,
-                               diagnoseCallSiteInfo);
+    __collectAndClearPageInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
+    __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
     DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
     if (obj != NULL) {
         DiagnoseObjInfo::release(obj);
