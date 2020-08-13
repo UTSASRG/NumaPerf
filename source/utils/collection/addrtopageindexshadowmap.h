@@ -2,12 +2,12 @@
 #define NUMAPERF_ADDRTOPAGEINDEXSHADOWMAP_H
 
 #include "../mm.hh"
-#include <assert.h>
 #include "../addresses.h"
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 #include "../maths.h"
 #include "../../xdefines.h"
+#include "asserts.h"
 
 /**
  * memory layout: bool-value-bool-value-bool-value
@@ -53,7 +53,7 @@ private:
     inline void createFragment(unsigned long key) {
         lock.lock();
         unsigned int fragmentIndex = key >> fragmentMappingBitNum;
-        assert(fragmentIndex < MAX_FRAGMENTS);
+        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS);
         if (startAddress[fragmentIndex] != NULL) {
             lock.unlock();
             return;

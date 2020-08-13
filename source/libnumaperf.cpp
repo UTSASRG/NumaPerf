@@ -22,6 +22,7 @@
 #include "utils/collection/addrtocacheindexshadowmap.h"
 #include "utils/collection/addrtopagesinglefragshadowmap.h"
 #include "utils/programs.h"
+#include "utils/asserts.h"
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
@@ -62,7 +63,7 @@ static void initializer(void) {
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
-                                       GB * 1);
+                                       GB * 4);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
                                                   GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
@@ -140,14 +141,14 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     static char initBuf[INIT_BUFF_SIZE];
     static int allocated = 0;
     if (!inited) {
-        assert(allocated + size < INIT_BUFF_SIZE);
+        Asserts::assertt(allocated + size < INIT_BUFF_SIZE);
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *objectStartAddress = Real::malloc(size);
-    assert(objectStartAddress != NULL);
+    Asserts::assertt(objectStartAddress != NULL);
 #if 0
     void *callStacks[3];
     backtrace(callStacks, 3);
@@ -366,7 +367,7 @@ void *initThreadIndexRoutine(void *args) {
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
-        assert(currentThreadIndex < MAX_THREAD_NUM);
+        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM);
     }
 
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];

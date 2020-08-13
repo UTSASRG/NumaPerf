@@ -2,13 +2,13 @@
 #define NUMAPERF_ADDRTOCACHEINDEXSHADOWMAP_H
 
 #include "../mm.hh"
-#include <assert.h>
 #include "../maths.h"
 #include "../addresses.h"
 #include "../log/Logger.h"
 #include "../concurrency/automics.h"
 #include "../concurrency/spinlock.h"
 #include "../../xdefines.h"
+#include "../asserts.h"
 
 /**
  * memory layout: bool-value-bool-value-bool-value
@@ -56,7 +56,7 @@ private:
     inline void createFragment(unsigned long key) {
         lock.lock();
         unsigned int fragmentIndex = key >> fragmentMappingBitNum;
-        assert(fragmentIndex < MAX_FRAGMENTS);
+        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS);
         if (startAddress[fragmentIndex] != NULL) {
             lock.unlock();
             return;
@@ -107,7 +107,7 @@ public:
         return true;
     }
 
-    inline ValueType* insert(const unsigned long &key, const ValueType &value) {
+    inline ValueType *insert(const unsigned long &key, const ValueType &value) {
         void *dataBlock = this->getDataBlock(key);
         if (NULL == dataBlock) {
             this->createFragment(key);
