@@ -56,10 +56,16 @@ public:
                allAccessNumInOtherThread;
     }
 
-    inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
+    inline void insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
-        return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
+        if (topCacheLineDetailQueue.mayCanInsert(cacheLineDetailedInfo->getSeriousScore())) {
+            CacheLineDetailedInfo *oldCacheLineInfo = topCacheLineDetailQueue.insert(
+                    cacheLineDetailedInfo->copy());
+            if (oldCacheLineInfo != NULL) {
+                CacheLineDetailedInfo::release(oldCacheLineInfo);
+            }
+        }
     }
 
     inline void

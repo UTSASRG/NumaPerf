@@ -229,46 +229,34 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInf
 }
 
 inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
-                                       DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+                                       DiagnoseObjInfo *diagnoseObjInfo,
                                        DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
-    DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                                      diagnoseCallSiteInfo);
-    for (unsigned long cacheLineAddress = beginningAddress;
-         (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
+    unsigned long objEndAddress = objStartAddress + objSize;
+
+    for (unsigned long cacheLineAddress = objStartAddress;
+         cacheLineAddress < objEndAddress; cacheLineAddress += CACHE_LINE_SIZE) {
         CacheLineDetailedInfo *cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
         // remove the info in cache level, even there maybe are more objs inside it.
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        CacheLineDetailedInfo *cacheLineDetail = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing(
-                1);
-        *cacheLineDetail = *cacheLineDetailedInfo;
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
-        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetail);
-        // insert successfully
-        if (cacheLine != cacheLineDetail) {
-            diagnoseCacheLineInfo->setCacheLineDetailedInfo(cacheLineDetail);
+        unsigned long seriousScore = cacheLineDetailedInfo->getSeriousScore();
+        // insert into global top cache queue
+        if (topCacheLineQueue.mayCanInsert(seriousScore)) {
+            DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(
+                    objectInfo, diagnoseCallSiteInfo, cacheLineDetailedInfo);
             DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
-            // new values is inserted
-            if (oldTopCacheLine != diagnoseCacheLineInfo) {
-                diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                           diagnoseCallSiteInfo);
-                if (oldTopCacheLine != NULL) {
-                    DiagnoseCacheLineInfo::release(oldTopCacheLine);
-                }
+            if (NULL != oldTopCacheLine) {
+                DiagnoseCacheLineInfo::release(oldTopCacheLine);
             }
         }
-        if (cacheLine != NULL) {
-//            if ((*cacheLineDetailedInfo)->isCoveredByObj(objStartAddress, objSize)) {
-            // may have some problems
-            CacheLineDetailedInfo::release(cacheLine);
-//            }
-        }
 
+        // insert into obj's top cache queue
+        diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
     }
-    DiagnoseCacheLineInfo::release(diagnoseCacheLineInfo);
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
@@ -284,14 +272,14 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
         if (NULL == pageBasicAccessInfo) {
-            Logger::warn("pageBasicAccessInfo is lost\n");
+            Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
         __collectAndClearPageInfo(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
                                   diagnoseCallSiteInfo);
-        __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, address,
-                                   diagnoseCallSiteInfo);
     }
+    __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo,
+                               diagnoseCallSiteInfo);
     DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
     if (obj != NULL) {
         DiagnoseObjInfo::release(obj);
