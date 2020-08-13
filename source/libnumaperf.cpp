@@ -62,17 +62,17 @@ static void initializer(void) {
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
-                                       TB * 5);
+                                       GB * 1);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
-                                                  TB * 5);
+                                                  GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
-                                                   TB * 5);
+                                                   GB * 4);
 
 MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
-                                            TB * 1);
+                                            GB * 1);
 
 MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
-                                                 TB * 1);
+                                                 GB * 1);
 
 MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCacheLineInfo)),
                                                   GB * 1);
@@ -220,6 +220,7 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInf
     if (allPageCoveredByObj) {
         pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
         pageBasicAccessInfoShadowMap.remove(beginningAddress);
+        PageDetailedAccessInfo::release(pageDetailedAccessInfo);
         return;
     }
 // else
