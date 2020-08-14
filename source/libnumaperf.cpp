@@ -38,6 +38,8 @@ typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInf
 
 
 thread_local int pageDetailSamplingFrequency = 0;
+thread_local int pageBasicSamplingFrequency = 0;
+
 bool inited = false;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
@@ -435,30 +437,33 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-#ifdef SAMPLING
-    pageDetailSamplingFrequency++;
-    if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
-        pageDetailSamplingFrequency = 0;
-    }
-#endif
 
+    if (!needPageDetailInfo) {
 #ifdef SAMPLING
-    if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+        pageBasicSamplingFrequency++;
+        if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
+            pageBasicSamplingFrequency = 0;
+            basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+        }
 #else
-        if (!needPageDetailInfo) {
-#endif
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+#endif
     }
 
     if (!needCahceDetailInfo) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
+
+    if (needPageDetailInfo) {
 #ifdef SAMPLING
-    if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+        pageDetailSamplingFrequency++;
+        if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
+            pageDetailSamplingFrequency = 0;
+            recordDetailsForPageSharing(basicPageAccessInfo, addr);
+        }
 #else
-        if (needPageDetailInfo) {
-#endif
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
+#endif
     }
 
     if (needCahceDetailInfo) {
