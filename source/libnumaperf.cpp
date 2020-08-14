@@ -443,35 +443,26 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #endif
 
 #ifdef SAMPLING
-    if (!
-                needPageDetailInfo && pageDetailSamplingFrequency
-                                      == 0) {
+    if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
 #else
         if (!needPageDetailInfo) {
 #endif
-        basicPageAccessInfo->
-                recordAccessForPageSharing(currentThreadIndex);
+        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
     }
 
     if (!needCahceDetailInfo) {
-        basicPageAccessInfo->
-                recordAccessForCacheSharing(addr, type
-        );
+        basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
 #ifdef SAMPLING
-    if (
-            needPageDetailInfo && pageDetailSamplingFrequency
-                                  == 0) {
+    if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
 #else
         if (needPageDetailInfo) {
 #endif
-        recordDetailsForPageSharing(basicPageAccessInfo, addr
-        );
+        recordDetailsForPageSharing(basicPageAccessInfo, addr);
     }
 
     if (needCahceDetailInfo) {
-        recordDetailsForCacheSharing(addr, firstTouchThreadId, type
-        );
+        recordDetailsForCacheSharing(addr, firstTouchThreadId, type);
     }
 // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
