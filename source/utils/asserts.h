@@ -7,7 +7,7 @@
 class Asserts {
 public:
     // since the default one will call malloc inside
-    static void assertt(bool result, char *message = NULL) {
+    static inline void assertt(bool result, char *message = (char *) "") {
         if (!result) {
             Logger::error("assert fail:%s\n", message);
             exit(11);

@@ -7,7 +7,7 @@
 #include "../concurrency/automics.h"
 #include "../maths.h"
 #include "../../xdefines.h"
-#include "asserts.h"
+#include "../asserts.h"
 
 /**
  * memory layout: bool-value-bool-value-bool-value

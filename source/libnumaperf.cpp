@@ -28,7 +28,8 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
 #define SAMPLING
 
-#define SHADOW_MAP_SIZE (32ul * TB)
+#define BASIC_PAGE_SHADOW_MAP_SIZE (32ul * TB)
+#define MAX_HANDLE_ADDRESS BASIC_PAGE_SHADOW_MAP_SIZE / sizeof(PageBasicAccessInfo) * PAGE_SIZE
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
@@ -52,11 +53,11 @@ static void initializer(void) {
     Real::init();
     void *callStacks[1];
     backtrace(callStacks, 1);
-    objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
-    callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
+    objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
+    callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
-    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(4ul * TB, true);
+    pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
+    cacheLineDetailedInfoShadowMap.initialize(1ul * TB, true);
     inited = true;
 }
 
@@ -422,6 +423,11 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
+    if (addr > MAX_HANDLE_ADDRESS) {
+        Logger::warn("access addr:%lu is too larg\n", addr);
+        return;
+    }
+
     PageBasicAccessInfo *basicPageAccessInfo = pageBasicAccessInfoShadowMap.find(addr);
     if (NULL == basicPageAccessInfo) {
         return;
@@ -437,28 +443,37 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #endif
 
 #ifdef SAMPLING
-    if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+    if (!
+                needPageDetailInfo && pageDetailSamplingFrequency
+                                      == 0) {
 #else
         if (!needPageDetailInfo) {
 #endif
-        basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+        basicPageAccessInfo->
+                recordAccessForPageSharing(currentThreadIndex);
     }
 
     if (!needCahceDetailInfo) {
-        basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
+        basicPageAccessInfo->
+                recordAccessForCacheSharing(addr, type
+        );
     }
 #ifdef SAMPLING
-    if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+    if (
+            needPageDetailInfo && pageDetailSamplingFrequency
+                                  == 0) {
 #else
         if (needPageDetailInfo) {
 #endif
-        recordDetailsForPageSharing(basicPageAccessInfo, addr);
+        recordDetailsForPageSharing(basicPageAccessInfo, addr
+        );
     }
 
     if (needCahceDetailInfo) {
-        recordDetailsForCacheSharing(addr, firstTouchThreadId, type);
+        recordDetailsForCacheSharing(addr, firstTouchThreadId, type
+        );
     }
-    // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
+// Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
 
 /*
