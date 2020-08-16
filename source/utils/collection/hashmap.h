@@ -1,13 +1,12 @@
 #ifndef __HASHMAP_H__
 #define __HASHMAP_H__
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <cstdio>
-
+#include "../asserts.h"
 #include "list.h"
 #include "../real.h"
 
@@ -147,7 +146,7 @@ public:
     }
 
     ValueType findAndRemove(const KeyType &key, size_t keylen) {
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
         //fprintf(stderr, "find entry key %p hindex %d\n", key, hindex);
@@ -174,7 +173,7 @@ public:
     // If existing, return true. *value should be carried specific value for this key.
     // Otherwise, return false.
     ValueType find(const KeyType &key, size_t keylen) {
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
         //fprintf(stderr, "find entry key %p hindex %d\n", key, hindex);
@@ -189,7 +188,7 @@ public:
     }
 
     void *findEntry(const KeyType &key, size_t keylen) {
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
 #if LOCK_PROTECTION
@@ -215,7 +214,7 @@ public:
 
     // this function is customized for call stack array
     ValueType *findOrAdd(const KeyType &key, size_t keylen, ValueType newval) {
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         ValueType *ret = NULL;
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
@@ -248,7 +247,7 @@ public:
             fprintf(stderr, "process %d: initialized at  %p hashmap is not true\n", getpid(), &_initialized);
         }
 
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         // PRINF("Insert entry:  before inserting\n");
         struct HashBucket *first = getHashBucket(hindex);
@@ -267,7 +266,7 @@ public:
     // Insert a hash table entry if it is not existing.
     // If the insert success, return true
     bool insertIfAbsent(const KeyType &key, size_t keylen, ValueType value) {
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
 //        fprintf(stderr, "hashmap insert hindex:%lu, count:%lu\n", hindex, first->count);
@@ -293,7 +292,7 @@ public:
 
     // Free an entry with specified key
     bool erase(const KeyType &key, size_t keylen) {
-        assert(_initialized == true);
+        Asserts::assertt(_initialized == true);
         size_t hindex = hashIndex(key, keylen);
         struct HashBucket *first = getHashBucket(hindex);
         struct Entry *entry;

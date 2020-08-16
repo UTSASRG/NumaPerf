@@ -10,6 +10,7 @@
 
 class CacheLineDetailedInfo {
     unsigned long startAddress;
+    unsigned long seriousScore;
     unsigned long invalidationNumberInFirstThread;
     unsigned long invalidationNumberInOtherThreads;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
@@ -44,6 +45,9 @@ private:
     }
 
 public:
+
+    CacheLineDetailedInfo() {
+    }
 
     CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
         memset(this, 0, sizeof(CacheLineDetailedInfo));
@@ -90,29 +94,37 @@ public:
         return invalidationNumberInOtherThreads;
     }
 
-    inline unsigned long getSeriousScore() const {
-        return Scores::getScoreForCacheInvalid(this->invalidationNumberInFirstThread,
-                                               this->invalidationNumberInOtherThreads);
+    inline unsigned long getSeriousScore() {
+        if (this->seriousScore != 0) {
+            return this->seriousScore;
+        }
+        this->seriousScore = Scores::getScoreForCacheInvalid(this->invalidationNumberInFirstThread,
+                                                             this->invalidationNumberInOtherThreads);
+        return this->seriousScore;
     }
 
-    inline bool operator<(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator<(CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() < cacheLineDetailedInfo.getSeriousScore();
     }
 
-    inline bool operator>(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator>(CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() > cacheLineDetailedInfo.getSeriousScore();
     }
 
-    inline bool operator<=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator<=(CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() <= cacheLineDetailedInfo.getSeriousScore();
     }
 
-    inline bool operator>=(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator>=(CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() >= cacheLineDetailedInfo.getSeriousScore();
     }
 
-    inline bool operator==(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+    inline bool operator==(CacheLineDetailedInfo &cacheLineDetailedInfo) {
         return this->getSeriousScore() == cacheLineDetailedInfo.getSeriousScore();
+    }
+
+    inline bool operator>=(unsigned long seriScore) {
+        return this->getSeriousScore() >= seriScore;
     }
 
     inline void

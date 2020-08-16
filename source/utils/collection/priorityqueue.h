@@ -1,8 +1,8 @@
 #ifndef NUMAPERF_PRIORITYQUEUE_H
 #define NUMAPERF_PRIORITYQUEUE_H
 
-#include <assert.h>
 #include "../concurrency/spinlock.h"
+#include "../asserts.h"
 
 #define PRI_QUEUE_MAX_CAPACITY 11
 
@@ -67,7 +67,7 @@ private:
 
 public:
     PriorityQueue(int maxSize) : MAX_SIZE(maxSize) {
-        assert(maxSize < PRI_QUEUE_MAX_CAPACITY);
+        Asserts::assertt(maxSize < PRI_QUEUE_MAX_CAPACITY);
         endIndex = 0;
         lock.init();
     }

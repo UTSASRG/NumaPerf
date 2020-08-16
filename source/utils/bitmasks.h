@@ -2,13 +2,13 @@
 #define NUMAPERF_BITMASKS_H
 
 #include "concurrency/automics.h"
-#include <assert.h>
+#include "asserts.h"
 
 class BitMasks {
 public:
     // return true if the bit is new set.
     static inline bool setBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex, int tryNum = 10) {
-        assert(bitIndex < bitMaskLentgh);
+        Asserts::assertt(bitIndex < bitMaskLentgh);
         if (bitIndex == 0) {
             return false;
         }

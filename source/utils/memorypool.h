@@ -11,6 +11,7 @@
 #include "log/Logger.h"
 #include "timer.h"
 #include "mm.hh"
+#include "asserts.h"
 
 class MemoryPool {
 private:
@@ -62,7 +63,7 @@ private:
                                             __ATOMIC_SEQ_CST)) {
             result = bumpPointer;
         }
-        assert(bumpPointer < bumpEndPointer);
+        Asserts::assertt(bumpPointer < bumpEndPointer);
         return (void *) result;
     }
 

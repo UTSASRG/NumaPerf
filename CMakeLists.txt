@@ -32,6 +32,7 @@ add_executable(NumaPerf
         source/utils/maths.h
         source/utils/bitmasks.h
         source/utils/addresses.h
+        source/utils/asserts.h
         source/utils/concurrency/spinlock.h
         source/xdefines.h
         source/utils/log/Logger.h

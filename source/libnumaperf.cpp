@@ -22,12 +22,14 @@
 #include "utils/collection/addrtocacheindexshadowmap.h"
 #include "utils/collection/addrtopagesinglefragshadowmap.h"
 #include "utils/programs.h"
+#include "utils/asserts.h"
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
 #define SAMPLING
 
-#define SHADOW_MAP_SIZE (32ul * TB)
+#define BASIC_PAGE_SHADOW_MAP_SIZE (32ul * TB)
+#define MAX_HANDLE_ADDRESS BASIC_PAGE_SHADOW_MAP_SIZE / sizeof(PageBasicAccessInfo) * PAGE_SIZE
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
@@ -36,6 +38,8 @@ typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInf
 
 
 thread_local int pageDetailSamplingFrequency = 0;
+thread_local int pageBasicSamplingFrequency = 0;
+
 bool inited = false;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
@@ -51,28 +55,28 @@ static void initializer(void) {
     Real::init();
     void *callStacks[1];
     backtrace(callStacks, 1);
-    objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
-    callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 8192);
+    objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
+    callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
-    pageBasicAccessInfoShadowMap.initialize(SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(4ul * TB, true);
+    pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
+    cacheLineDetailedInfoShadowMap.initialize(1ul * TB, true);
     inited = true;
 }
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
-                                       TB * 5);
+                                       GB * 4);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
-                                                  TB * 5);
+                                                  GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
-                                                   TB * 5);
+                                                   GB * 4);
 
 MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
-                                            TB * 1);
+                                            GB * 1);
 
 MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
-                                                 TB * 1);
+                                                 GB * 1);
 
 MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCacheLineInfo)),
                                                   GB * 1);
@@ -140,14 +144,14 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     static char initBuf[INIT_BUFF_SIZE];
     static int allocated = 0;
     if (!inited) {
-        assert(allocated + size < INIT_BUFF_SIZE);
+        Asserts::assertt(allocated + size < INIT_BUFF_SIZE);
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *objectStartAddress = Real::malloc(size);
-    assert(objectStartAddress != NULL);
+    Asserts::assertt(objectStartAddress != NULL);
 #if 0
     void *callStacks[3];
     backtrace(callStacks, 3);
@@ -188,86 +192,84 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     return objectStartAddress;
 }
 
-inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, PageBasicAccessInfo *pageBasicAccessInfo,
-                                      DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnoseObjInfo,
                                       DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
-    bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
-    PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-    if (pageDetailedAccessInfo == NULL) {
+    unsigned long objEndAddress = objStartAddress + objSize;
+    for (unsigned long beginningAddress = objStartAddress;
+         beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
+        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
+        if (NULL == pageBasicAccessInfo) {
+            Logger::error("pageBasicAccessInfo is lost\n");
+            continue;
+        }
+        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
+        PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+        if (pageDetailedAccessInfo == NULL) {
+            if (allPageCoveredByObj) {
+                pageBasicAccessInfoShadowMap.remove(beginningAddress);
+            }
+            continue;
+        }
+
+        unsigned long seriousScore = pageDetailedAccessInfo->getSeriousScore();
+
+        // insert into global top page queue
+        if (topPageQueue.mayCanInsert(seriousScore)) {
+            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo,
+                                                                                          diagnoseCallSiteInfo,
+                                                                                          pageDetailedAccessInfo);
+            DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
+            if (NULL != diagnosePageInfoOld) {
+                DiagnosePageInfo::release(diagnosePageInfoOld);
+            }
+        }
+
+        // insert into obj's top page queue
+        diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
+
         if (allPageCoveredByObj) {
             pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
             pageBasicAccessInfoShadowMap.remove(beginningAddress);
+            PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+            return;
         }
-        return;
-    }
-    unsigned long seriousScore = pageDetailedAccessInfo->getSeriousScore();
-
-    // insert into global top page queue
-    if (topPageQueue.mayCanInsert(seriousScore)) {
-        DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo, diagnoseCallSiteInfo,
-                                                                                      pageDetailedAccessInfo);
-        DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
-        if (NULL != diagnosePageInfoOld) {
-            DiagnosePageInfo::release(diagnosePageInfoOld);
-        }
-    }
-
-    // insert into obj's top page queue
-    diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
-
-    if (allPageCoveredByObj) {
-        pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
-        pageBasicAccessInfoShadowMap.remove(beginningAddress);
-        return;
-    }
 // else
-    pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-    pageDetailedAccessInfo->clearSumValue();
+        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+        pageDetailedAccessInfo->clearSumValue();
+    }
 }
 
 inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
-                                       DiagnoseObjInfo *diagnoseObjInfo, unsigned long beginningAddress,
+                                       DiagnoseObjInfo *diagnoseObjInfo,
                                        DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
-    DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                                      diagnoseCallSiteInfo);
-    for (unsigned long cacheLineAddress = beginningAddress;
-         (cacheLineAddress - objStartAddress) < objSize; cacheLineAddress += CACHE_LINE_SIZE) {
+    unsigned long objEndAddress = objStartAddress + objSize;
+
+    for (unsigned long cacheLineAddress = objStartAddress;
+         cacheLineAddress < objEndAddress; cacheLineAddress += CACHE_LINE_SIZE) {
         CacheLineDetailedInfo *cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
         // remove the info in cache level, even there maybe are more objs inside it.
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        CacheLineDetailedInfo *cacheLineDetail = CacheLineDetailedInfo::createNewCacheLineDetailedInfoForCacheSharing(
-                1);
-        *cacheLineDetail = *cacheLineDetailedInfo;
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
-        CacheLineDetailedInfo *cacheLine = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetail);
-        // insert successfully
-        if (cacheLine != cacheLineDetail) {
-            diagnoseCacheLineInfo->setCacheLineDetailedInfo(cacheLineDetail);
+        unsigned long seriousScore = cacheLineDetailedInfo->getSeriousScore();
+        // insert into global top cache queue
+        if (topCacheLineQueue.mayCanInsert(seriousScore)) {
+            DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(
+                    objectInfo, diagnoseCallSiteInfo, cacheLineDetailedInfo);
             DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
-            // new values is inserted
-            if (oldTopCacheLine != diagnoseCacheLineInfo) {
-                diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(objectInfo,
-                                                                                           diagnoseCallSiteInfo);
-                if (oldTopCacheLine != NULL) {
-                    DiagnoseCacheLineInfo::release(oldTopCacheLine);
-                }
+            if (NULL != oldTopCacheLine) {
+                DiagnoseCacheLineInfo::release(oldTopCacheLine);
             }
         }
-        if (cacheLine != NULL) {
-//            if ((*cacheLineDetailedInfo)->isCoveredByObj(objStartAddress, objSize)) {
-            // may have some problems
-            CacheLineDetailedInfo::release(cacheLine);
-//            }
-        }
 
+        // insert into obj's top cache queue
+        diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
+        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
     }
-    DiagnoseCacheLineInfo::release(diagnoseCacheLineInfo);
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
@@ -280,17 +282,8 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         return;
     }
     DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
-    for (unsigned long address = startAddress; (address - startAddress) < size; address += PAGE_SIZE) {
-        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(address);
-        if (NULL == pageBasicAccessInfo) {
-            Logger::warn("pageBasicAccessInfo is lost\n");
-            continue;
-        }
-        __collectAndClearPageInfo(objectInfo, pageBasicAccessInfo, diagnoseObjInfo, address,
-                                  diagnoseCallSiteInfo);
-        __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, address,
-                                   diagnoseCallSiteInfo);
-    }
+    __collectAndClearPageInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
+    __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
     DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
     if (obj != NULL) {
         DiagnoseObjInfo::release(obj);
@@ -377,7 +370,7 @@ void *initThreadIndexRoutine(void *args) {
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
-        assert(currentThreadIndex < MAX_THREAD_NUM);
+        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM);
     }
 
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];
@@ -432,6 +425,11 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
+    if (addr > MAX_HANDLE_ADDRESS) {
+        Logger::warn("access addr:%lu is too larg\n", addr);
+        return;
+    }
+
     PageBasicAccessInfo *basicPageAccessInfo = pageBasicAccessInfoShadowMap.find(addr);
     if (NULL == basicPageAccessInfo) {
         return;
@@ -439,36 +437,39 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-#ifdef SAMPLING
-    pageDetailSamplingFrequency++;
-    if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
-        pageDetailSamplingFrequency = 0;
-    }
-#endif
 
+    if (!needPageDetailInfo) {
 #ifdef SAMPLING
-    if (!needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+        pageBasicSamplingFrequency++;
+        if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
+            pageBasicSamplingFrequency = 0;
+            basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+        }
 #else
-        if (!needPageDetailInfo) {
-#endif
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+#endif
     }
 
     if (!needCahceDetailInfo) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
+
+    if (needPageDetailInfo) {
 #ifdef SAMPLING
-    if (needPageDetailInfo && pageDetailSamplingFrequency == 0) {
+        pageDetailSamplingFrequency++;
+        if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
+            pageDetailSamplingFrequency = 0;
+            recordDetailsForPageSharing(basicPageAccessInfo, addr);
+        }
 #else
-        if (needPageDetailInfo) {
-#endif
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
+#endif
     }
 
     if (needCahceDetailInfo) {
         recordDetailsForCacheSharing(addr, firstTouchThreadId, type);
     }
-    // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
+// Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }
 
 /*
