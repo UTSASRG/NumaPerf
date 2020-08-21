@@ -281,12 +281,16 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         Logger::error("diagnoseCallSiteInfo is lost, mallocCallSite:%lu\n", (unsigned long) mallocCallSite);
         return;
     }
-    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
-    __collectAndClearPageInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
-    __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
-    DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
-    if (obj != NULL) {
-        DiagnoseObjInfo::release(obj);
+    DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
+    __collectAndClearPageInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
+    __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
+
+    diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
+    if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
+        DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertToTopObjQueue(diagnoseObjInfo.copy());
+        if (obj != NULL) {
+            DiagnoseObjInfo::release(obj);
+        }
     }
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);

@@ -20,6 +20,9 @@ class DiagnoseObjInfo {
 private:
     static MemoryPool localMemoryPool;
 
+
+public:
+
     DiagnoseObjInfo(ObjectInfo *objectInfo) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO),
                                               topPageDetailedAccessInfoQueue(MAX_TOP_PAGE_DETAIL_INFO) {
         this->objectInfo = objectInfo;
@@ -29,7 +32,11 @@ private:
         allAccessNumInOtherThread = 0;
     }
 
-public:
+    DiagnoseObjInfo *copy() {
+        void *buff = localMemoryPool.get();
+        memcpy(buff, this, sizeof(DiagnoseObjInfo));
+    }
+
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
         void *buff = localMemoryPool.get();
 //        Logger::debug("new DiagnoseObjInfo buff address:%lu \n", buff);
