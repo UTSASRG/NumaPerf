@@ -35,6 +35,7 @@ public:
     DiagnoseObjInfo *copy() {
         void *buff = localMemoryPool.get();
         memcpy(buff, this, sizeof(DiagnoseObjInfo));
+        return (DiagnoseObjInfo *) buff;
     }
 
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
