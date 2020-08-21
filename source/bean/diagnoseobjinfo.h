@@ -116,6 +116,10 @@ public:
         return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
     }
 
+    inline bool operator>=(unsigned long seriousScore) {
+        return this->getSeriousScore() >= seriousScore;
+    }
+
     inline unsigned long getAllInvalidNumInMainThread() const {
         return allInvalidNumInMainThread;
     }
