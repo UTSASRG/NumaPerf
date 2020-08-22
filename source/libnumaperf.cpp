@@ -292,6 +292,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
             DiagnoseObjInfo::release(obj);
         }
     }
+    diagnoseObjInfo.release();
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);
 }
