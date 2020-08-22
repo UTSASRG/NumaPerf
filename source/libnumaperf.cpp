@@ -65,8 +65,8 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
-                                       GB * 4);
+//MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
+//                                       GB * 4);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
                                                   GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
@@ -185,7 +185,7 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
         if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
             PageBasicAccessInfo basicPageAccessInfo(currentThreadIndex, ADDRESSES::getPageStartAddress(address));
-            pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
+            pageBasicAccessInfoShadowMap.insert(address, basicPageAccessInfo);
         }
     }
     //Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
@@ -291,8 +291,9 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         if (obj != NULL) {
             DiagnoseObjInfo::release(obj);
         }
+    } else {
+        diagnoseObjInfo.release();
     }
-    diagnoseObjInfo.release();
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);
 }

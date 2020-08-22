@@ -9,8 +9,8 @@ private:
     unsigned long size;
     unsigned long mallocCallSite;
 
-private:
-    static MemoryPool localMemoryPool;
+//private:
+//    static MemoryPool localMemoryPool;
 
 private:
     ObjectInfo(unsigned long objectStartAddress, unsigned long size, unsigned long mallocCallSite) {
@@ -22,14 +22,16 @@ private:
 public:
     static ObjectInfo *
     createNewObjectInfoo(unsigned long objectStartAddress, unsigned long size, unsigned long mallocCallSite) {
-        void *buff = localMemoryPool.get();
+//        void *buff = localMemoryPool.get();
+        void *buff = Real::malloc(sizeof(ObjectInfo));
 //        Logger::debug("new ObjectInfo start address: %lu, buff address:%lu \n", objectStartAddress, buff);
         ObjectInfo *objectInfo = new(buff) ObjectInfo(objectStartAddress, size, mallocCallSite);
         return objectInfo;
     }
 
     static void release(ObjectInfo *buff) {
-        localMemoryPool.release((void *) buff);
+//        localMemoryPool.release((void *) buff);
+        Real::free(buff);
     }
 
     inline unsigned long getSize() {

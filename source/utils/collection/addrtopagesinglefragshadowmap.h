@@ -90,7 +90,8 @@ public:
 
     inline void remove(const unsigned long &key) {
         void *dataBlock = this->getDataBlock(key);
-        *((short *) dataBlock) = NOT_INSERT;
+//        *((short *) dataBlock) = NOT_INSERT;
+        memset(dataBlock, 0, this->blockSize);
     }
 };
 
