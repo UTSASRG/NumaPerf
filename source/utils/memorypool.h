@@ -63,7 +63,7 @@ private:
                                             __ATOMIC_SEQ_CST)) {
             result = bumpPointer;
         }
-        Asserts::assertt(bumpPointer < bumpEndPointer, "memorypool out of memory");
+        Asserts::assertt(bumpPointer < bumpEndPointer, (char *) "memorypool out of memory");
         return (void *) result;
     }
 

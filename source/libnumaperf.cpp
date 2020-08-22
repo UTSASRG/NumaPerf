@@ -144,14 +144,14 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     static char initBuf[INIT_BUFF_SIZE];
     static int allocated = 0;
     if (!inited) {
-        Asserts::assertt(allocated + size < INIT_BUFF_SIZE, "not enough temp memory");
+        Asserts::assertt(allocated + size < INIT_BUFF_SIZE, (char *) "not enough temp memory");
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *objectStartAddress = Real::malloc(size);
-    Asserts::assertt(objectStartAddress != NULL, "null point from malloc");
+    Asserts::assertt(objectStartAddress != NULL, (char *) "null point from malloc");
 #if 0
     void *callStacks[3];
     backtrace(callStacks, 3);
@@ -374,7 +374,7 @@ void *initThreadIndexRoutine(void *args) {
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
-        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, "max thread id out of range");
+        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
     }
 
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];

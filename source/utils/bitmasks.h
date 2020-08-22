@@ -8,7 +8,7 @@ class BitMasks {
 public:
     // return true if the bit is new set.
     static inline bool setBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex, int tryNum = 10) {
-        Asserts::assertt(bitIndex < bitMaskLentgh, "bitmask out of range");
+        Asserts::assertt(bitIndex < bitMaskLentgh, (char *) "bitmask out of range");
         if (bitIndex == 0) {
             return false;
         }
