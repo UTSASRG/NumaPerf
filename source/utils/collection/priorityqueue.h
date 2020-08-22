@@ -67,7 +67,7 @@ private:
 
 public:
     PriorityQueue(int maxSize) : MAX_SIZE(maxSize) {
-        Asserts::assertt(maxSize < PRI_QUEUE_MAX_CAPACITY);
+        Asserts::assertt(maxSize < PRI_QUEUE_MAX_CAPACITY, "PriorityQueue out of max size");
         endIndex = 0;
         lock.init();
     }

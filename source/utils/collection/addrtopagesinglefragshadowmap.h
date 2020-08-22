@@ -34,7 +34,7 @@ private:
     inline void *getDataBlock(unsigned long key) {
         unsigned long index = hashKey(key);
         unsigned long offset = index * blockSize;
-        Asserts::assertt(offset < fragmentSize);
+        Asserts::assertt(offset < fragmentSize, "add to page single shadowmemory out of range");
         return ((char *) startAddress) + offset;
     }
 
