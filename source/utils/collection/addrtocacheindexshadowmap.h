@@ -40,9 +40,7 @@ private:
 
     inline void *getDataBlock(unsigned long key) {
         unsigned int fragmentIndex = key >> fragmentMappingBitNum;
-        if (fragmentIndex >= MAX_FRAGMENTS) {
-            return NULL;
-        }
+        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS, (char *) "add to cache shadowmemory out of fragment");
         if (startAddress[fragmentIndex] == NULL) {
             return NULL;
         }
@@ -62,7 +60,8 @@ private:
             return;
         }
         startAddress[fragmentIndex] = MM::mmapAllocatePrivate(this->fragmentSize);
-        Logger::info("AddressToCacheIndexShadowMap create Fragment index:%d\n", fragmentIndex);
+        Logger::info("AddressToCacheIndexShadowMap create Fragment index:%d, startAddress:%p\n", fragmentIndex,
+                     startAddress[fragmentIndex]);
         lock.unlock();
     }
 
@@ -136,7 +135,7 @@ public:
         if (NULL == dataBlock) {
             return;
         }
-        *((short *) dataBlock) = NOT_INSERT;
+        memset(dataBlock, 0, this->blockSize);
     }
 };
 

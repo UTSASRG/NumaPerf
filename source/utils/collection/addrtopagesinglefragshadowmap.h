@@ -43,6 +43,7 @@ public:
     void initialize(unsigned long fragmentSize, bool needAlignToCacheLine = false) {
         this->fragmentSize = fragmentSize;
         this->startAddress = MM::mmapAllocatePrivate(this->fragmentSize);
+        Logger::info("AddressToPageSingleShadowMap create Fragment startAddress:%p\n", this->startAddress);
         if (needAlignToCacheLine) {
 //            Logger::debug("AddressToPageIndexSingleFragShadowMap, original Size:%lu, result Size:%lu \n",
 //                          sizeof(ValueType) + META_DATA_SIZE,
