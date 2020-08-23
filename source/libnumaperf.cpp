@@ -65,8 +65,8 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
-                                       GB * 4);
+//MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
+//                                       GB * 4);
 MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
                                                   GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
@@ -144,14 +144,14 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     static char initBuf[INIT_BUFF_SIZE];
     static int allocated = 0;
     if (!inited) {
-        Asserts::assertt(allocated + size < INIT_BUFF_SIZE);
+        Asserts::assertt(allocated + size < INIT_BUFF_SIZE, (char *) "not enough temp memory");
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *objectStartAddress = Real::malloc(size);
-    Asserts::assertt(objectStartAddress != NULL);
+    Asserts::assertt(objectStartAddress != NULL, (char *) "null point from malloc");
 #if 0
     void *callStacks[3];
     backtrace(callStacks, 3);
@@ -185,7 +185,7 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
         if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
             PageBasicAccessInfo basicPageAccessInfo(currentThreadIndex, ADDRESSES::getPageStartAddress(address));
-            pageBasicAccessInfoShadowMap.insertIfAbsent(address, basicPageAccessInfo);
+            pageBasicAccessInfoShadowMap.insert(address, basicPageAccessInfo);
         }
     }
     //Logger::info("malloc size:%lu, address:%p, totcal cycles:%lu\n",size, objectStartAddress, Timer::getCurrentCycle() - startCycle);
@@ -281,12 +281,18 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         Logger::error("diagnoseCallSiteInfo is lost, mallocCallSite:%lu\n", (unsigned long) mallocCallSite);
         return;
     }
-    DiagnoseObjInfo *diagnoseObjInfo = DiagnoseObjInfo::createNewDiagnoseObjInfo(objectInfo);
-    __collectAndClearPageInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
-    __collectAndClearCacheInfo(objectInfo, diagnoseObjInfo, diagnoseCallSiteInfo);
-    DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertDiagnoseObjInfo(diagnoseObjInfo, true);
-    if (obj != NULL) {
-        DiagnoseObjInfo::release(obj);
+    DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
+    __collectAndClearPageInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
+    __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
+
+    diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
+    if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
+        DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertToTopObjQueue(diagnoseObjInfo.copy());
+        if (obj != NULL) {
+            DiagnoseObjInfo::release(obj);
+        }
+    } else {
+        diagnoseObjInfo.release();
     }
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);
@@ -370,7 +376,7 @@ void *initThreadIndexRoutine(void *args) {
     if (currentThreadIndex == 0) {
         currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
-        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM);
+        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
     }
 
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];

@@ -34,6 +34,7 @@ add_executable(NumaPerf
         source/utils/addresses.h
         source/utils/asserts.h
         source/utils/concurrency/spinlock.h
+        source/utils/allocators/ptmalloc.h
         source/xdefines.h
         source/utils/log/Logger.h
         source/utils/timer.h

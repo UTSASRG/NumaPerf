@@ -47,11 +47,18 @@ public:
                allAccessNumInOtherThread;
     }
 
-    inline DiagnoseObjInfo *insertDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo, bool withLock = false) {
+    inline void recordDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo) {
         this->allInvalidNumInMainThread += diagnoseObjInfo->getAllInvalidNumInMainThread();
         this->allInvalidNumInOtherThreads += diagnoseObjInfo->getAllInvalidNumInOtherThreads();
         this->allAccessNumInMainThread += diagnoseObjInfo->getAllAccessNumInMainThread();
         this->allAccessNumInOtherThread += diagnoseObjInfo->getAllAccessNumInOtherThread();
+    }
+
+    inline bool mayCanInsertToTopObjQueue(DiagnoseObjInfo *diagnoseObjInfo) {
+        return topObjInfoQueue.mayCanInsert(diagnoseObjInfo->getSeriousScore());
+    }
+
+    inline DiagnoseObjInfo *insertToTopObjQueue(DiagnoseObjInfo *diagnoseObjInfo, bool withLock = true) {
         return topObjInfoQueue.insert(diagnoseObjInfo, withLock);
     }
 

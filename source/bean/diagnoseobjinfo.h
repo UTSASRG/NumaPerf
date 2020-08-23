@@ -20,6 +20,9 @@ class DiagnoseObjInfo {
 private:
     static MemoryPool localMemoryPool;
 
+
+public:
+
     DiagnoseObjInfo(ObjectInfo *objectInfo) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO),
                                               topPageDetailedAccessInfoQueue(MAX_TOP_PAGE_DETAIL_INFO) {
         this->objectInfo = objectInfo;
@@ -29,7 +32,12 @@ private:
         allAccessNumInOtherThread = 0;
     }
 
-public:
+    DiagnoseObjInfo *copy() {
+        void *buff = localMemoryPool.get();
+        memcpy(buff, this, sizeof(DiagnoseObjInfo));
+        return (DiagnoseObjInfo *) buff;
+    }
+
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
         void *buff = localMemoryPool.get();
 //        Logger::debug("new DiagnoseObjInfo buff address:%lu \n", buff);
@@ -37,16 +45,17 @@ public:
         return ret;
     }
 
+    inline void release() {
+        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
+            CacheLineDetailedInfo::release(this->topCacheLineDetailQueue.getValues()[i]);
+        }
+        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
+            PageDetailedAccessInfo::release(this->topPageDetailedAccessInfoQueue.getValues()[i]);
+        }
+    }
+
     inline static void release(DiagnoseObjInfo *buff) {
-//        for (int i = 0; i < buff->topCacheLineDetailQueue.getSize(); i++) {
-//            if (buff->topCacheLineDetailQueue.getValues()[i]->isCoveredByObj(buff->objectInfo->getStartAddress(),
-//                                                                             buff->objectInfo->getSize())) {
-//                CacheLineDetailedInfo::release(buff->topCacheLineDetailQueue.getValues()[i]);
-//            }
-//        }
-//        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
-//            PageDetailedAccessInfo::release(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
-//        }
+        buff->release();
         localMemoryPool.release((void *) buff);
     }
 
@@ -107,6 +116,10 @@ public:
 
     inline bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
         return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
+    }
+
+    inline bool operator>=(unsigned long seriousScore) {
+        return this->getSeriousScore() >= seriousScore;
     }
 
     inline unsigned long getAllInvalidNumInMainThread() const {

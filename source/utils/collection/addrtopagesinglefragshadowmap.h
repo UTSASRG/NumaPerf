@@ -34,7 +34,8 @@ private:
     inline void *getDataBlock(unsigned long key) {
         unsigned long index = hashKey(key);
         unsigned long offset = index * blockSize;
-        Asserts::assertt(offset < fragmentSize);
+        // todo need check
+//        Asserts::assertt(offset < fragmentSize, "add to page single shadowmemory out of range");
         return ((char *) startAddress) + offset;
     }
 
@@ -89,7 +90,8 @@ public:
 
     inline void remove(const unsigned long &key) {
         void *dataBlock = this->getDataBlock(key);
-        *((short *) dataBlock) = NOT_INSERT;
+//        *((short *) dataBlock) = NOT_INSERT;
+        memset(dataBlock, 0, this->blockSize);
     }
 };
 

@@ -348,7 +348,11 @@ private:
         head->count++;
 
         // increment total number
-        __atomic_add_fetch(&_totalEntry, 1, __ATOMIC_RELAXED);
+//#if LOCK_PROTECTION
+//        _totalEntry++;
+//#else
+//        __atomic_add_fetch(&_totalEntry, 1, __ATOMIC_RELAXED);
+//#endif
         return entry;
     }
 

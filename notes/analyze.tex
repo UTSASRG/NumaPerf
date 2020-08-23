@@ -70,3 +70,45 @@ In the another thinking, I determine it as false sharing as long as the there ar
                 invalidateNumberFromThisObjectInPartialCoverdPages;   // in page line level, issues may caused by allocators.
                 invalidateNumberFromThisObjectInPartialCoverdPagesWhenThePageFirstTouchedFromThisObject;
         }
+
+What is the highlight/difference of this project:
+        1. the first one is that this does not rely on the machine. But people usually argue that developers often bind the thread
+on the node manually, so NumaPerf will not work.
+        ---- two ways to solve this problem is that: 1. For apps not using binding, we could provide clues like how to bind. 2. For
+        apps using binding, we could detect the real node they belong to, and then do the profiling. But what is the difference with
+        other profilers.
+        2. the second one is that we are using llvm, so we could collect more information. But, this is no a highlight, unless it could
+bring more effectness.
+        3. the third one is that we collect sharing info in cache level and page level. Cache and page are actually what OS cares,
+developers do not care them, they more care about objects and call sites. So unless we could provide useful information
+in object level by cache and page info, they are still useless, and this is crucial for this project, may even more important than point one.
+The reason is that in the Xiu's paper, they actually collect info directly on the objects, so they can detect problems very well. But they
+can only provide limited hits about how to solve the problems. In his paper, their hits are also from access pattern. But still
+from how the object are shared by multiple threads, not from page and cache centrals. And I am sure that people can get more hits about
+how to improve their apps from page and cache central info. If we could provide more hits, it is a big success.
+        ---- in the perspective of OS, we need to figure out what is the key to influnce performance. For cache, cache invilation
+             number is super important. Fot page, we only care about how many remote accesses. And also we can collect info
+             in the thread level, this is about bus competation
+             in conclusion:
+                1. cache central: invalidation number
+                2. page central: remote access number  (more about remote access)
+                3. thread central: access number to each node (more about resource competition:bus,memory controller and LLCache)
+        ---- in the perspective of users, what they can control in apps is that how big this obj is , in which thread to do malloc,
+,pass them into which threads and also how to bind threads into nodes. What allocators can control is that in which node to do malloc
+(basicly they just allocate the memory from the node where the requesting thread is located on) and also if they need
+to use interleaved heap. And also actually we could provide hits about which node is better for this objs.
+And also we could say whether two objs should be in a same page or not. But actualy page is not the key, key is
+which node they should be and this related with thread binding and page(first touch policy).
+             in conclusion, the strategies devs can use are:
+                1. thread binding (both )
+                2. data duplicate in node or thread level.
+                3. seprate a big object into small objects and allocate them in different thread. (if obj has certain regular access patterns)
+                4. interleaved a big objs (similar to 3, but in this case, the obj do not has a regular access pattern, so can not splite it)
+                5. assign a obj to a certain node
+                6.
+
+The drawbacks of this project:
+        1. The result may not is accurate.This is also related with highlight-1. The situation is that we will overestimate the problems,
+but this is fine for apps not using binding. Because people do not know how the threads will be scheduled.
+        But actually, we are only predict problems and provide solutions to users, since even they did binding,
+it is not 100 percent good enough, we could provide they hits to optimize it.
