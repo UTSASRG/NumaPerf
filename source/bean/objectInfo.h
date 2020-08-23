@@ -34,6 +34,10 @@ public:
         Real::free(buff);
     }
 
+    ObjectInfo *copy() {
+        return ObjectInfo::createNewObjectInfoo(this->startAddress, this->size, this->mallocCallSite);
+    }
+
     inline unsigned long getSize() {
         return this->size;
     }

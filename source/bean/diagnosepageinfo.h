@@ -30,6 +30,7 @@ public:
     }
 
     inline static void release(DiagnosePageInfo *buff) {
+        ObjectInfo::release(buff->objectInfo);
         localMemoryPool.release((void *) buff);
     }
 
