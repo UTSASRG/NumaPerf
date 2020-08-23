@@ -426,10 +426,10 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long first
         cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
     }
     cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
-    Logger::info("addr:%p,seriousScore:%lu,mainThread:%lu,otherThreads:%lu\n", cacheLineInfoPtr,
-                 cacheLineInfoPtr->seriousScore,
-                 cacheLineInfoPtr->getInvalidationNumberInFirstThread(),
-                 cacheLineInfoPtr->getInvalidationNumberInOtherThreads());
+//    Logger::info("addr:%p,seriousScore:%lu,mainThread:%lu,otherThreads:%lu\n", cacheLineInfoPtr,
+//                 cacheLineInfoPtr->seriousScore,
+//                 cacheLineInfoPtr->getInvalidationNumberInFirstThread(),
+//                 cacheLineInfoPtr->getInvalidationNumberInOtherThreads());
 }
 
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
@@ -466,8 +466,8 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
 
-    Logger::info("addr:%p,removeAccess:%lu\n", basicPageAccessInfo,
-                 basicPageAccessInfo->getAccessNumberByOtherThreads());
+//    Logger::info("addr:%p,removeAccess:%lu,firstThread:%lu,currentThread:%lu\n", basicPageAccessInfo,
+//                 basicPageAccessInfo->getAccessNumberByOtherThreads(), firstTouchThreadId, currentThreadIndex);
 
     if (needPageDetailInfo) {
 #ifdef SAMPLING
