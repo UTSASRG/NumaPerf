@@ -99,7 +99,7 @@ public:
             return false;
         }
         ValueType *valuePtr = (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
-        *valuePtr = value;
+        new(valuePtr)ValueType(value);
         *metaData = INSERTED;
         return true;
     }
@@ -111,7 +111,7 @@ public:
             dataBlock = this->getDataBlock(key);
         }
         ValueType *valuePtr = (ValueType *) (((char *) dataBlock) + META_DATA_SIZE);
-        *valuePtr = value;
+        new(valuePtr)ValueType(value);
         short *metaData = (short *) dataBlock;
         *metaData = INSERTED;
         return valuePtr;
