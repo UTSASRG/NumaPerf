@@ -50,21 +50,22 @@ public:
     }
 
     CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
-        memset(this, 0, sizeof(CacheLineDetailedInfo));
+//        memset(this, 0, sizeof(CacheLineDetailedInfo));
         this->startAddress = cacheLineStartAddress;
     }
 
     CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
+        this->startAddress = cacheLineDetailedInfo.startAddress;
+//        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
     }
 
-    inline static CacheLineDetailedInfo *
-    createNewCacheLineDetailedInfoForCacheSharing(unsigned long cacheLineStartAddress) {
-        void *buff = localMemoryPool.get();
-//        Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
-        CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo(cacheLineStartAddress);
-        return ret;
-    }
+//    inline static CacheLineDetailedInfo *
+//    createNewCacheLineDetailedInfoForCacheSharing(unsigned long cacheLineStartAddress) {
+//        void *buff = localMemoryPool.get();
+////        Logger::debug("new CacheLineDetailedInfoForCacheSharing buff address:%lu \n", buff);
+//        CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo(cacheLineStartAddress);
+//        return ret;
+//    }
 
     inline static void release(CacheLineDetailedInfo *buff) {
         localMemoryPool.release((void *) buff);

@@ -303,7 +303,9 @@ inline void __free(void *ptr) {
     if (!inited) {
         return;
     }
+    //todo forget release objectInfo
     ObjectInfo *objectInfo = objectInfoMap.findAndRemove((unsigned long) ptr, 0);
+//    ObjectInfo::release(objectInfo);
     if (NULL != objectInfo) {
         collectAndClearObjInfo(objectInfo);
         Real::free(ptr);
@@ -445,6 +447,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 
     if (!needPageDetailInfo) {
+        // todo thread local sampling is still too costing
 #ifdef SAMPLING
         pageBasicSamplingFrequency++;
         if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
