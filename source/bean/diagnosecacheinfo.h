@@ -32,6 +32,7 @@ public:
     }
 
     inline static void release(DiagnoseCacheLineInfo *buff) {
+        ObjectInfo::release(buff->objectInfo);
         localMemoryPool.release((void *) buff);
     }
 

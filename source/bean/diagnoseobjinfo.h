@@ -52,6 +52,7 @@ public:
         for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
             PageDetailedAccessInfo::release(this->topPageDetailedAccessInfoQueue.getValues()[i]);
         }
+        ObjectInfo::release(this->objectInfo);
     }
 
     inline static void release(DiagnoseObjInfo *buff) {

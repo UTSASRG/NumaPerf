@@ -217,7 +217,7 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
 
         // insert into global top page queue
         if (topPageQueue.mayCanInsert(seriousScore)) {
-            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo,
+            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo->copy(),
                                                                                           diagnoseCallSiteInfo,
                                                                                           pageDetailedAccessInfo);
             DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
@@ -259,7 +259,7 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         // insert into global top cache queue
         if (topCacheLineQueue.mayCanInsert(seriousScore)) {
             DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(
-                    objectInfo, diagnoseCallSiteInfo, cacheLineDetailedInfo);
+                    objectInfo->copy(), diagnoseCallSiteInfo, cacheLineDetailedInfo);
             DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
             if (NULL != oldTopCacheLine) {
                 DiagnoseCacheLineInfo::release(oldTopCacheLine);
@@ -303,7 +303,6 @@ inline void __free(void *ptr) {
     if (!inited) {
         return;
     }
-    //todo forget release objectInfo
     ObjectInfo *objectInfo = objectInfoMap.findAndRemove((unsigned long) ptr, 0);
 //    ObjectInfo::release(objectInfo);
     if (NULL != objectInfo) {
