@@ -110,6 +110,10 @@ public:
         return this->pageDetailedAccessInfo = pageDetailedAccessInfo;
     }
 
+    inline unsigned long getAccessNumberByOtherThreads() const {
+        return accessNumberByOtherThreads;
+    }
+
     inline bool setIfBasentPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
         return Automics::compare_set<PageDetailedAccessInfo *>(&(this->pageDetailedAccessInfo), NULL,
                                                                pageDetailedAccessInfo);
