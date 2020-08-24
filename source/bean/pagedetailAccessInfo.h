@@ -79,6 +79,10 @@ public:
         return true;
     }
 
+    inline void clearAll() {
+        memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - sizeof(unsigned long));
+    }
+
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
         int startIndex = getStartIndex(objAddress, size);
         int endIndex = getEndIndex(objAddress, size);

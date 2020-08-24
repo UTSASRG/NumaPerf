@@ -208,7 +208,7 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
         PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
         if (pageDetailedAccessInfo == NULL) {
             if (allPageCoveredByObj) {
-                pageBasicAccessInfoShadowMap.remove(beginningAddress);
+                pageBasicAccessInfo->clearAll();
             }
             continue;
         }
@@ -230,12 +230,12 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
         diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
 
         if (allPageCoveredByObj) {
-            pageBasicAccessInfo->setPageDetailedAccessInfo(NULL);
-            pageBasicAccessInfoShadowMap.remove(beginningAddress);
-            PageDetailedAccessInfo::release(pageDetailedAccessInfo);
+            pageBasicAccessInfo->clearAll();
+            pageDetailedAccessInfo->clearAll();
             return;
         }
 // else
+        pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
         pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
         pageDetailedAccessInfo->clearSumValue();
     }

@@ -12,8 +12,8 @@ class PageBasicAccessInfo {
     unsigned short firstTouchThreadId;
 //    bool isPageContainMultipleObjects;
 //    unsigned long accessNumberByFirstTouchThread;
-    unsigned long accessNumberByOtherThreads;
     PageDetailedAccessInfo *pageDetailedAccessInfo;
+    unsigned long accessNumberByOtherThreads;
     unsigned long cacheLineWritingNumber[CACHE_NUM_IN_ONE_PAGE];
 
 private:
@@ -90,13 +90,18 @@ public:
         return true;
     }
 
+    inline void clearAll() {
+        memset(&(this->accessNumberByOtherThreads), 0,
+               sizeof(PageBasicAccessInfo) - sizeof(unsigned long) - sizeof(void *) - sizeof(unsigned short));
+    }
+
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
         int startIndex = getStartIndex(objAddress, size);
         int endIndex = getEndIndex(objAddress, size);
-//        int num = endIndex - startIndex + 1;
-//        if (num > (CACHE_NUM_IN_ONE_PAGE / 2)) {
-//            accessNumberByOtherThreads = accessNumberByOtherThreads / 2;
-//        }
+        int num = endIndex - startIndex + 1;
+        if (num > (CACHE_NUM_IN_ONE_PAGE / 2)) {
+            accessNumberByOtherThreads = accessNumberByOtherThreads / 2;
+        }
         for (int i = startIndex; i <= endIndex; i++) {
             this->cacheLineWritingNumber[i] = 0;
         }
