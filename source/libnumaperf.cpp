@@ -204,12 +204,14 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
             Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
-        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
         PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
+        if (allPageCoveredByObj) {
+            pageBasicAccessInfo->clearAll();
+        } else {
+            pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+        }
         if (pageDetailedAccessInfo == NULL) {
-            if (allPageCoveredByObj) {
-                pageBasicAccessInfo->clearAll();
-            }
             continue;
         }
 
@@ -227,17 +229,19 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
         }
 
         // insert into obj's top page queue
-        diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo, allPageCoveredByObj);
+        PageDetailedAccessInfo *pageCanClear = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo,
+                                                                                             allPageCoveredByObj);
+        if (pageCanClear == NULL) {
+            continue;
+        }
 
-        if (allPageCoveredByObj) {
-            pageBasicAccessInfo->clearAll();
-            pageDetailedAccessInfo->clearAll();
-            return;
+        if (pageCanClear->isCoveredByObj(objStartAddress, objSize)) {
+            pageCanClear->clearAll();
+            continue;
         }
 // else
-        pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-        pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-        pageDetailedAccessInfo->clearSumValue();
+        pageCanClear->clearResidObjInfo(objStartAddress, objSize);
+        pageCanClear->clearSumValue();
     }
 }
 
@@ -267,8 +271,8 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         }
 
         // insert into obj's top cache queue
-        diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
-        cacheLineDetailedInfo->clear();
+        CacheLineDetailedInfo *cacheCanClear = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
+        cacheCanClear->clear();
     }
 }
 
@@ -286,14 +290,20 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
 
     diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
+
     if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
-        DiagnoseObjInfo *obj = diagnoseCallSiteInfo->insertToTopObjQueue(diagnoseObjInfo.copy());
-        if (obj != NULL) {
-            DiagnoseObjInfo::release(obj);
+        DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.copy();
+        newDiagnoseObjInfo->copyCacheAndPage();
+        DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
+        if (oldDiagnoseObj != NULL) {
+            DiagnoseObjInfo::release(oldDiagnoseObj);
         }
     } else {
-        diagnoseObjInfo.release();
+        ObjectInfo::release(objectInfo);
     }
+
+    diagnoseObjInfo.clearCacheAndPage();
+
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);
 }
