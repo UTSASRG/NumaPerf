@@ -272,6 +272,9 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
 
         // insert into obj's top cache queue
         CacheLineDetailedInfo *cacheCanClear = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
+        if (NULL == cacheCanClear) {
+            continue;
+        }
         cacheCanClear->clear();
     }
 }
