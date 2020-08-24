@@ -292,8 +292,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
 
     if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
-        DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.copy();
-        newDiagnoseObjInfo->copyCacheAndPage();
+        DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
         if (oldDiagnoseObj != NULL) {
             DiagnoseObjInfo::release(oldDiagnoseObj);
