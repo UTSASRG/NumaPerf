@@ -38,11 +38,37 @@ public:
         return (DiagnoseObjInfo *) buff;
     }
 
+    void copyCacheAndPage() {
+        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
+            this->topCacheLineDetailQueue.getValues()[i] = this->topCacheLineDetailQueue.getValues()[i]->copy();
+        }
+
+        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
+            this->topPageDetailedAccessInfoQueue.getValues()[i] = this->topPageDetailedAccessInfoQueue.getValues()[i]->copy();
+        }
+    }
+
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
         void *buff = localMemoryPool.get();
 //        Logger::debug("new DiagnoseObjInfo buff address:%lu \n", buff);
         DiagnoseObjInfo *ret = new(buff) DiagnoseObjInfo(objectInfo);
         return ret;
+    }
+
+    inline void clearCacheAndPage() {
+        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
+            this->topCacheLineDetailQueue.getValues()[i]->clear();
+        }
+
+        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
+            unsigned long objAddress = this->objectInfo->getStartAddress();
+            unsigned long objSize = this->objectInfo->getSize();
+            if (this->topPageDetailedAccessInfoQueue.getValues()[i]->isCoveredByObj(objAddress, objSize)) {
+                this->topPageDetailedAccessInfoQueue.getValues()[i]->clearAll();
+                continue;
+            }
+            this->topPageDetailedAccessInfoQueue.getValues()[i]->clearResidObjInfo(objAddress, objSize);
+        }
     }
 
     inline void release() {
@@ -66,19 +92,21 @@ public:
                allAccessNumInOtherThread;
     }
 
-    inline void insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
+    inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
         if (topCacheLineDetailQueue.mayCanInsert(cacheLineDetailedInfo->getSeriousScore())) {
-            CacheLineDetailedInfo *oldCacheLineInfo = topCacheLineDetailQueue.insert(
-                    cacheLineDetailedInfo->copy());
-            if (oldCacheLineInfo != NULL) {
-                CacheLineDetailedInfo::release(oldCacheLineInfo);
-            }
+            return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
+//            CacheLineDetailedInfo *oldCacheLineInfo = topCacheLineDetailQueue.insert(
+//                    cacheLineDetailedInfo->copy());
+//            if (oldCacheLineInfo != NULL) {
+//                CacheLineDetailedInfo::release(oldCacheLineInfo);
+//            }
         }
+        return NULL;
     }
 
-    inline void
+    inline PageDetailedAccessInfo *
     insertPageDetailedAccessInfo(PageDetailedAccessInfo *pageDetailedAccessInfo, bool wholePageCoveredByObj) {
         if (wholePageCoveredByObj) {
             this->allAccessNumInMainThread += pageDetailedAccessInfo->getAccessNumberByFirstTouchThread(
@@ -92,11 +120,13 @@ public:
                     objectInfo->getStartAddress(), objectInfo->getSize());
         }
         if (topPageDetailedAccessInfoQueue.mayCanInsert(pageDetailedAccessInfo->getSeriousScore())) {
-            PageDetailedAccessInfo *oldPageInfo = topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo->copy());
-            if (NULL != oldPageInfo) {
-                PageDetailedAccessInfo::release(oldPageInfo);
-            }
+            return topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo);
+//            PageDetailedAccessInfo *oldPageInfo = topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo->copy());
+//            if (NULL != oldPageInfo) {
+//                PageDetailedAccessInfo::release(oldPageInfo);
+//            }
         }
+        return NULL;
     }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
