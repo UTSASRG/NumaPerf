@@ -32,20 +32,21 @@ public:
         allAccessNumInOtherThread = 0;
     }
 
-    DiagnoseObjInfo *copy() {
-        void *buff = localMemoryPool.get();
-        memcpy(buff, this, sizeof(DiagnoseObjInfo));
-        return (DiagnoseObjInfo *) buff;
-    }
-
-    void copyCacheAndPage() {
+    inline DiagnoseObjInfo *deepCopy() {
+        DiagnoseObjInfo *buff = (DiagnoseObjInfo *) localMemoryPool.get();
+        buff->objectInfo = this->objectInfo;
+        buff->allInvalidNumInMainThread = this->allInvalidNumInMainThread;
+        buff->allInvalidNumInOtherThreads = this->allInvalidNumInOtherThreads;
+        buff->allAccessNumInMainThread = this->allAccessNumInMainThread;
+        buff->allAccessNumInOtherThread = this->allAccessNumInOtherThread;
         for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
-            this->topCacheLineDetailQueue.getValues()[i] = this->topCacheLineDetailQueue.getValues()[i]->copy();
+            buff->topCacheLineDetailQueue.getValues()[i] = this->topCacheLineDetailQueue.getValues()[i]->copy();
         }
 
         for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
-            this->topPageDetailedAccessInfoQueue.getValues()[i] = this->topPageDetailedAccessInfoQueue.getValues()[i]->copy();
+            buff->topPageDetailedAccessInfoQueue.getValues()[i] = this->topPageDetailedAccessInfoQueue.getValues()[i]->copy();
         }
+        return (DiagnoseObjInfo *) buff;
     }
 
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {

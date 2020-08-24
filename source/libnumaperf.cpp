@@ -272,6 +272,9 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
 
         // insert into obj's top cache queue
         CacheLineDetailedInfo *cacheCanClear = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
+        if (NULL == cacheCanClear) {
+            continue;
+        }
         cacheCanClear->clear();
     }
 }
@@ -292,8 +295,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
 
     if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
-        DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.copy();
-        newDiagnoseObjInfo->copyCacheAndPage();
+        DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
         if (oldDiagnoseObj != NULL) {
             DiagnoseObjInfo::release(oldDiagnoseObj);
