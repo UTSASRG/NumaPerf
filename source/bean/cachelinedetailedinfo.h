@@ -59,6 +59,10 @@ public:
 //        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
     }
 
+    void clear() {
+        memset(&(this->seriousScore), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
+    }
+
 //    inline static CacheLineDetailedInfo *
 //    createNewCacheLineDetailedInfoForCacheSharing(unsigned long cacheLineStartAddress) {
 //        void *buff = localMemoryPool.get();

@@ -268,7 +268,7 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
 
         // insert into obj's top cache queue
         diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
-        cacheLineDetailedInfoShadowMap.remove(cacheLineAddress);
+        cacheLineDetailedInfo->clear();
     }
 }
 
