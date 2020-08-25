@@ -23,8 +23,7 @@ private:
 private:
 
     inline void resetThreadBitMask() {
-        accessThreadsBitMask[0] = 0;
-        accessThreadsBitMask[1] = 0;
+        memset(accessThreadsBitMask, 0, MAX_THREAD_NUM / 8);
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
