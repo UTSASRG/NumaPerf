@@ -24,7 +24,7 @@ public:
         *currentBitPtr = bitValue | *currentBitPtr;
 //        for (int i = 0; i < tryNum; i++) {
 //            unsigned long originalValue = *currentBitPtr;
-//            unsigned long newValue = originalValue | ();
+//            unsigned long newValue = originalValue | (1ul << (bitIndex - 1));
 //            if (originalValue == newValue) {
 //                return false;
 //            }
