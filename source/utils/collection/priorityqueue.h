@@ -113,6 +113,10 @@ public:
         return values;
     }
 
+    inline void setEndIndex(int endIndex) {
+        PriorityQueue::endIndex = endIndex;
+    }
+
 };
 
 #endif //NUMAPERF_PRIORITYQUEUE_H
