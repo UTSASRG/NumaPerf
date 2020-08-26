@@ -17,17 +17,22 @@ public:
             bitIndex -= 8 * sizeof(unsigned long);
             currentBitPtr++;
         }
-        for (int i = 0; i < tryNum; i++) {
-            unsigned long originalValue = *currentBitPtr;
-            unsigned long newValue = originalValue | (1ul << (bitIndex - 1));
-            if (originalValue == newValue) {
-                return false;
-            }
-            if (Automics::compare_set(currentBitPtr, originalValue, newValue)) {
-                return true;
-            }
+        unsigned long bitValue = 1ul << (bitIndex - 1);
+        if ((bitValue & *currentBitPtr) != 0) {
+            return false;
         }
-        return false;
+        *currentBitPtr = bitValue | *currentBitPtr;
+//        for (int i = 0; i < tryNum; i++) {
+//            unsigned long originalValue = *currentBitPtr;
+//            unsigned long newValue = originalValue | ();
+//            if (originalValue == newValue) {
+//                return false;
+//            }
+//            if (Automics::compare_set(currentBitPtr, originalValue, newValue)) {
+//                return true;
+//            }
+//        }
+        return true;
     }
 
 //    static inline void unsetBit(void *bitMaskPtr, unsigned long bitMaskLentgh, unsigned long bitIndex) {
