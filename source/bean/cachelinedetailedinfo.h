@@ -143,7 +143,7 @@ public:
     inline void
     recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
         if (firstTouchThreadId == threadId) {
-            if (type == E_ACCESS_WRITE && recordNewInvalidation(threadId, type)) {
+            if (recordNewInvalidation(threadId, type)) {
                 invalidationNumberInFirstThread++;
             }
         } else {
