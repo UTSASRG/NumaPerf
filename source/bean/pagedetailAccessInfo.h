@@ -12,6 +12,7 @@ class PageDetailedAccessInfo {
     unsigned long allAccessNumByOtherThread;
     unsigned long accessNumberByFirstTouchThread[CACHE_NUM_IN_ONE_PAGE];
     unsigned long accessNumberByOtherThread[CACHE_NUM_IN_ONE_PAGE];
+    unsigned long accessNumberByThreads[CACHE_NUM_IN_ONE_PAGE][MAX_THREAD_NUM];
 
 private:
     static MemoryPool localMemoryPool;
@@ -67,6 +68,7 @@ public:
             return;
         }
         accessNumberByOtherThread[index]++;
+        accessNumberByThreads[index][accessThreadId]++;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -89,6 +91,7 @@ public:
         for (int i = startIndex; i <= endIndex; i++) {
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
+            memset(accessNumberByThreads[i], 0, MAX_THREAD_NUM * sizeof(unsigned long));
         }
     }
 
@@ -163,6 +166,17 @@ public:
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
+        for (int i = 0; i < CACHE_NUM_IN_ONE_PAGE; i++) {
+            if (accessNumberByFirstTouchThread[i] == 0 && accessNumberByOtherThread[i] == 0) {
+                continue;
+            }
+            fprintf(file, "%s    %dth cache block:\n", prefix, i);
+            for (int j = 0; j < MAX_THREAD_NUM; j++) {
+                if (accessNumberByThreads[i][j] != 0) {
+                    fprintf(file, "%s        thread:%d, access number:%lu\n", prefix, j, accessNumberByThreads[i][j]);
+                }
+            }
+        }
         // print access num in cacheline level
     }
 };

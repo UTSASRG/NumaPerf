@@ -8,12 +8,19 @@
 
 #define MULTIPLE_THREAD 0xffff
 
+typedef struct ReadWritNum {
+    unsigned int readingNum;
+    unsigned int writingNum;
+} ReadWritNum;
+
 class CacheLineDetailedInfo {
+    unsigned long firstTouchThreadId;
     unsigned long startAddress;
     unsigned long seriousScore;
     unsigned long invalidationNumberInFirstThread;
     unsigned long invalidationNumberInOtherThreads;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
+    ReadWritNum readWritNum[MAX_THREAD_NUM];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
@@ -23,8 +30,7 @@ private:
 private:
 
     inline void resetThreadBitMask() {
-        accessThreadsBitMask[0] = 0;
-        accessThreadsBitMask[1] = 0;
+        memset(accessThreadsBitMask, 0, MAX_THREAD_NUM / 8);
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
@@ -49,18 +55,20 @@ public:
     CacheLineDetailedInfo() {
     }
 
-    CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
+    CacheLineDetailedInfo(unsigned long cacheLineStartAddress, unsigned long firstTouchThreadId) {
 //        memset(this, 0, sizeof(CacheLineDetailedInfo));
+        this->firstTouchThreadId = firstTouchThreadId;
         this->startAddress = cacheLineStartAddress;
     }
 
     CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+        this->firstTouchThreadId = cacheLineDetailedInfo.firstTouchThreadId;
         this->startAddress = cacheLineDetailedInfo.startAddress;
 //        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
     }
 
     void clear() {
-        memset(&(this->seriousScore), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
+        memset(&(this->seriousScore), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long) - sizeof(unsigned long));
     }
 
 //    inline static CacheLineDetailedInfo *
@@ -144,6 +152,14 @@ public:
             }
         }
 
+        if (type == E_ACCESS_WRITE) {
+            readWritNum[threadId].writingNum++;
+        }
+
+        if (type == E_ACCESS_READ) {
+            readWritNum[threadId].readingNum++;
+        }
+
         if (threadIdAndIsMultipleThreadsUnion == 0) {
             threadIdAndIsMultipleThreadsUnion = threadId;
             return;
@@ -180,6 +196,19 @@ public:
         fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
+        fprintf(file, "%sFirstTouchThreadId:       %lu\n", prefix, this->firstTouchThreadId);
+        for (int i = 0; i < MAX_THREAD_NUM; i++) {
+            if (readWritNum[i].writingNum <= 0) {
+                continue;
+            }
+            fprintf(file, "%s    Writing Number In Thread:%d is %u\n", prefix, i, readWritNum[i].writingNum);
+        }
+        for (int i = 0; i < MAX_THREAD_NUM; i++) {
+            if (readWritNum[i].readingNum <= 0) {
+                continue;
+            }
+            fprintf(file, "%s    Reading Number In Thread:%d is %u\n", prefix, i, readWritNum[i].readingNum);
+        }
         // print concurrent word index
     }
 };

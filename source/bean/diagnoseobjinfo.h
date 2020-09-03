@@ -39,6 +39,8 @@ public:
         buff->allInvalidNumInOtherThreads = this->allInvalidNumInOtherThreads;
         buff->allAccessNumInMainThread = this->allAccessNumInMainThread;
         buff->allAccessNumInOtherThread = this->allAccessNumInOtherThread;
+        buff->topCacheLineDetailQueue.setEndIndex(this->topCacheLineDetailQueue.getSize());
+        buff->topPageDetailedAccessInfoQueue.setEndIndex(this->topPageDetailedAccessInfoQueue.getSize());
         for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
             buff->topCacheLineDetailQueue.getValues()[i] = this->topCacheLineDetailQueue.getValues()[i]->copy();
         }
