@@ -1,0 +1,93 @@
+--- streamcluster.cpp	2020-09-10 14:31:18.679395880 -0500
++++ streamcluster.cpp.new	2020-09-10 14:36:51.516655216 -0500
+@@ -15,6 +15,9 @@
+ #include <math.h>
+ #include <sys/resource.h>
+ #include <limits.h>
++#include <sys/mman.h>
++#include <numa.h>
++#include <numaif.h>
+ 
+ #ifdef ENABLE_THREADS
+ #include <pthread.h>
+@@ -620,6 +623,7 @@
+ /* shuffle points into random order */
+ void shuffle(Points *points)
+ {
++ // fprintf(stderr, "shuffle........................\n");
+   long i, j;
+   Point temp;
+   for (i=0;i<points->num-1;i++) {
+@@ -1707,6 +1711,7 @@
+ #else //!TBB_VERSION
+ 
+ void localSearch( Points* points, long kmin, long kmax, long* kfinal ) {
++//    fprintf(stderr,"start localSearch\n");
+     pthread_barrier_t barrier;
+     pthread_t* threads = new pthread_t[nproc];
+     pkmedian_arg_t* arg = new pkmedian_arg_t[nproc];
+@@ -1740,6 +1745,7 @@
+ #ifdef ENABLE_THREADS
+     pthread_barrier_destroy(&barrier);
+ #endif
++//    fprintf(stderr,"end localSearch\n");
+ }
+ #endif // TBB_VERSION
+ 
+@@ -1836,14 +1842,25 @@
+ 		    long kmin, long kmax, int dim,
+ 		    long chunksize, long centersize, char* outfile )
+ {
+-
++unsigned long NUMA_NODES =8;
++unsigned long mask = (1 << NUMA_NODES)-1;
+ #ifdef TBB_VERSION
+   float* block = (float*)memoryFloat.allocate( chunksize*dim*sizeof(float) );
+   float* centerBlock = (float*)memoryFloat.allocate(centersize*dim*sizeof(float) );
+   long* centerIDs = (long*)memoryLong.allocate(centersize*dim*sizeof(long));
+ #else
+-  float* block = (float*)malloc( chunksize*dim*sizeof(float) );
++  //float* block = (float*)malloc( chunksize*dim*sizeof(float) );
++  float* block =  (float *)mmap(NULL, chunksize*dim*sizeof(float), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++  if(mbind(block, chunksize*dim*sizeof(float), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++      fprintf(stderr, "mbind error \n");
++      exit(-1);
++  }
+   float* centerBlock = (float*)malloc(centersize*dim*sizeof(float) );
++//  float* centerBlock =  (float *)mmap(NULL, centersize*dim*sizeof(float), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++//  if(mbind(centerBlock, centersize*dim*sizeof(float), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++//      fprintf(stderr, "mbind error \n");
++//      exit(-1);
++//  }
+   long* centerIDs = (long*)malloc(centersize*dim*sizeof(long));
+ #endif
+ 
+@@ -1860,6 +1877,11 @@
+     (Point *)memoryPoint.allocate(chunksize*sizeof(Point), NULL);
+ #else
+     (Point *)malloc(chunksize*sizeof(Point));
++//  (Point *)mmap(NULL, chunksize*sizeof(Point), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++//  if(mbind(points.p, chunksize*sizeof(Point), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++//      fprintf(stderr, "mbind error \n");
++//      exit(-1);
++//  }
+ #endif
+ 
+   for( int i = 0; i < chunksize; i++ ) {
+@@ -1873,6 +1895,7 @@
+     (Point *)memoryPoint.allocate(centersize*sizeof(Point), NULL);
+ #else
+     (Point *)malloc(centersize*sizeof(Point));
++    //(Point *)mmap(NULL, centersize*sizeof(Point), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+ #endif
+   centers.num = 0;
+ 
+@@ -1911,7 +1934,7 @@
+ 
+     //fprintf(stderr,"center_table = 0x%08x\n",(int)center_table);
+     //fprintf(stderr,"is_center = 0x%08x\n",(int)is_center);
+-
++    
+     localSearch(&points,kmin, kmax,&kfinal); // parallel
+ 
+     //fprintf(stderr,"finish local search\n");
