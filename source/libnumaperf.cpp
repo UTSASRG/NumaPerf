@@ -162,9 +162,9 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
         Logger::info("malloc call stack2: %lu\n", (unsigned long) callStacks[1]);
         Logger::info("malloc call stack3: %lu\n", (unsigned long) callStacks[2]);
         backtrace_symbols_fd(callStacks, 3, 2);
-        Programs::address2Line((unsigned long) callStacks[0]);
-        Programs::address2Line((unsigned long) callStacks[1]);
-        Programs::address2Line((unsigned long) callStacks[2]);
+        Programs::printAddress2Line((unsigned long) callStacks[0]);
+        Programs::printAddress2Line((unsigned long) callStacks[1]);
+        Programs::printAddress2Line((unsigned long) callStacks[2]);
     }
 #endif
     if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {

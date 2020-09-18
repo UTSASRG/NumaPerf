@@ -6,10 +6,13 @@
 #include "../xdefines.h"
 
 extern char *__progname_full;
+extern bool inited;
 
 class Programs {
 public:
     static inline void printAddress2Line(unsigned long sourceAddress, FILE *file = stderr) {
+        bool originalInited = inited;
+        inited = false;
         char cmd[BUFSZ];
         char out[BUFSZ];
         FILE *pFile;
@@ -20,12 +23,13 @@ public:
         while (fgets(out, BUFSZ, pFile) != NULL);
         pclose(pFile);
         fprintf(file, "%s", out);
+        inited = originalInited;
     }
 
     static inline unsigned long getLastEip(void *firtArgAddress) {
         void **ripAddress = (void **) (((unsigned long) firtArgAddress) + MALLOC_CALL_SITE_OFFSET);
         unsigned long callerAddress = (unsigned long) (*ripAddress);
-        return callerAddress;
+        return callerAddress - 1;
     }
 };
 
