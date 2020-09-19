@@ -206,11 +206,11 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
         }
         PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
         bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
-        if (allPageCoveredByObj) {
-            pageBasicAccessInfo->clearAll();
-        } else {
-            pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-        }
+//        if (allPageCoveredByObj) {
+//            pageBasicAccessInfo->clearAll();
+//        } else {
+//            pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+//        }
         if (pageDetailedAccessInfo == NULL) {
             continue;
         }

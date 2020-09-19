@@ -22,7 +22,7 @@ public:
         pFile = popen(cmd, "r");
         while (fgets(out, BUFSZ, pFile) != NULL);
         pclose(pFile);
-        fprintf(file, "%s", out);
+        fprintf(file, "address: %p, %s", (void *) sourceAddress, out);
         inited = originalInited;
     }
 
