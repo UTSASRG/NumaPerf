@@ -175,6 +175,9 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
             void *callStacks[MAX_BACK_TRACE_NUM];
             int size = backtrace(callStacks, MAX_BACK_TRACE_NUM);
             diagnoseCallSiteInfo->setCallStack((unsigned long *) callStacks, 2, size - 2);
+            if ((void *) callerAddress != callStacks[2]) {
+                Logger::info("callStackSize != callerAddress\n");
+            }
         }
     }
     ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,
@@ -332,24 +335,24 @@ void operator delete[](void *ptr) throw() {
 }
 
 void *operator new(size_t size) {
-    return __malloc(size, Programs::getLastEip(&size));
+    return __malloc(size, Programs::getLastEip(&size, 0x10));
 }
 
 void *operator new(size_t size, const std::nothrow_t &) throw() {
-    return __malloc(size, Programs::getLastEip(&size));
+    return __malloc(size, Programs::getLastEip(&size, 0x10));
 }
 
 void *operator new[](size_t size) {
-    return __malloc(size, Programs::getLastEip(&size));
+    return __malloc(size, Programs::getLastEip(&size, 0x10));
 }
 
 extern void *malloc(size_t size) {
-    return __malloc(size, Programs::getLastEip(&size));
+    return __malloc(size, Programs::getLastEip(&size, 0x10));
 }
 
 void *calloc(size_t n, size_t size) {
 //    Logger::debug("calloc N:%lu, size:%lu\n", n, size);
-    void *ptr = __malloc(n * size, Programs::getLastEip(&n));
+    void *ptr = __malloc(n * size, Programs::getLastEip(&n, 0x20));
     if (ptr != NULL) {
         memset(ptr, 0, n * size);
     }
@@ -358,7 +361,7 @@ void *calloc(size_t n, size_t size) {
 
 void *realloc(void *ptr, size_t size) {
 //    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
-    unsigned long callerAddress = Programs::getLastEip(&ptr);
+    unsigned long callerAddress = Programs::getLastEip(&ptr, 0x20);
     if (ptr == NULL) {
 //        __free(ptr);
         return __malloc(size, callerAddress);

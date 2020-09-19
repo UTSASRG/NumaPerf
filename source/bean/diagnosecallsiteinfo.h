@@ -85,7 +85,7 @@ public:
     inline void setCallStack(unsigned long *callStack, int startIndex, int length) {
         int num = length > MAX_CALL_STACK_NUM ? MAX_CALL_STACK_NUM : length;
         for (int i = 0; i < num; i++) {
-            this->callStack[i] = callStack[i + startIndex];
+            this->callStack[i] = callStack[i + startIndex] - 1;
         }
     }
 

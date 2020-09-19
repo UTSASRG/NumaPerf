@@ -26,10 +26,10 @@ public:
         inited = originalInited;
     }
 
-    static inline unsigned long getLastEip(void *firtArgAddress) {
-        void **ripAddress = (void **) (((unsigned long) firtArgAddress) + MALLOC_CALL_SITE_OFFSET);
+    static inline unsigned long getLastEip(void *firtArgAddress, unsigned long ripOffset) {
+        void **ripAddress = (void **) (((unsigned long) firtArgAddress) + ripOffset);
         unsigned long callerAddress = (unsigned long) (*ripAddress);
-        return callerAddress - 1;
+        return callerAddress;
     }
 };
 
