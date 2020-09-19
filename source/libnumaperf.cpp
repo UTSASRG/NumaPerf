@@ -176,7 +176,7 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
             int size = backtrace(callStacks, MAX_BACK_TRACE_NUM);
             diagnoseCallSiteInfo->setCallStack((unsigned long *) callStacks, 2, size - 2);
             if ((void *) callerAddress != callStacks[2]) {
-                Logger::info("callStackSize != callerAddress\n");
+                Logger::error("callStackSize != callerAddress\n");
             }
         }
     }
