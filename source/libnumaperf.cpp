@@ -361,7 +361,7 @@ void *calloc(size_t n, size_t size) {
 
 void *realloc(void *ptr, size_t size) {
 //    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
-    unsigned long callerAddress = Programs::getLastEip(&ptr, 0x20);
+    unsigned long callerAddress = Programs::getLastEip(&ptr, 0x38);
     if (ptr == NULL) {
 //        __free(ptr);
         return __malloc(size, callerAddress);
