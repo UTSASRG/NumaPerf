@@ -1,0 +1,345 @@
+--- pthreads.cpp	2020-03-19 20:13:42.146569740 -0500
++++ pthreads.cpp.bk.bk.bk	2020-09-20 19:28:36.313970614 -0500
+@@ -16,6 +16,13 @@
+ #ifdef ENABLE_PARSEC_HOOKS
+ #include <hooks.h>
+ #endif
++#include <sys/mman.h>
++#include <numaif.h>
++#include <numa.h>
++#include <sys/syscall.h>
++#include <sys/sysinfo.h>
++#include <unistd.h>
++#define NUMA_NODES 8
+ 
+ static inline int isLittleEndian() {
+   union {
+@@ -94,6 +101,12 @@
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ 
++thread_local Cell *cells2;
++thread_local int *cnumPars2;
++thread_local  bool *border;
++thread_local  struct Grid *grids;
++
++
+ const float timeStep = 0.005f;
+ const float doubleRestDensity = 2000.f;
+ const float kernelRadiusMultiplier = 1.695f;
+@@ -112,9 +125,9 @@
+ int numParticles = 0;
+ int numCells = 0;
+ Cell *cells = 0;
+-Cell *cells2 = 0;
++Cell *cells2PerNode[NUMA_NODES];
+ int *cnumPars = 0;
+-int *cnumPars2 = 0;
++int *cnumPars2PerNode[NUMA_NODES];
+ 
+ int XDIVS = 1;	// number of partitions in X
+ int ZDIVS = 1;	// number of partitions in Z
+@@ -125,15 +138,17 @@
+ {
+ 	int sx, sy, sz;
+ 	int ex, ey, ez;
+-} *grids;
+-bool *border;			// flags which cells lie on grid boundaries
+-pthread_attr_t attr;
++} *gridsPerNode[NUMA_NODES];
++bool *borderPerNode[NUMA_NODES];			// flags which cells lie on grid boundaries
++pthread_attr_t attrBinding[NUMA_NODES];
++pthread_attr_t attrNoBinding;
+ pthread_t *thread;
+ pthread_mutex_t **mutex;	// used to lock cells in RebuildGrid and also particles in other functions
+ pthread_barrier_t barrier;	// global barrier used by all threads
+ typedef struct __thread_args {
+   int tid;			//thread id, determines work partition
+   int frames;			//number of frames to compute
++  int nodeIndex; // numa node index from 0 to MAX -1
+ } thread_args;			//arguments for threads
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+@@ -184,7 +199,22 @@
+ 	assert(XDIVS * ZDIVS == threadnum);
+ 
+ 	thread = new pthread_t[NUM_GRIDS];
+-	grids = new struct Grid[NUM_GRIDS];
++  #define DUPLICATE_grids 1
++#if DUPLICATE_grids
++    for (int i = 0; i < NUMA_NODES; i++) {
++        gridsPerNode[i] = (struct Grid*) mmap(NULL, NUM_GRIDS * sizeof(struct Grid), PROT_READ | PROT_WRITE,
++                                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++        unsigned long nodeMask = 1 << i;
++        if (mbind(gridsPerNode[i], NUM_GRIDS * sizeof(struct Grid), MPOL_BIND, &nodeMask, NUMA_NODES + 1, 0) == -1) {
++            fprintf(stderr, "Binding failure");
++            exit(-1);
++        }
++    }
++#else
++    gridsPerNode[0] = new struct Grid[NUM_GRIDS];   // can be duplicated over nodes, only readed by other threads
++#endif
++
++    struct Grid *grids = gridsPerNode[0];
+ 
+ 	//Load input particles
+ 	std::cout << "Loading file \"" << fileName << "\"..." << std::endl;
+@@ -248,8 +278,22 @@
+ 		}
+ 	}
+ 	assert(gi == NUM_GRIDS);
++#define DUPLICATE_border2 1
++#if DUPLICATE_border2
++    for (int i = 0; i < NUMA_NODES; i++) {
++        borderPerNode[i] = (bool *) mmap(NULL, numCells * sizeof(bool), PROT_READ | PROT_WRITE,
++                                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++        unsigned long nodeMask = 1 << i;
++        if (mbind(borderPerNode[i], numCells * sizeof(bool), MPOL_BIND, &nodeMask, NUMA_NODES + 1, 0) == -1) {
++            fprintf(stderr, "Binding failure");
++            exit(-1);
++        }
++    }
++#else
++    borderPerNode[0] = new bool[numCells];   // can be duplicated over nodes, only readed by other threads
++#endif
++  bool *border = borderPerNode[0];
+ 
+-	border = new bool[numCells];
+ 	for(int i = 0; i < NUM_GRIDS; ++i)
+ 		for(int iz = grids[i].sz; iz < grids[i].ez; ++iz)
+ 			for(int iy = grids[i].sy; iy < grids[i].ey; ++iy)
+@@ -276,10 +320,39 @@
+ 							}
+ 				}
+ 
+-	pthread_attr_init(&attr);
+-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+ 
++// init attrBinattrBinding
++    int totalCpus = get_nprocs();
++    cpu_set_t *cpusetp = CPU_ALLOC(totalCpus);
++    assert(cpusetp);
++    size_t size = CPU_ALLOC_SIZE(totalCpus);
++    struct bitmask *bitmask = numa_bitmask_alloc(totalCpus);
++    for (int i = 0; i < NUMA_NODES; i++) {
++        numa_node_to_cpus(i, bitmask);
++        pthread_attr_init(&(attrBinding[i]));
++        pthread_attr_setdetachstate(&(attrBinding[i]), PTHREAD_CREATE_JOINABLE);
++        CPU_ZERO_S(size, cpusetp);
++        for (int cpu = 0; cpu < totalCpus; cpu++) {
++//          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
++            if(numa_bitmask_isbitset(bitmask, cpu)) {
++                //      fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
++                CPU_SET_S(cpu, size, cpusetp);
++            }
++        }
++        pthread_attr_setaffinity_np(&(attrBinding[i]), size, cpusetp);
++    }
++// finish init attr
++
++	unsigned long mask = (1 << NUMA_NODES)-1;
++#if 1
++	mutex  = (pthread_mutex_t**)mmap(NULL,numCells * sizeof(pthread_mutex_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++	if(mbind(mutex, numCells * sizeof(pthread_mutex_t), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++        fprintf(stderr, "mbind error \n");
++        exit(-1);
++    	}
++#else
+ 	mutex = new pthread_mutex_t *[numCells];
++#endif
+ 	for(int i = 0; i < numCells; ++i)
+ 	{
+ 		int n = (border[i] ? 16 : 1);
+@@ -288,11 +361,59 @@
+ 			pthread_mutex_init(&mutex[i][j], NULL);
+ 	}
+ 	pthread_barrier_init(&barrier, NULL, NUM_GRIDS);
+-
++#if 1
++	cells = (Cell*)mmap(NULL,numCells * sizeof(Cell), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++	if(mbind(cells, numCells * sizeof(Cell), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++        fprintf(stderr, "mbind error \n");
++        exit(-1);
++    	}
++#else
+ 	cells = new Cell[numCells];
+-	cells2 = new Cell[numCells];
++#endif
++
++
++#if 1
++	cnumPars = (int *) mmap(NULL, numCells * sizeof(int), PROT_READ | PROT_WRITE,
++                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++    if(mbind(cnumPars, numCells * sizeof(int), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++        fprintf(stderr, "mbind error \n");
++        exit(-1);
++    }
++#else
+ 	cnumPars = new int[numCells];
+-	cnumPars2 = new int[numCells];
++#endif
++
++#define DUPLICATE_CELLS2 1
++#if DUPLICATE_CELLS2
++    for (int i = 0; i < NUMA_NODES; i++) {
++        cells2PerNode[i] = (Cell *) mmap(NULL, numCells * sizeof(Cell), PROT_READ | PROT_WRITE,
++                                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++        unsigned long nodeMask = 1 << i;
++        if (mbind(cells2PerNode[i], numCells * sizeof(Cell), MPOL_BIND, &nodeMask, NUMA_NODES + 1, 0) == -1) {
++            fprintf(stderr, "Binding failure");
++            exit(-1);
++        }
++    }
++#else
++    cells2PerNode[0] = new Cell[numCells];   // only readed by other thread, so can be duplicated over nodes
++#endif
++  Cell *cells2 = cells2PerNode[0];
++
++  #define DUPLICATE_CNUMPARS2 1
++#if DUPLICATE_CNUMPARS2
++    for (int i = 0; i < NUMA_NODES; i++) {
++        cnumPars2PerNode[i] = (int *) mmap(NULL, numCells * sizeof(int), PROT_READ | PROT_WRITE,
++                                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++        unsigned long nodeMask = 1 << i;
++        if (mbind(cnumPars2PerNode[i], numCells * sizeof(int), MPOL_BIND, &nodeMask, NUMA_NODES + 1, 0) == -1) {
++            fprintf(stderr, "Binding failure");
++            exit(-1);
++        }
++    }
++#else
++    cnumPars2PerNode[0] = new int[numCells];   // only readed by other thread, so can be duplicated over nodes
++#endif
++	int *cnumPars2 = cnumPars2PerNode[0];
+ 	assert(cells && cells2 && cnumPars && cnumPars2);
+ 
+ 	memset(cnumPars2, 0, numCells*sizeof(int));
+@@ -349,6 +470,27 @@
+ 		else
+ 			--numParticles;
+ 	}
++  #if DUPLICATE_CELLS2
++    for (int i = 1; i < NUMA_NODES; i++) {
++        memcpy(cells2PerNode[i], cells2PerNode[0], numCells * sizeof(Cell));
++    }
++  #endif
++  #if DUPLICATE_CNUMPARS2
++    for (int i = 1; i < NUMA_NODES; i++) {
++        memcpy(cnumPars2PerNode[i], cnumPars2PerNode[0], numCells * sizeof(int));
++    }
++  #endif
++  #if DUPLICATE_border2
++    for (int i = 1; i < NUMA_NODES; i++) {
++        memcpy(borderPerNode[i], borderPerNode[0], numCells * sizeof(bool));
++    }
++  #endif
++
++  #if DUPLICATE_grids
++    for (int i = 1; i < NUMA_NODES; i++) {
++        memcpy(gridsPerNode[i], gridsPerNode[0], NUM_GRIDS * sizeof(struct Grid));
++    }
++  #endif
+ 	std::cout << "Number of particles: " << numParticles << " (" << origNumParticles-numParticles << " skipped)" << std::endl;
+ }
+ 
+@@ -443,7 +585,9 @@
+ 
+ void CleanUpSim()
+ {
+-	pthread_attr_destroy(&attr);
++	for (int i = 0; i < NUMA_NODES; i++) {
++        pthread_attr_destroy(&(attrBinding[i]));
++    	}
+ 
+ 	for(int i = 0; i < numCells; ++i)
+ 	{
+@@ -453,16 +597,16 @@
+ 		delete[] mutex[i];
+ 	}
+ 	pthread_barrier_destroy(&barrier);
+-	delete[] mutex;
++	//delete[] mutex;
+ 
+-	delete[] border;
++//	delete[] border;
+ 
+-	delete[] cells;
+-	delete[] cells2;
+-	delete[] cnumPars;
+-	delete[] cnumPars2;
++	//delete[] cells;
++	//delete[] cells2;
++	//delete[] cnumPars;
++	//delete[] cnumPars2;
+ 	delete[] thread;
+-	delete[] grids;
++	//delete[] grids;
+ }
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+@@ -781,8 +925,12 @@
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+-void AdvanceFrameMT(int i)
++void AdvanceFrameMT(int i, int nodeIndex)
+ {
++  cells2 = cells2PerNode[nodeIndex];
++  cnumPars2 = cnumPars2PerNode[nodeIndex];
++  border = borderPerNode[nodeIndex];
++  grids = gridsPerNode[nodeIndex];
+ 	ClearParticlesMT(i);
+ 	pthread_barrier_wait(&barrier);
+ 	RebuildGridMT(i);
+@@ -806,7 +954,7 @@
+ 	thread_args *targs = (thread_args *)args;
+ 
+ 	for(int i = 0; i < targs->frames; ++i)
+-		AdvanceFrameMT(targs->tid);
++		AdvanceFrameMT(targs->tid,targs->nodeIndex);
+ 
+ 	return NULL;
+ }
+@@ -851,11 +999,33 @@
+ #ifdef ENABLE_PARSEC_HOOKS
+ 	__parsec_roi_begin();
+ #endif
++
++#if 1
++// thread binding
++    int threadsPerNode = threadnum / NUMA_NODES;
++    int nodes = 0;
++	for(int i = 0; i < threadnum; ++i) {
++		targs[i].tid = i;
++		targs[i].frames = framenum;
++        if ((i + 1) > (nodes + 1) * threadsPerNode) {
++            nodes++;
++        }
++    targs[i].nodeIndex = nodes;
++	//fprintf(stderr, "thread:%d, nodes:%d\n", i , nodes);
++  pthread_create(&thread[i], &(attrBinding[nodes]), AdvanceFramesMT, &targs[i]);
++	}
++#else
++// thread no binding
++	pthread_attr_init(&attrNoBinding);
++	pthread_attr_setdetachstate(&attrNoBinding, PTHREAD_CREATE_JOINABLE);
+ 	for(int i = 0; i < threadnum; ++i) {
+ 		targs[i].tid = i;
+ 		targs[i].frames = framenum;
+-		pthread_create(&thread[i], &attr, AdvanceFramesMT, &targs[i]);
++    targs[i].nodeIndex = 0;
++		pthread_create(&thread[i], &attrNoBinding, AdvanceFramesMT, &targs[i]);
+ 	}
++#endif
++
+ 	// *** PARALLEL PHASE *** //
+ 	for(int i = 0; i < threadnum; ++i) {
+ 		pthread_join(thread[i], NULL);
+@@ -867,7 +1037,7 @@
+ 	if(argc > 4)
+ 		SaveFile(argv[4]);
+ 
+-	CleanUpSim();
++	//CleanUpSim();
+ 
+ #ifdef ENABLE_PARSEC_HOOKS
+ 	__parsec_bench_end();
