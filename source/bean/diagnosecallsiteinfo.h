@@ -4,6 +4,7 @@
 #include "../utils/programs.h"
 #include "../utils/collection/priorityqueue.h"
 #include "diagnoseobjinfo.h"
+#include "../xdefines.h"
 
 class DiagnoseCallSiteInfo {
     unsigned long callStack[MAX_CALL_STACK_NUM];
@@ -113,13 +114,14 @@ public:
         }
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
+    inline void dump(FILE *file, unsigned long totalRunningCycles, int blackSpaceNum) {
         this->dump_call_stacks(file);
         char prefix[blackSpaceNum];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
         }
-        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
+        fprintf(file, "%sSeriousScore:             %f\n", prefix,
+                2 * (double) (this->getSeriousScore()) / ((double) totalRunningCycles / AVERAGE_CYCLES_PERINSTRUCTION));
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidNumInMainThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidNumInOtherThread());
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAccessNumInMainThread());

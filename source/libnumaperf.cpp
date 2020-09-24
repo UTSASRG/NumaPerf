@@ -41,6 +41,7 @@ thread_local int pageDetailSamplingFrequency = 0;
 thread_local int pageBasicSamplingFrequency = 0;
 
 bool inited = false;
+unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
 ObjectInfoMap objectInfoMap;
@@ -60,6 +61,7 @@ static void initializer(void) {
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(1ul * TB, true);
+    applicationStartTime = Timer::getCurrentCycle();
     inited = true;
 }
 
@@ -86,7 +88,8 @@ MemoryPool DiagnosePageInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeo
 
 
 __attribute__ ((destructor)) void finalizer(void) {
-    Logger::info("NumaPerf finalizer\n");
+    unsigned long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
+    Logger::info("NumaPerf finalizer, totalRunningCycles:%lu\n", totalRunningCycles);
     inited = false;
     // collect and clear some objects that are not explicitly freed.
     for (auto iterator = objectInfoMap.begin(); iterator != objectInfoMap.end(); iterator++) {
@@ -129,7 +132,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile, "Part Three: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
         fprintf(dumpFile, "   Top problematical callsites %d:\n", i + 1);
-        topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile, 4);
+        topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile, totalRunningCycles, 4);
         fprintf(dumpFile, "\n\n");
     }
 }
