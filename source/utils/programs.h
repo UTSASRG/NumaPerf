@@ -20,9 +20,11 @@ public:
         memset(out, 0, BUFSZ);
         sprintf(cmd, "/usr/bin/addr2line -i --inlines -e %s %p", __progname_full, (void *) sourceAddress);
         pFile = popen(cmd, "r");
-        while (fgets(out, BUFSZ, pFile) != NULL);
+        fprintf(file, "address: %p  ", (void *) sourceAddress);
+        while (fgets(out, BUFSZ, pFile) != NULL) {
+            fprintf(file, "%s", out);
+        }
         pclose(pFile);
-        fprintf(file, "address: %p, %s", (void *) sourceAddress, out);
         inited = originalInited;
     }
 
