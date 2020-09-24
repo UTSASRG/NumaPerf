@@ -43,8 +43,7 @@ public:
 
     inline unsigned long getSeriousScore() const {
         //todo
-        return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads) +
-               allAccessNumInOtherThread;
+        return allAccessNumInOtherThread + allInvalidNumInOtherThreads;
     }
 
     inline void recordDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo) {

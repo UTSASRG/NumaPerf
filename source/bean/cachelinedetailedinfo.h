@@ -111,8 +111,7 @@ public:
         if (this->seriousScore != 0) {
             return this->seriousScore;
         }
-        this->seriousScore = Scores::getScoreForCacheInvalid(this->invalidationNumberInFirstThread,
-                                                             this->invalidationNumberInOtherThreads);
+        this->seriousScore = this->invalidationNumberInOtherThreads;
         return this->seriousScore;
     }
 
