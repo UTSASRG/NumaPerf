@@ -1,0 +1,26 @@
+--- netlist.h.old	2020-09-21 08:56:03.828096574 -0500
++++ netlist.h.new	2020-09-26 00:22:41.750168390 -0500
+@@ -35,6 +35,13 @@
+ #include <string>
+ 
+ #include "annealer_types.h"
++#define NUMA_NODES 2
++#include <sys/mman.h>
++#include <numaif.h>
++#include <numa.h>
++#include <sys/syscall.h>
++#include <sys/sysinfo.h>
++#include <unistd.h>
+ 
+ const long NO_MATCHING_ELEMENT = -1;
+ 
+@@ -61,7 +68,8 @@
+ 	unsigned _max_x;
+ 	unsigned _max_y;
+ 	unsigned _chip_size;
+-	std::vector<netlist_elem> _elements;//store the actual elements here
++	//std::vector<netlist_elem> _elements;//store the actual elements here
++	netlist_elem *_elements;//store the actual elements here
+ 	std::vector< std::vector<location_t> > _locations;//store the actual locations here
+ 	std::map<std::string, netlist_elem*> _elem_names;
+ 	netlist_elem* create_elem_if_necessary(std::string& name);

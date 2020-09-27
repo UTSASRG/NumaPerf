@@ -1,0 +1,446 @@
+diff -ru facesim.old/config.h facesim/config.h
+--- facesim.old/config.h	2020-09-24 01:23:23.317336828 -0500
++++ facesim/config.h	2020-09-24 01:26:43.067386476 -0500
+@@ -6,6 +6,14 @@
+ #ifndef __CONFIG_H_
+ #define __CONFIG_H_
+ 
++#include <sys/mman.h>
++#include <numaif.h>
++#include <numa.h>
++#include <sys/syscall.h>
++#include <sys/sysinfo.h>
++
+ #define MAX_THREADS   256
++#define NUMA_NODES   8
++
+ 
+ #endif // __CONFIG_H_
+diff -ru facesim.old/FACE_LANDMARK_OPTIMIZATION_GOAL.cpp facesim/FACE_LANDMARK_OPTIMIZATION_GOAL.cpp
+--- facesim.old/FACE_LANDMARK_OPTIMIZATION_GOAL.cpp	2020-09-24 01:23:21.701288352 -0500
++++ facesim/FACE_LANDMARK_OPTIMIZATION_GOAL.cpp	2020-07-04 12:08:08.000000000 -0500
+@@ -11,7 +11,7 @@
+ //#####################################################################
+ // Function Update_Target
+ //#####################################################################
+-template<class T> void PhysBAM::FACE_LANDMARK_OPTIMIZATION_GOAL<T>::
++template<class T> void FACE_LANDMARK_OPTIMIZATION_GOAL<T>::
+ Update_Target (const int frame)
+ {
+ 	int target_index = target_start + (frame - 1) * target_stride;
+diff -ru facesim.old/main.cpp facesim/main.cpp
+--- facesim.old/main.cpp	2020-09-24 01:23:23.461341148 -0500
++++ facesim/main.cpp	2020-09-23 22:12:33.000000000 -0500
+@@ -24,6 +24,9 @@
+ bool PHYSBAM_THREADED_RUN = false;
+ #endif //ENABLE_PTHREADS
+ 
++extern __thread long node = 0;
++extern __thread long threadId = 0;
++
+ int main (int argc, char* argv[])
+ {
+ #ifdef PARSEC_VERSION
+diff -ru facesim.old/Makefile facesim/Makefile
+--- facesim.old/Makefile	2020-09-24 01:23:23.889353988 -0500
++++ facesim/Makefile	2020-09-23 13:55:59.000000000 -0500
+@@ -28,7 +28,7 @@
+ 
+ CFLAGS = -DMYBUG -fexceptions -DENABLE_PTHREADS -DUSE_THREADS -DPARALLEL -DHAVE_LIBPTHREAD -I./ -I./FlexImageLib/  -fpermissive -DTASKQ_DIST_FIXED
+ #LIBS = -lm -lstdc++ -Llib -lflex -lthreads
+-LIBS = -lm -lstdc++ -Llib -lPhysBAM #mejbah
++LIBS = -lnuma -lm -lstdc++ -Llib -lPhysBAM #mejbah
+ 
+ include $(HOME)/Default.mk
+ 
+diff -ru facesim.old/Public_Library/Arrays/ARRAY.h facesim/Public_Library/Arrays/ARRAY.h
+--- facesim.old/Public_Library/Arrays/ARRAY.h	2020-09-24 01:23:22.973326509 -0500
++++ facesim/Public_Library/Arrays/ARRAY.h	2020-09-23 22:25:04.000000000 -0500
+@@ -22,6 +22,7 @@
+ #include "../Read_Write/READ_WRITE_FUNCTIONS.h"
+ #include "../Utilities/TYPE_UTILITIES.h"
+ #include "../Utilities/STATIC_ASSERT.h"
++#include "../../config.h"
+ 
+ namespace PhysBAM
+ {
+@@ -96,6 +97,17 @@
+ 		base_pointer = array - 1;
+ 	}
+ 
++	T* Allocate_Base_Pointer_NumaNode (const int m_input, const int node)
++    {
++	T* result = (T*)mmap(NULL, m_input * sizeof(T), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++	unsigned long nodeMask = 1 << node;
++        if (mbind(result, m_input * sizeof(T), MPOL_BIND, &nodeMask, NUMA_NODES + 1, 0) == -1) {
++            fprintf(stderr, "Binding failure");
++            exit(-1);
++        }
++        return result - 1;
++    }
++
+ 	T* Get_Array_Pointer() const
+ 	{
+ 		return base_pointer + 1;
+@@ -103,9 +115,9 @@
+ 
+ 	void Deallocate_Base_Pointer()
+ 	{
+-    if(!(base_pointer + 1)) {
++    		if(!(base_pointer + 1)) {
+ 		  delete[] (base_pointer + 1);
+-    }
++    		}
+ 	}
+ 
+ 	ARRAY<T>& operator= (const ARRAY<T>& source)
+@@ -222,6 +234,32 @@
+ 
+ 		return *this;
+ 	}
++	
++	void Resize_Array_NumaNode (const int m_new, const int node, const bool initialize_new_elements = true, const bool copy_existing_elements = true, const T& initialization_value = T())
++    {
++        if (Equal_Dimensions (*this, m_new)) return;
++
++        T* base_pointer_new = Allocate_Base_Pointer_NumaNode (m_new, node);
++
++        if (copy_existing_elements)
++        {
++            int m_end = PhysBAM::min (m, m_new);
++
++            for (int index = 1; index <= m_end; index++) base_pointer_new[index] = base_pointer[index];
++        }
++
++        if (initialize_new_elements)
++        {
++            int m_end = PhysBAM::min (m, m_new);
++
++            for (int index = m_end + 1; index <= m_new; index++) base_pointer_new[index] = initialization_value;
++        }
++
++        Deallocate_Base_Pointer();
++        m = m_new;
++        base_pointer = base_pointer_new;
++    }
++
+ 
+ 	void Resize_Array (const int m_new, const bool initialize_new_elements = true, const bool copy_existing_elements = true, const T& initialization_value = T())
+ 	{
+diff -ru facesim.old/Public_Library/Arrays/LIST_ARRAY.h facesim/Public_Library/Arrays/LIST_ARRAY.h
+--- facesim.old/Public_Library/Arrays/LIST_ARRAY.h	2020-09-24 01:23:22.961326148 -0500
++++ facesim/Public_Library/Arrays/LIST_ARRAY.h	2020-09-26 17:40:08.737815491 -0500
+@@ -116,12 +116,31 @@
+ 		if (array.m < m_new) array.Resize_Array (4 * m_new / 3 + 2, false, copy_existing_elements);
+ 	}
+ 
++	void Ensure_Enough_Space_NumaNode (const int m_new, const int node, const bool copy_existing_elements = true)
++    {
++        if (array.m < m_new) array.Resize_Array_NumaNode (4 * m_new / 3 + 2, node, false, copy_existing_elements);
++    }
++
+ public:
+ 	void Preallocate (const int max_size)
+ 	{
+ 		if (array.m < max_size) array.Resize_Array (max_size, false);
+ 	}
+ 
++	void Preallocate_NumaNode(const int max_size, const int node)
++    {
++        if (array.m < max_size) array.Resize_Array_NumaNode (max_size, node, false);
++    }
++
++	void Resize_Array_NumaNode (const int m_new, const int node, const bool initialize_new_elements = true, const bool copy_existing_elements = true)
++    {
++        Ensure_Enough_Space_NumaNode (m_new, node, copy_existing_elements);
++
++        if (initialize_new_elements && m_new > m) for (int i = m + 1; i <= m_new; i++) array (i) = T();
++
++        m = m_new;
++    }
++
+ 	void Resize_Array (const int m_new, const bool initialize_new_elements = true, const bool copy_existing_elements = true)
+ 	{
+ 		Ensure_Enough_Space (m_new, copy_existing_elements);
+@@ -142,6 +161,13 @@
+ 		m = m_new;
+ 	}
+ 
++	 void Append_Element_NumaNode (const T& element, const int node)
++    {
++        m++;
++        Ensure_Enough_Space_NumaNode(m, node);
++        array (m) = element;
++    }
++
+ 	void Append_Element (const T& element)
+ 	{
+ 		m++;
+diff -ru facesim.old/Public_Library/Collisions_And_Interactions/COLLISION_PENALTY_FORCES.h facesim/Public_Library/Collisions_And_Interactions/COLLISION_PENALTY_FORCES.h
+--- facesim.old/Public_Library/Collisions_And_Interactions/COLLISION_PENALTY_FORCES.h	2020-09-24 01:23:22.973326509 -0500
++++ facesim/Public_Library/Collisions_And_Interactions/COLLISION_PENALTY_FORCES.h	2020-09-24 01:12:15.000000000 -0500
+@@ -12,6 +12,9 @@
+ #include "TETRAHEDRON_COLLISION_BODY.h"
+ #include "COLLISION_BODY_LIST_3D.h"
+ #include "../Utilities/LOG.h"
++#include "../../config.h"
++extern __thread long node;
++extern __thread long threadId;
+ namespace PhysBAM
+ {
+ 
+@@ -25,12 +28,12 @@
+ 	ARRAY<bool> skip_collision_body;
+ 	ARRAY<int> check_collision;
+ 	ARRAY<VECTOR_3D<T> > collision_force;
+-	ARRAY<SYMMETRIC_MATRIX_3X3<T> > collision_force_derivative;
++	ARRAY<SYMMETRIC_MATRIX_3X3<T> > collision_force_derivative[NUMA_NODES];
+ 	T stiffness;
+ 	T separation_parameter;
+ 	T self_collision_reciprocity_factor;
+ 	int collision_body_list_id;
+-	LIST_ARRAY<LIST_ARRAY<int> > partition_check_collision;
++	LIST_ARRAY<LIST_ARRAY<int> > partition_check_collision[NUMA_NODES];
+ 	LIST_ARRAY<int> particle_to_check_collision_index;
+ 
+ 	COLLISION_PENALTY_FORCES (SOLIDS_PARTICLE<T, VECTOR_3D<T> >& particles_input)
+@@ -63,6 +66,7 @@
+ 
+ 	void Set_Boundary_Only_Collisions (TETRAHEDRON_MESH& tetrahedron_mesh)
+ 	{
++		//fprintf(stderr,"69============, thread:%ld, node:%ld\n",threadId, node);
+ 		LIST_ARRAY<bool>* old_node_on_boundary = tetrahedron_mesh.node_on_boundary;
+ 		tetrahedron_mesh.node_on_boundary = 0;
+ 		tetrahedron_mesh.Initialize_Node_On_Boundary();
+@@ -70,7 +74,9 @@
+ 		for (int p = 1; p <= particles.array_size; p++) if ( (*tetrahedron_mesh.node_on_boundary) (p)) check_collision.Append_Element (p);
+ 
+ 		collision_force.Resize_Array (check_collision.m);
+-		collision_force_derivative.Resize_Array (check_collision.m);
++		for (int i=0;i<NUMA_NODES;i++){
++			collision_force_derivative[i].Resize_Array_NumaNode (check_collision.m,i);
++		}
+ 		delete tetrahedron_mesh.node_on_boundary;
+ 		tetrahedron_mesh.node_on_boundary = old_node_on_boundary;
+ 		ARRAY<bool> particle_checked (particles.number);
+@@ -84,15 +90,27 @@
+ 
+ 		if (particles.particle_ranges)
+ 		{
+-			partition_check_collision.Resize_Array (particles.particle_ranges->m);
++			for (int i=0; i<NUMA_NODES;i++){
++				partition_check_collision[i].Resize_Array_NumaNode (particles.particle_ranges->m, i);
++			//fprintf(stderr,"addr:%p,node:%ld\n",partition_check_collision[i].array.base_pointer, i);
++			}
++			//fprintf(stderr,"87, thread:%ld, node:%ld\n",threadId, node);
+ 
+ 			for (int r = 1; r <= particles.particle_ranges->m; r++)
+ 			{
+ 				VECTOR_2D<int>& range = (*particles.particle_ranges) (r);
+-
++				for (int i=0; i<NUMA_NODES;i++){
++				partition_check_collision[i] (r).Preallocate_NumaNode(range.y+2,i);
++				//fprintf(stderr,"addr:%p,node:%ld\n",partition_check_collision[i] (r).array.base_pointer, i);
++                        	}
+ 				for (int p = range.x; p <= range.y; p++)
+ 				{
+-					if (particle_checked (p)) partition_check_collision (r).Append_Element (p);
++					//fprintf(stderr,"95, thread:%ld, node:%ld\n",threadId, node);
++					if (particle_checked (p)) {
++						for (int i=0; i<NUMA_NODES;i++){
++						partition_check_collision[i] (r).Append_Element_NumaNode (p,i);
++                        }
++					}
+ 				}
+ 			}
+ 		}
+@@ -122,6 +140,8 @@
+ 
+ 	void Resize_Collision_Arrays_From_Check_Collision()
+ 	{
++		fprintf(stderr,"140===========, thread:%ld, node:%ld\n",threadId, node);
++
+ 		collision_force.Resize_Array (check_collision.m);
+ 		collision_force_derivative.Resize_Array (check_collision.m);
+ 	}
+@@ -145,11 +165,14 @@
+ 
+ 	void Update_Forces_And_Derivatives()
+ 	{
++		fprintf(stderr,"===============163 thread:%ld\n",threadId);
+ 		for (int p = 1; p <= check_collision.m; p++)
+ 		{
+ 			int index = check_collision (p);
+ 			collision_force (p) = VECTOR_3D<T>();
+-			collision_force_derivative (p) = SYMMETRIC_MATRIX_3X3<T>();
++		//	for (int i=0;i<NUMA_NODES;i++){
++		//		collision_force_derivative[i](p) = SYMMETRIC_MATRIX_3X3<T>();
++		//	}
+ 
+ 			for (int r = 1; r <= collision_body_list->collision_bodies.m; r++) if (!skip_collision_body (r))
+ 				{
+@@ -192,18 +215,30 @@
+ 	void Add_Force_Differential (const ARRAY<VECTOR_3D<T> >& dX, ARRAY<VECTOR_3D<T> >& dF) const
+ 	{
+ 		//LOG::Time("AFD (CPF)");
+-		for (int p = 1; p <= check_collision.m; p++) dF (check_collision (p)) += collision_force_derivative (p) * dX (check_collision (p));
++		//fprintf(stderr,"210, thread:%ld, node:%ld\n",threadId, node);
++#if 0
++		for (int p = 1; p <= check_collision.m; p++) dF (check_collision (p)) += collision_force_derivative[node] (p) * dX (check_collision (p));
+ 
+-		//LOG::Stop_Time();
++		LOG::Stop_Time();
++#endif
+ 	}
+ 
+ 	void Add_Force_Differential (const ARRAY<VECTOR_3D<T> >& dX, ARRAY<VECTOR_3D<T> >& dF, const int partition_id) const
+ 	{
+-		for (int i = 1; i <= partition_check_collision (partition_id).m; i++)
++		//fprintf(stderr,"202, thread:%ld, node:%ld\n",threadId, node);
++#if 1
++		LIST_ARRAY<LIST_ARRAY<int> > const* local_partition_check_collision=&(partition_check_collision[node]);
++#else
++		LIST_ARRAY<LIST_ARRAY<int> > const *local_partition_check_collision=&(partition_check_collision[0]);
++#endif
++#if 0
++		for (int i = 1; i <= (*local_partition_check_collision) (partition_id).m; i++)
+ 		{
+-			int particle = partition_check_collision (partition_id) (i), index = particle_to_check_collision_index (particle);
+-			dF (particle) += collision_force_derivative (index) * dX (particle);
++			int particle = (*local_partition_check_collision) (partition_id) (i), index = particle_to_check_collision_index (particle);
++		//fprintf(stderr,"ecollision_force_derivativ[0](index):%f,%f,%f,%f,%f\n",collision_force_derivative[0](index).x11),collision_force_derivative[0](index).x11,collision_force_derivative[0](index).x11,collision_force_derivative[0](index).x11,collision_force_derivative[0](index).x11;
++			dF (particle) += collision_force_derivative[node] (index) * dX (particle);
+ 		}
++#endif
+ 	}
+ 
+ //#####################################################################
+diff -ru facesim.old/taskQ.c facesim/taskQ.c
+--- facesim.old/taskQ.c	2020-09-24 01:23:23.461341148 -0500
++++ facesim/taskQ.c	2020-09-26 18:36:15.233073043 -0500
+@@ -3,12 +3,14 @@
+  *        Sanjeev Kumar --- December, 2004
+  */
+ 
+-
++#define _GNU_SOURCE
++#include <sched.h>
++#include <assert.h>
+ #include <time.h>
+ #include "config.h"
+-
+ #ifdef ENABLE_PTHREADS
+ #include "alamere.h"
++#include <pthread.h>
+ pthread_t _M4_threadsTable[MAX_THREADS];
+ int _M4_threadsTableAllocated[MAX_THREADS];
+ pthread_mutexattr_t _M4_normalMutexAttr;
+@@ -16,6 +18,14 @@
+ 
+ #include "taskQInternal.h"
+ #include "taskQList.h"
++#define THREAD_BINDING 0
++extern __thread long node;
++extern __thread long threadId;
++
++typedef struct {
++	long node;
++	long threadId;
++} TArgs;
+ 
+ static volatile long          numThreads, numTaskQs, threadsPerTaskQ, maxTasks;
+ static volatile int           nextQ = 0;  // Just a hint. Not protected by locks.
+@@ -161,7 +171,10 @@
+ }
+ 
+ static void *taskQIdleLoop( void *arg) {
+-    long index = ( long)arg;
++    TArgs* targ= (TArgs*)arg;
++    node = targ->node;
++    threadId = targ->threadId;
++    long index = targ->threadId;
+     long myQ = index / threadsPerTaskQ;
+     int i = 0;
+     int stolen;
+@@ -215,8 +228,18 @@
+     printf( "\n\n");
+     */
+     DEBUG_ANNOUNCE;
+-
++#if 1
++    unsigned long mask = (1 << NUMA_NODES)-1;
++    taskQs = (TaskQ *) mmap(NULL, numTaskQs * sizeof(TaskQ), PROT_READ | PROT_WRITE,
++                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++    if(mbind(taskQs, numTaskQs * sizeof(TaskQ), MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++        fprintf(stderr, "mbind error \n");
++        exit(-1);
++    }
++#else
+     taskQs = ( TaskQ *)malloc( sizeof( TaskQ) * numTaskQs);
++#endif
++
+     for ( i = 0; i < numTaskQs; i++) {
+ #ifdef ENABLE_PTHREADS
+         pthread_mutex_init(&(taskQs[i].lock), NULL);;
+@@ -235,15 +258,60 @@
+     sync.threadCount = 0;
+ 
+ #ifdef ENABLE_PTHREADS
++#if THREAD_BINDING  // thread binding
++    pthread_attr_t attrBinding[NUMA_NODES];
++    // init attrBinattrBinding
++    int totalCpus = get_nprocs();
++    cpu_set_t *cpusetp = CPU_ALLOC(totalCpus);
++    assert(cpusetp);
++    size_t size = CPU_ALLOC_SIZE(totalCpus);
++    struct bitmask *bitmask = numa_bitmask_alloc(totalCpus);
++    for (int i = 0; i < NUMA_NODES; i++) {
++        numa_node_to_cpus(i, bitmask);
++        pthread_attr_init(&(attrBinding[i]));
++        pthread_attr_setdetachstate(&(attrBinding[i]), PTHREAD_CREATE_JOINABLE);
++        CPU_ZERO_S(size, cpusetp);
++        for (int cpu = 0; cpu < totalCpus; cpu++) {
++//          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
++            if(numa_bitmask_isbitset(bitmask, cpu)) {
++                //      fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
++                CPU_SET_S(cpu, size, cpusetp);
++            }
++        }
++        pthread_attr_setaffinity_np(&(attrBinding[i]), size, cpusetp);
++    }
++// finish init attr
++    TArgs *targs = (TArgs *)malloc(numThreads * sizeof(TArgs));
++    int threadsPerNode = numThreads / NUMA_NODES;
++    int nodes = 0;
+     for ( i = 1; i < numThreads; i++)
+     {
+         int _M4_i;
++	targs[i-1].threadId = i;
+         for ( _M4_i = 0; _M4_i < MAX_THREADS; _M4_i++) {
+             if ( _M4_threadsTableAllocated[_M4_i] == 0)    break;
+         }
+-        pthread_create(&_M4_threadsTable[_M4_i],NULL,(void *(*)(void *))taskQIdleLoop,(void *)( long)i);
++	if ((i + 1) > (nodes + 1) * threadsPerNode) {
++            nodes++;
++        }
++	targs[i-1].node = nodes;
++        pthread_create(&_M4_threadsTable[_M4_i],&(attrBinding[nodes]),(void *(*)(void *))taskQIdleLoop,(void *)(&(targs[i-1])));
+         _M4_threadsTableAllocated[_M4_i] = 1;
+     }
++#else
++TArgs *targs = (TArgs *)malloc(numThreads * sizeof(TArgs));
++    for ( i = 1; i < numThreads; i++)
++    {
++        int _M4_i;
++	targs[i-1].threadId = i;
++	targs[i-1].node = 0;
++        for ( _M4_i = 0; _M4_i < MAX_THREADS; _M4_i++) {
++            if ( _M4_threadsTableAllocated[_M4_i] == 0)    break;
++        }
++        pthread_create(&_M4_threadsTable[_M4_i],NULL,(void *(*)(void *))taskQIdleLoop,(void *)(&(targs[i-1])));
++        _M4_threadsTableAllocated[_M4_i] = 1;
++    }
++#endif
+ #endif //ENABLE_PTHREADS
+ ;
+ 

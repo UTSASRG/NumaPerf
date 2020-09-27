@@ -1,0 +1,84 @@
+--- netlist.cpp.old	2020-09-21 08:55:54.999851908 -0500
++++ netlist.cpp.new	2020-09-26 02:35:38.325332695 -0500
+@@ -165,15 +165,24 @@
+ 	fin >> _num_elements >> _max_x >> _max_y;
+ 	_chip_size = _max_x * _max_y;
+ 	assert(_num_elements < _chip_size);
+-	
++ 	fprintf(stderr, "_chip_size:%ld \n",_chip_size);	
+ 	//cout << "before mycreate chip of right size _num_elments " << _num_elements << " _max_x " << _max_x << " _max_y " << _max_y << endl;	
+ 
+ 	//cout << "before mycreate chip of right size, oldsize " << _elements.size()  << " new _chip_size " << _chip_size << endl;	
+ 	//fprintf(stderr, "before mycreate chip of right size, oldsize %d new size\n", _elements.size(), _chip_size);	
+ 	//create a chip of the right size
+     // LTP: this really sucks? if _chip_size is 562500 here, it will invoke almost 562500*2 times malloc(1);
+-	_elements.resize(_chip_size);  
+-	
++	//_elements.resize(_chip_size);  
++#if 1
++	_elements = (netlist_elem *) mmap(NULL, (_chip_size) * sizeof(netlist_elem), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++	unsigned long mask = (1 << NUMA_NODES)-1;
++	if(mbind(_elements, (_chip_size) * sizeof(netlist_elem) , MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
++        fprintf(stderr, "mbind error \n");
++        exit(-1);
++    }
++#else
++	_elements = new netlist_elem[_chip_size];
++#endif	
+ 	cout << "locs created" << endl;
+ 	//create the location elements
+ 	vector<location_t> y_vec(_max_y); 
+@@ -186,7 +195,7 @@
+ 			location_t* loc = &_locations.at(x).at(y);
+ 			loc->x = x;
+ 			loc->y = y;
+-			_elements.at(i_elem).present_loc.Set(loc);
++			_elements[i_elem].present_loc.Set(loc);
+ 			i_elem++;
+ 		}//for (int y = 0; y < _max_y; y++)
+ 	}//for (int x = 0; x < _max_x; x++)
+@@ -200,6 +209,13 @@
+ 		}
+ 		std::string name;
+ 		fin >> name;
++		if (i>2500000){
++			cout << "i: " << i << endl;
++		}
++		if (i>2500000){
++			cout << "name: " << name << endl;
++				break;
++		}
+ 		netlist_elem* present_elem = create_elem_if_necessary(name); // the element that we are presently working on
+ 		//use create if necessary because it might have been created as a previous elements fanin
+ 
+@@ -209,12 +225,19 @@
+ 		int type; //its type TODO errorcheck here
+ 		fin >> type; // presently, don't actually use this 
+ 
++			if (i>2500000){
++				cout << "before fanin_name: " << endl;
++				break;
++			}
+ 		std::string fanin_name;
+ 		while (fin >> fanin_name){
++			if (i>2500000){
++				cout << "fanin_name: " << fanin_name << endl;
++			}
+ 			if (fanin_name == "END"){
+ 				break; //last element in fanin
+ 			} //otherwise, make present elem the fanout of fanin_elem, and vice versa
+-			//cout << "fanin_name: " << fanin_name << endl;
++
+ 			netlist_elem* fanin_elem = create_elem_if_necessary(fanin_name);
+ 			present_elem->fanin.push_back(fanin_elem);
+ 			fanin_elem->fanout.push_back(present_elem);
+@@ -235,7 +258,8 @@
+ 	//check whether we already have a netlist element with that name
+ 	std::map<std::string, netlist_elem*>::iterator iter = _elem_names.find(name);
+ 	if (iter == _elem_names.end()){
+-		rval = &_elements.at(unused_elem);//if not, get one from the _elements pool
++		//fprintf(stderr, "unused_elem:%ld \n",unused_elem);
++		rval = &(_elements[unused_elem]);//if not, get one from the _elements pool
+ 		_elem_names[name] = rval;//put it in the map
+ 		unused_elem++;
+ 	} else {
