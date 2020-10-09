@@ -427,7 +427,7 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
 //    Logger::debug("record page detailed info\n");
     if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
         PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo(
-                ADDRESSES::getPageStartAddress(addr));
+                ADDRESSES::getPageStartAddress(addr), pageBasicAccessInfo->getFirstTouchThreadId());
         if (!pageBasicAccessInfo->setIfBasentPageDetailedAccessInfo(pageDetailInfoPtr)) {
             PageDetailedAccessInfo::release(pageDetailInfoPtr);
         }

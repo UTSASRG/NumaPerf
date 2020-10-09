@@ -8,6 +8,7 @@
 
 class PageDetailedAccessInfo {
 //    unsigned long seriousScore;
+    unsigned long firstTouchThreadId;
     unsigned long startAddress;
     unsigned long allAccessNumByOtherThread;
     unsigned long accessNumberByFirstTouchThread[CACHE_NUM_IN_ONE_PAGE];
@@ -17,8 +18,9 @@ class PageDetailedAccessInfo {
 private:
     static MemoryPool localMemoryPool;
 
-    PageDetailedAccessInfo(unsigned long pageStartAddress) {
+    PageDetailedAccessInfo(unsigned long pageStartAddress, unsigned long firstTouchThreadId) {
         memset(this, 0, sizeof(PageDetailedAccessInfo));
+        this->firstTouchThreadId = firstTouchThreadId;
         this->startAddress = pageStartAddress;
     }
 
@@ -42,10 +44,11 @@ private:
 
 public:
 
-    static PageDetailedAccessInfo *createNewPageDetailedAccessInfo(unsigned long pageStartAddress) {
+    static PageDetailedAccessInfo *
+    createNewPageDetailedAccessInfo(unsigned long pageStartAddress, unsigned long firstTouchThreadId) {
         void *buff = localMemoryPool.get();
 //        Logger::debug("new PageDetailedAccessInfo buff address:%lu \n", buff);
-        PageDetailedAccessInfo *ret = new(buff) PageDetailedAccessInfo(pageStartAddress);
+        PageDetailedAccessInfo *ret = new(buff) PageDetailedAccessInfo(pageStartAddress, firstTouchThreadId);
         return ret;
     }
 
@@ -82,7 +85,7 @@ public:
     }
 
     inline void clearAll() {
-        memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - sizeof(unsigned long));
+        memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
     }
 
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
@@ -161,6 +164,7 @@ public:
             prefix[i] = ' ';
         }
         fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
+        fprintf(file, "%sFirstTouchThreadId:         %lu\n", prefix, this->firstTouchThreadId);
 //        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore(0, 0));
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
