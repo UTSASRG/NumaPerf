@@ -462,6 +462,9 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long first
 //                 cacheLineInfoPtr->getInvalidationNumberInOtherThreads());
 }
 
+/*
+* handleAccess functions.
+*/
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
@@ -518,13 +521,38 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 }
 
 /*
-* handleAccess functions.
+* handle lock functions.
 */
 inline void recordLockAcquire() {
     lockAcquireNumber++;
 }
 
-int pthread_barrier_wait(pthread_barrier_t *barrier) {
+int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
+    fprintf(stderr, "pthread_spin_lock\n");
+    recordLockAcquire();
+    return Real::pthread_spin_lock(lock);
+}
+
+int pthread_spin_trylock(pthread_spinlock_t *lock) throw() {
+    fprintf(stderr, "pthread_spin_trylock\n");
+    recordLockAcquire();
+    return Real::pthread_spin_trylock(lock);
+}
+
+int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
+    fprintf(stderr, "pthread_mutex_lock\n");
+    recordLockAcquire();
+    return Real::pthread_mutex_lock(mutex);
+}
+
+int pthread_mutex_trylock(pthread_mutex_t *mutex) throw() {
+    fprintf(stderr, "pthread_mutex_trylock\n");
+    recordLockAcquire();
+    return Real::pthread_mutex_trylock(mutex);
+}
+
+int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
+    fprintf(stderr, "pthread_barrier_wait\n");
     recordLockAcquire();
     return Real::pthread_barrier_wait(barrier);
 }

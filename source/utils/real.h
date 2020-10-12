@@ -40,8 +40,14 @@ namespace Real {
     DEFINE_WRAPPER(free);
     DEFINE_WRAPPER(calloc);
     DEFINE_WRAPPER(realloc);
+
     DEFINE_WRAPPER(pthread_create);
+
     DEFINE_WRAPPER(pthread_barrier_wait);
+    DEFINE_WRAPPER(pthread_mutex_lock);
+    DEFINE_WRAPPER(pthread_mutex_trylock);
+    DEFINE_WRAPPER(pthread_spin_lock);
+    DEFINE_WRAPPER(pthread_spin_trylock);
 //    DEFINE_WRAPPER(pthread_join);
 //    DEFINE_WRAPPER(pthread_kill);
 
@@ -54,7 +60,12 @@ namespace Real {
         // FIXME about the flags
         void *pthread_handle = dlopen("libpthread.so.0", RTLD_NOW | RTLD_GLOBAL | RTLD_NOLOAD);
         INIT_WRAPPER(pthread_create, pthread_handle);
+
         INIT_WRAPPER(pthread_barrier_wait, pthread_handle);
+        INIT_WRAPPER(pthread_mutex_lock, pthread_handle);
+        INIT_WRAPPER(pthread_mutex_trylock, pthread_handle);
+        INIT_WRAPPER(pthread_spin_lock, pthread_handle);
+        INIT_WRAPPER(pthread_spin_trylock, pthread_handle);
 //        INIT_WRAPPER(pthread_join, pthread_handle);
 //        INIT_WRAPPER(pthread_kill, pthread_handle);
     }

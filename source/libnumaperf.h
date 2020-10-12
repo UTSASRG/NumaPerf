@@ -34,6 +34,10 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 __THROW;
 
 int pthread_barrier_wait(pthread_barrier_t *barrier);
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+int pthread_spin_lock(pthread_spinlock_t *lock);
+int pthread_spin_trylock(pthread_spinlock_t *lock);
 
 void store_16bytes(unsigned long addr);
 void store_8bytes(unsigned long addr);
