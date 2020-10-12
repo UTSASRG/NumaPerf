@@ -44,6 +44,9 @@ bool inited = false;
 unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
+thread_local unsigned long lockAcquireNumber = 0;
+
+unsigned long GlobalLockAcquireNumber[MAX_THREAD_NUM];
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
@@ -114,6 +117,13 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile, "    Part One: Top %d problematical pages.\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
     fprintf(dumpFile, "    Part Two: Top %d problematical cachelines.\n", MAX_TOP_CACHELINE_DETAIL_INFO);
     fprintf(dumpFile, "    Part Three: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
+
+    fprintf(dumpFile, "Part One: Thread base lock require number:\n");
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        if (GlobalLockAcquireNumber[i] > 0) {
+            fprintf(dumpFile, "  Thread-:%lu, acquires lock number: %lu:\n", i, GlobalLockAcquireNumber[i]);
+        }
+    }
 
     fprintf(dumpFile, "Part One: Top %d problematical pages:\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
     for (int i = 0; i < topPageQueue.getSize(); i++) {
@@ -365,7 +375,7 @@ void *calloc(size_t n, size_t size) {
 void *realloc(void *ptr, size_t size) {
 //    Logger::debug("realloc size:%lu, ptr:%p\n", size, ptr);
     unsigned long callerAddress = Programs::getLastEip(&ptr, 0x38);
-    if (ptr == NULL) {
+    if (ptr == NULL || !inited) {
 //        __free(ptr);
         return __malloc(size, callerAddress);
     }
@@ -400,6 +410,7 @@ void *initThreadIndexRoutine(void *args) {
 
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];
     void *result = startRoutineFunPtr(((void **) args)[1]);
+    GlobalLockAcquireNumber[currentThreadIndex] = lockAcquireNumber;
     Real::free(args);
     return result;
 }
@@ -509,6 +520,15 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 /*
 * handleAccess functions.
 */
+inline void recordLockAcquire() {
+    lockAcquireNumber++;
+}
+
+int pthread_barrier_wait(pthread_barrier_t *barrier) {
+    recordLockAcquire();
+    return Real::pthread_barrier_wait(barrier);
+}
+
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
 
 void store_8bytes(unsigned long addr) { handleAccess(addr, 8, E_ACCESS_WRITE); }

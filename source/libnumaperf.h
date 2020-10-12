@@ -33,6 +33,8 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 __THROW;
 
+int pthread_barrier_wait(pthread_barrier_t *barrier);
+
 void store_16bytes(unsigned long addr);
 void store_8bytes(unsigned long addr);
 void store_4bytes(unsigned long addr);

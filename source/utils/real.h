@@ -30,6 +30,7 @@
 
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define DEFINE_WRAPPER(name) decltype(::name) * name;
 #define INIT_WRAPPER(name, handle) name = (decltype(::name)*)dlsym(handle, #name);
@@ -40,6 +41,7 @@ namespace Real {
     DEFINE_WRAPPER(calloc);
     DEFINE_WRAPPER(realloc);
     DEFINE_WRAPPER(pthread_create);
+    DEFINE_WRAPPER(pthread_barrier_wait);
 //    DEFINE_WRAPPER(pthread_join);
 //    DEFINE_WRAPPER(pthread_kill);
 
@@ -52,6 +54,7 @@ namespace Real {
         // FIXME about the flags
         void *pthread_handle = dlopen("libpthread.so.0", RTLD_NOW | RTLD_GLOBAL | RTLD_NOLOAD);
         INIT_WRAPPER(pthread_create, pthread_handle);
+        INIT_WRAPPER(pthread_barrier_wait, pthread_handle);
 //        INIT_WRAPPER(pthread_join, pthread_handle);
 //        INIT_WRAPPER(pthread_kill, pthread_handle);
     }
