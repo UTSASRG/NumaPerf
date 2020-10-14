@@ -45,7 +45,9 @@ unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
 thread_local unsigned long currentThreadIndex = 0;
 thread_local unsigned long lockAcquireNumber = 0;
+thread_local unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
 
+unsigned long GlobalThreadBasedAccessNumber[MAX_THREAD_NUM][MAX_THREAD_NUM];
 unsigned long GlobalLockAcquireNumber[MAX_THREAD_NUM];
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
@@ -89,6 +91,104 @@ MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(
 MemoryPool DiagnosePageInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnosePageInfo)),
                                              GB * 1);
 
+inline void preAccessThreadBasedAccessNumber() {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (i == j) {
+                GlobalThreadBasedAccessNumber[i][j] = 0;
+                continue;
+            }
+            if (i > j) {
+                GlobalThreadBasedAccessNumber[i][j] = GlobalThreadBasedAccessNumber[j][i];
+                continue;
+            }
+            GlobalThreadBasedAccessNumber[i][j] += GlobalThreadBasedAccessNumber[j][i];
+        }
+    }
+}
+
+inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageAccessNumber) {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        threadBasedAverageAccessNumber[i] = 0;
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            threadBasedAverageAccessNumber[i] += GlobalThreadBasedAccessNumber[i][j];
+        }
+        threadBasedAverageAccessNumber[i] = threadBasedAverageAccessNumber[i] / (largestThreadIndex);
+    }
+}
+
+inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverageAccessNumber,
+                                                unsigned long *threadBasedAccessNumberDeviation) {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        threadBasedAccessNumberDeviation[i] = 0;
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (i == j) {
+                continue;
+            }
+            threadBasedAccessNumberDeviation[i] += abs((long long)
+                                                               (GlobalThreadBasedAccessNumber[i][j] -
+                                                                threadBasedAverageAccessNumber[i]));
+        }
+        threadBasedAccessNumberDeviation[i] = threadBasedAccessNumberDeviation[i] / (largestThreadIndex);
+    }
+}
+
+inline int getBalancedThread(unsigned long *threadBasedAverageAccessNumber,
+                             unsigned long *threadBasedAccessNumberDeviation,
+                             bool *balancedThread) {
+    int balancedThreadNum = 0;
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (threadBasedAverageAccessNumber[i] < threadBasedAccessNumberDeviation[i]) {
+            balancedThread[i] = false;
+            continue;
+        }
+        balancedThreadNum++;
+        balancedThread[i] = true;
+    }
+    return balancedThreadNum;
+}
+
+inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNumber,
+                                       bool *balancedThread, int balancedThreadNum) {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (balancedThread[i]) {
+            continue;
+        }
+        threadBasedAverageAccessNumber[i] = 0;
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (balancedThread[j]) {
+                continue;
+            }
+            threadBasedAverageAccessNumber[i] += GlobalThreadBasedAccessNumber[i][j];
+        }
+        threadBasedAverageAccessNumber[i] =
+                threadBasedAverageAccessNumber[i] / (largestThreadIndex - balancedThreadNum);
+    }
+}
+
+inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccessNumber,
+                                         unsigned long *threadBasedAccessNumberDeviation,
+                                         bool *balancedThread, int balancedThreadNum) {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (balancedThread[i]) {
+            continue;
+        }
+        threadBasedAccessNumberDeviation[i] = 0;
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (i == j) {
+                continue;
+            }
+            if (balancedThread[j]) {
+                continue;
+            }
+            threadBasedAccessNumberDeviation[i] += abs((long long)
+                                                               (GlobalThreadBasedAccessNumber[i][j] -
+                                                                threadBasedAverageAccessNumber[i]));
+        }
+        threadBasedAccessNumberDeviation[i] =
+                threadBasedAccessNumberDeviation[i] / (largestThreadIndex - balancedThreadNum);
+    }
+}
 
 __attribute__ ((destructor)) void finalizer(void) {
     unsigned long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
@@ -118,12 +218,53 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile, "    Part Two: Top %d problematical cachelines.\n", MAX_TOP_CACHELINE_DETAIL_INFO);
     fprintf(dumpFile, "    Part Three: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
 
-    fprintf(dumpFile, "Part One: Thread base lock require number:\n");
+    fprintf(dumpFile, "Part One: Thread based lock require number:\n");
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalLockAcquireNumber[i] > 0) {
-            fprintf(dumpFile, "  Thread-:%lu, acquires lock number: %lu:\n", i, GlobalLockAcquireNumber[i]);
+            fprintf(dumpFile, "  Thread-:%lu, acquires lock number: %lu\n", i, GlobalLockAcquireNumber[i]);
         }
     }
+    fprintf(dumpFile, "\n");
+
+    fprintf(dumpFile, "Part Two: Thread based access average and deviation:\n");
+    unsigned long threadBasedAverageAccessNumber[MAX_THREAD_NUM];
+    unsigned long threadBasedAccessNumberDeviation[MAX_THREAD_NUM];
+    bool balancedThread[MAX_THREAD_NUM];
+    preAccessThreadBasedAccessNumber();
+    getThreadBasedAverageAccessNumber(threadBasedAverageAccessNumber);
+    getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
+
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (threadBasedAverageAccessNumber[i] > 0 || threadBasedAccessNumberDeviation[i] > 0) {
+            fprintf(dumpFile, "  Thread-:%lu, thread based access number average  : %lu\n", i,
+                    threadBasedAverageAccessNumber[i]);
+            fprintf(dumpFile, "  Thread-:%lu, thread based access number deviation: %lu\n", i,
+                    threadBasedAccessNumberDeviation[i]);
+        }
+    }
+    fprintf(dumpFile, "\n");
+
+    int balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
+                                              balancedThread);
+    getAverageWOBalancedThread(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum);
+    getDeviationWOBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation, balancedThread,
+                                 balancedThreadNum);
+    balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
+                                          balancedThread);
+
+    fprintf(dumpFile, "Part Three: Thread based imbalance access:\n");
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (balancedThread[i]) {
+            continue;
+        }
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (!balancedThread[j] && GlobalThreadBasedAccessNumber[i][j] > 2 * threadBasedAverageAccessNumber[i]) {
+                fprintf(dumpFile, "  Thread-:%lu----Thread-:%lu, thread based access number: %lu\n", i, j,
+                        GlobalThreadBasedAccessNumber[i][j]);
+            }
+        }
+    }
+    fprintf(dumpFile, "\n");
 
     fprintf(dumpFile, "Part One: Top %d problematical pages:\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
     for (int i = 0; i < topPageQueue.getSize(); i++) {
@@ -407,10 +548,12 @@ void *initThreadIndexRoutine(void *args) {
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
         Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
     }
-
+    memset(threadBasedAccessNumber, 0, sizeof(unsigned long) * MAX_THREAD_NUM);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];
     void *result = startRoutineFunPtr(((void **) args)[1]);
     GlobalLockAcquireNumber[currentThreadIndex] = lockAcquireNumber;
+    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedAccessNumber,
+           sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
     return result;
 }
@@ -488,10 +631,12 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         pageBasicSamplingFrequency++;
         if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
             pageBasicSamplingFrequency = 0;
+            threadBasedAccessNumber[firstTouchThreadId]++;
             basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
         }
 #else
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
+        threadBasedAccessNumber[firstTouchThreadId]++;
 #endif
     }
 
@@ -507,10 +652,12 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         pageDetailSamplingFrequency++;
         if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
             pageDetailSamplingFrequency = 0;
+            threadBasedAccessNumber[firstTouchThreadId]++;
             recordDetailsForPageSharing(basicPageAccessInfo, addr);
         }
 #else
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
+        threadBasedAccessNumber[firstTouchThreadId]++;
 #endif
     }
 
