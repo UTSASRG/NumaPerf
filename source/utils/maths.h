@@ -12,8 +12,15 @@ public:
         return powerOf2;
     }
 
-    static inline unsigned long getLowBoundBitMask(unsigned long num) {
-        unsigned long upBoundPowerOf2 = getUpBoundPowerOf2(num);
+    static inline unsigned long getCeilingPowerOf2(unsigned long num) {
+        if (num == 0) {
+            return 0;
+        }
+        return getUpBoundPowerOf2(num) - 1;
+    }
+
+    static inline unsigned long getCeilingBitMask(unsigned long num) {
+        unsigned long upBoundPowerOf2 = getCeilingPowerOf2(num);
         unsigned long mask = 0;
         for (unsigned long i = 0; i < upBoundPowerOf2; i++) {
             mask = mask | (1lu << i);

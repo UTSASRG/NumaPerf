@@ -2,6 +2,7 @@
 #define NUMAPERF_SORTS_H
 
 #include <cstring>
+#include "real.h"
 
 class Sorts {
 public:
@@ -32,19 +33,19 @@ public:
         memset(set, 0, sizeof(int) * (length + 1));
         unsigned long upValue = 0;
         int index = 0;
-        for (int i = 0; i < length; i++) {
+        for (int k = 0; k < length; k++) {
             upValue = 0;
             index = 0;
-            for (int j = 0; j < length; j++) {
-                if (set[j] > 0) {
+            for (int f = 0; f < length; f++) {
+                if (set[f] > 0) {
                     continue;
                 }
-                if (upValue <= head[j]) {
-                    upValue = head[j];
-                    index = j;
+                if (upValue <= head[f]) {
+                    upValue = head[f];
+                    index = f;
                 }
             }
-            indexByOrder[i] = index;
+            indexByOrder[k] = index;
             set[index] = 1;
         }
     }

@@ -66,7 +66,7 @@ static void initializer(void) {
     callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(1ul * TB, true);
+    cacheLineDetailedInfoShadowMap.initialize(2ul * TB, true);
     applicationStartTime = Timer::getCurrentCycle();
     inited = true;
 }
@@ -193,12 +193,12 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
 
 inline void
 getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *balancedThread, int balancedThreadNum,
-                       long **threadCluster) {
+                       long *threadCluster) {
 
     int ordersOfThread[MAX_THREAD_NUM][MAX_THREAD_NUM];
     int indexByOrder[MAX_THREAD_NUM][MAX_THREAD_NUM];
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        threadCluster[i][0] = MAX_THREAD_NUM;
+        threadCluster[i * MAX_THREAD_NUM] = MAX_THREAD_NUM;
         if (balancedThread[i]) {
             threadBasedAverageAccessNumber[i] = 0;
             continue;
@@ -217,22 +217,22 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
     int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES;
     for (long i = 0; i < largestThreadIndex + 1; i++) {
         unsigned long threadId = averageIndexByOrder[i];
-        if (balancedThread[threadId] || threadCluster[threadId][0] < 0) {
-            threadCluster[threadId][0] = -1;
+        if (balancedThread[threadId] || threadCluster[threadId * MAX_THREAD_NUM] < 0) {
+            threadCluster[threadId * MAX_THREAD_NUM] = -1;
             continue;
         }
-        threadCluster[threadId][0] = threadId;
+        threadCluster[threadId * MAX_THREAD_NUM] = threadId;
         int index = 1;
         for (unsigned long j = 0; j < thredNumPerNode; j++) {
             int targetThreadId = indexByOrder[threadId][j];
             if (ordersOfThread[targetThreadId][threadId] < thredNumPerNode + 1) {
-                threadCluster[threadId][index] = targetThreadId;
+                threadCluster[threadId * MAX_THREAD_NUM + index] = targetThreadId;
                 index++;
-                threadCluster[targetThreadId][0] = -1;
+                threadCluster[targetThreadId * MAX_THREAD_NUM] = -1;
                 continue;
             }
         }
-        threadCluster[threadId][index] = -1;
+        threadCluster[threadId * MAX_THREAD_NUM + index] = -1;
     }
 }
 
@@ -298,7 +298,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
                                           balancedThread);
     long threadClusters[MAX_THREAD_NUM][MAX_THREAD_NUM];
-    getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, (long **) threadClusters);
+    getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, (long *) threadClusters);
     fprintf(dumpFile, "Part Three: Tight thread cluster:\n");
     int cluster = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
