@@ -23,6 +23,7 @@
 #include "utils/collection/addrtopagesinglefragshadowmap.h"
 #include "utils/programs.h"
 #include "utils/asserts.h"
+#include "utils/sorts.h"
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
@@ -190,6 +191,51 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
     }
 }
 
+inline void
+getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *balancedThread, int balancedThreadNum,
+                       long **threadCluster) {
+
+    int ordersOfThread[MAX_THREAD_NUM][MAX_THREAD_NUM];
+    int indexByOrder[MAX_THREAD_NUM][MAX_THREAD_NUM];
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        threadCluster[i][0] = MAX_THREAD_NUM;
+        if (balancedThread[i]) {
+            threadBasedAverageAccessNumber[i] = 0;
+            continue;
+        }
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (i == j || balancedThread[j]) {
+                GlobalThreadBasedAccessNumber[i][j] = 0;
+            }
+        }
+        Sorts::getOrder(GlobalThreadBasedAccessNumber[i], ordersOfThread[i], largestThreadIndex + 1);
+        Sorts::sortToIndex(GlobalThreadBasedAccessNumber[i], indexByOrder[i], largestThreadIndex + 1);
+    }
+    int averageIndexByOrder[MAX_THREAD_NUM];
+    Sorts::sortToIndex(threadBasedAverageAccessNumber, averageIndexByOrder, largestThreadIndex + 1);
+
+    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES;
+    for (long i = 0; i < largestThreadIndex + 1; i++) {
+        unsigned long threadId = averageIndexByOrder[i];
+        if (balancedThread[threadId] || threadCluster[threadId][0] < 0) {
+            threadCluster[threadId][0] = -1;
+            continue;
+        }
+        threadCluster[threadId][0] = threadId;
+        int index = 1;
+        for (unsigned long j = 0; j < thredNumPerNode; j++) {
+            int targetThreadId = indexByOrder[threadId][j];
+            if (ordersOfThread[targetThreadId][threadId] < thredNumPerNode + 1) {
+                threadCluster[threadId][index] = targetThreadId;
+                index++;
+                threadCluster[targetThreadId][0] = -1;
+                continue;
+            }
+        }
+        threadCluster[threadId][index] = -1;
+    }
+}
+
 __attribute__ ((destructor)) void finalizer(void) {
     unsigned long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
     Logger::info("NumaPerf finalizer, totalRunningCycles:%lu\n", totalRunningCycles);
@@ -251,6 +297,24 @@ __attribute__ ((destructor)) void finalizer(void) {
                                  balancedThreadNum);
     balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
                                           balancedThread);
+    long threadClusters[MAX_THREAD_NUM][MAX_THREAD_NUM];
+    getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, (long **) threadClusters);
+    fprintf(dumpFile, "Part Three: Tight thread cluster:\n");
+    int cluster = 0;
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (threadClusters[i][0] < 0) {
+            continue;
+        }
+        cluster++;
+        fprintf(dumpFile, "Thread cluster-%d:", cluster);
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (threadClusters[i][j] < 0) {
+                break;
+            }
+            fprintf(dumpFile, "%ld,", threadClusters[i][j]);
+        }
+        fprintf(dumpFile, "\n");
+    }
 
     fprintf(dumpFile, "Part Three: Thread based imbalance access:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {

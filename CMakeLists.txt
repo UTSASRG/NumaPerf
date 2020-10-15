@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(NumaPerf)
 
 set(CMAKE_CXX_STANDARD 14)
+add_compile_definitions(NUMA_NODES=2)
 
 include_directories(source)
 include_directories(source/utils)
@@ -40,4 +41,5 @@ add_executable(NumaPerf
         source/utils/timer.h
         source/utils/memorypool.h
         source/utils/mm.hh
+        source/utils/sorts.h
         test/test.cpp)
