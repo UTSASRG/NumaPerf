@@ -79,8 +79,9 @@ public:
             blockSize = ADDRESSES::alignUpToWord(sizeof(ValueType) + META_DATA_SIZE);
         }
         unsigned long fragmentMappingSize = (fragmentSize / blockSize) * PAGE_SIZE;
-        this->fragmentMappingBitNum = Maths::getUpBoundPowerOf2(fragmentMappingSize);
-        this->fragmentMappingBitMask = Maths::getLowBoundBitMask(fragmentMappingSize);
+        this->fragmentMappingBitNum = Maths::getCeilingPowerOf2(fragmentMappingSize);
+        this->fragmentMappingBitMask = Maths::getCeilingBitMask(fragmentMappingSize);
+        this->fragmentSize = (1ul << this->fragmentMappingBitNum) / PAGE_SIZE * blockSize;
         lock.init();
     }
 
