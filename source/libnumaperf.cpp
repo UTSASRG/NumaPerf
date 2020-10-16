@@ -195,8 +195,8 @@ inline void
 getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *balancedThread, int balancedThreadNum,
                        long *threadCluster) {
 
-    int ordersOfThread[MAX_THREAD_NUM][MAX_THREAD_NUM];
-    int indexByOrder[MAX_THREAD_NUM][MAX_THREAD_NUM];
+    int *ordersOfThread = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM * MAX_THREAD_NUM);
+    int *indexByOrder = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM * MAX_THREAD_NUM);
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadCluster[i * MAX_THREAD_NUM] = MAX_THREAD_NUM;
         if (balancedThread[i]) {
@@ -208,13 +208,15 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
                 GlobalThreadBasedAccessNumber[i][j] = 0;
             }
         }
-        Sorts::getOrder(GlobalThreadBasedAccessNumber[i], ordersOfThread[i], largestThreadIndex + 1);
-        Sorts::sortToIndex(GlobalThreadBasedAccessNumber[i], indexByOrder[i], largestThreadIndex + 1);
+        Sorts::getOrder(GlobalThreadBasedAccessNumber[i], &(ordersOfThread[i * MAX_THREAD_NUM]),
+                        largestThreadIndex + 1);
+        Sorts::sortToIndex(GlobalThreadBasedAccessNumber[i], &(indexByOrder[i * MAX_THREAD_NUM]),
+                           largestThreadIndex + 1);
     }
-    int averageIndexByOrder[MAX_THREAD_NUM];
+    int *averageIndexByOrder = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM);
     Sorts::sortToIndex(threadBasedAverageAccessNumber, averageIndexByOrder, largestThreadIndex + 1);
 
-    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES;
+    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES + 1;
     for (long i = 0; i < largestThreadIndex + 1; i++) {
         unsigned long threadId = averageIndexByOrder[i];
         if (balancedThread[threadId] || threadCluster[threadId * MAX_THREAD_NUM] < 0) {
@@ -224,8 +226,8 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
         threadCluster[threadId * MAX_THREAD_NUM] = threadId;
         int index = 1;
         for (unsigned long j = 0; j < thredNumPerNode; j++) {
-            int targetThreadId = indexByOrder[threadId][j];
-            if (ordersOfThread[targetThreadId][threadId] < thredNumPerNode + 1) {
+            int targetThreadId = indexByOrder[threadId * MAX_THREAD_NUM + j];
+            if (ordersOfThread[targetThreadId * MAX_THREAD_NUM + threadId] < thredNumPerNode + 1) {
                 threadCluster[threadId * MAX_THREAD_NUM + index] = targetThreadId;
                 index++;
                 threadCluster[targetThreadId * MAX_THREAD_NUM] = -1;
@@ -234,6 +236,8 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
         }
         threadCluster[threadId * MAX_THREAD_NUM + index] = -1;
     }
+    Real::free(ordersOfThread);
+    Real::free(indexByOrder);
 }
 
 __attribute__ ((destructor)) void finalizer(void) {
@@ -297,21 +301,21 @@ __attribute__ ((destructor)) void finalizer(void) {
                                  balancedThreadNum);
     balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
                                           balancedThread);
-    long threadClusters[MAX_THREAD_NUM][MAX_THREAD_NUM];
+    long *threadClusters = (long *) Real::malloc(sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
     getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, (long *) threadClusters);
     fprintf(dumpFile, "Part Three: Tight thread cluster:\n");
     int cluster = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (threadClusters[i][0] < 0) {
+        if (threadClusters[i * MAX_THREAD_NUM] < 0) {
             continue;
         }
         cluster++;
         fprintf(dumpFile, "Thread cluster-%d:", cluster);
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            if (threadClusters[i][j] < 0) {
+            if (threadClusters[i * MAX_THREAD_NUM + j] < 0) {
                 break;
             }
-            fprintf(dumpFile, "%ld,", threadClusters[i][j]);
+            fprintf(dumpFile, "%ld,", threadClusters[i * MAX_THREAD_NUM + j]);
         }
         fprintf(dumpFile, "\n");
     }

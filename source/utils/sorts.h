@@ -12,24 +12,24 @@ public:
         memset(order, 0, sizeof(int) * length);
         unsigned long upValue = 0;
         int index = 0;
-        for (int i = 0; i < length; i++) {
+        for (int ii = 0; ii < length; ii++) {
             upValue = 0;
             index = 0;
-            for (int j = 0; j < length; j++) {
-                if (order[j] > 0) {
+            for (int jj = 0; jj < length; jj++) {
+                if (order[jj] > 0) {
                     continue;
                 }
-                if (upValue <= head[j]) {
-                    upValue = head[j];
-                    index = j;
+                if (upValue <= head[jj]) {
+                    upValue = head[jj];
+                    index = jj;
                 }
             }
-            order[index] = i + 1;
+            order[index] = ii + 1;
         }
     }
 
     static inline void sortToIndex(const unsigned long *head, int *indexByOrder, int length) {
-        int set[length + 1];
+        int *set = (int *) Real::malloc(sizeof(int) * (length + 1));
         memset(set, 0, sizeof(int) * (length + 1));
         unsigned long upValue = 0;
         int index = 0;
@@ -48,6 +48,7 @@ public:
             indexByOrder[k] = index;
             set[index] = 1;
         }
+        Real::free(set);
     }
 };
 
