@@ -191,14 +191,21 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
     }
 }
 
+typedef struct {
+    int num;
+    long bindedThreadId;
+    long threadId[MAX_THREAD_NUM];
+} ThreadCluster;
+
 inline void
 getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *balancedThread, int balancedThreadNum,
-                       long *threadCluster) {
+                       ThreadCluster *threadCluster) {
 
     int *ordersOfThread = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM * MAX_THREAD_NUM);
     int *indexByOrder = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM * MAX_THREAD_NUM);
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        threadCluster[i * MAX_THREAD_NUM] = MAX_THREAD_NUM;
+        threadCluster[i].num = 0;
+        threadCluster[i].bindedThreadId = -1;
         if (balancedThread[i]) {
             threadBasedAverageAccessNumber[i] = 0;
             continue;
@@ -216,25 +223,57 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
     int *averageIndexByOrder = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM);
     Sorts::sortToIndex(threadBasedAverageAccessNumber, averageIndexByOrder, largestThreadIndex + 1);
 
-    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES + 1;
-    for (long i = 0; i < largestThreadIndex + 1; i++) {
-        unsigned long threadId = averageIndexByOrder[i];
-        if (balancedThread[threadId] || threadCluster[threadId * MAX_THREAD_NUM] < 0) {
-            threadCluster[threadId * MAX_THREAD_NUM] = -1;
-            continue;
-        }
-        threadCluster[threadId * MAX_THREAD_NUM] = threadId;
-        int index = 1;
-        for (unsigned long j = 0; j < thredNumPerNode; j++) {
-            int targetThreadId = indexByOrder[threadId * MAX_THREAD_NUM + j];
-            if (ordersOfThread[targetThreadId * MAX_THREAD_NUM + threadId] < thredNumPerNode + 1) {
-                threadCluster[threadId * MAX_THREAD_NUM + index] = targetThreadId;
-                index++;
-                threadCluster[targetThreadId * MAX_THREAD_NUM] = -1;
+    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES;
+    for (int tryBind = 1; tryBind <= NUMA_NODES; tryBind++) {
+        int threadDistance = tryBind * thredNumPerNode;
+        for (long i = 0; i <= largestThreadIndex; i++) {
+            unsigned long threadId = averageIndexByOrder[i];
+            if (balancedThread[threadId]) {  // do not need binding
                 continue;
             }
+            int bindedThreadId = threadCluster[threadId].bindedThreadId;
+            if (bindedThreadId >= 0 && threadCluster[bindedThreadId].num >= thredNumPerNode) {  // this cluster has full
+                continue;
+            }
+            if (bindedThreadId < 0) {
+                threadCluster[threadId].bindedThreadId = threadId;
+                threadCluster[threadId].threadId[threadCluster[threadId].num] = threadId;
+                threadCluster[threadId].num = 1;
+                bindedThreadId = threadId;
+            }
+            for (unsigned long j = 0; j < threadDistance; j++) {
+                int targetThreadId = indexByOrder[threadId * MAX_THREAD_NUM + j];
+                if (balancedThread[targetThreadId]) { // do not need binding
+                    continue;
+                }
+                if (threadCluster[bindedThreadId].num >= thredNumPerNode) { // this cluster has full
+                    break;
+                }
+                if (ordersOfThread[targetThreadId * MAX_THREAD_NUM + threadId] > threadDistance) {
+                    continue;
+                }
+                int targetThreadBindedThreadId = threadCluster[targetThreadId].bindedThreadId;
+                if (targetThreadBindedThreadId < 0) {
+                    threadCluster[bindedThreadId].threadId[threadCluster[bindedThreadId].num] = targetThreadId;
+                    threadCluster[bindedThreadId].num++;
+                    threadCluster[targetThreadId].bindedThreadId = threadId;
+                    continue;
+                }
+                if (targetThreadBindedThreadId == bindedThreadId) {
+                    continue;
+                }
+                if (threadCluster[bindedThreadId].num + threadCluster[targetThreadBindedThreadId].num <
+                    thredNumPerNode) {
+                    for (int s = 0; s < threadCluster[targetThreadBindedThreadId].num; s++) {
+                        int threadInTargetCluster = threadCluster[targetThreadBindedThreadId].threadId[s];
+                        threadCluster[bindedThreadId].threadId[threadCluster[bindedThreadId].num] = threadInTargetCluster;
+                        threadCluster[bindedThreadId].num++;
+                        threadCluster[threadInTargetCluster].bindedThreadId = bindedThreadId;
+                    }
+                    threadCluster[targetThreadBindedThreadId].num = 0;
+                }
+            }
         }
-        threadCluster[threadId * MAX_THREAD_NUM + index] = -1;
     }
     Real::free(ordersOfThread);
     Real::free(indexByOrder);
@@ -301,24 +340,29 @@ __attribute__ ((destructor)) void finalizer(void) {
                                  balancedThreadNum);
     balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
                                           balancedThread);
-    long *threadClusters = (long *) Real::malloc(sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
-    getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, (long *) threadClusters);
+    ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
+    memset(threadClusters, 0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
+    getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, threadClusters);
     fprintf(dumpFile, "Part Three: Tight thread cluster:\n");
     int cluster = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (threadClusters[i * MAX_THREAD_NUM] < 0) {
+        if (threadClusters[i].num == 0) {
             continue;
         }
         cluster++;
         fprintf(dumpFile, "Thread cluster-%d:", cluster);
-        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            if (threadClusters[i * MAX_THREAD_NUM + j] < 0) {
-                break;
-            }
-            fprintf(dumpFile, "%ld,", threadClusters[i * MAX_THREAD_NUM + j]);
+        for (unsigned long j = 0; j < threadClusters[i].num; j++) {
+            fprintf(dumpFile, "%ld,", threadClusters[i].threadId[j]);
         }
         fprintf(dumpFile, "\n");
     }
+    fprintf(dumpFile, "Balanced Threads:");
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (balancedThread[i]) {
+            fprintf(dumpFile, "%ld,", i);
+        }
+    }
+    fprintf(dumpFile, "\n");
 
     fprintf(dumpFile, "Part Three: Thread based imbalance access:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
