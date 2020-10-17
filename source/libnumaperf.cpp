@@ -223,9 +223,12 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
     int *averageIndexByOrder = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM);
     Sorts::sortToIndex(threadBasedAverageAccessNumber, averageIndexByOrder, largestThreadIndex + 1);
 
-    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES;
+    int thredNumPerNode = (largestThreadIndex + 1) / NUMA_NODES + 1;
     for (int tryBind = 1; tryBind <= NUMA_NODES; tryBind++) {
         int threadDistance = tryBind * thredNumPerNode;
+        if (threadDistance > largestThreadIndex + 1) {
+            threadDistance = largestThreadIndex + 1;
+        }
         for (long i = 0; i <= largestThreadIndex; i++) {
             unsigned long threadId = averageIndexByOrder[i];
             if (balancedThread[threadId]) {  // do not need binding
