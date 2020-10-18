@@ -51,9 +51,10 @@ public:
     }
 
     inline void dump(FILE *file, int blackSpaceNum) {
-        char prefix[blackSpaceNum];
+        char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
+            prefix[i + 1] = '\0';
         }
         fprintf(file, "%sObject Start Address:   %p\n", prefix, (void *) (this->startAddress));
         fprintf(file, "%sObject Size:            %lu\n", prefix, this->size);

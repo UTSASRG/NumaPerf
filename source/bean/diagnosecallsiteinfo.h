@@ -116,9 +116,10 @@ public:
 
     inline void dump(FILE *file, unsigned long totalRunningCycles, int blackSpaceNum) {
         this->dump_call_stacks(file);
-        char prefix[blackSpaceNum];
+        char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
+            prefix[i + 1] = '\0';
         }
         fprintf(file, "%sSeriousScore:             %f\n", prefix,
                 2 * (double) (this->getSeriousScore()) / ((double) totalRunningCycles / AVERAGE_CYCLES_PERINSTRUCTION));

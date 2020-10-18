@@ -69,9 +69,10 @@ public:
     inline void dump(FILE *file, int blackSpaceNum) {
         this->pageDetailedAccessInfo.dump(file, blackSpaceNum + 2);
         this->objectInfo->dump(file, blackSpaceNum + 2);
-        char prefix[blackSpaceNum];
+        char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
+            prefix[i + 1] = '\0';
         }
         fprintf(file, "%sCall Site Stacks:\n", prefix);
         this->diagnoseCallSiteInfo->dump_call_stacks(file);

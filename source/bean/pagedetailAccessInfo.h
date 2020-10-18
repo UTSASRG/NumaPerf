@@ -159,9 +159,10 @@ public:
     }
 
     inline void dump(FILE *file, int blackSpaceNum) {
-        char prefix[blackSpaceNum];
+        char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
+            prefix[i + 1] = '\0';
         }
         fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
         fprintf(file, "%sFirstTouchThreadId:         %lu\n", prefix, this->firstTouchThreadId);
