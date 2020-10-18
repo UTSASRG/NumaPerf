@@ -213,6 +213,18 @@ public:
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
         fprintf(file, "%sFirstTouchThreadId:       %lu\n", prefix, this->firstTouchThreadId);
+        fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %lu/%lu\n", prefix,
+                this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
+        fprintf(file, "%sFalseSharing(sharing in each word):\n", prefix);
+        for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
+            if (wordThreadIdAndIsMultipleThreadsUnion[i] == MULTIPLE_THREAD) {
+                fprintf(file, "%s%d-th word:%s,", prefix, i, "true");
+            } else {
+                fprintf(file, "%s%d-th word:%s,", prefix, i, "false");
+            }
+        }
+        fprintf(file, "\n");
+
         for (int i = 0; i < MAX_THREAD_NUM; i++) {
             if (readWritNum[i].writingNum <= 0) {
                 continue;
@@ -223,7 +235,12 @@ public:
             if (readWritNum[i].readingNum <= 0) {
                 continue;
             }
+#ifdef SAMPLING
+            fprintf(file, "%s    Reading Number In Thread:%d is %u\n", prefix, i,
+                    readWritNum[i].readingNum * SAMPLING_FREQUENCY);
+#else
             fprintf(file, "%s    Reading Number In Thread:%d is %u\n", prefix, i, readWritNum[i].readingNum);
+#endif
         }
         // print concurrent word index
     }
