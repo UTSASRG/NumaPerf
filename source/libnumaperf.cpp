@@ -27,8 +27,6 @@
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
-#define SAMPLING
-
 #define BASIC_PAGE_SHADOW_MAP_SIZE (32ul * TB)
 #define MAX_HANDLE_ADDRESS BASIC_PAGE_SHADOW_MAP_SIZE / sizeof(PageBasicAccessInfo) * PAGE_SIZE
 
@@ -705,7 +703,13 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
                                                                      pageBasicAccessInfo->getFirstTouchThreadId());
 }
 
-inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
+#ifdef SAMPLING
+
+inline void
+recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type, bool sampled) {
+#else
+    inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
+#endif
 //    Logger::debug("record cache detailed info\n");
     CacheLineDetailedInfo *cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
     if (NULL == cacheLineInfoPtr) {
@@ -713,7 +717,11 @@ inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long first
                                                                          firstTouchThreadId);
         cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
     }
+#ifdef SAMPLING
+    cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr, sampled);
+#else
     cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr);
+#endif
 //    Logger::info("addr:%p,seriousScore:%lu,mainThread:%lu,otherThreads:%lu\n", cacheLineInfoPtr,
 //                 cacheLineInfoPtr->seriousScore,
 //                 cacheLineInfoPtr->getInvalidationNumberInFirstThread(),
@@ -740,11 +748,13 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 
+    bool sampled = false;
     if (!needPageDetailInfo) {
         // todo thread local sampling is still too costing
 #ifdef SAMPLING
         pageBasicSamplingFrequency++;
         if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
+            sampled = true;
             pageBasicSamplingFrequency = 0;
             threadBasedAccessNumber[firstTouchThreadId]++;
             basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
@@ -766,6 +776,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #ifdef SAMPLING
         pageDetailSamplingFrequency++;
         if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
+            sampled = true;
             pageDetailSamplingFrequency = 0;
             threadBasedAccessNumber[firstTouchThreadId]++;
             recordDetailsForPageSharing(basicPageAccessInfo, addr);
@@ -777,7 +788,11 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     }
 
     if (needCahceDetailInfo) {
+#ifdef SAMPLING
+        recordDetailsForCacheSharing(addr, firstTouchThreadId, type, sampled);
+#else
         recordDetailsForCacheSharing(addr, firstTouchThreadId, type);
+#endif
     }
 // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
 }

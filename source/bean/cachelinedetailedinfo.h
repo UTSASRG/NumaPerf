@@ -19,6 +19,8 @@ class CacheLineDetailedInfo {
     unsigned long seriousScore;
     unsigned long invalidationNumberInFirstThread;
     unsigned long invalidationNumberInOtherThreads;
+    unsigned long readNumBeforeLastWrite;
+    unsigned long continualReadNumAfterAWrite;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
     ReadWritNum readWritNum[MAX_THREAD_NUM];
     unsigned short threadIdAndIsMultipleThreadsUnion;
@@ -140,7 +142,12 @@ public:
     }
 
     inline void
-    recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
+#ifdef SAMPLING
+    recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr,
+                 bool sampled) {
+#else
+        recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
+#endif
         if (firstTouchThreadId == threadId) {
             if (recordNewInvalidation(threadId, type)) {
                 invalidationNumberInFirstThread++;
@@ -152,11 +159,21 @@ public:
         }
 
         if (type == E_ACCESS_WRITE) {
+            readNumBeforeLastWrite += continualReadNumAfterAWrite;
+            continualReadNumAfterAWrite = 0;
             readWritNum[threadId].writingNum++;
         }
 
         if (type == E_ACCESS_READ) {
+#ifdef SAMPLING
+            if (sampled) {
+                continualReadNumAfterAWrite++;
+                readWritNum[threadId].readingNum++;
+            }
+#else
+            continualReadNumAfterAWrite++;
             readWritNum[threadId].readingNum++;
+#endif
         }
 
         if (threadIdAndIsMultipleThreadsUnion == 0) {
