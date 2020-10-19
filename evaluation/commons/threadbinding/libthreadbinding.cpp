@@ -9,6 +9,7 @@
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <unistd.h>
+#include <assert.h>
 
 char CUSTOMIZE_THREAD_BINDING_CONFIG_FILE[100] = "./thread_binding.config\0";
 unsigned long largestThreadIndex = 0;
@@ -86,13 +87,17 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-
+#if 1
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg) __THROW {
     unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
     if (isRoundrobinBInding) {
         fprintf(stderr, "pthread create thread%lu--node%lu\n", threadIndex, threadIndex % NUMA_NODES);
+#if 1
         return Real::pthread_create(tid, &(attrBinding[threadIndex % NUMA_NODES]), start_routine, arg);
+#else
+        return Real::pthread_create(tid, &(attrBinding[0]), start_routine, arg);
+#endif
     }
     if (threadToNode[threadIndex] < 0) {
         fprintf(stderr, "pthread create error : thread to node data lost\n");
@@ -101,3 +106,4 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     fprintf(stderr, "pthread create thread%lu--node%d\n", threadIndex, threadToNode[threadIndex]);
     return Real::pthread_create(tid, &(attrBinding[threadToNode[threadIndex]]), start_routine, arg);
 }
+#endif
