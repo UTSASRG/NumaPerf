@@ -57,11 +57,11 @@ static bool importCustomizeThreadBindingConfig() {
         }
         int numberStartIndex = 0;
         for (int j = 0; j < length; j++) {
-            if (buff[j] == ',') {
+            if (buff[j] == ',' || buff[j] == '\n'|| buff[j] == '\0') {
                 buff[j] = '\0';
                 unsigned int threadIndex = atoi(&(buff[numberStartIndex]));
                 numberStartIndex = j + 1;
-                threadToNode[numberStartIndex] = i;
+                threadToNode[threadIndex] = i;
                 continue;
             }
             if (buff[j] == '\n' || buff[j] == '\0') {
@@ -100,7 +100,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 #endif
     }
     if (threadToNode[threadIndex] < 0) {
-        fprintf(stderr, "pthread create error : thread to node data lost\n");
+        fprintf(stderr, "pthread create error : thread to node data lost, threadIndex:%lu\n",threadIndex);
         exit(-1);
     }
     fprintf(stderr, "pthread create thread%lu--node%d\n", threadIndex, threadToNode[threadIndex]);
