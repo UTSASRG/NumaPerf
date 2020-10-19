@@ -3,6 +3,7 @@ project(NumaPerf)
 
 set(CMAKE_CXX_STANDARD 14)
 add_compile_definitions(NUMA_NODES=2)
+add_definitions(-DDEV)
 
 include_directories(source)
 include_directories(source/utils)
@@ -42,4 +43,7 @@ add_executable(NumaPerf
         source/utils/memorypool.h
         source/utils/mm.hh
         source/utils/sorts.h
+        evaluation/commons/resource/libthreadbinding.cpp
+        evaluation/commons/resource/libthreadbinding.h
+        evaluation/commons/resource/real.h
         test/test.cpp)
