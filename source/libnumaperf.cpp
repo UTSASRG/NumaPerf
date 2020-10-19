@@ -646,24 +646,25 @@ void *realloc(void *ptr, size_t size) {
     return newObjPtr;
 }
 
-void free(void *ptr)
-
-__THROW {
-__free(ptr);
+void free(void *ptr) __THROW {
+    __free(ptr);
 }
+
+typedef struct {
+    void *startRoutinePtr;
+    void *parameterPtr;
+    unsigned long threadIndex;
+} ThreadStartRoutineParameter;
 
 typedef void *(*threadStartRoutineFunPtr)(void *);
 
 void *initThreadIndexRoutine(void *args) {
-
-    if (currentThreadIndex == 0) {
-        currentThreadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
+    ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) args;
+    currentThreadIndex = arguments->threadIndex;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
-        Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
-    }
     memset(threadBasedAccessNumber, 0, sizeof(unsigned long) * MAX_THREAD_NUM);
-    threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) ((void **) args)[0];
-    void *result = startRoutineFunPtr(((void **) args)[1]);
+    threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
+    void *result = startRoutineFunPtr(arguments->parameterPtr);
     GlobalLockAcquireNumber[currentThreadIndex] = lockAcquireNumber;
     memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedAccessNumber,
            sizeof(unsigned long) * MAX_THREAD_NUM);
@@ -672,22 +673,21 @@ void *initThreadIndexRoutine(void *args) {
 }
 
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg)
-
-__THROW {
+                   void *(*start_routine)(void *), void *arg) __THROW {
 //Logger::debug("pthread create\n");
-if (!inited) {
-initializer();
+    if (!inited) {
+        initializer();
 
-}
-void *arguments = Real::malloc(sizeof(void *) * 2);
-((void **) arguments)[0] = (void *)
-start_routine;
-((void **) arguments)[1] =
-arg;
-return
-Real::pthread_create(tid, attr, initThreadIndexRoutine, arguments
-);
+    }
+    ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) Real::malloc(
+            sizeof(ThreadStartRoutineParameter));
+    unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
+    Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
+
+    arguments->startRoutinePtr = (void *) start_routine;
+    arguments->parameterPtr = arg;
+    arguments->threadIndex = threadIndex;
+    return Real::pthread_create(tid, attr, initThreadIndexRoutine, (void *) arguments);
 }
 
 inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
