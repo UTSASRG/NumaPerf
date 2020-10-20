@@ -14,6 +14,7 @@
 char CUSTOMIZE_THREAD_BINDING_CONFIG_FILE[100] = "./thread_binding.config\0";
 unsigned long largestThreadIndex = 0;
 pthread_attr_t attrBinding[NUMA_NODES];
+cpu_set_t cpuSet[NUMA_NODES];
 int threadToNode[MAX_THREAD_NUM];
 bool isRoundrobinBInding;
 
@@ -28,11 +29,13 @@ static void initThreadAttr() {
         pthread_attr_init(&(attrBinding[i]));
         pthread_attr_setdetachstate(&(attrBinding[i]), PTHREAD_CREATE_JOINABLE);
         CPU_ZERO_S(size, cpusetp);
+        CPU_ZERO_S(size, &(cpuSet[i]));
         for (int cpu = 0; cpu < totalCpus; cpu++) {
             //          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
             if (numa_bitmask_isbitset(bitmask, cpu)) {
                 //      fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
                 CPU_SET_S(cpu, size, cpusetp);
+                CPU_SET_S(cpu, size, &(cpuSet[i]));
             }
         }
         pthread_attr_setaffinity_np(&(attrBinding[i]), size, cpusetp);
@@ -57,7 +60,7 @@ static bool importCustomizeThreadBindingConfig() {
         }
         int numberStartIndex = 0;
         for (int j = 0; j < length; j++) {
-            if (buff[j] == ',' || buff[j] == '\n'|| buff[j] == '\0') {
+            if (buff[j] == ',' || buff[j] == '\n' || buff[j] == '\0') {
                 buff[j] = '\0';
                 unsigned int threadIndex = atoi(&(buff[numberStartIndex]));
                 numberStartIndex = j + 1;
@@ -82,12 +85,32 @@ static void initializer(void) {
     } else {
         fprintf(stderr, "thread binding using customized config\n");
     }
-
+    // bind the main thread
+    unsigned long threadIndex = 0;
+    if (isRoundrobinBInding) {
+        fprintf(stderr, "pthread create thread%lu--node%lu\n", threadIndex, 0);
+        if (sched_setaffinity(threadIndex, sizeof(cpuSet[0]), &(cpuSet[0])) == -1) {
+            fprintf(stderr, "warning: could not set CPU affinity\n");
+            abort();
+        }
+    } else {
+        if (threadToNode[threadIndex] < 0) {
+            fprintf(stderr, "pthread create error : thread to node data lost, threadIndex:%lu\n", threadIndex);
+            exit(-1);
+        }
+        fprintf(stderr, "pthread create thread%lu--node%d\n", threadIndex, threadToNode[threadIndex]);
+        if (sched_setaffinity(threadIndex, sizeof(cpuSet[threadToNode[threadIndex]]),
+                              &(cpuSet[threadToNode[threadIndex]])) == -1) {
+            fprintf(stderr, "warning: could not set CPU affinity\n");
+            abort();
+        }
+    }
 }
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 #if 1
+
 int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg) __THROW {
     unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
@@ -100,10 +123,11 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 #endif
     }
     if (threadToNode[threadIndex] < 0) {
-        fprintf(stderr, "pthread create error : thread to node data lost, threadIndex:%lu\n",threadIndex);
+        fprintf(stderr, "pthread create error : thread to node data lost, threadIndex:%lu\n", threadIndex);
         exit(-1);
     }
     fprintf(stderr, "pthread create thread%lu--node%d\n", threadIndex, threadToNode[threadIndex]);
     return Real::pthread_create(tid, &(attrBinding[threadToNode[threadIndex]]), start_routine, arg);
 }
+
 #endif
