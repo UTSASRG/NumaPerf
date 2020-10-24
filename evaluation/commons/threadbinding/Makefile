@@ -5,7 +5,7 @@ all: libthreadbinding.so
 SRCS = libthreadbinding.cpp
 
 libthreadbinding.so: $(SRCS)
-	clang -DNUMA_NODES=2 -DMAX_THREAD_NUM=1024 -g -O3 -shared -fPIC -fno-omit-frame-pointer -o libthreadbinding.so $(SRCS) -ldl -lpthread -lnuma
+	clang -DNUMA_NODES=8 -DMAX_THREAD_NUM=1024 -g -O3 -shared -fPIC -fno-omit-frame-pointer -o libthreadbinding.so $(SRCS) -ldl -lpthread -lnuma
 
 clean:
 	rm libthreadbinding.so

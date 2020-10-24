@@ -88,7 +88,7 @@ static void initializer(void) {
     // bind the main thread
     unsigned long threadIndex = 0;
     if (isRoundrobinBInding) {
-        fprintf(stderr, "pthread create thread%lu--node%lu\n", threadIndex, 0);
+        fprintf(stderr, "pthread create thread%lu--node%lu\n", threadIndex, 0lu);
         if (sched_setaffinity(threadIndex, sizeof(cpuSet[0]), &(cpuSet[0])) == -1) {
             fprintf(stderr, "warning: could not set CPU affinity\n");
             abort();

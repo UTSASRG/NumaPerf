@@ -44,6 +44,8 @@ add_executable(NumaPerf
         source/utils/memorypool.h
         source/utils/mm.hh
         source/utils/sorts.h
+        evaluation/commons/interleaved/libinterleaved.cpp
+        evaluation/commons/interleaved/libinterleaved.h
         evaluation/commons/threadbinding/libthreadbinding.cpp
         evaluation/commons/threadbinding/libthreadbinding.h
         evaluation/commons/threadbinding/real.h
