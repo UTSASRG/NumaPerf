@@ -35,7 +35,7 @@ public:
     }
 
     inline unsigned long getSeriousScore() {
-        return this->pageDetailedAccessInfo.getSeriousScore();
+        return this->pageDetailedAccessInfo.getTotalRemoteAccess();
     }
 
     inline bool operator<(DiagnosePageInfo &diagnoseCacheLineInfo) {
@@ -66,8 +66,8 @@ public:
         return &pageDetailedAccessInfo;
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
-        this->pageDetailedAccessInfo.dump(file, blackSpaceNum + 2);
+    inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
+        this->pageDetailedAccessInfo.dump(file, blackSpaceNum + 2, totalRunningCycles);
         this->objectInfo->dump(file, blackSpaceNum + 2);
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {

@@ -109,7 +109,7 @@ public:
         return invalidationNumberInOtherThreads;
     }
 
-    inline unsigned long getSeriousScore() {
+    inline unsigned long getTotalRemoteAccess() {
         if (this->seriousScore != 0) {
             return this->seriousScore;
         }
@@ -118,27 +118,27 @@ public:
     }
 
     inline bool operator<(CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        return this->getSeriousScore() < cacheLineDetailedInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() < cacheLineDetailedInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>(CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        return this->getSeriousScore() > cacheLineDetailedInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() > cacheLineDetailedInfo.getTotalRemoteAccess();
     }
 
     inline bool operator<=(CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        return this->getSeriousScore() <= cacheLineDetailedInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() <= cacheLineDetailedInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        return this->getSeriousScore() >= cacheLineDetailedInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() >= cacheLineDetailedInfo.getTotalRemoteAccess();
     }
 
     inline bool operator==(CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        return this->getSeriousScore() == cacheLineDetailedInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() == cacheLineDetailedInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(unsigned long seriScore) {
-        return this->getSeriousScore() >= seriScore;
+        return this->getTotalRemoteAccess() >= seriScore;
     }
 
     inline void
@@ -203,14 +203,15 @@ public:
         }
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
+    inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
             prefix[i + 1] = '\0';
         }
         fprintf(file, "%sCacheLineStartAddress:    %p\n", prefix, (void *) (this->startAddress));
-        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
+        fprintf(file, "%sSeriousScore:             %f\n", prefix,
+                Scores::getSeriousScore(getTotalRemoteAccess(), totalRunningCycles));
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
         fprintf(file, "%sFirstTouchThreadId:       %lu\n", prefix, this->firstTouchThreadId);

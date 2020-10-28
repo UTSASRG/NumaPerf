@@ -124,7 +124,7 @@ public:
         return accessNumInOtherThread;
     }
 
-    inline unsigned long getSeriousScore() {
+    inline unsigned long getTotalRemoteAccess() {
 //        return Scores::getScoreForAccess(this->getAccessNumberByFirstTouchThread(objStartAddress, size),
 //                                         this->getAccessNumberByOtherTouchThread(objStartAddress, size));
         return this->getAccessNumberByOtherTouchThread(0, 0);
@@ -135,30 +135,30 @@ public:
     }
 
     inline bool operator<(PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore() < pageDetailedAccessInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() < pageDetailedAccessInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>(PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore() > pageDetailedAccessInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() > pageDetailedAccessInfo.getTotalRemoteAccess();
     }
 
     inline bool operator<=(PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore() <= pageDetailedAccessInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() <= pageDetailedAccessInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore() >= pageDetailedAccessInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() >= pageDetailedAccessInfo.getTotalRemoteAccess();
     }
 
     inline bool operator==(PageDetailedAccessInfo &pageDetailedAccessInfo) {
-        return this->getSeriousScore() == pageDetailedAccessInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() == pageDetailedAccessInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(unsigned long seriousScore) {
-        return this->getSeriousScore() >= seriousScore;
+        return this->getTotalRemoteAccess() >= seriousScore;
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
+    inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
@@ -166,7 +166,7 @@ public:
         }
         fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
         fprintf(file, "%sFirstTouchThreadId:         %lu\n", prefix, this->firstTouchThreadId);
-//        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore(0, 0));
+//        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getTotalRemoteAccess(0, 0));
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,

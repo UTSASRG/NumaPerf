@@ -36,8 +36,8 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    inline unsigned long getSeriousScore() {
-        return this->cacheLineDetailedInfo.getSeriousScore();
+    inline unsigned long getTotalRemoteAccess() {
+        return this->cacheLineDetailedInfo.getTotalRemoteAccess();
     }
 
     inline bool operator<(DiagnoseCacheLineInfo &diagnoseCacheLineInfo) {
@@ -68,8 +68,8 @@ public:
         return &cacheLineDetailedInfo;
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
-        this->cacheLineDetailedInfo.dump(file, blackSpaceNum + 2);
+    inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
+        this->cacheLineDetailedInfo.dump(file, blackSpaceNum + 2, totalRunningCycles);
         this->objectInfo->dump(file, blackSpaceNum + 2);
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {

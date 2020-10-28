@@ -291,9 +291,9 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     PriorityQueue<DiagnoseCallSiteInfo> topDiadCallSiteInfoQueue(MAX_TOP_CALL_SITE_INFO);
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
-//        fprintf(stderr, "%lu ,", iterator.getData()->getSeriousScore());
+//        fprintf(stderr, "%lu ,", iterator.getData()->getTotalRemoteAccess());
 //        fprintf(stderr, "callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
-        if (iterator.getData()->getSeriousScore() == 0) {
+        if (iterator.getData()->getTotalRemoteAccess() <= SERIOUS_SCORE_THRESHOLD) {
             continue;
         }
         topDiadCallSiteInfoQueue.insert(iterator.getData());
@@ -382,14 +382,14 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile, "Part One: Top %d problematical pages:\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
     for (int i = 0; i < topPageQueue.getSize(); i++) {
         fprintf(dumpFile, "  Top problematical pages %d:\n", i + 1);
-        topPageQueue.getValues()[i]->dump(dumpFile, 4);
+        topPageQueue.getValues()[i]->dump(dumpFile, 4, totalRunningCycles);
         fprintf(dumpFile, "\n\n");
     }
 
     fprintf(dumpFile, "Part Two: Top %d problematical cachelines:\n", MAX_TOP_CACHELINE_DETAIL_INFO);
     for (int i = 0; i < topCacheLineQueue.getSize(); i++) {
         fprintf(dumpFile, "  Top problematical cachelines %d:\n", i + 1);
-        topCacheLineQueue.getValues()[i]->dump(dumpFile, 4);
+        topCacheLineQueue.getValues()[i]->dump(dumpFile, 4, totalRunningCycles);
         fprintf(dumpFile, "\n\n");
     }
 
@@ -485,7 +485,7 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
             continue;
         }
 
-        unsigned long seriousScore = pageDetailedAccessInfo->getSeriousScore();
+        unsigned long seriousScore = pageDetailedAccessInfo->getTotalRemoteAccess();
 
         // insert into global top page queue
         if (topPageQueue.mayCanInsert(seriousScore)) {
@@ -529,7 +529,7 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         if (NULL == cacheLineDetailedInfo) {
             continue;
         }
-        unsigned long seriousScore = cacheLineDetailedInfo->getSeriousScore();
+        unsigned long seriousScore = cacheLineDetailedInfo->getTotalRemoteAccess();
         // insert into global top cache queue
         if (topCacheLineQueue.mayCanInsert(seriousScore)) {
             DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(

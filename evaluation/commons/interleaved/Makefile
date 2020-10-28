@@ -1,4 +1,4 @@
-all: libthreadbinding.so
+all: libinterleaved.so
 
 # INCLUDEPATH = /usr/include/x86_64-linux-gnu/c++/4.8/
 

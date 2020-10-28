@@ -89,16 +89,15 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    inline unsigned long getSeriousScore() const {
+    inline unsigned long getTotalRemoteAccess() const {
         //todo
-        return Scores::getScoreForCacheInvalid(allInvalidNumInMainThread, allInvalidNumInOtherThreads) +
-               allAccessNumInOtherThread;
+        return allInvalidNumInOtherThreads + allAccessNumInOtherThread;
     }
 
     inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
-        if (topCacheLineDetailQueue.mayCanInsert(cacheLineDetailedInfo->getSeriousScore())) {
+        if (topCacheLineDetailQueue.mayCanInsert(cacheLineDetailedInfo->getTotalRemoteAccess())) {
             return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
 //            CacheLineDetailedInfo *oldCacheLineInfo = topCacheLineDetailQueue.insert(
 //                    cacheLineDetailedInfo->copy());
@@ -122,7 +121,7 @@ public:
             this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
                     objectInfo->getStartAddress(), objectInfo->getSize());
         }
-        if (topPageDetailedAccessInfoQueue.mayCanInsert(pageDetailedAccessInfo->getSeriousScore())) {
+        if (topPageDetailedAccessInfoQueue.mayCanInsert(pageDetailedAccessInfo->getTotalRemoteAccess())) {
             return topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo);
 //            PageDetailedAccessInfo *oldPageInfo = topPageDetailedAccessInfoQueue.insert(pageDetailedAccessInfo->copy());
 //            if (NULL != oldPageInfo) {
@@ -133,27 +132,27 @@ public:
     }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() < diagnoseObjInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() < diagnoseObjInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() > diagnoseObjInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() > diagnoseObjInfo.getTotalRemoteAccess();
     }
 
     inline bool operator<=(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() <= diagnoseObjInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() <= diagnoseObjInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() >= diagnoseObjInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() >= diagnoseObjInfo.getTotalRemoteAccess();
     }
 
     inline bool operator==(const DiagnoseObjInfo &diagnoseObjInfo) {
-        return this->getSeriousScore() == diagnoseObjInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() == diagnoseObjInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(unsigned long seriousScore) {
-        return this->getSeriousScore() >= seriousScore;
+        return this->getTotalRemoteAccess() >= seriousScore;
     }
 
     inline unsigned long getAllInvalidNumInMainThread() const {
@@ -172,7 +171,7 @@ public:
         return allAccessNumInOtherThread;
     }
 
-    inline void dump(FILE *file, int blackSpaceNum) {
+    inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
@@ -180,18 +179,19 @@ public:
         }
 
         this->objectInfo->dump(file, blackSpaceNum);
-        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getSeriousScore());
+        fprintf(file, "%sSeriousScore:             %f\n", prefix,
+                Scores::getSeriousScore(getTotalRemoteAccess(), totalRunningCycles));
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getAllInvalidNumInMainThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getAllInvalidNumInOtherThreads());
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAllAccessNumInMainThread());
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAllAccessNumInOtherThread());
         for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
             fprintf(file, "%sTop CacheLines %d:\n", prefix, i);
-            topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
+            topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
         }
         for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
             fprintf(file, "%sTop Pages %d:\n", prefix, i);
-            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
+            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
         }
 
     }

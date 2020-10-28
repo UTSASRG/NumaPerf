@@ -42,7 +42,7 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    inline unsigned long getSeriousScore() const {
+    inline unsigned long getTotalRemoteAccess() const {
         //todo
         return allAccessNumInOtherThread + allInvalidNumInOtherThreads;
     }
@@ -55,7 +55,7 @@ public:
     }
 
     inline bool mayCanInsertToTopObjQueue(DiagnoseObjInfo *diagnoseObjInfo) {
-        return topObjInfoQueue.mayCanInsert(diagnoseObjInfo->getSeriousScore());
+        return topObjInfoQueue.mayCanInsert(diagnoseObjInfo->getTotalRemoteAccess());
     }
 
     inline DiagnoseObjInfo *insertToTopObjQueue(DiagnoseObjInfo *diagnoseObjInfo, bool withLock = true) {
@@ -63,23 +63,23 @@ public:
     }
 
     inline bool operator<(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
-        return this->getSeriousScore() < diagnoseCallSiteInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() < diagnoseCallSiteInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
-        return this->getSeriousScore() > diagnoseCallSiteInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() > diagnoseCallSiteInfo.getTotalRemoteAccess();
     }
 
     inline bool operator<=(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
-        return this->getSeriousScore() <= diagnoseCallSiteInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() <= diagnoseCallSiteInfo.getTotalRemoteAccess();
     }
 
     inline bool operator>=(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
-        return this->getSeriousScore() >= diagnoseCallSiteInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() >= diagnoseCallSiteInfo.getTotalRemoteAccess();
     }
 
     inline bool operator==(const DiagnoseCallSiteInfo &diagnoseCallSiteInfo) {
-        return this->getSeriousScore() == diagnoseCallSiteInfo.getSeriousScore();
+        return this->getTotalRemoteAccess() == diagnoseCallSiteInfo.getTotalRemoteAccess();
     }
 
     inline void setCallStack(unsigned long *callStack, int startIndex, int length) {
@@ -114,6 +114,10 @@ public:
         }
     }
 
+    inline double getSeriousScore(unsigned long totalRunningCycles) {
+        return Scores::getSeriousScore(getTotalRemoteAccess(), totalRunningCycles);
+    }
+
     inline void dump(FILE *file, unsigned long totalRunningCycles, int blackSpaceNum) {
         this->dump_call_stacks(file);
         char prefix[blackSpaceNum + 2];
@@ -121,15 +125,14 @@ public:
             prefix[i] = ' ';
             prefix[i + 1] = '\0';
         }
-        fprintf(file, "%sSeriousScore:             %f\n", prefix,
-                2 * (double) (this->getSeriousScore()) / ((double) totalRunningCycles / AVERAGE_CYCLES_PERINSTRUCTION));
+        fprintf(file, "%sSeriousScore:             %f\n", prefix, this->getSeriousScore(totalRunningCycles));
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidNumInMainThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidNumInOtherThread());
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAccessNumInMainThread());
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAccessNumInOtherThread());
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
             fprintf(file, "%sTop Object %d:\n", prefix, i);
-            topObjInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2);
+            topObjInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
         }
     }
 
