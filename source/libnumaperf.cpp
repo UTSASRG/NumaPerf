@@ -343,28 +343,28 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
     fprintf(dumpFile, "\n");
 
-    fprintf(dumpFile, "Part Two: Thread based imbalance detection & threads binding recommendation.\n");
+    fprintf(dumpFile, "Part Two: Thread based imbalance detection & threads binding recommendation:\n\n");
     unsigned long threadBasedAverageAccessNumber[MAX_THREAD_NUM];
     unsigned long threadBasedAccessNumberDeviation[MAX_THREAD_NUM];
     bool balancedThread[MAX_THREAD_NUM];
     int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
                                                         threadBasedAccessNumberDeviation, balancedThread);
-    fprintf(dumpFile, "2.1 Balanced Threads:");
+    fprintf(dumpFile, "2.1 Balanced Threads:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (balancedThread[i]) {
             fprintf(dumpFile, "%ld,", i);
         }
     }
-    fprintf(dumpFile, "\n");
+    fprintf(dumpFile, "\n\n");
 
-    fprintf(dumpFile, "2.2 ImBalanced Threads:");
+    fprintf(dumpFile, "2.2 ImBalanced Threads:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (!balancedThread[i]) {
             fprintf(dumpFile, "%ld,", i);
         }
     }
-    fprintf(dumpFile, "\n");
-    fprintf(dumpFile, "2.3 Threads binding recomendations\n:");
+    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile, "2.3 Threads binding recomendations:\n");
     // get threads binding recommendations
     ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
     memset(threadClusters, 0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
@@ -381,7 +381,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
         fprintf(dumpFile, "\n");
     }
-
+    fprintf(dumpFile, "\n\n");
 #ifdef DEBUG_LOG
     fprintf(dumpFile, "2.4 Thread based imbalance access:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
