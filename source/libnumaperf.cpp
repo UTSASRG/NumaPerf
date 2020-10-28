@@ -280,6 +280,32 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
     Real::free(indexByOrder);
 }
 
+int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
+                                unsigned long *threadBasedAccessNumberDeviation, bool *balancedThread) {
+    preAccessThreadBasedAccessNumber();
+    getThreadBasedAverageAccessNumber(threadBasedAverageAccessNumber);
+    getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
+    int balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
+                                              balancedThread);
+#ifdef DEBUG_LOG
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (threadBasedAverageAccessNumber[i] > 0 || threadBasedAccessNumberDeviation[i] > 0) {
+            fprintf(dumpFile, "  Thread-:%lu, thread based access number average  : %lu\n", i,
+                    threadBasedAverageAccessNumber[i]);
+            fprintf(dumpFile, "  Thread-:%lu, thread based access number deviation: %lu\n", i,
+                    threadBasedAccessNumberDeviation[i]);
+        }
+    }
+    fprintf(dumpFile, "\n");
+#endif
+    getAverageWOBalancedThread(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum);
+    getDeviationWOBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation, balancedThread,
+                                 balancedThreadNum);
+    balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
+                                          balancedThread);
+    return balancedThreadNum;
+}
+
 __attribute__ ((destructor)) void finalizer(void) {
     unsigned long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
     Logger::info("NumaPerf finalizer, totalRunningCycles:%lu\n", totalRunningCycles);
@@ -304,9 +330,10 @@ __attribute__ ((destructor)) void finalizer(void) {
         exit(9);
     }
     fprintf(dumpFile, "Table of Contents\n");
-    fprintf(dumpFile, "    Part One: Top %d problematical pages.\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
-    fprintf(dumpFile, "    Part Two: Top %d problematical cachelines.\n", MAX_TOP_CACHELINE_DETAIL_INFO);
+    fprintf(dumpFile, "    Part One: Thread based lock require number.\n");
+    fprintf(dumpFile, "    Part Two: Thread based imbalance detection & threads binding recommendation.\n");
     fprintf(dumpFile, "    Part Three: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
+
 
     fprintf(dumpFile, "Part One: Thread based lock require number:\n");
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
@@ -316,35 +343,32 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
     fprintf(dumpFile, "\n");
 
-    fprintf(dumpFile, "Part Two: Thread based access average and deviation:\n");
+    fprintf(dumpFile, "Part Two: Thread based imbalance detection & threads binding recommendation.\n");
     unsigned long threadBasedAverageAccessNumber[MAX_THREAD_NUM];
     unsigned long threadBasedAccessNumberDeviation[MAX_THREAD_NUM];
     bool balancedThread[MAX_THREAD_NUM];
-    preAccessThreadBasedAccessNumber();
-    getThreadBasedAverageAccessNumber(threadBasedAverageAccessNumber);
-    getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
-
+    int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
+                                                        threadBasedAccessNumberDeviation, balancedThread);
+    fprintf(dumpFile, "2.1 Balanced Threads:");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (threadBasedAverageAccessNumber[i] > 0 || threadBasedAccessNumberDeviation[i] > 0) {
-            fprintf(dumpFile, "  Thread-:%lu, thread based access number average  : %lu\n", i,
-                    threadBasedAverageAccessNumber[i]);
-            fprintf(dumpFile, "  Thread-:%lu, thread based access number deviation: %lu\n", i,
-                    threadBasedAccessNumberDeviation[i]);
+        if (balancedThread[i]) {
+            fprintf(dumpFile, "%ld,", i);
         }
     }
     fprintf(dumpFile, "\n");
 
-    int balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
-                                              balancedThread);
-    getAverageWOBalancedThread(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum);
-    getDeviationWOBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation, balancedThread,
-                                 balancedThreadNum);
-    balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
-                                          balancedThread);
+    fprintf(dumpFile, "2.2 ImBalanced Threads:");
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (!balancedThread[i]) {
+            fprintf(dumpFile, "%ld,", i);
+        }
+    }
+    fprintf(dumpFile, "\n");
+    fprintf(dumpFile, "2.3 Threads binding recomendations\n:");
+    // get threads binding recommendations
     ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
     memset(threadClusters, 0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
     getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, threadClusters);
-    fprintf(dumpFile, "Part Three: Tight thread cluster:\n");
     int cluster = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadClusters[i].num == 0) {
@@ -357,15 +381,9 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
         fprintf(dumpFile, "\n");
     }
-    fprintf(dumpFile, "Balanced Threads:");
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (balancedThread[i]) {
-            fprintf(dumpFile, "%ld,", i);
-        }
-    }
-    fprintf(dumpFile, "\n");
 
-    fprintf(dumpFile, "Part Three: Thread based imbalance access:\n");
+#ifdef DEBUG_LOG
+    fprintf(dumpFile, "2.4 Thread based imbalance access:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (balancedThread[i]) {
             continue;
@@ -378,7 +396,8 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
     }
     fprintf(dumpFile, "\n");
-
+#endif
+#if 0
     fprintf(dumpFile, "Part One: Top %d problematical pages:\n", MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
     for (int i = 0; i < topPageQueue.getSize(); i++) {
         fprintf(dumpFile, "  Top problematical pages %d:\n", i + 1);
@@ -392,7 +411,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         topCacheLineQueue.getValues()[i]->dump(dumpFile, 4, totalRunningCycles);
         fprintf(dumpFile, "\n\n");
     }
-
+#endif
     fprintf(dumpFile, "Part Three: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
         fprintf(dumpFile, "   Top problematical callsites %d:\n", i + 1);
