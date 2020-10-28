@@ -293,7 +293,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
 //        fprintf(stderr, "%lu ,", iterator.getData()->getTotalRemoteAccess());
 //        fprintf(stderr, "callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
-        if (iterator.getData()->getTotalRemoteAccess() <= SERIOUS_SCORE_THRESHOLD) {
+        if (iterator.getData()->getSeriousScore(totalRunningCycles) <= SERIOUS_SCORE_THRESHOLD) {
             continue;
         }
         topDiadCallSiteInfoQueue.insert(iterator.getData());
