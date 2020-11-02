@@ -825,30 +825,45 @@ inline void recordLockAcquire() {
 
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_lock\n");
+    if (!inited) {
+        return 1;
+    }
     recordLockAcquire();
     return Real::pthread_spin_lock(lock);
 }
 
 int pthread_spin_trylock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_trylock\n");
+    if (!inited) {
+        return 1;
+    }
     recordLockAcquire();
     return Real::pthread_spin_trylock(lock);
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
 //    fprintf(stderr, "pthread_mutex_lock\n");
+    if (!inited) {
+        return 1;
+    }
     recordLockAcquire();
     return Real::pthread_mutex_lock(mutex);
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex) throw() {
 //    fprintf(stderr, "pthread_mutex_trylock\n");
+    if (!inited) {
+        return 1;
+    }
     recordLockAcquire();
     return Real::pthread_mutex_trylock(mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
+    if (!inited) {
+        return 1;
+    }
     recordLockAcquire();
     return Real::pthread_barrier_wait(barrier);
 }
