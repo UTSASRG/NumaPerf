@@ -770,6 +770,9 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
     // set real first touch thread id for huge objects
+    if (firstTouchThreadId < 0 && type == E_ACCESS_READ) {
+        return;
+    }
     if (firstTouchThreadId < 0) {
         basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
         firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
