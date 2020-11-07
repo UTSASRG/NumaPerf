@@ -469,11 +469,14 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,
                                                                  callerAddress);
     objectInfoMap.insert((unsigned long) objectStartAddress, 0, objectInfoPtr);
-
+    long firstTouchThreadId = currentThreadIndex;
+    if (size > HUGE_OBJ_SIZE) {
+        firstTouchThreadId = -1;
+    }
     for (unsigned long address = (unsigned long) objectStartAddress;
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
         if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
-            PageBasicAccessInfo basicPageAccessInfo(currentThreadIndex, ADDRESSES::getPageStartAddress(address));
+            PageBasicAccessInfo basicPageAccessInfo(firstTouchThreadId, ADDRESSES::getPageStartAddress(address));
             pageBasicAccessInfoShadowMap.insert(address, basicPageAccessInfo);
         }
     }
@@ -765,7 +768,12 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     }
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
-    unsigned long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+    long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+    // set real first touch thread id for huge objects
+    if (firstTouchThreadId < 0) {
+        basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
+        firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+    }
 
     bool sampled = false;
     if (!needPageDetailInfo) {
@@ -826,7 +834,7 @@ inline void recordLockAcquire() {
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_lock\n");
     if (!inited) {
-        return 1;
+        return 0;
     }
     recordLockAcquire();
     return Real::pthread_spin_lock(lock);
@@ -835,7 +843,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 int pthread_spin_trylock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_trylock\n");
     if (!inited) {
-        return 1;
+        return 0;
     }
     recordLockAcquire();
     return Real::pthread_spin_trylock(lock);
@@ -844,7 +852,7 @@ int pthread_spin_trylock(pthread_spinlock_t *lock) throw() {
 int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
 //    fprintf(stderr, "pthread_mutex_lock\n");
     if (!inited) {
-        return 1;
+        return 0;
     }
     recordLockAcquire();
     return Real::pthread_mutex_lock(mutex);
@@ -853,7 +861,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
 int pthread_mutex_trylock(pthread_mutex_t *mutex) throw() {
 //    fprintf(stderr, "pthread_mutex_trylock\n");
     if (!inited) {
-        return 1;
+        return 0;
     }
     recordLockAcquire();
     return Real::pthread_mutex_trylock(mutex);
@@ -861,9 +869,6 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex) throw() {
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
-    if (!inited) {
-        return 1;
-    }
     recordLockAcquire();
     return Real::pthread_barrier_wait(barrier);
 }

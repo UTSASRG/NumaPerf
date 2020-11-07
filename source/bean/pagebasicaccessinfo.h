@@ -9,7 +9,7 @@
 
 class PageBasicAccessInfo {
     unsigned long pageStartAddress;
-    unsigned short firstTouchThreadId;
+    long firstTouchThreadId;
 //    bool isPageContainMultipleObjects;
 //    unsigned long accessNumberByFirstTouchThread;
     PageDetailedAccessInfo *pageDetailedAccessInfo;
@@ -56,7 +56,7 @@ public:
 //        }
     }
 
-    inline void recordAccessForPageSharing(unsigned long accessThreadId) {
+    inline void recordAccessForPageSharing(long accessThreadId) {
         if (firstTouchThreadId != accessThreadId) {
             accessNumberByOtherThreads++;
         }
@@ -76,8 +76,12 @@ public:
         return cacheLineWritingNumber[ADDRESSES::getCacheIndexInsidePage(addr)] > CACHE_SHARING_DETAIL_THRESHOLD;
     }
 
-    inline unsigned short getFirstTouchThreadId() {
+    inline long getFirstTouchThreadId() {
         return firstTouchThreadId;
+    }
+
+    inline void setFirstTouchThreadIdIfAbsent(unsigned long firstTouchThreadId) {
+        Automics::compare_set<long>(&(this->firstTouchThreadId), -1, firstTouchThreadId);
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
