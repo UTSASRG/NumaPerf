@@ -36,7 +36,7 @@ private:
     }
 
 public:
-    PageBasicAccessInfo(unsigned short firstTouchThreadId, unsigned long pageStartAddress) {
+    PageBasicAccessInfo(long firstTouchThreadId, unsigned long pageStartAddress) {
         this->pageStartAddress = pageStartAddress;
         this->firstTouchThreadId = firstTouchThreadId;
 //        this->accessNumberByFirstTouchThread = 0;
@@ -80,7 +80,7 @@ public:
         return firstTouchThreadId;
     }
 
-    inline void setFirstTouchThreadIdIfAbsent(unsigned long firstTouchThreadId) {
+    inline void setFirstTouchThreadIdIfAbsent(long firstTouchThreadId) {
         Automics::compare_set<long>(&(this->firstTouchThreadId), -1, firstTouchThreadId);
     }
 
