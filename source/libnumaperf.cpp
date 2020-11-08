@@ -94,7 +94,7 @@ inline void preAccessThreadBasedAccessNumber() {
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
-                GlobalThreadBasedAccessNumber[i][j] = 0;
+//                GlobalThreadBasedAccessNumber[i][j] = 0;
                 continue;
             }
             if (i > j) {
@@ -110,6 +110,9 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAverageAccessNumber[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (i == j) {
+                continue;
+            }
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedAccessNumber[i][j];
         }
         threadBasedAverageAccessNumber[i] = threadBasedAverageAccessNumber[i] / (largestThreadIndex);
@@ -132,9 +135,22 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
     }
 }
 
-inline int getBalancedThread(unsigned long *threadBasedAverageAccessNumber,
-                             unsigned long *threadBasedAccessNumberDeviation,
-                             bool *balancedThread) {
+inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
+                                   bool *localBalancedThread) {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (GlobalThreadBasedAccessNumber[i][i] - threadBasedAverageAccessNumber[i] >
+            threadBasedAverageAccessNumber[i]) {
+            localBalancedThread[i] = false;
+            continue;
+        }
+        localBalancedThread[i] = true;
+    }
+}
+
+
+inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
+                                   unsigned long *threadBasedAccessNumberDeviation,
+                                   bool *balancedThread) {
     int balancedThreadNum = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadBasedAverageAccessNumber[i] < threadBasedAccessNumberDeviation[i]) {
@@ -155,7 +171,7 @@ inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNu
         }
         threadBasedAverageAccessNumber[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            if (balancedThread[j]) {
+            if (balancedThread[j] || i == j) {
                 continue;
             }
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedAccessNumber[i][j];
@@ -281,12 +297,14 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
 }
 
 int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
-                                unsigned long *threadBasedAccessNumberDeviation, bool *balancedThread) {
+                                unsigned long *threadBasedAccessNumberDeviation, bool *localBalancedThread,
+                                bool *globalBalancedThread) {
     preAccessThreadBasedAccessNumber();
     getThreadBasedAverageAccessNumber(threadBasedAverageAccessNumber);
+    getLocalBalancedThread(threadBasedAverageAccessNumber, localBalancedThread);
     getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
-    int balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
-                                              balancedThread);
+    int balancedThreadNum = getGlobalBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
+                                                    globalBalancedThread);
 #ifdef DEBUG_LOG
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadBasedAverageAccessNumber[i] > 0 || threadBasedAccessNumberDeviation[i] > 0) {
@@ -298,11 +316,11 @@ int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
     }
     fprintf(dumpFile, "\n");
 #endif
-    getAverageWOBalancedThread(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum);
-    getDeviationWOBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation, balancedThread,
+    getAverageWOBalancedThread(threadBasedAverageAccessNumber, globalBalancedThread, balancedThreadNum);
+    getDeviationWOBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation, globalBalancedThread,
                                  balancedThreadNum);
-    balancedThreadNum = getBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
-                                          balancedThread);
+    balancedThreadNum = getGlobalBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
+                                                globalBalancedThread);
     return balancedThreadNum;
 }
 
@@ -346,29 +364,39 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile, "Part Two: Thread based imbalance detection & threads binding recommendation:\n\n");
     unsigned long threadBasedAverageAccessNumber[MAX_THREAD_NUM];
     unsigned long threadBasedAccessNumberDeviation[MAX_THREAD_NUM];
-    bool balancedThread[MAX_THREAD_NUM];
+    bool globalBalancedThread[MAX_THREAD_NUM];
+    bool localBalancedThread[MAX_THREAD_NUM];
     int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
-                                                        threadBasedAccessNumberDeviation, balancedThread);
-    fprintf(dumpFile, "2.1 Balanced Threads:\n");
+                                                        threadBasedAccessNumberDeviation, localBalancedThread,
+                                                        globalBalancedThread);
+    fprintf(dumpFile, "2.1 Local ImBalanced Threads:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (balancedThread[i]) {
+        if (!localBalancedThread[i]) {
             fprintf(dumpFile, "%ld,", i);
         }
     }
     fprintf(dumpFile, "\n\n");
 
-    fprintf(dumpFile, "2.2 ImBalanced Threads:\n");
+    fprintf(dumpFile, "2.2 Global Balanced Threads:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (!balancedThread[i]) {
+        if (globalBalancedThread[i]) {
             fprintf(dumpFile, "%ld,", i);
         }
     }
     fprintf(dumpFile, "\n\n");
-    fprintf(dumpFile, "2.3 Threads binding recomendations:\n");
+
+    fprintf(dumpFile, "2.3 Global ImBalanced Threads:\n");
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (!globalBalancedThread[i]) {
+            fprintf(dumpFile, "%ld,", i);
+        }
+    }
+    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile, "2.4 Threads binding recomendations:\n");
     // get threads binding recommendations
     ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
     memset(threadClusters, 0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
-    getTightThreadClusters(threadBasedAverageAccessNumber, balancedThread, balancedThreadNum, threadClusters);
+    getTightThreadClusters(threadBasedAverageAccessNumber, globalBalancedThread, balancedThreadNum, threadClusters);
     int cluster = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadClusters[i].num == 0) {
