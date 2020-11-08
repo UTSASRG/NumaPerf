@@ -176,6 +176,11 @@ public:
 #endif
         }
 
+        // for cache false sharing detect
+        if (type == E_ACCESS_READ) {
+            return;
+        }
+
         if (threadIdAndIsMultipleThreadsUnion == 0) {
             threadIdAndIsMultipleThreadsUnion = threadId;
             return;
@@ -185,7 +190,7 @@ public:
             if (threadIdAndIsMultipleThreadsUnion != threadId) {
                 threadIdAndIsMultipleThreadsUnion = MULTIPLE_THREAD;
             }
-            return;;
+            return;
         }
 
         // threadIdAndIsMultipleThreadsUnion==MULTIPLE_THREAD

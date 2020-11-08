@@ -776,7 +776,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (firstTouchThreadId < 0) {
         basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
         firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-        Logger::warn("firstTouchThread:%lu\n", firstTouchThreadId);
+//        Logger::warn("firstTouchThread:%lu\n", firstTouchThreadId);
     }
 
     bool sampled = false;
