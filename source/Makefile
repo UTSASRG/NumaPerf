@@ -3,9 +3,11 @@ all: libnumaperf.so
 # INCLUDEPATH = /usr/include/x86_64-linux-gnu/c++/4.8/
 
 SRCS = libnumaperf.cpp
+CXXFLAGS = -DNUMA_NODES=8 -DCPU_CLOSE
+#CXXFLAGS = -DNUMA_NODES=2 -DCPU_INTERLEAVED
 
 libnumaperf.so: $(SRCS)
-	clang -DWARN_LOG -DNUMA_NODES=8 -DCPU_CLOSE -g -O3 -shared -fPIC -fno-omit-frame-pointer -o libnumaperf.so $(SRCS) -ldl -lpthread
+	clang -DWARN_LOG $(CXXFLAGS) -g -O3 -shared -fPIC -fno-omit-frame-pointer -o libnumaperf.so $(SRCS) -ldl -lpthread
 	#clang -DDEBUG_LOG -g -O0 -shared -fPIC -fno-omit-frame-pointer -o libnumaperf.so $(SRCS) -ldl -lpthread
 	#clang -g -O3 -shared -fPIC -fno-omit-frame-pointer -o libnumaperf.so $(SRCS) -ldl -lpthread
 #         clang -g -O0 -shared -fPIC -fno-omit-frame-pointer $(SRCS) -o libnumaperf.so -ldl -I$(INCLUDEPATH) -lpthread
