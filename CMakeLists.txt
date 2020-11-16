@@ -30,6 +30,7 @@ add_executable(NumaPerf
         source/bean/diagnoseobjinfo.h
         source/bean/diagnosecacheinfo.h
         source/bean/diagnosepageinfo.h
+        source/utils/numa/numas.h
         source/utils/programs.h
         source/utils/real.h
         source/utils/maths.h
