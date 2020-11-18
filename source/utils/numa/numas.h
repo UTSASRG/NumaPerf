@@ -2,6 +2,7 @@
 #define NUMAPERF_NUMAS_H
 
 #include <sys/sysinfo.h>
+#include <sched.h>
 
 class Numas {
 
@@ -22,6 +23,11 @@ public:
 #ifdef CPU_INTERLEAVED
         return cpuNum % NUMA_NODES;
 #endif
+    }
+
+    static inline int getNodeOfCurrentThread() {
+        int cpu = sched_getcpu();
+        return getNodeOfCpu(cpu);
     }
 };
 

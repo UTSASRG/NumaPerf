@@ -19,7 +19,7 @@ public:
     }
 
     static inline unsigned long
-    automicIncrease(unsigned long *targetValue, unsigned long increaseNumber, int retry_num = 5) {
+    automicIncrease(unsigned long *targetValue, long increaseNumber, int retry_num = 5) {
         if (retry_num < 0) {
             while (1) {
                 volatile unsigned long expect_value = *targetValue;

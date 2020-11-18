@@ -21,6 +21,8 @@ add_executable(NumaPerf
         source/utils/collection/addrtopagesinglefragshadowmap.h
         source/libnumaperf.cpp
         source/libnumaperf.h
+        source/bean/lockinfo.h
+        source/bean/threadbasedinfo.h
         source/bean/scores.h
         source/bean/objectInfo.h
         source/bean/pagebasicaccessinfo.h

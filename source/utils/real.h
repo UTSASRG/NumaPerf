@@ -45,8 +45,10 @@ namespace Real {
 
     DEFINE_WRAPPER(pthread_barrier_wait);
     DEFINE_WRAPPER(pthread_mutex_lock);
+    DEFINE_WRAPPER(pthread_mutex_unlock);
     DEFINE_WRAPPER(pthread_mutex_trylock);
     DEFINE_WRAPPER(pthread_spin_lock);
+    DEFINE_WRAPPER(pthread_spin_unlock);
     DEFINE_WRAPPER(pthread_spin_trylock);
 //    DEFINE_WRAPPER(pthread_join);
 //    DEFINE_WRAPPER(pthread_kill);
@@ -63,8 +65,10 @@ namespace Real {
 
         INIT_WRAPPER(pthread_barrier_wait, pthread_handle);
         INIT_WRAPPER(pthread_mutex_lock, pthread_handle);
+        INIT_WRAPPER(pthread_mutex_unlock, pthread_handle);
         INIT_WRAPPER(pthread_mutex_trylock, pthread_handle);
         INIT_WRAPPER(pthread_spin_lock, pthread_handle);
+        INIT_WRAPPER(pthread_spin_unlock, pthread_handle);
         INIT_WRAPPER(pthread_spin_trylock, pthread_handle);
 //        INIT_WRAPPER(pthread_join, pthread_handle);
 //        INIT_WRAPPER(pthread_kill, pthread_handle);

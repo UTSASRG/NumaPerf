@@ -16,6 +16,8 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
+#include <bean/threadbasedinfo.h>
+#include <bean/lockinfo.h>
 #include "bean/diagnosepageinfo.h"
 #include "bean/objectInfo.h"
 #include "utils/collection/addrtopageindexshadowmap.h"
@@ -32,6 +34,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
+typedef HashMap<unsigned long, LockInfo *, spinlock, localAllocator> LockInfoMap;
 typedef AddressToPageIndexSingleFragShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInfoShadowMap;
 
@@ -42,6 +45,7 @@ thread_local int pageBasicSamplingFrequency = 0;
 bool inited = false;
 unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
+thread_local ThreadBasedInfo *threadBasedInfo;
 thread_local unsigned long currentThreadIndex = 0;
 thread_local unsigned long lockAcquireNumber = 0;
 thread_local unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
@@ -50,6 +54,7 @@ unsigned long GlobalThreadBasedAccessNumber[MAX_THREAD_NUM][MAX_THREAD_NUM];
 unsigned long GlobalLockAcquireNumber[MAX_THREAD_NUM];
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
+LockInfoMap lockInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
 PriorityQueue<DiagnoseCacheLineInfo> topCacheLineQueue(MAX_TOP_GLOBAL_CACHELINE_DETAIL_INFO);
@@ -62,6 +67,7 @@ static void initializer(void) {
     backtrace(callStacks, 1);
     objectInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
     callSiteInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1048576);
+    lockInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 1024 * 4);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(2ul * TB, true);
@@ -863,22 +869,60 @@ inline void recordLockAcquire() {
     lockAcquireNumber++;
 }
 
+#define LOCK_HANDLE(lockFuncPtr, lock)\
+LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
+    if (lockInfo == NULL) {\
+        lockInfo = LockInfo::createLockInfo();\
+        if (!lockInfoMap.insertIfAbsent((unsigned long) lock, 0, lockInfo)) {\
+            LockInfo::release(lockInfo);\
+            lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
+        }\
+    }\
+    lockInfo->acquireLock();\
+    if (!lockInfo->hasContention()) {\
+        return lockFuncPtr(lock);\
+    }\
+    int nodeBefore = Numas::getNodeOfCurrentThread();\
+    unsigned long long start = Timer::getCurrentCycle();\
+    int ret = lockFuncPtr(lock);\
+    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
+    int nodeAfter = Numas::getNodeOfCurrentThread()\
+    if (nodeBefore != nodeAfter) {\
+        threadBasedInfo->nodeMigrate();\
+    }\
+    return ret;
+
+
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_lock\n");
     if (!inited) {
         return 0;
     }
-    recordLockAcquire();
-    return Real::pthread_spin_lock(lock);
+    LOCK_HANDLE(Real::pthread_spin_lock, lock);
+//    LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);
+//    if (lockInfo == NULL) {
+//        lockInfo = LockInfo::createLockInfo();
+//        if (!lockInfoMap.insertIfAbsent((unsigned long) lock, 0, lockInfo)) {
+//            LockInfo::release(lockInfo);
+//            lockInfo = lockInfoMap.find((unsigned long) lock, 0);
+//        }
+//    }
+//    lockInfo->acquireLock();
+//    if (!lockInfo->hasContention()) {
+//        return Real::pthread_spin_lock(lock);
+//    }
+//    int nodeBefore = Numas::getNodeOfCurrentThread();
+//    unsigned long long start = Timer::getCurrentCycle();
+//    int ret = Real::pthread_spin_lock(lock);
+//    threadBasedInfo->idle(Timer::getCurrentCycle() - start);
+//    int nodeAfter = Numas::getNodeOfCurrentThread()
+//    if (nodeBefore != nodeAfter) {
+//        threadBasedInfo->nodeMigrate();
+//    }
 }
 
-int pthread_spin_trylock(pthread_spinlock_t *lock) throw() {
-//    fprintf(stderr, "pthread_spin_trylock\n");
-    if (!inited) {
-        return 0;
-    }
-    recordLockAcquire();
-    return Real::pthread_spin_trylock(lock);
+int pthread_spin_unlock(pthread_spinlock_t *lock) {
+    return Real::pthread_spin_unlock(lock);
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
@@ -886,23 +930,17 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     if (!inited) {
         return 0;
     }
-    recordLockAcquire();
-    return Real::pthread_mutex_lock(mutex);
+    LOCK_HANDLE(Real::pthread_mutex_lock, lock);
 }
 
-int pthread_mutex_trylock(pthread_mutex_t *mutex) throw() {
-//    fprintf(stderr, "pthread_mutex_trylock\n");
-    if (!inited) {
-        return 0;
-    }
-    recordLockAcquire();
-    return Real::pthread_mutex_trylock(mutex);
+int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+    return Real::pthread_mutex_unlock(mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
     recordLockAcquire();
-    return Real::pthread_barrier_wait(barrier);
+    LOCK_HANDLE(Real::pthread_barrier_wait, lock);
 }
 
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
