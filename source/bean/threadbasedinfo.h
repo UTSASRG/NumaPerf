@@ -2,7 +2,6 @@
 #define NUMAPERF_THREADBASEDINFO_H
 
 #include <cstring>
-#include <utils/real.h>
 
 class ThreadBasedInfo {
     void *threadCreateCallSite;

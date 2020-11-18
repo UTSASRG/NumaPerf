@@ -16,8 +16,8 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
-#include <bean/threadbasedinfo.h>
-#include <bean/lockinfo.h>
+#include "bean/threadbasedinfo.h"
+#include "bean/lockinfo.h"
 #include "bean/diagnosepageinfo.h"
 #include "bean/objectInfo.h"
 #include "utils/collection/addrtopageindexshadowmap.h"
@@ -26,6 +26,7 @@
 #include "utils/programs.h"
 #include "utils/asserts.h"
 #include "utils/sorts.h"
+#include "utils/numa/numas.h"
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
@@ -870,7 +871,7 @@ inline void recordLockAcquire() {
 }
 
 #define LOCK_HANDLE(lockFuncPtr, lock)\
-LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
+    LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
     if (lockInfo == NULL) {\
         lockInfo = LockInfo::createLockInfo();\
         if (!lockInfoMap.insertIfAbsent((unsigned long) lock, 0, lockInfo)) {\
