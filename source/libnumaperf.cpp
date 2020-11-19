@@ -46,7 +46,7 @@ thread_local int pageBasicSamplingFrequency = 0;
 bool inited = false;
 unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
-thread_local ThreadBasedInfo *threadBasedInfo;
+thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
 thread_local unsigned long lockAcquireNumber = 0;
 thread_local unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
@@ -710,6 +710,7 @@ void free(void *ptr) __THROW {
 typedef struct {
     void *startRoutinePtr;
     void *parameterPtr;
+    void *callSite;
     unsigned long threadIndex;
 } ThreadStartRoutineParameter;
 
@@ -718,6 +719,7 @@ typedef void *(*threadStartRoutineFunPtr)(void *);
 void *initThreadIndexRoutine(void *args) {
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) args;
     currentThreadIndex = arguments->threadIndex;
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite);
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     memset(threadBasedAccessNumber, 0, sizeof(unsigned long) * MAX_THREAD_NUM);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
@@ -743,6 +745,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
+    arguments->callSite = (void *) -1;
     arguments->threadIndex = threadIndex;
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, (void *) arguments);
 }
@@ -879,6 +882,9 @@ inline void recordLockAcquire() {
             lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
         }\
     }\
+    if (threadBasedInfo == NULL){\
+        threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(0);\
+    }\
     lockInfo->acquireLock();\
     if (!lockInfo->hasContention()) {\
         return lockFuncPtr(lock);\
@@ -887,7 +893,7 @@ inline void recordLockAcquire() {
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = lockFuncPtr(lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
-    int nodeAfter = Numas::getNodeOfCurrentThread()\
+    int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
         threadBasedInfo->nodeMigrate();\
     }\
@@ -900,29 +906,9 @@ int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
         return 0;
     }
     LOCK_HANDLE(Real::pthread_spin_lock, lock);
-//    LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);
-//    if (lockInfo == NULL) {
-//        lockInfo = LockInfo::createLockInfo();
-//        if (!lockInfoMap.insertIfAbsent((unsigned long) lock, 0, lockInfo)) {
-//            LockInfo::release(lockInfo);
-//            lockInfo = lockInfoMap.find((unsigned long) lock, 0);
-//        }
-//    }
-//    lockInfo->acquireLock();
-//    if (!lockInfo->hasContention()) {
-//        return Real::pthread_spin_lock(lock);
-//    }
-//    int nodeBefore = Numas::getNodeOfCurrentThread();
-//    unsigned long long start = Timer::getCurrentCycle();
-//    int ret = Real::pthread_spin_lock(lock);
-//    threadBasedInfo->idle(Timer::getCurrentCycle() - start);
-//    int nodeAfter = Numas::getNodeOfCurrentThread()
-//    if (nodeBefore != nodeAfter) {
-//        threadBasedInfo->nodeMigrate();
-//    }
 }
 
-int pthread_spin_unlock(pthread_spinlock_t *lock) {
+int pthread_spin_unlock(pthread_spinlock_t *lock) throw() {
     return Real::pthread_spin_unlock(lock);
 }
 
@@ -931,17 +917,17 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     if (!inited) {
         return 0;
     }
-    LOCK_HANDLE(Real::pthread_mutex_lock, lock);
+    LOCK_HANDLE(Real::pthread_mutex_lock, mutex);
 }
 
-int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
     return Real::pthread_mutex_unlock(mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
     recordLockAcquire();
-    LOCK_HANDLE(Real::pthread_barrier_wait, lock);
+    LOCK_HANDLE(Real::pthread_barrier_wait, barrier);
 }
 
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
