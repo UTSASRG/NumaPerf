@@ -26,6 +26,10 @@ public:
         Real::free(threadBasedInfo);
     }
 
+    void setTotalRunningTime(unsigned long totalRunningTime) {
+        ThreadBasedInfo::totalRunningTime = totalRunningTime;
+    }
+
     void nodeMigrate() {
         this->nodeMigrationNum++;
     }

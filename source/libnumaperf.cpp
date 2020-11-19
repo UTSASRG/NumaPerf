@@ -723,7 +723,9 @@ void *initThreadIndexRoutine(void *args) {
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     memset(threadBasedAccessNumber, 0, sizeof(unsigned long) * MAX_THREAD_NUM);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
+    unsigned long long start = Timer::getCurrentCycle();
     void *result = startRoutineFunPtr(arguments->parameterPtr);
+    threadBasedInfo->setTotalRunningTime(Timer::getCurrentCycle() - start);
     GlobalLockAcquireNumber[currentThreadIndex] = lockAcquireNumber;
     memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedAccessNumber,
            sizeof(unsigned long) * MAX_THREAD_NUM);
@@ -745,7 +747,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
-    arguments->callSite = (void *) -1;
+    arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);
     arguments->threadIndex = threadIndex;
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, (void *) arguments);
 }
@@ -909,7 +911,7 @@ inline void recordLockAcquire() {
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
-        fprintf(stderr, "node migrate\n");\
+        fprintf(stderr, "thread-%lu, node migrate\n", currentThreadIndex);\
         threadBasedInfo->nodeMigrate();\
     }\
     return ret;
