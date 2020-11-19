@@ -70,6 +70,8 @@ static void initializer(void) {
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(2ul * TB, true);
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(0);
+    GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
     inited = true;
 }
@@ -882,10 +884,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
             LockInfo::release(lockInfo);\
             lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
         }\
-    }\
-    if (currentThreadIndex == 0 && threadBasedInfo == NULL){\
-        threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(0);\
-        GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;\
     }\
     lockInfo->acquireLock();\
     if (!lockInfo->hasContention()) {\
