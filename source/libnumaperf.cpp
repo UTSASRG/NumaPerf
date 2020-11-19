@@ -48,8 +48,6 @@ unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
 thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
-thread_local unsigned long lockAcquireNumber = 0;
-thread_local unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
 
 unsigned long GlobalThreadBasedAccessNumber[MAX_THREAD_NUM][MAX_THREAD_NUM];
 ThreadBasedInfo *GlobalThreadBasedInfo[MAX_THREAD_NUM];
@@ -363,7 +361,8 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile, "Part One: Thread based node migration times:\n");
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
-            fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i, GlobalThreadBasedInfo[i]->getNodeMigrationNum());
+            fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
+                    GlobalThreadBasedInfo[i]->getNodeMigrationNum());
         }
     }
     fprintf(dumpFile, "\n");
@@ -722,12 +721,11 @@ void *initThreadIndexRoutine(void *args) {
     threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite);
     GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
-    memset(threadBasedAccessNumber, 0, sizeof(unsigned long) * MAX_THREAD_NUM);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
     unsigned long long start = Timer::getCurrentCycle();
     void *result = startRoutineFunPtr(arguments->parameterPtr);
     threadBasedInfo->setTotalRunningTime(Timer::getCurrentCycle() - start);
-    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedAccessNumber,
+    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
            sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
     return result;
@@ -826,12 +824,12 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
             sampled = true;
             pageBasicSamplingFrequency = 0;
-            threadBasedAccessNumber[firstTouchThreadId]++;
+            threadBasedInfo->threadBasedAccess(firstTouchThreadId);
             basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
         }
 #else
         basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
-        threadBasedAccessNumber[firstTouchThreadId]++;
+        threadBasedInfo->threadBasedAccess(firstTouchThreadId);
 #endif
     }
 
@@ -848,12 +846,12 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
             sampled = true;
             pageDetailSamplingFrequency = 0;
-            threadBasedAccessNumber[firstTouchThreadId]++;
+            threadBasedInfo->threadBasedAccess(firstTouchThreadId);
             recordDetailsForPageSharing(basicPageAccessInfo, addr);
         }
 #else
         recordDetailsForPageSharing(basicPageAccessInfo, addr);
-        threadBasedAccessNumber[firstTouchThreadId]++;
+        threadBasedInfo->threadBasedAccess(firstTouchThreadId);
 #endif
     }
 
@@ -865,13 +863,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #endif
     }
 // Logger::debug("handle access cycles:%lu\n", Timer::getCurrentCycle() - startCycle);
-}
-
-/*
-* handle lock functions.
-*/
-inline void recordLockAcquire() {
-    lockAcquireNumber++;
 }
 
 #define UNLOCK_HANDLE(unlockFuncPtr, lock)\
@@ -951,7 +942,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
-    recordLockAcquire();
     LOCK_HANDLE(Real::pthread_barrier_wait, barrier, true);
 }
 

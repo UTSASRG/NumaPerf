@@ -15,46 +15,50 @@ public:
         memset(this, 0, sizeof(ThreadBasedInfo));
     }
 
-    static ThreadBasedInfo *createThreadBasedInfo(void *threadCreateCallSite) {
+    inline static ThreadBasedInfo *createThreadBasedInfo(void *threadCreateCallSite) {
         void *mem = Real::malloc(sizeof(ThreadBasedInfo));
         ThreadBasedInfo *ret = new(mem)ThreadBasedInfo();
         ret->threadCreateCallSite = threadCreateCallSite;
         return ret;
     }
 
-    static void release(ThreadBasedInfo *threadBasedInfo) {
+    inline static void release(ThreadBasedInfo *threadBasedInfo) {
         Real::free(threadBasedInfo);
     }
 
-    void setTotalRunningTime(unsigned long totalRunningTime) {
+    inline void threadBasedAccess(unsigned long firstTouchThreadId) {
+        threadBasedAccessNumber[firstTouchThreadId]++;
+    }
+
+    inline void setTotalRunningTime(unsigned long totalRunningTime) {
         ThreadBasedInfo::totalRunningTime = totalRunningTime;
     }
 
-    void nodeMigrate() {
+    inline void nodeMigrate() {
         this->nodeMigrationNum++;
     }
 
-    void idle(unsigned long long newIdleTime) {
+    inline void idle(unsigned long long newIdleTime) {
         this->idleTime += newIdleTime;
     }
 
-    void *getThreadCreateCallSite() const {
+    inline void *getThreadCreateCallSite() const {
         return threadCreateCallSite;
     }
 
-    unsigned long getTotalRunningTime() const {
+    inline unsigned long getTotalRunningTime() const {
         return totalRunningTime;
     }
 
-    unsigned long long int getIdleTime() const {
+    inline unsigned long long int getIdleTime() const {
         return idleTime;
     }
 
-    long getNodeMigrationNum() const {
+    inline long getNodeMigrationNum() const {
         return nodeMigrationNum;
     }
 
-    const unsigned long *getThreadBasedAccessNumber() const {
+    inline const unsigned long *getThreadBasedAccessNumber() const {
         return threadBasedAccessNumber;
     }
 };
