@@ -873,7 +873,14 @@ inline void recordLockAcquire() {
     lockAcquireNumber++;
 }
 
-#define LOCK_HANDLE(lockFuncPtr, lock)\
+#define UNLOCK_HANDLE(unlockFuncPtr, lock)\
+    LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
+    if (lockInfo != NULL) {\
+        lockInfo->releaseLock();\
+    }\
+    return unlockFuncPtr(lock);\
+
+#define LOCK_HANDLE(lockFuncPtr, lock, releaseLockAfterAcquire)\
     LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
     if (lockInfo == NULL) {\
         lockInfo = LockInfo::createLockInfo();\
@@ -887,14 +894,22 @@ inline void recordLockAcquire() {
     }\
     lockInfo->acquireLock();\
     if (!lockInfo->hasContention()) {\
-        return lockFuncPtr(lock);\
+        int ret = lockFuncPtr(lock);\
+        if (releaseLockAfterAcquire) {\
+            lockInfo->releaseLock();\
+        }\
+        return ret;\
     }\
     int nodeBefore = Numas::getNodeOfCurrentThread();\
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = lockFuncPtr(lock);\
+    if (releaseLockAfterAcquire) {\
+        lockInfo->releaseLock();\
+    }\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
+        fprintf(stderr, "node migrate\n");\
         threadBasedInfo->nodeMigrate();\
     }\
     return ret;
@@ -905,11 +920,14 @@ int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
     if (!inited) {
         return 0;
     }
-    LOCK_HANDLE(Real::pthread_spin_lock, lock);
+    LOCK_HANDLE(Real::pthread_spin_lock, lock, false);
 }
 
 int pthread_spin_unlock(pthread_spinlock_t *lock) throw() {
-    return Real::pthread_spin_unlock(lock);
+    if (!inited) {
+        return 0;
+    }
+    UNLOCK_HANDLE(Real::pthread_spin_unlock, lock);
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
@@ -917,17 +935,20 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     if (!inited) {
         return 0;
     }
-    LOCK_HANDLE(Real::pthread_mutex_lock, mutex);
+    LOCK_HANDLE(Real::pthread_mutex_lock, mutex, false);
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
-    return Real::pthread_mutex_unlock(mutex);
+    if (!inited) {
+        return 0;
+    }
+    UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
     recordLockAcquire();
-    LOCK_HANDLE(Real::pthread_barrier_wait, barrier);
+    LOCK_HANDLE(Real::pthread_barrier_wait, barrier, true);
 }
 
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
