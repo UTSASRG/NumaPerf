@@ -37,6 +37,26 @@ public:
     void idle(unsigned long long newIdleTime) {
         this->idleTime += newIdleTime;
     }
+
+    void *getThreadCreateCallSite() const {
+        return threadCreateCallSite;
+    }
+
+    unsigned long getTotalRunningTime() const {
+        return totalRunningTime;
+    }
+
+    unsigned long long int getIdleTime() const {
+        return idleTime;
+    }
+
+    long getNodeMigrationNum() const {
+        return nodeMigrationNum;
+    }
+
+    const unsigned long *getThreadBasedAccessNumber() const {
+        return threadBasedAccessNumber;
+    }
 };
 
 #endif //NUMAPERF_THREADBASEDINFO_H

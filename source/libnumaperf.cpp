@@ -52,7 +52,7 @@ thread_local unsigned long lockAcquireNumber = 0;
 thread_local unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
 
 unsigned long GlobalThreadBasedAccessNumber[MAX_THREAD_NUM][MAX_THREAD_NUM];
-unsigned long GlobalLockAcquireNumber[MAX_THREAD_NUM];
+ThreadBasedInfo *GlobalThreadBasedInfo[MAX_THREAD_NUM];
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
 LockInfoMap lockInfoMap;
@@ -355,15 +355,15 @@ __attribute__ ((destructor)) void finalizer(void) {
         exit(9);
     }
     fprintf(dumpFile, "Table of Contents\n");
-    fprintf(dumpFile, "    Part One: Thread based lock require number.\n");
+    fprintf(dumpFile, "    Part One: Thread based node migration times.\n");
     fprintf(dumpFile, "    Part Two: Thread based imbalance detection & threads binding recommendation.\n");
     fprintf(dumpFile, "    Part Three: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
 
 
-    fprintf(dumpFile, "Part One: Thread based lock require number:\n");
+    fprintf(dumpFile, "Part One: Thread based node migration times:\n");
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        if (GlobalLockAcquireNumber[i] > 0) {
-            fprintf(dumpFile, "  Thread-:%lu, acquires lock number: %lu\n", i, GlobalLockAcquireNumber[i]);
+        if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
+            fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i, GlobalThreadBasedInfo[i]->getNodeMigrationNum());
         }
     }
     fprintf(dumpFile, "\n");
@@ -720,13 +720,13 @@ void *initThreadIndexRoutine(void *args) {
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) args;
     currentThreadIndex = arguments->threadIndex;
     threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite);
+    GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     memset(threadBasedAccessNumber, 0, sizeof(unsigned long) * MAX_THREAD_NUM);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
     unsigned long long start = Timer::getCurrentCycle();
     void *result = startRoutineFunPtr(arguments->parameterPtr);
     threadBasedInfo->setTotalRunningTime(Timer::getCurrentCycle() - start);
-    GlobalLockAcquireNumber[currentThreadIndex] = lockAcquireNumber;
     memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedAccessNumber,
            sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
@@ -738,17 +738,16 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 //Logger::debug("pthread create\n");
     if (!inited) {
         initializer();
-
     }
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) Real::malloc(
             sizeof(ThreadStartRoutineParameter));
     unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
     Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
-
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
     arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);
     arguments->threadIndex = threadIndex;
+    //fprintf(stderr, "callSite:%p\n",arguments->callSite);
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, (void *) arguments);
 }
 
@@ -877,10 +876,12 @@ inline void recordLockAcquire() {
 
 #define UNLOCK_HANDLE(unlockFuncPtr, lock)\
     LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
-    if (lockInfo != NULL) {\
-        lockInfo->releaseLock();\
+    if (lockInfo == NULL) {\
+        fprintf(stderr, "lockinfo missed\n");\
+        return unlockFuncPtr(lock);\
     }\
-    return unlockFuncPtr(lock);\
+    lockInfo->releaseLock();\
+    return unlockFuncPtr(lock);
 
 #define LOCK_HANDLE(lockFuncPtr, lock, releaseLockAfterAcquire)\
     LockInfo *lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
@@ -891,8 +892,9 @@ inline void recordLockAcquire() {
             lockInfo = lockInfoMap.find((unsigned long) lock, 0);\
         }\
     }\
-    if (threadBasedInfo == NULL){\
+    if (currentThreadIndex == 0 && threadBasedInfo == NULL){\
         threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(0);\
+        GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;\
     }\
     lockInfo->acquireLock();\
     if (!lockInfo->hasContention()) {\

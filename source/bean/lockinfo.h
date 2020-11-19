@@ -31,6 +31,10 @@ public:
         return threadsAcquire > 1;
     }
 
+    inline unsigned long getThreadsAcquire() const {
+        return threadsAcquire;
+    }
+
 };
 
 #endif //NUMAPERF_LOCKINFO_H
