@@ -16,6 +16,7 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
+#include <bean/threadstageinfo.h>
 #include "bean/threadbasedinfo.h"
 #include "bean/lockinfo.h"
 #include "bean/diagnosepageinfo.h"
@@ -355,21 +356,44 @@ __attribute__ ((destructor)) void finalizer(void) {
         exit(9);
     }
     fprintf(dumpFile, "Table of Contents\n");
-    fprintf(dumpFile, "    Part One: Thread based node migration times.\n");
-    fprintf(dumpFile, "    Part Two: Thread based imbalance detection & threads binding recommendation.\n");
-    fprintf(dumpFile, "    Part Three: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
+    fprintf(dumpFile, "    Part One: Thread number recommendation for each stage.\n");
+    fprintf(dumpFile, "    Part Two: Thread based node migration times.\n");
+    fprintf(dumpFile, "    Part Three: Thread based imbalance detection & threads binding recommendation.\n");
+    fprintf(dumpFile, "    Part Four: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
 
 
-    fprintf(dumpFile, "Part One: Thread based node migration times:\n");
+    fprintf(dumpFile, "Part One: Thread number recommendation for each stage.\n");
+    typedef HashMap<unsigned long, ThreadStageInfo *, spinlock, localAllocator> ThreadStageInfoMap;
+    ThreadStageInfoMap threadStageInfoMap;
+    threadStageInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 30);
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        unsigned long callSite = (unsigned long) (GlobalThreadBasedInfo[i]->getThreadCreateCallSite());
+        ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSite, 0);
+        if (NULL == threadStageInfo) {
+            threadStageInfo = ThreadStageInfo::createThreadStageInfo(callSite);
+            threadStageInfoMap.insert(callSite, 0, threadStageInfo);
+        }
+        threadStageInfo->recordThreadBasedInfo(GlobalThreadBasedInfo[i]);
+    }
+    int stage = 1;
+    for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
+        ThreadStageInfo *data = iterator.getData();
+        fprintf(dumpFile, "Thread Stage-%d: ", stage);
+        Programs::printAddress2Line(data->getThreadCreateCallSite(), dumpFile);
+        fprintf(dumpFile, "Thread Number:%lu, User Usage:%f\n\n", data->getThreadNumber(), data->getUserUsage());
+    }
+    fprintf(dumpFile, "\n\n");
+
+    fprintf(dumpFile, "Part Two: Thread based node migration times:\n");
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
             fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
                     GlobalThreadBasedInfo[i]->getNodeMigrationNum());
         }
     }
-    fprintf(dumpFile, "\n");
+    fprintf(dumpFile, "\n\n");
 
-    fprintf(dumpFile, "Part Two: Thread based imbalance detection & threads binding recommendation:\n\n");
+    fprintf(dumpFile, "Part Three: Thread based imbalance detection & threads binding recommendation:\n\n");
     unsigned long threadBasedAverageAccessNumber[MAX_THREAD_NUM];
     unsigned long threadBasedAccessNumberDeviation[MAX_THREAD_NUM];
     bool globalBalancedThread[MAX_THREAD_NUM];
@@ -448,7 +472,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         fprintf(dumpFile, "\n\n");
     }
 #endif
-    fprintf(dumpFile, "Part Three: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
+    fprintf(dumpFile, "Part Four: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
     for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
         fprintf(dumpFile, "   Top problematical callsites %d:\n", i + 1);
         topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile, totalRunningCycles, 4);
