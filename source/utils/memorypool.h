@@ -75,7 +75,7 @@ public:
                unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul) {
 //        Logger::debug("memory pool init\n");
         lock.init();
-        if (strlen(name) < NAME_LENGTH) {
+        if (strlen(name) >= NAME_LENGTH) {
             Asserts::assertt(false, 2, (char *) "memoryPool name is too long:", name);
         }
         memcpy(this->name, name, strlen(name) + 1);
