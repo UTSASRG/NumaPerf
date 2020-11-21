@@ -902,11 +902,11 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
-        fprintf(stderr, "thread-%lu, node migrate\n", currentThreadIndex);\
         threadBasedInfo->nodeMigrate();\
     }\
     return ret;
 
+//        fprintf(stderr, "thread-%lu, node migrate\n", currentThreadIndex);
 
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_lock\n");
