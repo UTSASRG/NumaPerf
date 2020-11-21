@@ -16,9 +16,10 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
-#include <bean/threadstageinfo.h>
+#include "bean/threadstageinfo.h"
 #include "bean/threadbasedinfo.h"
 #include "bean/lockinfo.h"
+#include "bean/threadstageinfo.h"
 #include "bean/diagnosepageinfo.h"
 #include "bean/objectInfo.h"
 #include "utils/collection/addrtopageindexshadowmap.h"
@@ -81,21 +82,27 @@ static void initializer(void) {
 static int const do_init = (initializer(), 0);
 //MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
 //                                       GB * 4);
-MemoryPool CacheLineDetailedInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
+MemoryPool CacheLineDetailedInfo::localMemoryPool((char *) "CacheLineDetailedInfo",
+                                                  ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
                                                   GB * 4);
-MemoryPool PageDetailedAccessInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
+MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessInfo",
+                                                   ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
                                                    GB * 64);
 
-MemoryPool DiagnoseObjInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
+MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
+                                            ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
                                             GB * 1);
 
-MemoryPool DiagnoseCallSiteInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
+MemoryPool DiagnoseCallSiteInfo::localMemoryPool((char *) "DiagnoseCallSiteInfo",
+                                                 ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
                                                  GB * 1);
 
-MemoryPool DiagnoseCacheLineInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCacheLineInfo)),
+MemoryPool DiagnoseCacheLineInfo::localMemoryPool((char *) "DiagnoseCacheLineInfo",
+                                                  ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCacheLineInfo)),
                                                   GB * 1);
 
-MemoryPool DiagnosePageInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(DiagnosePageInfo)),
+MemoryPool DiagnosePageInfo::localMemoryPool((char *) "DiagnosePageInfo",
+                                             ADDRESSES::alignUpToCacheLine(sizeof(DiagnosePageInfo)),
                                              GB * 1);
 
 inline void preAccessThreadBasedAccessNumber() {
@@ -366,25 +373,39 @@ __attribute__ ((destructor)) void finalizer(void) {
     typedef HashMap<unsigned long, ThreadStageInfo *, spinlock, localAllocator> ThreadStageInfoMap;
     ThreadStageInfoMap threadStageInfoMap;
     threadStageInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 30);
+    int callsiteNum = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         unsigned long callSite = (unsigned long) (GlobalThreadBasedInfo[i]->getThreadCreateCallSite());
         ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSite, 0);
         if (NULL == threadStageInfo) {
+            callsiteNum++;
             threadStageInfo = ThreadStageInfo::createThreadStageInfo(callSite);
             threadStageInfoMap.insert(callSite, 0, threadStageInfo);
         }
         threadStageInfo->recordThreadBasedInfo(GlobalThreadBasedInfo[i]);
     }
-    int stage = 1;
-    for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
-        ThreadStageInfo *data = iterator.getData();
-        fprintf(dumpFile, "Thread Stage-%d: ", stage);
-        Programs::printAddress2Line(data->getThreadCreateCallSite(), dumpFile);
-        fprintf(dumpFile, "Thread Number:%lu, User Usage:%f\n\n", data->getThreadNumber(), data->getUserUsage());
+    if (callsiteNum > 1) {
+        int stage = 1;
+        for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
+            ThreadStageInfo *data = iterator.getData();
+            fprintf(dumpFile, "Thread Stage-%d: ", stage);
+            Programs::printAddress2Line(data->getThreadCreateCallSite(), dumpFile);
+            fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
+                    data->getUserUsage(), data->getRecommendThreadNum());
+            if (data->getUserUsage() > THREAD_FULL_USAGE) {
+                fprintf(dumpFile, "++");
+            }
+            fprintf(dumpFile, "\n\n");
+            stage++;
+        }
     }
-    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile, "\n");
 
-    fprintf(dumpFile, "Part Two: Thread based node migration times:\n");
+    long totalMigrationNum = 0;
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
+    }
+    fprintf(dumpFile, "Part Two: Thread based node migration times:%lu\n", totalMigrationNum);
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
             fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
@@ -490,14 +511,14 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     static char initBuf[INIT_BUFF_SIZE];
     static int allocated = 0;
     if (!inited) {
-        Asserts::assertt(allocated + size < INIT_BUFF_SIZE, (char *) "not enough temp memory");
+        Asserts::assertt(allocated + size < INIT_BUFF_SIZE, 1, (char *) "not enough temp memory");
         void *resultPtr = (void *) &initBuf[allocated];
         allocated += size;
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
     void *objectStartAddress = Real::malloc(size);
-    Asserts::assertt(objectStartAddress != NULL, (char *) "null point from malloc");
+    Asserts::assertt(objectStartAddress != NULL, 1, (char *) "null point from malloc");
 #if 0
     void *callStacks[3];
     backtrace(callStacks, 3);
@@ -766,7 +787,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) Real::malloc(
             sizeof(ThreadStartRoutineParameter));
     unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
-    Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, (char *) "max thread id out of range");
+    Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, 1, (char *) "max thread id out of range");
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
     arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);

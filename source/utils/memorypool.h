@@ -13,8 +13,11 @@
 #include "mm.hh"
 #include "asserts.h"
 
+#define NAME_LENGTH 30
+
 class MemoryPool {
 private:
+    char name[NAME_LENGTH];
     unsigned int sizeOfMemoryBlock;
     unsigned long maxPoolSize;
     void *volatile bumpPointer;
@@ -63,14 +66,19 @@ private:
                                             __ATOMIC_SEQ_CST)) {
             result = bumpPointer;
         }
-        Asserts::assertt(bumpPointer < bumpEndPointer, (char *) "memorypool out of memory");
+        Asserts::assertt(bumpPointer < bumpEndPointer, 2, (char *) "memorypool out of memory:", this->name);
         return (void *) result;
     }
 
 public:
-    MemoryPool(unsigned int sizeOfMemoryBlock, unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul) {
+    MemoryPool(char *name, unsigned int sizeOfMemoryBlock,
+               unsigned long maxPoolSize = 1024ul * 1024ul * 1024ul * 1024ul) {
 //        Logger::debug("memory pool init\n");
         lock.init();
+        if (strlen(name) < NAME_LENGTH) {
+            Asserts::assertt(false, 2, (char *) "memoryPool name is too long:", name);
+        }
+        memcpy(this->name, name, strlen(name) + 1);
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->maxPoolSize = maxPoolSize;
         this->freeListHead = NULL;

@@ -40,7 +40,7 @@ private:
 
     inline void *getDataBlock(unsigned long key) {
         unsigned int fragmentIndex = key >> fragmentMappingBitNum;
-        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS, (char *) "add to cache shadowmemory out of fragment");
+        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS, 1, (char *) "add to cache shadowmemory out of fragment");
         if (startAddress[fragmentIndex] == NULL) {
             return NULL;
         }
@@ -54,7 +54,7 @@ private:
     inline void createFragment(unsigned long key) {
         lock.lock();
         unsigned int fragmentIndex = key >> fragmentMappingBitNum;
-        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS, (char *) "add to cache shadowmemory out of fragment");
+        Asserts::assertt(fragmentIndex < MAX_FRAGMENTS, 1, (char *) "add to cache shadowmemory out of fragment");
         if (startAddress[fragmentIndex] != NULL) {
             lock.unlock();
             return;

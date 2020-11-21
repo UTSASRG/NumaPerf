@@ -1,7 +1,7 @@
 #ifndef NUMAPERF_THREADSTAGEINFO_H
 #define NUMAPERF_THREADSTAGEINFO_H
 
-#include <utils/real.h>
+#include "../utils/real.h"
 #include <cstring>
 #include "threadbasedinfo.h"
 
@@ -31,6 +31,16 @@ public:
 
     float getUserUsage() {
         return (float) (this->totalAliveTime - this->totalIdleTime) / (float) (this->totalAliveTime);
+    }
+
+    long getRecommendThreadNum() {
+        if (this->threadNumber == 1) {
+            return 1;
+        }
+        if (this->getUserUsage() > THREAD_FULL_USAGE) {
+            return this->threadNumber;
+        }
+        return this->getUserUsage() * this->threadNumber;
     }
 
     unsigned long getThreadCreateCallSite() const {

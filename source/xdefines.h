@@ -38,6 +38,7 @@
 #define MALLOC_CALL_SITE_OFFSET 16
 
 #define BUFSZ 1024
+#define THREAD_FULL_USAGE 0.95
 
 #define TWO_BLACK_SPACE "  "
 
