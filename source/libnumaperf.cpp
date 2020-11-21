@@ -72,7 +72,7 @@ static void initializer(void) {
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(2ul * TB, true);
-    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(0);
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL);
     GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
     inited = true;
@@ -87,7 +87,7 @@ MemoryPool CacheLineDetailedInfo::localMemoryPool((char *) "CacheLineDetailedInf
                                                   GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessInfo",
                                                    ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
-                                                   GB * 64);
+                                                   GB * 128);
 
 MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
                                             ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
@@ -375,12 +375,13 @@ __attribute__ ((destructor)) void finalizer(void) {
     threadStageInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 30);
     int callsiteNum = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        unsigned long callSite = (unsigned long) (GlobalThreadBasedInfo[i]->getThreadCreateCallSite());
-        ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSite, 0);
+        unsigned long callSiteKey = GlobalThreadBasedInfo[i]->getThreadCreateCallSiteStack()->getKey();
+        ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSiteKey, 0);
         if (NULL == threadStageInfo) {
             callsiteNum++;
-            threadStageInfo = ThreadStageInfo::createThreadStageInfo(callSite);
-            threadStageInfoMap.insert(callSite, 0, threadStageInfo);
+            threadStageInfo = ThreadStageInfo::createThreadStageInfo(
+                    GlobalThreadBasedInfo[i]->getThreadCreateCallSiteStack());
+            threadStageInfoMap.insert(callSiteKey, 0, threadStageInfo);
         }
         threadStageInfo->recordThreadBasedInfo(GlobalThreadBasedInfo[i]);
     }
@@ -388,8 +389,8 @@ __attribute__ ((destructor)) void finalizer(void) {
         int stage = 1;
         for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
             ThreadStageInfo *data = iterator.getData();
-            fprintf(dumpFile, "Thread Stage-%d: ", stage);
-            Programs::printAddress2Line(data->getThreadCreateCallSite(), dumpFile);
+            fprintf(dumpFile, "Thread Stage-%d: \n", stage);
+            data->getThreadCreateCallSite()->print(dumpFile);
             fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
                     data->getUserUsage(), data->getRecommendThreadNum());
             if (data->getUserUsage() > THREAD_FULL_USAGE) {
@@ -756,7 +757,7 @@ void free(void *ptr) __THROW {
 typedef struct {
     void *startRoutinePtr;
     void *parameterPtr;
-    void *callSite;
+    CallStack *callSite;
     unsigned long threadIndex;
 } ThreadStartRoutineParameter;
 
@@ -790,7 +791,8 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, 1, (char *) "max thread id out of range");
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
-    arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);
+//    arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);
+    arguments->callSite = CallStack::createCallStack();
     arguments->threadIndex = threadIndex;
     //fprintf(stderr, "callSite:%p\n",arguments->callSite);
     return Real::pthread_create(tid, attr, initThreadIndexRoutine, (void *) arguments);

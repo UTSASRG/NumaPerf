@@ -6,7 +6,7 @@
 #include "threadbasedinfo.h"
 
 class ThreadStageInfo {
-    unsigned long threadCreateCallSite;
+    CallStack *threadCreateCallSite;
     long threadNumber;
     unsigned long long totalAliveTime;
     unsigned long long totalIdleTime;
@@ -15,7 +15,7 @@ private:
     }
 
 public:
-    static ThreadStageInfo *createThreadStageInfo(unsigned long threadCreateCallSite) {
+    static ThreadStageInfo *createThreadStageInfo(CallStack *threadCreateCallSite) {
         void *mem = Real::malloc(sizeof(ThreadStageInfo));
         memset(mem, 0, sizeof(ThreadStageInfo));
         ThreadStageInfo *ret = (ThreadStageInfo *) mem;
@@ -43,7 +43,7 @@ public:
         return this->getUserUsage() * this->threadNumber;
     }
 
-    unsigned long getThreadCreateCallSite() const {
+    CallStack *getThreadCreateCallSite() const {
         return threadCreateCallSite;
     }
 

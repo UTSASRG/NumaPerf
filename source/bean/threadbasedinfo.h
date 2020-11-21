@@ -2,9 +2,10 @@
 #define NUMAPERF_THREADBASEDINFO_H
 
 #include <cstring>
+#include "callstacks.h"
 
 class ThreadBasedInfo {
-    void *threadCreateCallSite;
+    CallStack *threadCreateCallSiteStack;
     unsigned long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
     long nodeMigrationNum;
@@ -18,10 +19,10 @@ private:
 
 public:
 
-    inline static ThreadBasedInfo *createThreadBasedInfo(void *threadCreateCallSite) {
+    inline static ThreadBasedInfo *createThreadBasedInfo(CallStack *threadCreateCallSite) {
         void *mem = Real::malloc(sizeof(ThreadBasedInfo));
         ThreadBasedInfo *ret = new(mem)ThreadBasedInfo();
-        ret->threadCreateCallSite = threadCreateCallSite;
+        ret->threadCreateCallSiteStack = threadCreateCallSite;
         return ret;
     }
 
@@ -45,8 +46,8 @@ public:
         this->idleTime += newIdleTime;
     }
 
-    inline void *getThreadCreateCallSite() const {
-        return threadCreateCallSite;
+    CallStack *getThreadCreateCallSiteStack() const {
+        return threadCreateCallSiteStack;
     }
 
     inline unsigned long getTotalRunningTime() const {
