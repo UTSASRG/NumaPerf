@@ -6,7 +6,8 @@
 
 class ThreadBasedInfo {
     CallStack *threadCreateCallSiteStack;
-    unsigned long totalRunningTime;
+    unsigned long long startTime;
+    unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
     long nodeMigrationNum;
     unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
@@ -30,12 +31,16 @@ public:
         Real::free(threadBasedInfo);
     }
 
-    inline void threadBasedAccess(unsigned long firstTouchThreadId) {
-        threadBasedAccessNumber[firstTouchThreadId]++;
+    inline void start() {
+        this->startTime = Timer::getCurrentCycle();
     }
 
-    inline void setTotalRunningTime(unsigned long totalRunningTime) {
-        ThreadBasedInfo::totalRunningTime = totalRunningTime;
+    inline void end() {
+        this->totalRunningTime = Timer::getCurrentCycle() - this->startTime;
+    }
+
+    inline void threadBasedAccess(unsigned long firstTouchThreadId) {
+        threadBasedAccessNumber[firstTouchThreadId]++;
     }
 
     inline void nodeMigrate() {

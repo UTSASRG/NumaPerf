@@ -375,6 +375,10 @@ __attribute__ ((destructor)) void finalizer(void) {
     threadStageInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 30);
     int callsiteNum = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+
+        if (GlobalThreadBasedInfo[i]->getTotalRunningTime() == 0) {
+            GlobalThreadBasedInfo[i]->end();
+        }
         unsigned long callSiteKey = GlobalThreadBasedInfo[i]->getThreadCreateCallSiteStack()->getKey();
         ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSiteKey, 0);
         if (NULL == threadStageInfo) {
@@ -770,9 +774,9 @@ void *initThreadIndexRoutine(void *args) {
     GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
-    unsigned long long start = Timer::getCurrentCycle();
+    threadBasedInfo->start();
     void *result = startRoutineFunPtr(arguments->parameterPtr);
-    threadBasedInfo->setTotalRunningTime(Timer::getCurrentCycle() - start);
+    threadBasedInfo->end();
     memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
            sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
