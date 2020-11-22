@@ -42,8 +42,8 @@ public:
     }
 
     inline void print(FILE *outFile = stderr) {
-        for (int i = 0; i < size; i++) {
-            Programs::printAddress2Line((unsigned long) callStack[i], outFile);
+        for (int i = 1; i < size; i++) {
+            Programs::printAddress2Line((unsigned long) callStack[i] - 1, outFile);
         }
     }
 };
