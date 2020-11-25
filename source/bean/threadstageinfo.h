@@ -41,8 +41,8 @@ public:
             return this->threadNumber;
         }
         long ret = this->getUserUsage() * this->threadNumber;
-        if (ret == 0) {
-            return 1;
+        if (ret < threadNumber) {
+            ret++;
         }
         return ret;
     }

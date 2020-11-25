@@ -393,6 +393,9 @@ __attribute__ ((destructor)) void finalizer(void) {
         int stage = 1;
         for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
             ThreadStageInfo *data = iterator.getData();
+            if (data->getThreadNumber() == 1) {
+                continue;
+            }
             fprintf(dumpFile, "Thread Stage-%d: \n", stage);
             data->getThreadCreateCallSite()->print(dumpFile);
             fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
@@ -404,22 +407,47 @@ __attribute__ ((destructor)) void finalizer(void) {
             stage++;
         }
     }
-    fprintf(dumpFile, "\n");
+
+    fprintf(dumpFile,
+            "\n");
 
     long totalMigrationNum = 0;
-    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
+    for (
+            unsigned long i = 1;
+            i <=
+            largestThreadIndex;
+            i++) {
+        totalMigrationNum += GlobalThreadBasedInfo[i]->
+
+                getNodeMigrationNum();
+
     }
-    fprintf(dumpFile, "Part Two: Thread based node migration times:%lu\n", totalMigrationNum);
-    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
-            fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
-                    GlobalThreadBasedInfo[i]->getNodeMigrationNum());
+    fprintf(dumpFile,
+            "Part Two: Thread based node migration times:%lu\n", totalMigrationNum);
+    for (
+            unsigned long i = 1;
+            i <=
+            largestThreadIndex;
+            i++) {
+        if (GlobalThreadBasedInfo[i]->
+
+                getNodeMigrationNum()
+
+            > 0) {
+            fprintf(dumpFile,
+                    "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
+                    GlobalThreadBasedInfo[i]->
+
+                            getNodeMigrationNum()
+
+            );
         }
     }
-    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile,
+            "\n\n");
 
-    fprintf(dumpFile, "Part Three: Thread based imbalance detection & threads binding recommendation:\n\n");
+    fprintf(dumpFile,
+            "Part Three: Thread based imbalance detection & threads binding recommendation:\n\n");
     unsigned long threadBasedAverageAccessNumber[MAX_THREAD_NUM];
     unsigned long threadBasedAccessNumberDeviation[MAX_THREAD_NUM];
     bool globalBalancedThread[MAX_THREAD_NUM];
@@ -427,47 +455,83 @@ __attribute__ ((destructor)) void finalizer(void) {
     int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
                                                         threadBasedAccessNumberDeviation, localBalancedThread,
                                                         globalBalancedThread);
-    fprintf(dumpFile, "2.1 Local ImBalanced Threads:\n");
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+    fprintf(dumpFile,
+            "2.1 Local ImBalanced Threads:\n");
+    for (
+            unsigned long i = 0;
+            i <=
+            largestThreadIndex;
+            i++) {
         if (!localBalancedThread[i]) {
-            fprintf(dumpFile, "%ld,", i);
+            fprintf(dumpFile,
+                    "%ld,", i);
         }
     }
-    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile,
+            "\n\n");
 
-    fprintf(dumpFile, "2.2 Global Balanced Threads:\n");
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+    fprintf(dumpFile,
+            "2.2 Global Balanced Threads:\n");
+    for (
+            unsigned long i = 0;
+            i <=
+            largestThreadIndex;
+            i++) {
         if (globalBalancedThread[i]) {
-            fprintf(dumpFile, "%ld,", i);
+            fprintf(dumpFile,
+                    "%ld,", i);
         }
     }
-    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile,
+            "\n\n");
 
-    fprintf(dumpFile, "2.3 Global ImBalanced Threads:\n");
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+    fprintf(dumpFile,
+            "2.3 Global ImBalanced Threads:\n");
+    for (
+            unsigned long i = 0;
+            i <=
+            largestThreadIndex;
+            i++) {
         if (!globalBalancedThread[i]) {
-            fprintf(dumpFile, "%ld,", i);
+            fprintf(dumpFile,
+                    "%ld,", i);
         }
     }
-    fprintf(dumpFile, "\n\n");
-    fprintf(dumpFile, "2.4 Threads binding recomendations:\n");
-    // get threads binding recommendations
+    fprintf(dumpFile,
+            "\n\n");
+    fprintf(dumpFile,
+            "2.4 Threads binding recomendations:\n");
+// get threads binding recommendations
     ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
-    memset(threadClusters, 0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
-    getTightThreadClusters(threadBasedAverageAccessNumber, globalBalancedThread, balancedThreadNum, threadClusters);
+    memset(threadClusters,
+           0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
+    getTightThreadClusters(threadBasedAverageAccessNumber, globalBalancedThread, balancedThreadNum, threadClusters
+    );
     int cluster = 0;
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+    for (
+            unsigned long i = 0;
+            i <=
+            largestThreadIndex;
+            i++) {
         if (threadClusters[i].num == 0) {
             continue;
         }
         cluster++;
-        fprintf(dumpFile, "Thread cluster-%d:", cluster);
-        for (unsigned long j = 0; j < threadClusters[i].num; j++) {
-            fprintf(dumpFile, "%ld,", threadClusters[i].threadId[j]);
+        fprintf(dumpFile,
+                "Thread cluster-%d:", cluster);
+        for (
+                unsigned long j = 0;
+                j < threadClusters[i].
+                        num;
+                j++) {
+            fprintf(dumpFile,
+                    "%ld,", threadClusters[i].threadId[j]);
         }
-        fprintf(dumpFile, "\n");
+        fprintf(dumpFile,
+                "\n");
     }
-    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile,
+            "\n\n");
 #ifdef DEBUG_LOG
     fprintf(dumpFile, "2.4 Thread based imbalance access:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
@@ -498,11 +562,22 @@ __attribute__ ((destructor)) void finalizer(void) {
         fprintf(dumpFile, "\n\n");
     }
 #endif
-    fprintf(dumpFile, "Part Four: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
-    for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
-        fprintf(dumpFile, "   Top problematical callsites %d:\n", i + 1);
-        topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile, totalRunningCycles, 4);
-        fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile,
+            "Part Four: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
+    for (
+            int i = 0;
+            i < topDiadCallSiteInfoQueue.
+
+                    getSize();
+
+            i++) {
+        fprintf(dumpFile,
+                "   Top problematical callsites %d:\n", i + 1);
+        topDiadCallSiteInfoQueue.getValues()[i]->
+                dump(dumpFile, totalRunningCycles,
+                     4);
+        fprintf(dumpFile,
+                "\n\n");
     }
 }
 
