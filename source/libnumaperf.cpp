@@ -390,24 +390,16 @@ __attribute__ ((destructor)) void finalizer(void) {
         threadStageInfo->recordThreadBasedInfo(GlobalThreadBasedInfo[i]);
     }
     if (callsiteNum > 1) {
-        unsigned long long totalWaitingTime = 0;
-        long totalThreadNum = 0;
+        int stage = 1;
         for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
             ThreadStageInfo *data = iterator.getData();
             if (data->getThreadNumber() == 1) {
                 continue;
             }
-            totalThreadNum += data->getThreadNumber();
-            totalWaitingTime += data->getTotalIdleTime();
-        }
-
-        int stage = 1;
-        for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
-            ThreadStageInfo *data = iterator.getData();
             fprintf(dumpFile, "Thread Stage-%d: \n", stage);
             data->getThreadCreateCallSite()->print(dumpFile);
-            fprintf(dumpFile, "Thread Number:%lu, Waiting Percentage:%f\n", data->getThreadNumber(),
-                    ((double) data->getTotalIdleTime()) / ((double) totalWaitingTime));
+            fprintf(dumpFile, "Thread Number:%lu, Waiting Time:%f\n", data->getThreadNumber(),
+                    data->getTotalIdleTime());
             fprintf(dumpFile, "\n\n");
             stage++;
         }

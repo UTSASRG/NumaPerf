@@ -55,11 +55,11 @@ public:
         return threadNumber;
     }
 
-    unsigned long long getTotalAliveTime() const {
+    unsigned long long int getTotalAliveTime() const {
         return totalAliveTime;
     }
 
-    unsigned long long getTotalIdleTime() const {
+    unsigned long long int getTotalIdleTime() const {
         return totalIdleTime;
     }
 };
