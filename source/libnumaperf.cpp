@@ -393,13 +393,13 @@ __attribute__ ((destructor)) void finalizer(void) {
         int stage = 1;
         for (auto iterator = threadStageInfoMap.begin(); iterator != threadStageInfoMap.end(); iterator++) {
             ThreadStageInfo *data = iterator.getData();
-            if (data->getThreadNumber() == 1) {
-                continue;
-            }
             fprintf(dumpFile, "Thread Stage-%d: \n", stage);
             data->getThreadCreateCallSite()->print(dumpFile);
-            fprintf(dumpFile, "Thread Number:%lu, Waiting Time:%f\n", data->getThreadNumber(),
-                    data->getTotalIdleTime());
+            fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
+                    data->getUserUsage(), data->getRecommendThreadNum());
+            if (data->getUserUsage() > THREAD_FULL_USAGE) {
+                fprintf(dumpFile, "++");
+            }
             fprintf(dumpFile, "\n\n");
             stage++;
         }
