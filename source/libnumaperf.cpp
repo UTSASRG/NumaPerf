@@ -959,6 +959,19 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
 //        fprintf(stderr, "thread-%lu, node migrate\n", currentThreadIndex);
 
+
+#define WAIT_HANDLE(waiTFuncPtr, cond, lock)\
+    int nodeBefore = Numas::getNodeOfCurrentThread();\
+    unsigned long long start = Timer::getCurrentCycle();\
+    int ret = waiTFuncPtr(cond, lock);\
+    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
+    int nodeAfter = Numas::getNodeOfCurrentThread();\
+    if (nodeBefore != nodeAfter) {\
+        threadBasedInfo->nodeMigrate();\
+    }\
+    return ret;
+
+
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_lock\n");
     if (!inited) {
@@ -987,6 +1000,11 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
         return 0;
     }
     UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
+}
+
+int pthread_cond_wait(pthread_cond_t *cond,
+                      pthread_mutex_t *mutex) {
+    WAIT_HANDLE(Real::pthread_cond_wait, cond, mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {

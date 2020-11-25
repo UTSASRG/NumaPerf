@@ -1,7 +1,3 @@
-//
-// Created by XIN ZHAO on 6/7/20.
-//
-
 #ifndef NUMAPERF_TIMER_H
 #define NUMAPERF_TIMER_H
 namespace Timer {

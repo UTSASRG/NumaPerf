@@ -41,6 +41,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
 int pthread_spin_lock(pthread_spinlock_t *lock);
 int pthread_spin_unlock(pthread_spinlock_t *lock);
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 
 void store_16bytes(unsigned long addr);
 void store_8bytes(unsigned long addr);
