@@ -40,7 +40,11 @@ public:
         if (this->getUserUsage() > THREAD_FULL_USAGE) {
             return this->threadNumber;
         }
-        return this->getUserUsage() * this->threadNumber;
+        long ret = this->getUserUsage() * this->threadNumber;
+        if (ret == 0) {
+            return 1;
+        }
+        return ret;
     }
 
     CallStack *getThreadCreateCallSite() const {
