@@ -614,6 +614,12 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
         Programs::printAddress2Line((unsigned long) callStacks[2]);
     }
 #endif
+#define USING_BACKTRACE 1
+#if USING_BACKTRACE
+    CallStack localCallStack = CallStack();
+    localCallStack.fillCallStack();
+    callerAddress = localCallStack.getKey();
+#endif
     if (callSiteInfoMap.find((unsigned long) callerAddress, 0) == NULL) {
         DiagnoseCallSiteInfo *diagnoseCallSiteInfo = DiagnoseCallSiteInfo::createNewDiagnoseCallSiteInfo();
         if (!callSiteInfoMap.insertIfAbsent((unsigned long) callerAddress, 0, diagnoseCallSiteInfo)) {
@@ -621,12 +627,11 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
         } else {
             CallStack *callStack = diagnoseCallSiteInfo->getCallStack();
             callStack->fillCallStack();
-//            void *callStacks[MAX_BACK_TRACE_NUM];
-//            int size = backtrace(callStacks, MAX_BACK_TRACE_NUM);
-//            diagnoseCallSiteInfo->setCallStack((unsigned long *) callStacks, 2, size - 2);
+#if !USING_BACKTRACE
             if ((void *) callerAddress != callStack->getCallStack()[2]) {
                 Logger::error("callStackSize != callerAddress\n");
             }
+#endif
         }
     }
     ObjectInfo *objectInfoPtr = ObjectInfo::createNewObjectInfoo((unsigned long) objectStartAddress, size,
