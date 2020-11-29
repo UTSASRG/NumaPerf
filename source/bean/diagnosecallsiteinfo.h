@@ -5,9 +5,10 @@
 #include "../utils/collection/priorityqueue.h"
 #include "diagnoseobjinfo.h"
 #include "../xdefines.h"
+#include "callstacks.h"
 
 class DiagnoseCallSiteInfo {
-    unsigned long callStack[MAX_CALL_STACK_NUM];
+    CallStack callStack;
     unsigned long allInvalidNumInMainThread;
     unsigned long allInvalidNumInOtherThreads;
     unsigned long allAccessNumInMainThread;
@@ -17,10 +18,7 @@ class DiagnoseCallSiteInfo {
 private:
     static MemoryPool localMemoryPool;
 
-    DiagnoseCallSiteInfo() : topObjInfoQueue(MAX_TOP_OBJ_INFO) {
-        for (int i = 0; i < MAX_CALL_STACK_NUM; i++) {
-            callStack[i] = MAX_CALL_STACK_NUM;
-        }
+    DiagnoseCallSiteInfo() : callStack(), topObjInfoQueue(MAX_TOP_OBJ_INFO) {
         allInvalidNumInMainThread = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
@@ -82,12 +80,8 @@ public:
         return this->getTotalRemoteAccess() == diagnoseCallSiteInfo.getTotalRemoteAccess();
     }
 
-    inline void setCallStack(unsigned long *callStack, int startIndex, int length) {
-        int num = length > MAX_CALL_STACK_NUM ? MAX_CALL_STACK_NUM : length;
-        for (int i = 0; i < num; i++) {
-            // this is strange, if not minus one, sometime addr2line can not print the right line number
-            this->callStack[i] = callStack[i + startIndex] - 1;
-        }
+    CallStack *getCallStack() {
+        return &(this->callStack);
     }
 
     inline unsigned long getInvalidNumInMainThread() {
@@ -107,12 +101,7 @@ public:
     }
 
     inline void dump_call_stacks(FILE *file) {
-        for (int i = 0; i < MAX_CALL_STACK_NUM; i++) {
-            if (this->callStack[i] == 0) {
-                break;
-            }
-            Programs::printAddress2Line(this->callStack[i], file);
-        }
+        this->callStack.printFrom(2, file);
     }
 
     inline double getSeriousScore(unsigned long totalRunningCycles) {

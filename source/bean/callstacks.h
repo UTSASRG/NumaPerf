@@ -6,19 +6,16 @@
 #include <execinfo.h>
 #include "../utils/real.h"
 
-#define MAX_CALL_STACK_NUM 5
 
 class CallStack {
     int size = 0;
-    void *callStack[MAX_CALL_STACK_NUM];
+    void *callStack[MAX_BACK_TRACE_NUM];
 
-private:
+public:
 
     CallStack() {
         memset(this, 0, sizeof(CallStack));
     }
-
-public:
 
     inline static CallStack *createEmptyCallStack() {
         void *mem = Real::malloc(sizeof(CallStack));
@@ -28,9 +25,18 @@ public:
 
     inline static CallStack *createCallStack() {
         CallStack *ret = CallStack::createEmptyCallStack();
-        int size = backtrace(ret->callStack, MAX_CALL_STACK_NUM);
+        int size = backtrace(ret->callStack, MAX_BACK_TRACE_NUM);
         ret->size = size;
         return ret;
+    }
+
+    inline void fillCallStack() {
+        int size = backtrace(this->callStack, MAX_BACK_TRACE_NUM);
+        this->size = size;
+    }
+
+    inline void **getCallStack() {
+        return callStack;
     }
 
     inline unsigned long getKey() {
@@ -41,8 +47,9 @@ public:
         return key;
     }
 
-    inline void print(FILE *outFile = stderr) {
-        for (int i = 1; i < size; i++) {
+    inline void printFrom(int fromIndex, FILE *outFile = stderr) {
+        for (int i = fromIndex; i < size; i++) {
+            // this is strange, if not minus one, sometime addr2line can not print the right line number
             Programs::printAddress2Line((unsigned long) callStack[i] - 1, outFile);
         }
     }

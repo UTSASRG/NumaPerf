@@ -397,7 +397,7 @@ __attribute__ ((destructor)) void finalizer(void) {
                 continue;
             }
             fprintf(dumpFile, "Thread Stage-%d: \n", stage);
-            data->getThreadCreateCallSite()->print(dumpFile);
+            data->getThreadCreateCallSite()->printFrom(1, dumpFile);
             fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
                     data->getUserUsage(), data->getRecommendThreadNum());
             if (data->getUserUsage() > THREAD_FULL_USAGE) {
@@ -619,10 +619,12 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
         if (!callSiteInfoMap.insertIfAbsent((unsigned long) callerAddress, 0, diagnoseCallSiteInfo)) {
             DiagnoseCallSiteInfo::release(diagnoseCallSiteInfo);
         } else {
-            void *callStacks[MAX_BACK_TRACE_NUM];
-            int size = backtrace(callStacks, MAX_BACK_TRACE_NUM);
-            diagnoseCallSiteInfo->setCallStack((unsigned long *) callStacks, 2, size - 2);
-            if ((void *) callerAddress != callStacks[2]) {
+            CallStack *callStack = diagnoseCallSiteInfo->getCallStack();
+            callStack->fillCallStack();
+//            void *callStacks[MAX_BACK_TRACE_NUM];
+//            int size = backtrace(callStacks, MAX_BACK_TRACE_NUM);
+//            diagnoseCallSiteInfo->setCallStack((unsigned long *) callStacks, 2, size - 2);
+            if ((void *) callerAddress != callStack->getCallStack()[2]) {
                 Logger::error("callStackSize != callerAddress\n");
             }
         }
