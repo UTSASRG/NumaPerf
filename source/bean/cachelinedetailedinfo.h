@@ -109,6 +109,14 @@ public:
         return invalidationNumberInOtherThreads;
     }
 
+    inline unsigned long getReadNumBeforeLastWrite() {
+        return readNumBeforeLastWrite;
+    }
+
+    inline unsigned long getContinualReadNumAfterAWrite() {
+        return continualReadNumAfterAWrite;
+    }
+
     inline unsigned long getTotalRemoteAccess() {
         if (this->seriousScore != 0) {
             return this->seriousScore;

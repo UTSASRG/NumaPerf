@@ -14,6 +14,8 @@ class DiagnoseObjInfo {
     unsigned long allInvalidNumInOtherThreads;
     unsigned long allAccessNumInMainThread;
     unsigned long allAccessNumInOtherThread;
+    unsigned long readNumBeforeLastWrite;
+    unsigned long continualReadNumAfterAWrite;
     PriorityQueue<CacheLineDetailedInfo> topCacheLineDetailQueue;
     PriorityQueue<PageDetailedAccessInfo> topPageDetailedAccessInfoQueue;
 
@@ -30,6 +32,8 @@ public:
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
         allAccessNumInOtherThread = 0;
+        readNumBeforeLastWrite = 0;
+        continualReadNumAfterAWrite = 0;
     }
 
     inline DiagnoseObjInfo *deepCopy() {
@@ -39,6 +43,8 @@ public:
         buff->allInvalidNumInOtherThreads = this->allInvalidNumInOtherThreads;
         buff->allAccessNumInMainThread = this->allAccessNumInMainThread;
         buff->allAccessNumInOtherThread = this->allAccessNumInOtherThread;
+        buff->readNumBeforeLastWrite = this->readNumBeforeLastWrite;
+        buff->continualReadNumAfterAWrite = this->continualReadNumAfterAWrite;
         buff->topCacheLineDetailQueue.setEndIndex(this->topCacheLineDetailQueue.getSize());
         buff->topPageDetailedAccessInfoQueue.setEndIndex(this->topPageDetailedAccessInfoQueue.getSize());
         for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
@@ -97,6 +103,8 @@ public:
     inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        this->readNumBeforeLastWrite += cacheLineDetailedInfo->getReadNumBeforeLastWrite();
+        this->continualReadNumAfterAWrite += cacheLineDetailedInfo->getContinualReadNumAfterAWrite();
         if (topCacheLineDetailQueue.mayCanInsert(cacheLineDetailedInfo->getTotalRemoteAccess())) {
             return topCacheLineDetailQueue.insert(cacheLineDetailedInfo);
 //            CacheLineDetailedInfo *oldCacheLineInfo = topCacheLineDetailQueue.insert(
@@ -171,6 +179,14 @@ public:
         return allAccessNumInOtherThread;
     }
 
+    inline unsigned long getReadNumBeforeLastWrite() const {
+        return readNumBeforeLastWrite;
+    }
+
+    inline unsigned long getContinualReadNumAfterAWrite() const {
+        return continualReadNumAfterAWrite;
+    }
+
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
@@ -185,6 +201,8 @@ public:
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getAllInvalidNumInOtherThreads());
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAllAccessNumInMainThread());
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAllAccessNumInOtherThread());
+        fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %lu/%lu\n", prefix,
+                this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
         for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
             fprintf(file, "%sTop CacheLines %d:\n", prefix, i);
             topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
@@ -193,7 +211,6 @@ public:
             fprintf(file, "%sTop Pages %d:\n", prefix, i);
             topPageDetailedAccessInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
         }
-
     }
 };
 
