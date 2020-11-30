@@ -16,7 +16,7 @@ add_executable(NumaPerf
         source/utils/collection/addrtopageindexshadowmap.h
         source/utils/collection/addrtocacheindexshadowmap.h
         source/utils/collection/list.h
-        source/utils/overwrite_to_file.cpp
+        script/overwrite_to_file.cpp
         source/utils/collection/hashmap.h
         source/utils/collection/priorityqueue.h
         source/utils/collection/addrtopagesinglefragshadowmap.h
