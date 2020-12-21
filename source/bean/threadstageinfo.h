@@ -8,6 +8,7 @@
 class ThreadStageInfo {
     CallStack *threadCreateCallSite;
     long threadNumber;
+    unsigned long long totalMemoryOverheads;
     unsigned long long totalAliveTime;
     unsigned long long totalIdleTime;
 private:
@@ -23,10 +24,19 @@ public:
         return ret;
     }
 
-    void recordThreadBasedInfo(ThreadBasedInfo *threadBasedInfo) {
+    void
+    recordThreadBasedInfo(ThreadBasedInfo *threadBasedInfo, unsigned long currentThreadIndex,
+                          unsigned long maxThreadIndex) {
         this->threadNumber++;
         this->totalAliveTime += threadBasedInfo->getTotalRunningTime();
         this->totalIdleTime += threadBasedInfo->getIdleTime();
+        for (unsigned long index = 0; index <= maxThreadIndex; index++) {
+            if (currentThreadIndex == index) {
+                this->totalMemoryOverheads += threadBasedInfo->getThreadBasedAccessNumber()[index];
+                continue;
+            }
+            this->totalMemoryOverheads += 2 * (threadBasedInfo->getThreadBasedAccessNumber()[index]);
+        }
     }
 
     float getUserUsage() {
@@ -57,6 +67,10 @@ public:
 
     unsigned long long int getTotalAliveTime() const {
         return totalAliveTime;
+    }
+
+    unsigned long long getTotalMemoryOverheads() const {
+        return totalMemoryOverheads;
     }
 
     unsigned long long int getTotalIdleTime() const {

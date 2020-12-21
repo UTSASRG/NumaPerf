@@ -387,7 +387,7 @@ __attribute__ ((destructor)) void finalizer(void) {
                     GlobalThreadBasedInfo[i]->getThreadCreateCallSiteStack());
             threadStageInfoMap.insert(callSiteKey, 0, threadStageInfo);
         }
-        threadStageInfo->recordThreadBasedInfo(GlobalThreadBasedInfo[i]);
+        threadStageInfo->recordThreadBasedInfo(GlobalThreadBasedInfo[i], i, largestThreadIndex);
     }
     if (callsiteNum > 1) {
         int stage = 1;
@@ -398,12 +398,14 @@ __attribute__ ((destructor)) void finalizer(void) {
             }
             fprintf(dumpFile, "Thread Stage-%d: \n", stage);
             data->getThreadCreateCallSite()->printFrom(1, dumpFile);
-            fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
-                    data->getUserUsage(), data->getRecommendThreadNum());
-            if (data->getUserUsage() > THREAD_FULL_USAGE) {
-                fprintf(dumpFile, "++");
-            }
-            fprintf(dumpFile, "\n\n");
+            fprintf(dumpFile, "Current Thread Number:%lu, MemoryLatency:%llu\n", data->getThreadNumber(),
+                    data->getTotalMemoryOverheads());
+//            fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
+//                    data->getUserUsage(), data->getRecommendThreadNum());
+//            if (data->getUserUsage() > THREAD_FULL_USAGE) {
+//                fprintf(dumpFile, "++");
+//            }
+            fprintf(dumpFile, "\n");
             stage++;
         }
     }
