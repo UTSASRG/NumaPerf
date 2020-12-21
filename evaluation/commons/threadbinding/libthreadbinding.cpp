@@ -115,7 +115,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg) __THROW {
     unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
     if (isRoundrobinBInding) {
-        fprintf(stderr, "pthread create thread%lu--node%lu\n", threadIndex, threadIndex % NUMA_NODES);
+//        fprintf(stderr, "pthread create thread%lu--node%lu\n", threadIndex, threadIndex % NUMA_NODES);
 #if 1
         return Real::pthread_create(tid, &(attrBinding[threadIndex % NUMA_NODES]), start_routine, arg);
 #else

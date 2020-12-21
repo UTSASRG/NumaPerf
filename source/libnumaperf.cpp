@@ -614,7 +614,7 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
         Programs::printAddress2Line((unsigned long) callStacks[2]);
     }
 #endif
-#define USING_BACKTRACE 1
+#define USING_BACKTRACE 0
 #if USING_BACKTRACE
     CallStack localCallStack = CallStack();
     localCallStack.fillCallStack();
