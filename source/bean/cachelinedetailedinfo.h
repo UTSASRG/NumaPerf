@@ -22,7 +22,7 @@ class CacheLineDetailedInfo {
     unsigned long readNumBeforeLastWrite;
     unsigned long continualReadNumAfterAWrite;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
-    ReadWritNum readWritNum[MAX_THREAD_NUM];
+//    ReadWritNum readWritNum[MAX_THREAD_NUM];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
@@ -169,14 +169,14 @@ public:
         if (type == E_ACCESS_WRITE) {
             readNumBeforeLastWrite += continualReadNumAfterAWrite;
             continualReadNumAfterAWrite = 0;
-            readWritNum[threadId].writingNum++;
+//            readWritNum[threadId].writingNum++;
         }
 
         if (type == E_ACCESS_READ) {
 #ifdef SAMPLING
             if (sampled) {
                 continualReadNumAfterAWrite++;
-                readWritNum[threadId].readingNum++;
+//                readWritNum[threadId].readingNum++;
             }
 #else
             continualReadNumAfterAWrite++;
@@ -239,7 +239,7 @@ public:
             }
         }
         fprintf(file, "\n");
-
+#if 0
         for (int i = 0; i < MAX_THREAD_NUM; i++) {
             if (readWritNum[i].writingNum <= 0) {
                 continue;
@@ -257,6 +257,7 @@ public:
             fprintf(file, "%s    Reading Number In Thread:%d is %u\n", prefix, i, readWritNum[i].readingNum);
 #endif
         }
+#endif
         // print concurrent word index
     }
 };
