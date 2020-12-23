@@ -90,7 +90,7 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessI
                                                    GB * 128);
 
 MemoryPool PageDetailedAccessInfo::localThreadAccessNumberMemoryPool(
-        (char *) "PageDetailedAccessInfo-localThreadAccessNumberMemoryPool",
+        (char *) "LocalThreadAccessNumberMemoryPool",
         ADDRESSES::alignUpToCacheLine(BLOCK_SIZE * sizeof(unsigned long)),
         GB * 128);
 

@@ -122,7 +122,9 @@ public:
         for (int i = startIndex; i <= endIndex; i++) {
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
-            localThreadAccessNumberMemoryPool.release((void *) blockThreadIdAndAccessNumPtrUnion[i]);
+            if (blockThreadIdAndAccessNumPtrUnion[i] > MAX_THREAD_NUM) {
+                localThreadAccessNumberMemoryPool.release((void *) blockThreadIdAndAccessNumPtrUnion[i]);
+            }
             blockThreadIdAndAccessNumPtrUnion[i] = 0;
         }
     }
