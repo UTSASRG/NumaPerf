@@ -89,6 +89,11 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessI
                                                    ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
                                                    GB * 128);
 
+MemoryPool PageDetailedAccessInfo::localThreadAccessNumberMemoryPool(
+        (char *) "PageDetailedAccessInfo-localThreadAccessNumberMemoryPool",
+        ADDRESSES::alignUpToCacheLine(BLOCK_SIZE * sizeof(unsigned long)),
+        GB * 128);
+
 MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
                                             ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
                                             GB * 1);

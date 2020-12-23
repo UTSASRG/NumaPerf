@@ -6,17 +6,21 @@
 #include "../utils/addresses.h"
 #include "scores.h"
 
+#define BLOCK_SIZE CACHE_LINE_SIZE
+#define BLOCK_NUM (PAGE_SIZE/CACHE_LINE_SIZE)
+
 class PageDetailedAccessInfo {
 //    unsigned long seriousScore;
     unsigned long firstTouchThreadId;
     unsigned long startAddress;
     unsigned long allAccessNumByOtherThread;
-    unsigned long accessNumberByFirstTouchThread[CACHE_NUM_IN_ONE_PAGE];
-    unsigned long accessNumberByOtherThread[CACHE_NUM_IN_ONE_PAGE];
-    unsigned long accessNumberByThreads[CACHE_NUM_IN_ONE_PAGE][MAX_THREAD_NUM];
+    unsigned long accessNumberByFirstTouchThread[BLOCK_SIZE];
+    unsigned long accessNumberByOtherThread[BLOCK_SIZE];
+    unsigned long blockThreadIdAndAccessNumPtrUnion[BLOCK_NUM];
 
 private:
     static MemoryPool localMemoryPool;
+    static MemoryPool localThreadAccessNumberMemoryPool;
 
     PageDetailedAccessInfo(unsigned long pageStartAddress, unsigned long firstTouchThreadId) {
         memset(this, 0, sizeof(PageDetailedAccessInfo));
@@ -61,7 +65,16 @@ public:
     PageDetailedAccessInfo *copy() {
         void *buff = localMemoryPool.get();
         memcpy(buff, this, sizeof(PageDetailedAccessInfo));
-        return (PageDetailedAccessInfo *) buff;
+        PageDetailedAccessInfo *newObj = (PageDetailedAccessInfo *) buff;
+        for (int i = 0; i < BLOCK_NUM; i++) {
+            if (newObj->blockThreadIdAndAccessNumPtrUnion[i] > MAX_THREAD_NUM) {
+                void *oldOne = (void *) (newObj->blockThreadIdAndAccessNumPtrUnion[i]);
+                newObj->blockThreadIdAndAccessNumPtrUnion[i] = (unsigned long) localThreadAccessNumberMemoryPool.get();
+                memcpy((void *) (newObj->blockThreadIdAndAccessNumPtrUnion[i]), oldOne,
+                       localThreadAccessNumberMemoryPool.getMemBlockSize());
+            }
+        }
+        return newObj;
     }
 
     inline void recordAccess(unsigned long addr, unsigned long accessThreadId, unsigned long firstTouchThreadId) {
@@ -69,9 +82,19 @@ public:
         if (accessThreadId == firstTouchThreadId) {
             accessNumberByFirstTouchThread[index]++;
             return;
-        }
+        } // well, this is not a bug. Since no needs to trace firstTouchThreadId in details.
         accessNumberByOtherThread[index]++;
-        accessNumberByThreads[index][accessThreadId]++;
+        if (blockThreadIdAndAccessNumPtrUnion[index] == accessThreadId) {
+            return;
+        }
+        if (blockThreadIdAndAccessNumPtrUnion[index] == 0) {
+            blockThreadIdAndAccessNumPtrUnion[index] = accessThreadId;
+            return;
+        }
+        if (blockThreadIdAndAccessNumPtrUnion[index] <= MAX_THREAD_NUM) {
+            blockThreadIdAndAccessNumPtrUnion[index] = (unsigned long) localThreadAccessNumberMemoryPool.get();
+        }
+        ((unsigned long *) blockThreadIdAndAccessNumPtrUnion[index])[accessThreadId]++;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -85,6 +108,11 @@ public:
     }
 
     inline void clearAll() {
+        for (int i = 0; i < BLOCK_NUM; i++) {
+            if (blockThreadIdAndAccessNumPtrUnion[i] > MAX_THREAD_NUM) {
+                localThreadAccessNumberMemoryPool.release((void *) blockThreadIdAndAccessNumPtrUnion[i]);
+            }
+        }
         memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
     }
 
@@ -94,7 +122,8 @@ public:
         for (int i = startIndex; i <= endIndex; i++) {
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
-            memset(accessNumberByThreads[i], 0, MAX_THREAD_NUM * sizeof(unsigned long));
+            localThreadAccessNumberMemoryPool.release((void *) blockThreadIdAndAccessNumPtrUnion[i]);
+            blockThreadIdAndAccessNumPtrUnion[i] = 0;
         }
     }
 
@@ -171,14 +200,20 @@ public:
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
-        for (int i = 0; i < CACHE_NUM_IN_ONE_PAGE; i++) {
+        for (int i = 0; i < BLOCK_NUM; i++) {
             if (accessNumberByFirstTouchThread[i] == 0 && accessNumberByOtherThread[i] == 0) {
                 continue;
             }
-            fprintf(file, "%s    %dth cache block:\n", prefix, i);
+            fprintf(file, "%s    %dth block:\n", prefix, i);
+            if (blockThreadIdAndAccessNumPtrUnion[i] <= MAX_THREAD_NUM) {
+                fprintf(file, "%s        thread:%lu, only access by one thread\n", prefix,
+                        blockThreadIdAndAccessNumPtrUnion[i]);
+                continue;
+            }
             for (int j = 0; j < MAX_THREAD_NUM; j++) {
-                if (accessNumberByThreads[i][j] != 0) {
-                    fprintf(file, "%s        thread:%d, access number:%lu\n", prefix, j, accessNumberByThreads[i][j]);
+                if (((unsigned long *) blockThreadIdAndAccessNumPtrUnion[i])[j] != 0) {
+                    fprintf(file, "%s        thread:%d, access number:%lu\n", prefix, j,
+                            ((unsigned long *) blockThreadIdAndAccessNumPtrUnion[i])[j]);
                 }
             }
         }

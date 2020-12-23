@@ -89,6 +89,10 @@ public:
 //                      bumpPointer, bumpEndPointer);
     }
 
+    unsigned int getMemBlockSize() {
+        return this->sizeOfMemoryBlock;
+    }
+
     void *get() {
 //        unsigned long start = Timer::getCurrentCycle();
         void *result = NULL;
