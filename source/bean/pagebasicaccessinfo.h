@@ -14,7 +14,7 @@ class PageBasicAccessInfo {
 //    unsigned long accessNumberByFirstTouchThread;
     PageDetailedAccessInfo *pageDetailedAccessInfo;
     unsigned long accessNumberByOtherThreads;
-    unsigned long cacheLineWritingNumber[CACHE_NUM_IN_ONE_PAGE];
+    unsigned short cacheLineWritingNumber[CACHE_NUM_IN_ONE_PAGE];
 
 private:
     inline int getStartIndex(unsigned long objStartAddress, unsigned long size) const {
