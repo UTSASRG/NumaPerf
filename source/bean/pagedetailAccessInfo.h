@@ -6,16 +6,18 @@
 #include "../utils/addresses.h"
 #include "scores.h"
 
-#define BLOCK_SIZE CACHE_LINE_SIZE
-#define BLOCK_NUM (PAGE_SIZE/CACHE_LINE_SIZE)
+#define BLOCK_SHIFT_BITS ((unsigned int)(1+CACHE_LINE_SHIFT_BITS))
+#define BLOCK_SIZE (1 << BLOCK_SHIFT_BITS)
+#define BLOCK_NUM (PAGE_SIZE/BLOCK_SIZE)
+#define BLOCK_MASK ((unsigned long)0b111110000000)
 
 class PageDetailedAccessInfo {
 //    unsigned long seriousScore;
     unsigned long firstTouchThreadId;
     unsigned long startAddress;
     unsigned long allAccessNumByOtherThread;
-    unsigned long accessNumberByFirstTouchThread[BLOCK_SIZE];
-    unsigned long accessNumberByOtherThread[BLOCK_SIZE];
+    unsigned long accessNumberByFirstTouchThread[BLOCK_NUM];
+    unsigned long accessNumberByOtherThread[BLOCK_NUM];
     unsigned long blockThreadIdAndAccessNumPtrUnion[BLOCK_NUM];
 
 private:
@@ -28,22 +30,26 @@ private:
         this->startAddress = pageStartAddress;
     }
 
+    inline unsigned int getBlockIndex(unsigned long address) const {
+        return (address & BLOCK_MASK) >> BLOCK_SHIFT_BITS;
+    }
+
     inline int getStartIndex(unsigned long objStartAddress, unsigned long size) const {
         if (objStartAddress <= startAddress) {
             return 0;
         }
-        return ADDRESSES::getCacheIndexInsidePage(objStartAddress);
+        return getBlockIndex(objStartAddress);
     }
 
     inline int getEndIndex(unsigned long objStartAddress, unsigned long size) const {
         if (objStartAddress <= 0) {
-            return CACHE_NUM_IN_ONE_PAGE - 1;
+            return BLOCK_NUM - 1;
         }
         unsigned long objEndAddress = objStartAddress + size;
         if (objEndAddress >= (startAddress + PAGE_SIZE)) {
-            return CACHE_NUM_IN_ONE_PAGE - 1;
+            return BLOCK_NUM - 1;
         }
-        return ADDRESSES::getCacheIndexInsidePage(objEndAddress);
+        return getBlockIndex(objEndAddress);
     }
 
 public:
@@ -78,7 +84,7 @@ public:
     }
 
     inline void recordAccess(unsigned long addr, unsigned long accessThreadId, unsigned long firstTouchThreadId) {
-        unsigned int index = ADDRESSES::getCacheIndexInsidePage(addr);
+        unsigned int index = getBlockIndex(addr);
         if (accessThreadId == firstTouchThreadId) {
             accessNumberByFirstTouchThread[index]++;
             return;
