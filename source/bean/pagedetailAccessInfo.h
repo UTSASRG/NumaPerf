@@ -16,8 +16,8 @@ class PageDetailedAccessInfo {
     unsigned long firstTouchThreadId;
     unsigned long startAddress;
     unsigned long allAccessNumByOtherThread;
-    unsigned long accessNumberByFirstTouchThread[BLOCK_NUM];
-    unsigned long accessNumberByOtherThread[BLOCK_NUM];
+    unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
+    unsigned int accessNumberByOtherThread[BLOCK_NUM];
     unsigned long blockThreadIdAndAccessNumPtrUnion[BLOCK_NUM];
 
 private:
@@ -100,7 +100,7 @@ public:
         if (blockThreadIdAndAccessNumPtrUnion[index] <= MAX_THREAD_NUM) {
             blockThreadIdAndAccessNumPtrUnion[index] = (unsigned long) localThreadAccessNumberMemoryPool.get();
         }
-        ((unsigned long *) blockThreadIdAndAccessNumPtrUnion[index])[accessThreadId]++;
+        ((unsigned short *) blockThreadIdAndAccessNumPtrUnion[index])[accessThreadId]++;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -219,9 +219,9 @@ public:
                 continue;
             }
             for (int j = 0; j < MAX_THREAD_NUM; j++) {
-                if (((unsigned long *) blockThreadIdAndAccessNumPtrUnion[i])[j] != 0) {
-                    fprintf(file, "%s        thread:%d, access number:%lu\n", prefix, j,
-                            ((unsigned long *) blockThreadIdAndAccessNumPtrUnion[i])[j]);
+                if (((unsigned short *) blockThreadIdAndAccessNumPtrUnion[i])[j] != 0) {
+                    fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j,
+                            ((unsigned short *) blockThreadIdAndAccessNumPtrUnion[i])[j]);
                 }
             }
         }

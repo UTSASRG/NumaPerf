@@ -16,11 +16,11 @@ typedef struct ReadWritNum {
 class CacheLineDetailedInfo {
     unsigned long firstTouchThreadId;
     unsigned long startAddress;
-    unsigned long seriousScore;
-    unsigned long invalidationNumberInFirstThread;
-    unsigned long invalidationNumberInOtherThreads;
-    unsigned long readNumBeforeLastWrite;
-    unsigned long continualReadNumAfterAWrite;
+    unsigned int seriousScore;
+    unsigned int invalidationNumberInFirstThread;
+    unsigned int invalidationNumberInOtherThreads;
+    unsigned int readNumBeforeLastWrite;
+    unsigned int continualReadNumAfterAWrite;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
 //    ReadWritNum readWritNum[MAX_THREAD_NUM];
     unsigned short threadIdAndIsMultipleThreadsUnion;

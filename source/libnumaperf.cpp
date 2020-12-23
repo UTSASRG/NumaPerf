@@ -91,7 +91,7 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessI
 
 MemoryPool PageDetailedAccessInfo::localThreadAccessNumberMemoryPool(
         (char *) "AccessNumberMemoryPool",
-        ADDRESSES::alignUpToCacheLine(MAX_THREAD_NUM * sizeof(unsigned long)),
+        ADDRESSES::alignUpToCacheLine(MAX_THREAD_NUM * sizeof(unsigned short)),
         GB * 128);
 
 MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
