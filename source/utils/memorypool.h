@@ -82,7 +82,7 @@ public:
         this->sizeOfMemoryBlock = sizeOfMemoryBlock;
         this->maxPoolSize = maxPoolSize;
         this->freeListHead = NULL;
-        this->bumpPointer = MM::mmapAllocateShared(maxPoolSize);
+        this->bumpPointer = MM::mmapAllocatePrivate(maxPoolSize, NULL, false, -1, true);
         this->bumpEndPointer = (char *) this->bumpPointer + maxPoolSize;
 //        memset((void *) bumpPointer, 0, initPoolSize);
 //        Logger::debug("memory pool init capacity:%lu, bumppointer:%lu, bumpendpointer:%lu\n", maxPoolSize,

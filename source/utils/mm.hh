@@ -38,17 +38,18 @@ public:
 
     static void mmapDeallocate(void *ptr, size_t sz) { munmap(ptr, sz); }
 
-    static void *mmapAllocateShared(size_t sz, int fd = -1, void *startaddr = NULL) {
-        return allocate(true, false, sz, fd, startaddr);
+    static void *mmapAllocateShared(size_t sz, int fd = -1, void *startaddr = NULL, bool shutdownTHP = false) {
+        return allocate(true, false, sz, fd, startaddr, shutdownTHP);
     }
 
-    static void *mmapAllocatePrivate(size_t sz, void *startaddr = NULL, bool isHugePage = false, int fd = -1) {
-        return allocate(false, isHugePage, sz, fd, startaddr);
+    static void *mmapAllocatePrivate(size_t sz, void *startaddr = NULL, bool isHugePage = false, int fd = -1,
+                                     bool shutdownTHP = false) {
+        return allocate(false, isHugePage, sz, fd, startaddr, shutdownTHP);
     }
 
 
 private:
-    static void *allocate(bool isShared, bool isHugePage, size_t sz, int fd, void *startaddr) {
+    static void *allocate(bool isShared, bool isHugePage, size_t sz, int fd, void *startaddr, bool shutdownTHP) {
         int protInfo = PROT_READ | PROT_WRITE;
         int sharedInfo = isShared ? MAP_SHARED : MAP_PRIVATE;
         sharedInfo |= ((fd == -1) ? MAP_ANONYMOUS : 0);
@@ -60,12 +61,20 @@ private:
           sharedInfo |= MAP_HUGETLB;
         }
 #endif
-
         void *ptr = mmap(startaddr, sz, protInfo, sharedInfo, fd, 0);
         if (ptr == MAP_FAILED) {
             fprintf(stderr, "Couldn't do mmap (%s) : startaddr %p, sz %lx, protInfo=%d, sharedInfo=%d\n",
                     strerror(errno), startaddr, sz, protInfo, sharedInfo);
             exit(-1);
+        }
+        if (shutdownTHP) {
+            int advice = MADV_NOHUGEPAGE;
+            int result = madvise(ptr, sz, advice);
+            if (result != 0) {
+                fprintf(stderr, "Couldn't madvise in mmap, ptr:%p, size:%lu, advice:%d, result:%d\n",
+                        ptr, sz, advice, result);
+                exit(-1);
+            }
         }
 
         return ptr;

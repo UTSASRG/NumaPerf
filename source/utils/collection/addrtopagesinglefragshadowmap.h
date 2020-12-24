@@ -42,7 +42,7 @@ private:
 public:
     void initialize(unsigned long fragmentSize, bool needAlignToCacheLine = false) {
         this->fragmentSize = fragmentSize;
-        this->startAddress = MM::mmapAllocatePrivate(this->fragmentSize);
+        this->startAddress = MM::mmapAllocatePrivate(this->fragmentSize, NULL, false, -1, true);
         Logger::info("AddressToPageSingleShadowMap create Fragment startAddress:%p\n", this->startAddress);
         if (needAlignToCacheLine) {
 //            Logger::debug("AddressToPageIndexSingleFragShadowMap, original Size:%lu, result Size:%lu \n",

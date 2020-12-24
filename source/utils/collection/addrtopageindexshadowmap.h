@@ -58,7 +58,7 @@ private:
             lock.unlock();
             return;
         }
-        startAddress[fragmentIndex] = MM::mmapAllocatePrivate(this->fragmentSize);
+        startAddress[fragmentIndex] = MM::mmapAllocatePrivate(this->fragmentSize, NULL, false, -1, true);
         Logger::info("AddressToPageIndexShadowMap create Fragment index:%d\n", fragmentIndex);
         lock.unlock();
     }
