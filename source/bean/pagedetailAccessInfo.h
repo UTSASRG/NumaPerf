@@ -128,7 +128,7 @@ public:
         short **firstLayerPtr = (short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
         int firstLayerIndex = getFirstLayerIndex(accessThreadId);
         if (firstLayerPtr[firstLayerIndex] == NULL) {
-            firstLayerPtr[firstLayerIndex] = (short *) localThreadAccessNumberFirstLayerMemoryPool.get();
+            firstLayerPtr[firstLayerIndex] = (short *) localThreadAccessNumberSecondLayerMemoryPool.get();
         }
         int secondLayerIndex = getSecondLayerIndex(accessThreadId);
         firstLayerPtr[firstLayerIndex][secondLayerIndex]++;
