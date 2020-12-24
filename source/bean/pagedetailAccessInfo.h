@@ -10,7 +10,15 @@
 #define BLOCK_SIZE (1 << BLOCK_SHIFT_BITS)
 #define BLOCK_NUM (PAGE_SIZE/BLOCK_SIZE)
 #define BLOCK_MASK ((unsigned long)0b111110000000)
+#define SLOTS_IN_FIRST_LAYER 8
+#define SLOTS_IN_SECOND_LAYER (MAX_THREAD_NUM/SLOTS_IN_FIRST_LAYER)
 
+/**
+ *  strategies used to reduce mem overheads
+ *      1.start record multiple threads access number after the block is shared by multiple threads
+ *      2.shut down THP in mmap(benefit for shadow mem)
+ *      3.two layers structure like page table. since only few threads access a block in most cases, after it is shared by multiple threads
+ */
 class PageDetailedAccessInfo {
 //    unsigned long seriousScore;
     unsigned long firstTouchThreadId;
@@ -18,11 +26,12 @@ class PageDetailedAccessInfo {
     unsigned long allAccessNumByOtherThread;
     unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
     unsigned int accessNumberByOtherThread[BLOCK_NUM];
-    unsigned long blockThreadIdAndAccessNumPtrUnion[BLOCK_NUM];
+    unsigned long blockThreadIdAndAccessFirstLayerPtrUnion[BLOCK_NUM];
 
 private:
     static MemoryPool localMemoryPool;
-    static MemoryPool localThreadAccessNumberMemoryPool;
+    static MemoryPool localThreadAccessNumberFirstLayerMemoryPool;
+    static MemoryPool localThreadAccessNumberSecondLayerMemoryPool;
 
     PageDetailedAccessInfo(unsigned long pageStartAddress, unsigned long firstTouchThreadId) {
         memset(this, 0, sizeof(PageDetailedAccessInfo));
@@ -73,11 +82,17 @@ public:
         memcpy(buff, this, sizeof(PageDetailedAccessInfo));
         PageDetailedAccessInfo *newObj = (PageDetailedAccessInfo *) buff;
         for (int i = 0; i < BLOCK_NUM; i++) {
-            if (newObj->blockThreadIdAndAccessNumPtrUnion[i] > MAX_THREAD_NUM) {
-                void *oldOne = (void *) (newObj->blockThreadIdAndAccessNumPtrUnion[i]);
-                newObj->blockThreadIdAndAccessNumPtrUnion[i] = (unsigned long) localThreadAccessNumberMemoryPool.get();
-                memcpy((void *) (newObj->blockThreadIdAndAccessNumPtrUnion[i]), oldOne,
-                       localThreadAccessNumberMemoryPool.getMemBlockSize());
+            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
+                newObj->blockThreadIdAndAccessFirstLayerPtrUnion[i] = (unsigned long) localThreadAccessNumberFirstLayerMemoryPool.get();
+                unsigned short **oldFirstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
+                unsigned short **newFirstLayerPtr = (unsigned short **) newObj->blockThreadIdAndAccessFirstLayerPtrUnion[i];
+                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                    if (oldFirstLayerPtr[j] != NULL) {
+                        newFirstLayerPtr[j] = (unsigned short *) localThreadAccessNumberSecondLayerMemoryPool.get();
+                        memcpy(newFirstLayerPtr[j], oldFirstLayerPtr[j],
+                               localThreadAccessNumberSecondLayerMemoryPool.getMemBlockSize());
+                    }
+                }
             }
         }
         return newObj;
@@ -90,17 +105,17 @@ public:
             return;
         } // well, this is not a bug. Since no needs to trace firstTouchThreadId in details.
         accessNumberByOtherThread[index]++;
-        if (blockThreadIdAndAccessNumPtrUnion[index] == accessThreadId) {
+        if (blockThreadIdAndAccessFirstLayerPtrUnion[index] == accessThreadId) {
             return;
         }
-        if (blockThreadIdAndAccessNumPtrUnion[index] == 0) {
-            blockThreadIdAndAccessNumPtrUnion[index] = accessThreadId;
+        if (blockThreadIdAndAccessFirstLayerPtrUnion[index] == 0) {
+            blockThreadIdAndAccessFirstLayerPtrUnion[index] = accessThreadId;
             return;
         }
-        if (blockThreadIdAndAccessNumPtrUnion[index] <= MAX_THREAD_NUM) {
-            blockThreadIdAndAccessNumPtrUnion[index] = (unsigned long) localThreadAccessNumberMemoryPool.get();
+        if (blockThreadIdAndAccessFirstLayerPtrUnion[index] <= MAX_THREAD_NUM) {
+            blockThreadIdAndAccessFirstLayerPtrUnion[index] = (unsigned long) localThreadAccessNumberFirstLayerMemoryPool.get();
         }
-        ((unsigned short *) blockThreadIdAndAccessNumPtrUnion[index])[accessThreadId]++;
+        ((unsigned short *) blockThreadIdAndAccessFirstLayerPtrUnion[index])[accessThreadId]++;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -115,8 +130,14 @@ public:
 
     inline void clearAll() {
         for (int i = 0; i < BLOCK_NUM; i++) {
-            if (blockThreadIdAndAccessNumPtrUnion[i] > MAX_THREAD_NUM) {
-                localThreadAccessNumberMemoryPool.release((void *) blockThreadIdAndAccessNumPtrUnion[i]);
+            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
+                unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
+                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                    if (firstLayerPtr[j] != NULL) {
+                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
+                    }
+                }
+                localThreadAccessNumberFirstLayerMemoryPool.release((void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
             }
         }
         memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
@@ -128,10 +149,16 @@ public:
         for (int i = startIndex; i <= endIndex; i++) {
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
-            if (blockThreadIdAndAccessNumPtrUnion[i] > MAX_THREAD_NUM) {
-                localThreadAccessNumberMemoryPool.release((void *) blockThreadIdAndAccessNumPtrUnion[i]);
+            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
+                unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
+                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                    if (firstLayerPtr[j] != NULL) {
+                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
+                    }
+                }
+                localThreadAccessNumberFirstLayerMemoryPool.release((void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
             }
-            blockThreadIdAndAccessNumPtrUnion[i] = 0;
+            blockThreadIdAndAccessFirstLayerPtrUnion[i] = 0;
         }
     }
 
@@ -213,15 +240,15 @@ public:
                 continue;
             }
             fprintf(file, "%s    %dth block:\n", prefix, i);
-            if (blockThreadIdAndAccessNumPtrUnion[i] <= MAX_THREAD_NUM) {
+            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] <= MAX_THREAD_NUM) {
                 fprintf(file, "%s        thread:%lu, only access by one thread\n", prefix,
-                        blockThreadIdAndAccessNumPtrUnion[i]);
+                        blockThreadIdAndAccessFirstLayerPtrUnion[i]);
                 continue;
             }
             for (int j = 0; j < MAX_THREAD_NUM; j++) {
-                if (((unsigned short *) blockThreadIdAndAccessNumPtrUnion[i])[j] != 0) {
+                if (((unsigned short *) blockThreadIdAndAccessFirstLayerPtrUnion[i])[j] != 0) {
                     fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j,
-                            ((unsigned short *) blockThreadIdAndAccessNumPtrUnion[i])[j]);
+                            ((unsigned short *) blockThreadIdAndAccessFirstLayerPtrUnion[i])[j]);
                 }
             }
         }
