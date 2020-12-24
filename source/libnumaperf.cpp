@@ -882,7 +882,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) Real::malloc(
             sizeof(ThreadStartRoutineParameter));
     unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
-    Asserts::assertt(currentThreadIndex < MAX_THREAD_NUM, 1, (char *) "max thread id out of range");
+    Asserts::assertt(threadIndex < MAX_THREAD_NUM, 1, (char *) "max thread id out of range");
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
 //    arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);
