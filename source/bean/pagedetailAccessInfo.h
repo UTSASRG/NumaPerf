@@ -10,7 +10,9 @@
 #define BLOCK_SIZE (1 << BLOCK_SHIFT_BITS)
 #define BLOCK_NUM (PAGE_SIZE/BLOCK_SIZE)
 #define BLOCK_MASK ((unsigned long)0b111110000000)
-#define SLOTS_IN_FIRST_LAYER 8
+
+#define FIRST_LAYER_SHIFT_BITS 3
+#define SLOTS_IN_FIRST_LAYER (1 << FIRST_LAYER_SHIFT_BITS)
 #define SLOTS_IN_SECOND_LAYER (MAX_THREAD_NUM/SLOTS_IN_FIRST_LAYER)
 
 /**
@@ -59,6 +61,14 @@ private:
             return BLOCK_NUM - 1;
         }
         return getBlockIndex(objEndAddress);
+    }
+
+    int getFirstLayerIndex(unsigned long threadIndex) {
+        return threadIndex >> (MAX_THREAD_NUM_SHIFT_BITS - FIRST_LAYER_SHIFT_BITS);
+    }
+
+    int getSecondLayerIndex(unsigned long threadIndex) {
+        return ((1 << (MAX_THREAD_NUM_SHIFT_BITS - FIRST_LAYER_SHIFT_BITS)) - 1) & threadIndex;
     }
 
 public:
@@ -115,7 +125,13 @@ public:
         if (blockThreadIdAndAccessFirstLayerPtrUnion[index] <= MAX_THREAD_NUM) {
             blockThreadIdAndAccessFirstLayerPtrUnion[index] = (unsigned long) localThreadAccessNumberFirstLayerMemoryPool.get();
         }
-        ((unsigned short *) blockThreadIdAndAccessFirstLayerPtrUnion[index])[accessThreadId]++;
+        short **firstLayerPtr = (short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
+        int firstLayerIndex = getFirstLayerIndex(accessThreadId);
+        if (firstLayerPtr[firstLayerIndex] == NULL) {
+            firstLayerPtr[firstLayerIndex] = (short *) localThreadAccessNumberFirstLayerMemoryPool.get();
+        }
+        int secondLayerIndex = getSecondLayerIndex(accessThreadId);
+        firstLayerPtr[firstLayerIndex][secondLayerIndex]++;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -137,7 +153,8 @@ public:
                         localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
                     }
                 }
-                localThreadAccessNumberFirstLayerMemoryPool.release((void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
+                localThreadAccessNumberFirstLayerMemoryPool.release(
+                        (void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
             }
         }
         memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
@@ -156,7 +173,8 @@ public:
                         localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
                     }
                 }
-                localThreadAccessNumberFirstLayerMemoryPool.release((void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
+                localThreadAccessNumberFirstLayerMemoryPool.release(
+                        (void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
             }
             blockThreadIdAndAccessFirstLayerPtrUnion[i] = 0;
         }
@@ -245,10 +263,16 @@ public:
                         blockThreadIdAndAccessFirstLayerPtrUnion[i]);
                 continue;
             }
-            for (int j = 0; j < MAX_THREAD_NUM; j++) {
-                if (((unsigned short *) blockThreadIdAndAccessFirstLayerPtrUnion[i])[j] != 0) {
-                    fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j,
-                            ((unsigned short *) blockThreadIdAndAccessFirstLayerPtrUnion[i])[j]);
+            unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
+            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                if (firstLayerPtr[j] == NULL) {
+                    continue;
+                }
+                for (int z = 0; z < SLOTS_IN_SECOND_LAYER; z++) {
+                    if (firstLayerPtr[j][z] != 0) {
+                        fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j * 8 + z,
+                                firstLayerPtr[j][z]);
+                    }
                 }
             }
         }
