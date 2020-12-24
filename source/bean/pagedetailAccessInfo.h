@@ -122,14 +122,28 @@ public:
             blockThreadIdAndAccessFirstLayerPtrUnion[index] = accessThreadId;
             return;
         }
-        if (blockThreadIdAndAccessFirstLayerPtrUnion[index] <= MAX_THREAD_NUM) {
-            blockThreadIdAndAccessFirstLayerPtrUnion[index] = (unsigned long) localThreadAccessNumberFirstLayerMemoryPool.get();
+
+        unsigned long firstLayerThreadIndex = blockThreadIdAndAccessFirstLayerPtrUnion[index];
+        if (firstLayerThreadIndex <= MAX_THREAD_NUM) {
+            void *memblock = localThreadAccessNumberFirstLayerMemoryPool.get();
+            bool ret = Automics::compare_set(blockThreadIdAndAccessFirstLayerPtrUnion + index, firstLayerThreadIndex,
+                                             (unsigned long) memblock);
+            if (!ret) {
+                localThreadAccessNumberFirstLayerMemoryPool.release(memblock);
+            }
         }
-        short **firstLayerPtr = (short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
+
+        unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
         int firstLayerIndex = getFirstLayerIndex(accessThreadId);
         if (firstLayerPtr[firstLayerIndex] == NULL) {
-            firstLayerPtr[firstLayerIndex] = (short *) localThreadAccessNumberSecondLayerMemoryPool.get();
+            void *memblock = localThreadAccessNumberSecondLayerMemoryPool.get();
+            bool ret = Automics::compare_set(firstLayerPtr + firstLayerIndex, (unsigned short *) NULL,
+                                             (unsigned short *) memblock);
+            if (!ret) {
+                localThreadAccessNumberSecondLayerMemoryPool.release(memblock);
+            }
         }
+
         int secondLayerIndex = getSecondLayerIndex(accessThreadId);
         firstLayerPtr[firstLayerIndex][secondLayerIndex]++;
     }
