@@ -67,7 +67,15 @@ public:
         return nodeMigrationNum;
     }
 
-    inline const unsigned long *getThreadBasedAccessNumber() const {
+    inline void setThreadBasedAccessNumber(int threadIndex, unsigned long value) {
+        threadBasedAccessNumber[threadIndex] = value;
+    }
+
+    inline void addThreadBasedAccessNumber(int threadIndex, unsigned long value) {
+        threadBasedAccessNumber[threadIndex] += value;
+    }
+
+    inline const unsigned long *getThreadBasedAccessNumber() {
         return threadBasedAccessNumber;
     }
 };

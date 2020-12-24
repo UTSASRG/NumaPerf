@@ -51,7 +51,6 @@ unsigned long largestThreadIndex = 0;
 thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
 
-unsigned long GlobalThreadBasedAccessNumber[MAX_THREAD_NUM][MAX_THREAD_NUM];
 ThreadBasedInfo *GlobalThreadBasedInfo[MAX_THREAD_NUM];
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
@@ -118,10 +117,12 @@ inline void preAccessThreadBasedAccessNumber() {
                 continue;
             }
             if (i > j) {
-                GlobalThreadBasedAccessNumber[i][j] = GlobalThreadBasedAccessNumber[j][i];
+                GlobalThreadBasedInfo[i]->setThreadBasedAccessNumber(j,
+                                                                     GlobalThreadBasedInfo[j]->getThreadBasedAccessNumber()[i]);
                 continue;
             }
-            GlobalThreadBasedAccessNumber[i][j] += GlobalThreadBasedAccessNumber[j][i];
+            GlobalThreadBasedInfo[i]->addThreadBasedAccessNumber(j,
+                                                                 GlobalThreadBasedInfo[j]->getThreadBasedAccessNumber()[i]);
         }
     }
 }
@@ -133,7 +134,7 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
             if (i == j) {
                 continue;
             }
-            threadBasedAverageAccessNumber[i] += GlobalThreadBasedAccessNumber[i][j];
+            threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
         }
         threadBasedAverageAccessNumber[i] = threadBasedAverageAccessNumber[i] / (largestThreadIndex);
     }
@@ -148,7 +149,7 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
                 continue;
             }
             threadBasedAccessNumberDeviation[i] += abs((long long)
-                                                               (GlobalThreadBasedAccessNumber[i][j] -
+                                                               (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] -
                                                                 threadBasedAverageAccessNumber[i]));
         }
         threadBasedAccessNumberDeviation[i] = threadBasedAccessNumberDeviation[i] / (largestThreadIndex);
@@ -158,7 +159,7 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
 inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
                                    bool *localBalancedThread) {
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (GlobalThreadBasedAccessNumber[i][i] - threadBasedAverageAccessNumber[i] >
+        if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[i] - threadBasedAverageAccessNumber[i] >
             threadBasedAverageAccessNumber[i]) {
             localBalancedThread[i] = false;
             continue;
@@ -194,7 +195,7 @@ inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNu
             if (balancedThread[j] || i == j) {
                 continue;
             }
-            threadBasedAverageAccessNumber[i] += GlobalThreadBasedAccessNumber[i][j];
+            threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
         }
         threadBasedAverageAccessNumber[i] =
                 threadBasedAverageAccessNumber[i] / (largestThreadIndex - balancedThreadNum);
@@ -217,7 +218,7 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
                 continue;
             }
             threadBasedAccessNumberDeviation[i] += abs((long long)
-                                                               (GlobalThreadBasedAccessNumber[i][j] -
+                                                               (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] -
                                                                 threadBasedAverageAccessNumber[i]));
         }
         threadBasedAccessNumberDeviation[i] =
@@ -246,12 +247,12 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
         }
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j || balancedThread[j]) {
-                GlobalThreadBasedAccessNumber[i][j] = 0;
+                GlobalThreadBasedInfo[i]->setThreadBasedAccessNumber(j, 0);
             }
         }
-        Sorts::getOrder(GlobalThreadBasedAccessNumber[i], &(ordersOfThread[i * MAX_THREAD_NUM]),
+        Sorts::getOrder(GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber(), &(ordersOfThread[i * MAX_THREAD_NUM]),
                         largestThreadIndex + 1);
-        Sorts::sortToIndex(GlobalThreadBasedAccessNumber[i], &(indexByOrder[i * MAX_THREAD_NUM]),
+        Sorts::sortToIndex(GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber(), &(indexByOrder[i * MAX_THREAD_NUM]),
                            largestThreadIndex + 1);
     }
     int *averageIndexByOrder = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM);
@@ -866,8 +867,8 @@ void *initThreadIndexRoutine(void *args) {
     threadBasedInfo->start();
     void *result = startRoutineFunPtr(arguments->parameterPtr);
     threadBasedInfo->end();
-    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
-           sizeof(unsigned long) * MAX_THREAD_NUM);
+//    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
+//           sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
     return result;
 }
