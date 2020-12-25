@@ -178,6 +178,11 @@ public:
         }
 
         volatile unsigned short **firstLayerPtr = (volatile unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
+        if ((unsigned long) firstLayerPtr <= MAX_THREAD_NUM) {
+            blockThreadIdAndAccessFirstLayerPtrUnion[index] = 0;
+            printf("use after free issue from applications. (can ignore if few happened)\n");
+            return;
+        }
         int firstLayerIndex = getFirstLayerIndex(accessThreadId);
         if (firstLayerPtr[firstLayerIndex] == NULL) {
             void *memblock = localThreadAccessNumberSecondLayerMemoryPool.get();
@@ -188,9 +193,13 @@ public:
                 localThreadAccessNumberSecondLayerMemoryPool.release(memblock);
             }
         }
-
+        volatile unsigned short *secondLayerPtr = firstLayerPtr[firstLayerIndex];
+        if (secondLayerPtr == NULL) {
+            printf("use after free issue from applications. (can ignore if few happened)\n");
+            return;
+        }
         int secondLayerIndex = getSecondLayerIndex(accessThreadId);
-        firstLayerPtr[firstLayerIndex][secondLayerIndex]++;
+        secondLayerPtr[secondLayerIndex]++;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
