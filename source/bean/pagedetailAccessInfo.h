@@ -125,7 +125,7 @@ public:
             return;
         }
 
-        unsigned long firstLayerThreadIndex = blockThreadIdAndAccessFirstLayerPtrUnion[index];
+        volatile unsigned long firstLayerThreadIndex = (volatile unsigned long) (blockThreadIdAndAccessFirstLayerPtrUnion[index]);
         if (firstLayerThreadIndex <= MAX_THREAD_NUM) {
             void *memblock = localThreadAccessNumberFirstLayerMemoryPool.get();
             bool ret = Automics::compare_set(blockThreadIdAndAccessFirstLayerPtrUnion + index, firstLayerThreadIndex,
@@ -135,16 +135,12 @@ public:
             }
         }
 
-        unsigned long *firstLayerPtr = (unsigned long *) blockThreadIdAndAccessFirstLayerPtrUnion[index];
-        int firstLayerIndex = getFirstLayerIndex(accessThreadId);
-        firstLayerPtr[firstLayerIndex]++;
-
-        return;
-        unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
+        volatile unsigned short **firstLayerPtr = (volatile unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[index];
         int firstLayerIndex = getFirstLayerIndex(accessThreadId);
         if (firstLayerPtr[firstLayerIndex] == NULL) {
             void *memblock = localThreadAccessNumberSecondLayerMemoryPool.get();
-            bool ret = Automics::compare_set(firstLayerPtr + firstLayerIndex, (unsigned short *) NULL,
+            bool ret = Automics::compare_set((unsigned short **) (firstLayerPtr + firstLayerIndex),
+                                             (unsigned short *) NULL,
                                              (unsigned short *) memblock);
             if (!ret) {
                 localThreadAccessNumberSecondLayerMemoryPool.release(memblock);
