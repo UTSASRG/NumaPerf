@@ -10,6 +10,7 @@
 #define BLOCK_SIZE (1 << BLOCK_SHIFT_BITS)
 #define BLOCK_NUM (PAGE_SIZE/BLOCK_SIZE)
 #define BLOCK_MASK ((unsigned long)0b111110000000)
+#define BLOCK_LOW_BITS_MASK ((unsigned long)0b1111111)
 
 #define FIRST_LAYER_SHIFT_BITS 3
 #define SLOTS_IN_FIRST_LAYER (1 << FIRST_LAYER_SHIFT_BITS)
@@ -45,11 +46,20 @@ private:
         return (address & BLOCK_MASK) >> BLOCK_SHIFT_BITS;
     }
 
-    inline int getStartIndex(unsigned long objStartAddress, unsigned long size) const {
+    inline int getResidentStartIndex(unsigned long objStartAddress, unsigned long size) const {
         if (objStartAddress <= startAddress) {
             return 0;
         }
         return getBlockIndex(objStartAddress);
+    }
+
+    // may go over BLOCK_NUM
+    inline int getCoveredStartIndex(unsigned long objStartAddress, unsigned long size) const {
+        int blockIndex = getResidentStartIndex(objStartAddress, size);
+        if ((objStartAddress & BLOCK_LOW_BITS_MASK) != 0){
+          return blockIndex + 1;
+        }
+        return blockIndex;
     }
 
     inline void releaseTwoLayersBlockAccessNum(int blockIndex) {
@@ -57,16 +67,18 @@ private:
             unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[blockIndex];
             for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
                 if (firstLayerPtr[j] != NULL) {
-                    localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
+                    unsigned short *secondLayerPtr = firstLayerPtr[j];
+                    firstLayerPtr[j]=0;
+                    localThreadAccessNumberSecondLayerMemoryPool.release(secondLayerPtr);
                 }
             }
-            localThreadAccessNumberFirstLayerMemoryPool.release(
-                    (void *) blockThreadIdAndAccessFirstLayerPtrUnion[blockIndex]);
+            blockThreadIdAndAccessFirstLayerPtrUnion[blockIndex] = 0;
+            localThreadAccessNumberFirstLayerMemoryPool.release(firstLayerPtr);
         }
     }
 
-    inline int getEndIndex(unsigned long objStartAddress, unsigned long size) const {
-        if (objStartAddress <= 0) {
+    inline int getResidentEndIndex(unsigned long objStartAddress, unsigned long size) const {
+       if (objStartAddress <= 0) {
             return BLOCK_NUM - 1;
         }
         unsigned long objEndAddress = objStartAddress + size;
@@ -74,6 +86,15 @@ private:
             return BLOCK_NUM - 1;
         }
         return getBlockIndex(objEndAddress);
+    }
+
+    // may go down 0
+    inline int getCoveredEndIndex(unsigned long objStartAddress, unsigned long size) const {
+        int blockIndex = getResidentEndIndex(objEndAddress, size);
+        if ((objStartAddress & BLOCK_LOW_BITS_MASK) != 0){
+          return blockIndex - 1;
+        }
+        return blockIndex;
     }
 
     int getFirstLayerIndex(unsigned long threadIndex) {
@@ -186,7 +207,6 @@ public:
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
             releaseTwoLayersBlockAccessNum(i);
-            blockThreadIdAndAccessFirstLayerPtrUnion[i] = 0;
         }
     }
 

@@ -91,7 +91,7 @@ public:
     }
 
     unsigned int getMemBlockSize() {
-        return this->sizeOfMemoryBlock;
+        return this->sizeOfMemoryBlock - sizeof(void*);
     }
 
     void *get() {
