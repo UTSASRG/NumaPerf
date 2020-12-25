@@ -12,6 +12,7 @@
 #include "timer.h"
 #include "mm.hh"
 #include "asserts.h"
+#include "addresses.h"
 
 #define NAME_LENGTH 30
 
@@ -79,7 +80,7 @@ public:
             Asserts::assertt(false, 2, (char *) "memoryPool name is too long:", name);
         }
         memcpy(this->name, name, strlen(name) + 1);
-        this->sizeOfMemoryBlock = sizeOfMemoryBlock;
+        this->sizeOfMemoryBlock = ADDRESSES::alignUpToCacheLine(sizeOfMemoryBlock + sizeof(void *));
         this->maxPoolSize = maxPoolSize;
         this->freeListHead = NULL;
         this->bumpPointer = MM::mmapAllocatePrivate(maxPoolSize, NULL, false, -1, true);
@@ -102,17 +103,18 @@ public:
         if (result != NULL) {
             memset(result, 0, sizeOfMemoryBlock);
 //            Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
-            return result;
+            return (void *) ((unsigned long) result + sizeof(void *));
         }
         result = automicGetFromBumpPointer();
 //        Logger::debug("memory pool get address:%lu, total cycles:%lu\n", result, Timer::getCurrentCycle() - start);
-        return result;
+        return (void *) ((unsigned long) result + sizeof(void *));
     }
 
     void release(void *memoryBlock) {
         if (NULL == memoryBlock) {
             return;
         }
+        memoryBlock = (void *) ((unsigned long) memoryBlock - sizeof(void *));
         automicInsertIntoFreeList(memoryBlock);
     }
 };

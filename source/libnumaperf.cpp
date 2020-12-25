@@ -82,36 +82,36 @@ static int const do_init = (initializer(), 0);
 //MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
 //                                       GB * 4);
 MemoryPool CacheLineDetailedInfo::localMemoryPool((char *) "CacheLineDetailedInfo",
-                                                  ADDRESSES::alignUpToCacheLine(sizeof(CacheLineDetailedInfo)),
+                                                  sizeof(CacheLineDetailedInfo),
                                                   GB * 4);
 MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessInfo",
-                                                   ADDRESSES::alignUpToCacheLine(sizeof(PageDetailedAccessInfo)),
+                                                   sizeof(PageDetailedAccessInfo),
                                                    GB * 128);
 
 MemoryPool PageDetailedAccessInfo::localThreadAccessNumberFirstLayerMemoryPool(
         (char *) "AccessNumberFirstLayerMemPool",
-        ADDRESSES::alignUpToCacheLine(SLOTS_IN_FIRST_LAYER * sizeof(unsigned short *)),
+        (SLOTS_IN_FIRST_LAYER * sizeof(unsigned short *)),
         GB * 4);
 
 MemoryPool PageDetailedAccessInfo::localThreadAccessNumberSecondLayerMemoryPool(
         (char *) "AccessNumberSecoLayerMemPool",
-        ADDRESSES::alignUpToCacheLine(SLOTS_IN_SECOND_LAYER * sizeof(unsigned short)),
+        (SLOTS_IN_SECOND_LAYER * sizeof(unsigned short)),
         GB * 4);
 
 MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
-                                            ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseObjInfo)),
+                                            (sizeof(DiagnoseObjInfo)),
                                             GB * 1);
 
 MemoryPool DiagnoseCallSiteInfo::localMemoryPool((char *) "DiagnoseCallSiteInfo",
-                                                 ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCallSiteInfo)),
+                                                 (sizeof(DiagnoseCallSiteInfo)),
                                                  GB * 1);
 
 MemoryPool DiagnoseCacheLineInfo::localMemoryPool((char *) "DiagnoseCacheLineInfo",
-                                                  ADDRESSES::alignUpToCacheLine(sizeof(DiagnoseCacheLineInfo)),
+                                                  (sizeof(DiagnoseCacheLineInfo)),
                                                   GB * 1);
 
 MemoryPool DiagnosePageInfo::localMemoryPool((char *) "DiagnosePageInfo",
-                                             ADDRESSES::alignUpToCacheLine(sizeof(DiagnosePageInfo)),
+                                             (sizeof(DiagnosePageInfo)),
                                              GB * 1);
 
 inline void preAccessThreadBasedAccessNumber() {
