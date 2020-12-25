@@ -42,7 +42,7 @@ private:
         this->startAddress = pageStartAddress;
     }
 
-    inline unsigned int getBlockIndex(unsigned long address) const {
+    inline int getBlockIndex(unsigned long address) const {
         return (address & BLOCK_MASK) >> BLOCK_SHIFT_BITS;
     }
 
@@ -55,9 +55,12 @@ private:
 
     // may go over BLOCK_NUM
     inline int getCoveredStartIndex(unsigned long objStartAddress, unsigned long size) const {
-        int blockIndex = getResidentStartIndex(objStartAddress, size);
-        if ((objStartAddress & BLOCK_LOW_BITS_MASK) != 0){
-          return blockIndex + 1;
+        if (objStartAddress <= startAddress) {
+            return 0;
+        }
+        int blockIndex = getBlockIndex(objStartAddress);
+        if ((objStartAddress & BLOCK_LOW_BITS_MASK) != 0) {
+            return blockIndex + 1;
         }
         return blockIndex;
     }
@@ -68,7 +71,7 @@ private:
             for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
                 if (firstLayerPtr[j] != NULL) {
                     unsigned short *secondLayerPtr = firstLayerPtr[j];
-                    firstLayerPtr[j]=0;
+                    firstLayerPtr[j] = 0;
                     localThreadAccessNumberSecondLayerMemoryPool.release(secondLayerPtr);
                 }
             }
@@ -78,7 +81,7 @@ private:
     }
 
     inline int getResidentEndIndex(unsigned long objStartAddress, unsigned long size) const {
-       if (objStartAddress <= 0) {
+        if (objStartAddress <= 0) {
             return BLOCK_NUM - 1;
         }
         unsigned long objEndAddress = objStartAddress + size;
@@ -90,9 +93,16 @@ private:
 
     // may go down 0
     inline int getCoveredEndIndex(unsigned long objStartAddress, unsigned long size) const {
-        int blockIndex = getResidentEndIndex(objEndAddress, size);
-        if ((objStartAddress & BLOCK_LOW_BITS_MASK) != 0){
-          return blockIndex - 1;
+        if (objStartAddress <= 0) {
+            return BLOCK_NUM - 1;
+        }
+        unsigned long objEndAddress = objStartAddress + size;
+        if (objEndAddress >= (startAddress + PAGE_SIZE)) {
+            return BLOCK_NUM - 1;
+        }
+        int blockIndex = getBlockIndex(objEndAddress);
+        if ((objStartAddress & BLOCK_LOW_BITS_MASK) != 0) {
+            return blockIndex - 1;
         }
         return blockIndex;
     }
@@ -201,8 +211,11 @@ public:
     }
 
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
-        int startIndex = getStartIndex(objAddress, size);
-        int endIndex = getEndIndex(objAddress, size);
+        int startIndex = getCoveredStartIndex(objAddress, size);
+        int endIndex = getCoveredEndIndex(objAddress, size);
+        if (startIndex > endIndex) {
+            return;
+        }
         for (int i = startIndex; i <= endIndex; i++) {
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
@@ -212,8 +225,8 @@ public:
 
     inline unsigned long getAccessNumberByFirstTouchThread(unsigned long objStartAddress, unsigned long size) const {
         unsigned long accessNumInMainThread = 0;
-        int startIndex = getStartIndex(objStartAddress, size);
-        int endIndex = getEndIndex(objStartAddress, size);
+        int startIndex = getResidentStartIndex(objStartAddress, size);
+        int endIndex = getResidentEndIndex(objStartAddress, size);
         for (unsigned int i = startIndex; i <= endIndex; i++) {
             accessNumInMainThread += this->accessNumberByFirstTouchThread[i];
         }
@@ -225,8 +238,8 @@ public:
             return allAccessNumByOtherThread;
         }
         unsigned long accessNumInOtherThread = 0;
-        int startIndex = getStartIndex(objStartAddress, size);
-        int endIndex = getEndIndex(objStartAddress, size);
+        int startIndex = getResidentStartIndex(objStartAddress, size);
+        int endIndex = getResidentEndIndex(objStartAddress, size);
         for (unsigned int i = startIndex; i <= endIndex; i++) {
             accessNumInOtherThread += this->accessNumberByOtherThread[i];
         }
