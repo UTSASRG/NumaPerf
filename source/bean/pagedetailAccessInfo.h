@@ -52,6 +52,19 @@ private:
         return getBlockIndex(objStartAddress);
     }
 
+    inline void releaseTwoLayersBlockAccessNum(int blockIndex) {
+        if (blockThreadIdAndAccessFirstLayerPtrUnion[blockIndex] > MAX_THREAD_NUM) {
+            unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[blockIndex];
+            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                if (firstLayerPtr[j] != NULL) {
+                    localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
+                }
+            }
+            localThreadAccessNumberFirstLayerMemoryPool.release(
+                    (void *) blockThreadIdAndAccessFirstLayerPtrUnion[blockIndex]);
+        }
+    }
+
     inline int getEndIndex(unsigned long objStartAddress, unsigned long size) const {
         if (objStartAddress <= 0) {
             return BLOCK_NUM - 1;
@@ -161,16 +174,7 @@ public:
 
     inline void clearAll() {
         for (int i = 0; i < BLOCK_NUM; i++) {
-            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
-                unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
-                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-                    if (firstLayerPtr[j] != NULL) {
-                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
-                    }
-                }
-                localThreadAccessNumberFirstLayerMemoryPool.release(
-                        (void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
-            }
+            releaseTwoLayersBlockAccessNum(i);
         }
         memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
     }
@@ -181,16 +185,7 @@ public:
         for (int i = startIndex; i <= endIndex; i++) {
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
-            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
-                unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
-                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-                    if (firstLayerPtr[j] != NULL) {
-                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
-                    }
-                }
-                localThreadAccessNumberFirstLayerMemoryPool.release(
-                        (void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
-            }
+            releaseTwoLayersBlockAccessNum(i);
             blockThreadIdAndAccessFirstLayerPtrUnion[i] = 0;
         }
     }
