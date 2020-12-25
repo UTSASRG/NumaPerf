@@ -163,11 +163,11 @@ public:
         for (int i = 0; i < BLOCK_NUM; i++) {
             if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
                 unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
-//                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-//                    if (firstLayerPtr[j] != NULL) {
-//                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
-//                    }
-//                }
+                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                    if (firstLayerPtr[j] != NULL) {
+                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
+                    }
+                }
                 localThreadAccessNumberFirstLayerMemoryPool.release(
                         (void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
             }
@@ -183,11 +183,11 @@ public:
             this->accessNumberByOtherThread[i] = 0;
             if (blockThreadIdAndAccessFirstLayerPtrUnion[i] > MAX_THREAD_NUM) {
                 unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
-//                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-//                    if (firstLayerPtr[j] != NULL) {
-//                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
-//                    }
-//                }
+                for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                    if (firstLayerPtr[j] != NULL) {
+                        localThreadAccessNumberSecondLayerMemoryPool.release(firstLayerPtr[j]);
+                    }
+                }
                 localThreadAccessNumberFirstLayerMemoryPool.release(
                         (void *) blockThreadIdAndAccessFirstLayerPtrUnion[i]);
             }
@@ -256,42 +256,42 @@ public:
     }
 
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
-//        char prefix[blackSpaceNum + 2];
-//        for (int i = 0; i < blackSpaceNum; i++) {
-//            prefix[i] = ' ';
-//            prefix[i + 1] = '\0';
-//        }
-//        fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
-//        fprintf(file, "%sFirstTouchThreadId:         %lu\n", prefix, this->firstTouchThreadId);
-////        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getTotalRemoteAccess(0, 0));
-//        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
-//                this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
-//        fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
-//                this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
-//        for (int i = 0; i < BLOCK_NUM; i++) {
-//            if (accessNumberByFirstTouchThread[i] == 0 && accessNumberByOtherThread[i] == 0) {
-//                continue;
-//            }
-//            fprintf(file, "%s    %dth block:\n", prefix, i);
-//            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] <= MAX_THREAD_NUM) {
-//                fprintf(file, "%s        thread:%lu, only access by one thread\n", prefix,
-//                        blockThreadIdAndAccessFirstLayerPtrUnion[i]);
-//                continue;
-//            }
-//            unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
-//            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-//                if (firstLayerPtr[j] == NULL) {
-//                    continue;
-//                }
-//                for (int z = 0; z < SLOTS_IN_SECOND_LAYER; z++) {
-//                    if (firstLayerPtr[j][z] != 0) {
-//                        fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j * 8 + z,
-//                                firstLayerPtr[j][z]);
-//                    }
-//                }
-//            }
-//        }
-//        // print access num in cacheline level
+        char prefix[blackSpaceNum + 2];
+        for (int i = 0; i < blackSpaceNum; i++) {
+            prefix[i] = ' ';
+            prefix[i + 1] = '\0';
+        }
+        fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
+        fprintf(file, "%sFirstTouchThreadId:         %lu\n", prefix, this->firstTouchThreadId);
+//        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getTotalRemoteAccess(0, 0));
+        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
+                this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
+        fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
+                this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
+        for (int i = 0; i < BLOCK_NUM; i++) {
+            if (accessNumberByFirstTouchThread[i] == 0 && accessNumberByOtherThread[i] == 0) {
+                continue;
+            }
+            fprintf(file, "%s    %dth block:\n", prefix, i);
+            if (blockThreadIdAndAccessFirstLayerPtrUnion[i] <= MAX_THREAD_NUM) {
+                fprintf(file, "%s        thread:%lu, only access by one thread\n", prefix,
+                        blockThreadIdAndAccessFirstLayerPtrUnion[i]);
+                continue;
+            }
+            unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion[i];
+            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+                if (firstLayerPtr[j] == NULL) {
+                    continue;
+                }
+                for (int z = 0; z < SLOTS_IN_SECOND_LAYER; z++) {
+                    if (firstLayerPtr[j][z] != 0) {
+                        fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j * 8 + z,
+                                firstLayerPtr[j][z]);
+                    }
+                }
+            }
+        }
+        // print access num in cacheline level
     }
 };
 
