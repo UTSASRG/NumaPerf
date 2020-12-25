@@ -98,13 +98,11 @@ public:
                 unsigned short **newFirstLayerPtr = (unsigned short **) newObj->blockThreadIdAndAccessFirstLayerPtrUnion[i];
                 for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
                     if (oldFirstLayerPtr[j] != NULL) {
-//                        newFirstLayerPtr[j] = (unsigned short *) localThreadAccessNumberSecondLayerMemoryPool.get();
-//                        memcpy(newFirstLayerPtr[j], oldFirstLayerPtr[j],
-//                               localThreadAccessNumberSecondLayerMemoryPool.getMemBlockSize());
+                        newFirstLayerPtr[j] = (unsigned short *) localThreadAccessNumberSecondLayerMemoryPool.get();
+                        memcpy(newFirstLayerPtr[j], oldFirstLayerPtr[j],
+                               localThreadAccessNumberSecondLayerMemoryPool.getMemBlockSize());
                     }
                 }
-                memcpy(newFirstLayerPtr, oldFirstLayerPtr,
-                       localThreadAccessNumberFirstLayerMemoryPool.getMemBlockSize());
             }
         }
         return newObj;
