@@ -88,15 +88,15 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessI
                                                    sizeof(PageDetailedAccessInfo),
                                                    GB * 128);
 
-MemoryPool PageDetailedAccessInfo::localThreadAccessNumberFirstLayerMemoryPool(
-        (char *) "AccessNumberFirstLayerMemPool",
-        (SLOTS_IN_FIRST_LAYER * sizeof(unsigned short *)),
-        GB * 4);
-
-MemoryPool PageDetailedAccessInfo::localThreadAccessNumberSecondLayerMemoryPool(
-        (char *) "AccessNumberSecoLayerMemPool",
-        (SLOTS_IN_SECOND_LAYER * sizeof(unsigned short)),
-        GB * 4);
+//MemoryPool PageDetailedAccessInfo::localThreadAccessNumberFirstLayerMemoryPool(
+//        (char *) "AccessNumberFirstLayerMemPool",
+//        (SLOTS_IN_FIRST_LAYER * sizeof(unsigned short *)),
+//        GB * 4);
+//
+//MemoryPool PageDetailedAccessInfo::localThreadAccessNumberSecondLayerMemoryPool(
+//        (char *) "AccessNumberSecoLayerMemPool",
+//        (SLOTS_IN_SECOND_LAYER * sizeof(unsigned short)),
+//        GB * 4);
 
 MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
                                             (sizeof(DiagnoseObjInfo)),

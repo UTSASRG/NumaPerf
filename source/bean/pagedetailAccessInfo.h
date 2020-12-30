@@ -12,9 +12,9 @@
 #define BLOCK_MASK ((unsigned long)0b111110000000)
 #define BLOCK_LOW_BITS_MASK ((unsigned long)0b1111111)
 
-#define FIRST_LAYER_SHIFT_BITS 3
-#define SLOTS_IN_FIRST_LAYER (1 << FIRST_LAYER_SHIFT_BITS)
-#define SLOTS_IN_SECOND_LAYER (MAX_THREAD_NUM/SLOTS_IN_FIRST_LAYER)
+//#define FIRST_LAYER_SHIFT_BITS 3
+//#define SLOTS_IN_FIRST_LAYER (1 << FIRST_LAYER_SHIFT_BITS)
+//#define SLOTS_IN_SECOND_LAYER (MAX_THREAD_NUM/SLOTS_IN_FIRST_LAYER)
 
 /**
  *  strategies used to reduce mem overheads
@@ -29,12 +29,12 @@ class PageDetailedAccessInfo {
     unsigned long allAccessNumByOtherThread;
     unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
     unsigned int accessNumberByOtherThread[BLOCK_NUM];
-    unsigned long blockThreadIdAndAccessFirstLayerPtrUnion;
+    unsigned int threadIdAndIsSharedUnion;
 
 private:
     static MemoryPool localMemoryPool;
-    static MemoryPool localThreadAccessNumberFirstLayerMemoryPool;
-    static MemoryPool localThreadAccessNumberSecondLayerMemoryPool;
+//    static MemoryPool localThreadAccessNumberFirstLayerMemoryPool;
+//    static MemoryPool localThreadAccessNumberSecondLayerMemoryPool;
 
     PageDetailedAccessInfo(unsigned long pageStartAddress, unsigned long firstTouchThreadId) {
         memset(this, 0, sizeof(PageDetailedAccessInfo));
@@ -64,21 +64,21 @@ private:
 //        }
 //        return blockIndex;
 //    }
-
-    inline void releaseTwoLayersBlockAccessNum() {
-        if (blockThreadIdAndAccessFirstLayerPtrUnion > MAX_THREAD_NUM) {
-            unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion;
-            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-                if (firstLayerPtr[j] != NULL) {
-                    unsigned short *secondLayerPtr = firstLayerPtr[j];
-                    firstLayerPtr[j] = 0;
-                    localThreadAccessNumberSecondLayerMemoryPool.release(secondLayerPtr);
-                }
-            }
-            blockThreadIdAndAccessFirstLayerPtrUnion = 0;
-            localThreadAccessNumberFirstLayerMemoryPool.release(firstLayerPtr);
-        }
-    }
+//
+//    inline void releaseTwoLayersBlockAccessNum() {
+//        if (threadIdAndIsSharedUnion > MAX_THREAD_NUM) {
+//            unsigned short **firstLayerPtr = (unsigned short **) threadIdAndIsSharedUnion;
+//            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
+//                if (firstLayerPtr[j] != NULL) {
+//                    unsigned short *secondLayerPtr = firstLayerPtr[j];
+//                    firstLayerPtr[j] = 0;
+//                    localThreadAccessNumberSecondLayerMemoryPool.release(secondLayerPtr);
+//                }
+//            }
+//            threadIdAndIsSharedUnion = 0;
+//            localThreadAccessNumberFirstLayerMemoryPool.release(firstLayerPtr);
+//        }
+//    }
 
     inline int getResidentEndIndex(unsigned long objStartAddress, unsigned long size) const {
         if (objStartAddress <= 0) {
@@ -107,13 +107,13 @@ private:
 //        return blockIndex;
 //    }
 
-    int getFirstLayerIndex(unsigned long threadIndex) {
-        return threadIndex >> (MAX_THREAD_NUM_SHIFT_BITS - FIRST_LAYER_SHIFT_BITS);
-    }
-
-    int getSecondLayerIndex(unsigned long threadIndex) {
-        return ((1 << (MAX_THREAD_NUM_SHIFT_BITS - FIRST_LAYER_SHIFT_BITS)) - 1) & threadIndex;
-    }
+//    int getFirstLayerIndex(unsigned long threadIndex) {
+//        return threadIndex >> (MAX_THREAD_NUM_SHIFT_BITS - FIRST_LAYER_SHIFT_BITS);
+//    }
+//
+//    int getSecondLayerIndex(unsigned long threadIndex) {
+//        return ((1 << (MAX_THREAD_NUM_SHIFT_BITS - FIRST_LAYER_SHIFT_BITS)) - 1) & threadIndex;
+//    }
 
 public:
 
@@ -134,70 +134,28 @@ public:
     PageDetailedAccessInfo *copy() {
         void *buff = localMemoryPool.get();
         memcpy(buff, this, sizeof(PageDetailedAccessInfo));
-        PageDetailedAccessInfo *newObj = (PageDetailedAccessInfo *) buff;
-        if (blockThreadIdAndAccessFirstLayerPtrUnion > MAX_THREAD_NUM) {
-            newObj->blockThreadIdAndAccessFirstLayerPtrUnion = (unsigned long) localThreadAccessNumberFirstLayerMemoryPool.get();
-            unsigned short **oldFirstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion;
-            unsigned short **newFirstLayerPtr = (unsigned short **) newObj->blockThreadIdAndAccessFirstLayerPtrUnion;
-            for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-                if (oldFirstLayerPtr[j] != NULL) {
-                    newFirstLayerPtr[j] = (unsigned short *) localThreadAccessNumberSecondLayerMemoryPool.get();
-                    memcpy(newFirstLayerPtr[j], oldFirstLayerPtr[j],
-                           localThreadAccessNumberSecondLayerMemoryPool.getMemBlockSize());
-                }
-            }
-        }
-        return newObj;
+        return (PageDetailedAccessInfo *) buff;
     }
 
     inline void recordAccess(unsigned long addr, unsigned long accessThreadId, unsigned long firstTouchThreadId) {
         unsigned int index = getBlockIndex(addr);
         if (accessThreadId == firstTouchThreadId) {
             accessNumberByFirstTouchThread[index]++;
-            return;
-        } // well, this is not a bug. Since no needs to trace firstTouchThreadId in details.
-        accessNumberByOtherThread[index]++;
-        if (blockThreadIdAndAccessFirstLayerPtrUnion == accessThreadId) {
-            return;
-        }
-        if (blockThreadIdAndAccessFirstLayerPtrUnion == 0) {
-            Automics::compare_set(&blockThreadIdAndAccessFirstLayerPtrUnion, (unsigned long) 0, accessThreadId);
-            return;
+        } else {
+            accessNumberByOtherThread[index]++;
         }
 
-        volatile unsigned long threadId = (volatile unsigned long) (blockThreadIdAndAccessFirstLayerPtrUnion);
-        if (threadId <= MAX_THREAD_NUM) {
-            void *memblock = localThreadAccessNumberFirstLayerMemoryPool.get();
-            bool ret = Automics::compare_set(&blockThreadIdAndAccessFirstLayerPtrUnion, threadId,
-                                             (unsigned long) memblock);
-            if (!ret) {
-                localThreadAccessNumberFirstLayerMemoryPool.release(memblock);
-            }
-        }
-
-        volatile unsigned short **firstLayerPtr = (volatile unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion;
-        if ((unsigned long) firstLayerPtr <= MAX_THREAD_NUM) {
-            blockThreadIdAndAccessFirstLayerPtrUnion = 0;
-            printf("use after free issue from applications. (can ignore if few happened)\n");
+        if (threadIdAndIsSharedUnion == accessThreadId) {
             return;
         }
-        int firstLayerIndex = getFirstLayerIndex(accessThreadId);
-        if (firstLayerPtr[firstLayerIndex] == NULL) {
-            void *memblock = localThreadAccessNumberSecondLayerMemoryPool.get();
-            bool ret = Automics::compare_set((unsigned short **) (firstLayerPtr + firstLayerIndex),
-                                             (unsigned short *) NULL,
-                                             (unsigned short *) memblock);
-            if (!ret) {
-                localThreadAccessNumberSecondLayerMemoryPool.release(memblock);
-            }
-        }
-        volatile unsigned short *secondLayerPtr = firstLayerPtr[firstLayerIndex];
-        if (secondLayerPtr == NULL) {
-            printf("use after free issue from applications. (can ignore if few happened)\n");
+        if (threadIdAndIsSharedUnion == 0) {
+            Automics::compare_set(&threadIdAndIsSharedUnion, (unsigned int) 0, (unsigned int) accessThreadId);
             return;
         }
-        int secondLayerIndex = getSecondLayerIndex(accessThreadId);
-        secondLayerPtr[secondLayerIndex]++;
+        if (threadIdAndIsSharedUnion > MAX_THREAD_NUM) {
+            return;
+        }
+        threadIdAndIsSharedUnion = MAX_THREAD_NUM + 1;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -211,7 +169,7 @@ public:
     }
 
     inline void clearAll() {
-        releaseTwoLayersBlockAccessNum();
+//        releaseTwoLayersBlockAccessNum();
         memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
     }
 
@@ -222,7 +180,7 @@ public:
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
         }
-        releaseTwoLayersBlockAccessNum();
+//        releaseTwoLayersBlockAccessNum();
     }
 
     inline unsigned long getAccessNumberByFirstTouchThread(unsigned long objStartAddress, unsigned long size) const {
@@ -298,22 +256,12 @@ public:
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
-        if (blockThreadIdAndAccessFirstLayerPtrUnion <= MAX_THREAD_NUM) {
+        if (threadIdAndIsSharedUnion <= MAX_THREAD_NUM) {
             fprintf(file, "%s        only access by one thread:%lu\n", prefix,
-                    blockThreadIdAndAccessFirstLayerPtrUnion);
-            return;
-        }
-        unsigned short **firstLayerPtr = (unsigned short **) blockThreadIdAndAccessFirstLayerPtrUnion;
-        for (int j = 0; j < SLOTS_IN_FIRST_LAYER; j++) {
-            if (firstLayerPtr[j] == NULL) {
-                continue;
-            }
-            for (int z = 0; z < SLOTS_IN_SECOND_LAYER; z++) {
-                if (firstLayerPtr[j][z] != 0) {
-                    fprintf(file, "%s        thread:%d, access number:%d\n", prefix, j * SLOTS_IN_FIRST_LAYER + z,
-                            firstLayerPtr[j][z]);
-                }
-            }
+                    threadIdAndIsSharedUnion);
+        } else {
+            fprintf(file, "%s        this page is shared by multiple threads\n", prefix,
+                    threadIdAndIsSharedUnion);
         }
         // print access num in cacheline level
     }
