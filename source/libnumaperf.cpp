@@ -678,7 +678,6 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
             continue;
         }
         PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-        bool allPageCoveredByObj = pageBasicAccessInfo->isCoveredByObj(objStartAddress, objSize);
 //        if (allPageCoveredByObj) {
 //            pageBasicAccessInfo->clearAll();
 //        } else {
@@ -687,6 +686,7 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
         if (pageDetailedAccessInfo == NULL) {
             continue;
         }
+        bool allPageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(objStartAddress, objSize);
 
         unsigned long seriousScore = pageDetailedAccessInfo->getTotalRemoteAccess();
 
