@@ -257,11 +257,10 @@ public:
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
         if (threadIdAndIsSharedUnion <= MAX_THREAD_NUM) {
-            fprintf(file, "%s        only access by one thread:%lu\n", prefix,
+            fprintf(file, "%s        only access by one thread:%d\n", prefix,
                     threadIdAndIsSharedUnion);
         } else {
-            fprintf(file, "%s        this page is shared by multiple threads\n", prefix,
-                    threadIdAndIsSharedUnion);
+            fprintf(file, "%s        this page is shared by multiple threads\n", prefix);
         }
         // print access num in cacheline level
     }
