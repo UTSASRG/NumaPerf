@@ -8,21 +8,13 @@
 
 #define MULTIPLE_THREAD 0xffff
 
-typedef struct ReadWritNum {
-    unsigned int readingNum;
-    unsigned int writingNum;
-} ReadWritNum;
-
 class CacheLineDetailedInfo {
-    unsigned long firstTouchThreadId;
     unsigned long startAddress;
-    unsigned int seriousScore;
     unsigned int invalidationNumberInFirstThread;
     unsigned int invalidationNumberInOtherThreads;
     unsigned int readNumBeforeLastWrite;
     unsigned int continualReadNumAfterAWrite;
     unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
-//    ReadWritNum readWritNum[MAX_THREAD_NUM];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
@@ -59,18 +51,16 @@ public:
 
     CacheLineDetailedInfo(unsigned long cacheLineStartAddress, unsigned long firstTouchThreadId) {
 //        memset(this, 0, sizeof(CacheLineDetailedInfo));
-        this->firstTouchThreadId = firstTouchThreadId;
         this->startAddress = cacheLineStartAddress;
     }
 
     CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        this->firstTouchThreadId = cacheLineDetailedInfo.firstTouchThreadId;
         this->startAddress = cacheLineDetailedInfo.startAddress;
 //        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
     }
 
     void clear() {
-        memset(&(this->seriousScore), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long) - sizeof(unsigned long));
+        memset(&(this->invalidationNumberInFirstThread), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
     }
 
 //    inline static CacheLineDetailedInfo *
@@ -118,11 +108,7 @@ public:
     }
 
     inline unsigned long getTotalRemoteAccess() {
-        if (this->seriousScore != 0) {
-            return this->seriousScore;
-        }
-        this->seriousScore = this->invalidationNumberInOtherThreads;
-        return this->seriousScore;
+        return this->invalidationNumberInOtherThreads;
     }
 
     inline bool operator<(CacheLineDetailedInfo &cacheLineDetailedInfo) {
@@ -227,7 +213,6 @@ public:
                 Scores::getSeriousScore(getTotalRemoteAccess(), totalRunningCycles));
         fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
-        fprintf(file, "%sFirstTouchThreadId:       %lu\n", prefix, this->firstTouchThreadId);
         fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %d/%d\n", prefix,
                 this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
         fprintf(file, "%sFalseSharing(sharing in each word):\n", prefix);
