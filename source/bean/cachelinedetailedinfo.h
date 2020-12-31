@@ -8,13 +8,16 @@
 
 #define MULTIPLE_THREAD 0xffff
 
+#define THERAD_BIT_MASK_LENGTH (MAX_THREAD_NUM >> 2)   //256
+#define THERAD_BIT_MASK ((unsigned long)((1 << (MAX_THREAD_NUM_SHIFT_BITS - 2)) - 1))
+
 class CacheLineDetailedInfo {
     unsigned long startAddress;
     unsigned int invalidationNumberInFirstThread;
     unsigned int invalidationNumberInOtherThreads;
     unsigned int readNumBeforeLastWrite;
     unsigned int continualReadNumAfterAWrite;
-    unsigned int accessThreadsBitMask[MAX_THREAD_NUM / (8 * sizeof(unsigned int))];
+    unsigned long accessThreadsBitMask[THERAD_BIT_MASK_LENGTH / (8 * sizeof(unsigned long))];
     unsigned short threadIdAndIsMultipleThreadsUnion;
     unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
@@ -24,11 +27,11 @@ private:
 private:
 
     inline void resetThreadBitMask() {
-        memset(accessThreadsBitMask, 0, MAX_THREAD_NUM / 8);
+        memset(accessThreadsBitMask, 0, THERAD_BIT_MASK_LENGTH / 8);
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
-        return BitMasks::setBit(accessThreadsBitMask, MAX_THREAD_NUM, threadIndex);
+        return BitMasks::setBit(accessThreadsBitMask, THERAD_BIT_MASK_LENGTH, threadIndex & THERAD_BIT_MASK);
     }
 
     inline bool recordNewInvalidation(unsigned long threadId, eAccessType type) {
