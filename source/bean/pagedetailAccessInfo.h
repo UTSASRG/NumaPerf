@@ -6,11 +6,11 @@
 #include "../utils/addresses.h"
 #include "scores.h"
 
-#define BLOCK_SHIFT_BITS ((unsigned int)(1+CACHE_LINE_SHIFT_BITS))
+#define BLOCK_SHIFT_BITS ((unsigned int)(CACHE_LINE_SHIFT_BITS))
 #define BLOCK_SIZE (1 << BLOCK_SHIFT_BITS)
 #define BLOCK_NUM (PAGE_SIZE/BLOCK_SIZE)
-#define BLOCK_MASK ((unsigned long)0b111110000000)
-#define BLOCK_LOW_BITS_MASK ((unsigned long)0b1111111)
+#define BLOCK_MASK ((unsigned long)0b111111000000)
+//#define BLOCK_LOW_BITS_MASK ((unsigned long)0b1111111)
 
 //#define FIRST_LAYER_SHIFT_BITS 3
 //#define SLOTS_IN_FIRST_LAYER (1 << FIRST_LAYER_SHIFT_BITS)
