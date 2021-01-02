@@ -963,6 +963,8 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 //        Logger::warn("firstTouchThread:%lu\n", firstTouchThreadId);
     }
 #ifdef SAMPLING
+    // todo thread local sampling is still too costing
+    // but did not find a better way. generating a random number is slower than this
     bool sampled = false;
     pageBasicSamplingFrequency++;
     if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
@@ -972,7 +974,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #endif
 
     if (!needPageDetailInfo) {
-        // todo thread local sampling is still too costing
 #ifdef SAMPLING
         if (sampled) {
             threadBasedInfo->threadBasedAccess(firstTouchThreadId);
