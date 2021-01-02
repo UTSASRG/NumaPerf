@@ -42,7 +42,6 @@ typedef AddressToPageIndexSingleFragShadowMap<PageBasicAccessInfo> PageBasicAcce
 typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInfoShadowMap;
 
 
-thread_local int pageDetailSamplingFrequency = 0;
 thread_local int pageBasicSamplingFrequency = 0;
 
 bool inited = false;
@@ -963,15 +962,19 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 //        Logger::warn("firstTouchThread:%lu\n", firstTouchThreadId);
     }
-
+#ifdef SAMPLING
     bool sampled = false;
+    pageBasicSamplingFrequency++;
+    if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
+        sampled = true;
+        pageBasicSamplingFrequency = 0;
+    }
+#endif
+
     if (!needPageDetailInfo) {
         // todo thread local sampling is still too costing
 #ifdef SAMPLING
-        pageBasicSamplingFrequency++;
-        if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
-            sampled = true;
-            pageBasicSamplingFrequency = 0;
+        if (sampled) {
             threadBasedInfo->threadBasedAccess(firstTouchThreadId);
             basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
         }
@@ -990,10 +993,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
     if (needPageDetailInfo) {
 #ifdef SAMPLING
-        pageDetailSamplingFrequency++;
-        if (pageDetailSamplingFrequency > SAMPLING_FREQUENCY) {
-            sampled = true;
-            pageDetailSamplingFrequency = 0;
+        if (sampled) {
             threadBasedInfo->threadBasedAccess(firstTouchThreadId);
             recordDetailsForPageSharing(basicPageAccessInfo, addr);
         }
