@@ -47,6 +47,7 @@ add_executable(NumaPerf
         source/xdefines.h
         source/utils/log/Logger.h
         source/utils/timer.h
+        source/utils/random.h
         source/utils/memorypool.h
         source/utils/mm.hh
         source/utils/sorts.h

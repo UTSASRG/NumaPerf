@@ -16,6 +16,7 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
+#include <utils/random.h>
 #include "bean/threadstageinfo.h"
 #include "bean/threadbasedinfo.h"
 #include "bean/lockinfo.h"
@@ -965,6 +966,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #ifdef SAMPLING
     bool sampled = false;
     pageBasicSamplingFrequency++;
+    Random::rdrand64_step(1);
     if (pageBasicSamplingFrequency > SAMPLING_FREQUENCY) {
         sampled = true;
         pageBasicSamplingFrequency = 0;
