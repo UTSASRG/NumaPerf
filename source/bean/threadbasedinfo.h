@@ -12,23 +12,10 @@ class ThreadBasedInfo {
     long nodeMigrationNum;
     unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
 
-private:
+public:
 
     ThreadBasedInfo() {
         memset(this, 0, sizeof(ThreadBasedInfo));
-    }
-
-public:
-
-    inline static ThreadBasedInfo *createThreadBasedInfo(CallStack *threadCreateCallSite) {
-        void *mem = Real::malloc(sizeof(ThreadBasedInfo));
-        ThreadBasedInfo *ret = new(mem)ThreadBasedInfo();
-        ret->threadCreateCallSiteStack = threadCreateCallSite;
-        return ret;
-    }
-
-    inline static void release(ThreadBasedInfo *threadBasedInfo) {
-        Real::free(threadBasedInfo);
     }
 
     inline void start() {
