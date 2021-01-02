@@ -47,7 +47,7 @@ thread_local int pageBasicSamplingFrequency = 0;
 bool inited = false;
 unsigned long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
-thread_local ThreadBasedInfo threadBasedInfo;
+thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
 
 ThreadBasedInfo *GlobalThreadBasedInfo[MAX_THREAD_NUM];
@@ -70,7 +70,8 @@ static void initializer(void) {
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(2ul * TB, true);
-    GlobalThreadBasedInfo[0] = &threadBasedInfo;
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL);
+    GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
     inited = true;
 }
@@ -863,12 +864,13 @@ typedef void *(*threadStartRoutineFunPtr)(void *);
 void *initThreadIndexRoutine(void *args) {
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) args;
     currentThreadIndex = arguments->threadIndex;
-    GlobalThreadBasedInfo[currentThreadIndex] = &threadBasedInfo;
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite);
+    GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
-    threadBasedInfo.start();
+    threadBasedInfo->start();
     void *result = startRoutineFunPtr(arguments->parameterPtr);
-    threadBasedInfo.end();
+    threadBasedInfo->end();
 //    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
 //           sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
@@ -974,7 +976,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (!needPageDetailInfo) {
 #ifdef SAMPLING
         if (sampled) {
-            threadBasedInfo.threadBasedAccess(firstTouchThreadId);
+            threadBasedInfo->threadBasedAccess(firstTouchThreadId);
             basicPageAccessInfo->recordAccessForPageSharing(currentThreadIndex);
         }
 #else
@@ -993,7 +995,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (needPageDetailInfo) {
 #ifdef SAMPLING
         if (sampled) {
-            threadBasedInfo.threadBasedAccess(firstTouchThreadId);
+            threadBasedInfo->threadBasedAccess(firstTouchThreadId);
             recordDetailsForPageSharing(basicPageAccessInfo, addr);
         }
 #else
@@ -1044,10 +1046,10 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (releaseLockAfterAcquire) {\
         lockInfo->releaseLock();\
     }\
-    threadBasedInfo.idle(Timer::getCurrentCycle() - start);\
+    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
-        threadBasedInfo.nodeMigrate();\
+        threadBasedInfo->nodeMigrate();\
     }\
     return ret;
 
@@ -1058,10 +1060,10 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     int nodeBefore = Numas::getNodeOfCurrentThread();\
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = waiTFuncPtr(cond, lock);\
-    threadBasedInfo.idle(Timer::getCurrentCycle() - start);\
+    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
-        threadBasedInfo.nodeMigrate();\
+        threadBasedInfo->nodeMigrate();\
     }\
     return ret;
 
