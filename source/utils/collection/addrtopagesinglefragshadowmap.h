@@ -14,17 +14,18 @@
  * @tparam KeyType
  * @tparam ValueType
  */
+
+#define META_DATA_SIZE 2 // sizeof(short)
+#define NOT_INSERT ((short)0)
+#define INSERTING ((short)1)
+#define INSERTED ((short)2)
+
 template<class ValueType>
 class AddressToPageIndexSingleFragShadowMap {
 
     unsigned long fragmentSize;
     unsigned long blockSize;
     void *startAddress;
-
-    const static int META_DATA_SIZE = sizeof(short);
-    const static short NOT_INSERT = 0;
-    const static short INSERTING = 1;
-    const static short INSERTED = 2;
 
 private:
     inline unsigned long hashKey(unsigned long key) {
