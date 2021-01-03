@@ -176,6 +176,7 @@ public:
     inline void clearAll() {
 //        releaseTwoLayersBlockAccessNum();
         memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
+        this->threadIdAndIsSharedUnion = -1;
     }
 
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
