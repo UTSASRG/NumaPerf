@@ -145,13 +145,16 @@ public:
 #else
         recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
 #endif
-        if (firstTouchThreadId == threadId) {
-            if (recordNewInvalidation(threadId, type)) {
-                invalidationNumberInFirstThread++;
-            }
-        } else {
-            if (recordNewInvalidation(threadId, type)) {
-                invalidationNumberInOtherThreads++;
+
+        if (sampled || type == E_ACCESS_WRITE) {
+            if (firstTouchThreadId == threadId) {
+                if (recordNewInvalidation(threadId, type)) {
+                    invalidationNumberInFirstThread++;
+                }
+            } else {
+                if (recordNewInvalidation(threadId, type)) {
+                    invalidationNumberInOtherThreads++;
+                }
             }
         }
 
@@ -159,9 +162,7 @@ public:
             readNumBeforeLastWrite += continualReadNumAfterAWrite;
             continualReadNumAfterAWrite = 0;
 //            readWritNum[threadId].writingNum++;
-        }
-
-        if (type == E_ACCESS_READ) {
+        } else {
 #ifdef SAMPLING
             if (sampled) {
                 continualReadNumAfterAWrite++;
@@ -171,11 +172,7 @@ public:
             continualReadNumAfterAWrite++;
             readWritNum[threadId].readingNum++;
 #endif
-        }
-
-        // for cache false sharing detect
-        if (type == E_ACCESS_READ) {
-            return;
+            return;        // for cache false sharing detect
         }
 
         if (threadIdAndIsMultipleThreadsUnion == 0) {
