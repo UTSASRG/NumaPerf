@@ -12,12 +12,10 @@ public:
         if (bitIndex == 0) {
             return false;
         }
-        unsigned long *currentBitPtr = (unsigned long *) bitMaskPtr;
-        while (bitIndex > (8 * sizeof(unsigned long) + 1)) {
-            bitIndex -= 8 * sizeof(unsigned long);
-            currentBitPtr++;
-        }
-        unsigned long bitValue = 1ul << (bitIndex - 1);
+        int index = bitIndex >> 6;
+        int offset = bitIndex & 0b111111;
+        unsigned long *currentBitPtr = (unsigned long *) bitMaskPtr + index;
+        unsigned long bitValue = 1ul << offset;
         if ((bitValue & *currentBitPtr) != 0) {
             return false;
         }
