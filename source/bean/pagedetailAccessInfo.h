@@ -29,7 +29,7 @@ class PageDetailedAccessInfo {
     unsigned long allAccessNumByOtherThread;
     unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
     unsigned int accessNumberByOtherThread[BLOCK_NUM];
-    unsigned int threadIdAndIsSharedUnion;
+    int threadIdAndIsSharedUnion;
 
 private:
     static MemoryPool localMemoryPool;
@@ -40,6 +40,7 @@ private:
         memset(this, 0, sizeof(PageDetailedAccessInfo));
         this->firstTouchThreadId = firstTouchThreadId;
         this->startAddress = pageStartAddress;
+        this->threadIdAndIsSharedUnion = -1;
     }
 
     inline int getBlockIndex(unsigned long address) const {
@@ -89,6 +90,10 @@ private:
             return BLOCK_NUM - 1;
         }
         return getBlockIndex(objEndAddress);
+    }
+
+    inline bool isThisPageShared() {
+        return threadIdAndIsSharedUnion > MAX_THREAD_NUM;
     }
 
 //    // may go down 0
@@ -148,11 +153,11 @@ public:
         if (threadIdAndIsSharedUnion == accessThreadId) {
             return;
         }
-        if (threadIdAndIsSharedUnion == 0) {
-            Automics::compare_set(&threadIdAndIsSharedUnion, (unsigned int) 0, (unsigned int) accessThreadId);
+        if (threadIdAndIsSharedUnion == -1) {
+            threadIdAndIsSharedUnion = accessThreadId;
             return;
         }
-        if (threadIdAndIsSharedUnion > MAX_THREAD_NUM) {
+        if (isThisPageShared()) {
             return;
         }
         threadIdAndIsSharedUnion = MAX_THREAD_NUM + 1;
@@ -256,7 +261,7 @@ public:
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
-        if (threadIdAndIsSharedUnion <= MAX_THREAD_NUM) {
+        if (!isThisPageShared()) {
             fprintf(file, "%s        only access by one thread:%d\n", prefix,
                     threadIdAndIsSharedUnion);
         } else {
