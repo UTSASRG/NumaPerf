@@ -6,7 +6,7 @@
 #include "../utils/bitmasks.h"
 #include "scores.h"
 
-#define MULTIPLE_THREAD 0xffff
+#define MULTIPLE_THREAD 0xfff
 
 #define THERAD_BIT_MASK_LENGTH (MAX_THREAD_NUM >> 2)   //256
 #define THERAD_BIT_MASK ((unsigned long)((1 << (MAX_THREAD_NUM_SHIFT_BITS - 2)) - 1))
