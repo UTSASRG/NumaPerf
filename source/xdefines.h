@@ -44,7 +44,7 @@
 #define TWO_BLACK_SPACE "  "
 
 #define PAGE_SHARING_DETAIL_THRESHOLD 2000   // * 100 , since it is sampling
-#define PAGE_CACHE_BASIC_THRESHOLD 500   // * 100 , since it is sampling
+#define PAGE_CACHE_BASIC_THRESHOLD 10   // * 100 , since it is sampling
 #define CACHE_SHARING_DETAIL_THRESHOLD 300
 #define SAMPLING
 #define SAMPLING_FREQUENCY 100

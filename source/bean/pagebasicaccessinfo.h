@@ -65,7 +65,11 @@ public:
     inline void recordAccessForCacheSharing(unsigned long addr, eAccessType type) {
 //        if (type == E_ACCESS_WRITE && accessNumberByOtherThreads > PAGE_CACHE_BASIC_THRESHOLD) {
         if (type == E_ACCESS_WRITE) {
-            cacheLineWritingNumber[ADDRESSES::getCacheIndexInsidePage(addr)]++;
+            unsigned int index = ADDRESSES::getCacheIndexInsidePage(addr);
+            if (cacheLineWritingNumber[index] > CACHE_SHARING_DETAIL_THRESHOLD) {
+                return;
+            }
+            cacheLineWritingNumber[index]++;
         }
     }
 
@@ -74,7 +78,8 @@ public:
     }
 
     inline bool needCacheLineSharingDetailInfo(unsigned long addr) {
-        return cacheLineWritingNumber[ADDRESSES::getCacheIndexInsidePage(addr)] > CACHE_SHARING_DETAIL_THRESHOLD;
+        return cacheLineWritingNumber[ADDRESSES::getCacheIndexInsidePage(addr)] > CACHE_SHARING_DETAIL_THRESHOLD &&
+               accessNumberByOtherThreads > PAGE_CACHE_BASIC_THRESHOLD;
     }
 
     inline long getFirstTouchThreadId() {
