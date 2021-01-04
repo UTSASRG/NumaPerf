@@ -63,7 +63,8 @@ public:
     }
 
     inline void recordAccessForCacheSharing(unsigned long addr, eAccessType type) {
-        if (type == E_ACCESS_WRITE && accessNumberByOtherThreads > PAGE_CACHE_BASIC_THRESHOLD) {
+//        if (type == E_ACCESS_WRITE && accessNumberByOtherThreads > PAGE_CACHE_BASIC_THRESHOLD) {
+        if (type == E_ACCESS_WRITE) {
             cacheLineWritingNumber[ADDRESSES::getCacheIndexInsidePage(addr)]++;
         }
     }

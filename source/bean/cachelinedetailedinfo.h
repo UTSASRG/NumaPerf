@@ -19,7 +19,7 @@ class CacheLineDetailedInfo {
     unsigned int continualReadNumAfterAWrite;
     unsigned long accessThreadsBitMask[THERAD_BIT_MASK_LENGTH / (8 * sizeof(unsigned long))];
     unsigned short threadIdAndIsMultipleThreadsUnion;
-    unsigned short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
+    short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
 private:
     static MemoryPool localMemoryPool;
@@ -28,6 +28,9 @@ private:
 
     inline void resetThreadBitMask() {
         memset(accessThreadsBitMask, 0, THERAD_BIT_MASK_LENGTH / 8);
+        for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
+            wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
+        }
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
@@ -64,6 +67,9 @@ public:
 
     void clear() {
         memset(&(this->invalidationNumberInFirstThread), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
+        for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
+            wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
+        }
     }
 
 //    inline static CacheLineDetailedInfo *
@@ -187,7 +193,7 @@ public:
 
         // threadIdAndIsMultipleThreadsUnion==MULTIPLE_THREAD
         unsigned long wordIndex = ADDRESSES::getWordIndexInsideCache(addr);
-        if (wordThreadIdAndIsMultipleThreadsUnion[wordIndex] == 0) {
+        if (wordThreadIdAndIsMultipleThreadsUnion[wordIndex] == -1) {
             wordThreadIdAndIsMultipleThreadsUnion[wordIndex] = threadId;
             return;
         }
@@ -218,7 +224,7 @@ public:
             if (wordThreadIdAndIsMultipleThreadsUnion[i] == MULTIPLE_THREAD) {
                 fprintf(file, "%s%d-th word:%s,", prefix, i, "true");
             } else {
-                fprintf(file, "%s%d-th word:%s,", prefix, i, "false");
+                fprintf(file, "%s%d-th word:%d,", prefix, i, wordThreadIdAndIsMultipleThreadsUnion[i]);
             }
         }
         fprintf(file, "\n");
