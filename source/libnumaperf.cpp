@@ -985,7 +985,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 #endif
     }
 
-    if (needPageDetailInfo && !needCahceDetailInfo) {
+    if (!needCahceDetailInfo) {
         basicPageAccessInfo->recordAccessForCacheSharing(addr, type);
     }
 

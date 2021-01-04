@@ -146,15 +146,13 @@ public:
         recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
 #endif
 
-        if (sampled || type == E_ACCESS_WRITE) {
-            if (firstTouchThreadId == threadId) {
-                if (recordNewInvalidation(threadId, type)) {
-                    invalidationNumberInFirstThread++;
-                }
-            } else {
-                if (recordNewInvalidation(threadId, type)) {
-                    invalidationNumberInOtherThreads++;
-                }
+        if (firstTouchThreadId == threadId) {
+            if (recordNewInvalidation(threadId, type)) {
+                invalidationNumberInFirstThread++;
+            }
+        } else {
+            if (recordNewInvalidation(threadId, type)) {
+                invalidationNumberInOtherThreads++;
             }
         }
 
