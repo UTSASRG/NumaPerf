@@ -6,7 +6,7 @@
 #include "../utils/bitmasks.h"
 #include "scores.h"
 
-#define MULTIPLE_THREAD 0xfff
+#define MULTIPLE_THREAD (MAX_THREAD_NUM + 1)
 
 #define THERAD_BIT_MASK_LENGTH (MAX_THREAD_NUM >> 2)   //256
 #define THERAD_BIT_MASK ((unsigned long)((1 << (MAX_THREAD_NUM_SHIFT_BITS - 2)) - 1))
@@ -28,10 +28,6 @@ private:
 
     inline void resetThreadBitMask() {
         memset(accessThreadsBitMask, 0, THERAD_BIT_MASK_LENGTH / 8);
-        threadIdAndIsMultipleThreadsUnion = -1;
-        for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
-            wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
-        }
     }
 
     inline bool setThreadBitMask(unsigned long threadIndex) {
@@ -53,17 +49,20 @@ private:
 
 public:
 
-    CacheLineDetailedInfo() {
-    }
-
     CacheLineDetailedInfo(unsigned long cacheLineStartAddress, unsigned long firstTouchThreadId) {
-//        memset(this, 0, sizeof(CacheLineDetailedInfo));
+        memset(this, 0, sizeof(CacheLineDetailedInfo));
         this->startAddress = cacheLineStartAddress;
+        threadIdAndIsMultipleThreadsUnion = -1;
+        for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
+            wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
+        }
     }
 
     CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
         this->startAddress = cacheLineDetailedInfo.startAddress;
-//        memcpy(this, &cacheLineDetailedInfo, sizeof(CacheLineDetailedInfo));
+        this->threadIdAndIsMultipleThreadsUnion = cacheLineDetailedInfo.threadIdAndIsMultipleThreadsUnion;
+        memcpy(this->wordThreadIdAndIsMultipleThreadsUnion, cacheLineDetailedInfo.wordThreadIdAndIsMultipleThreadsUnion,
+               sizeof(short) * WORD_NUMBER_IN_CACHELINE);
     }
 
     void clear() {
@@ -223,7 +222,7 @@ public:
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
         fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %d/%d\n", prefix,
                 this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
-        fprintf(file, "%sFalseSharing(sharing in each word):\n", prefix);
+        fprintf(file, "%sFalseSharing(sharing in each word):%d\n", prefix, this->threadIdAndIsMultipleThreadsUnion);
         for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
             if (wordThreadIdAndIsMultipleThreadsUnion[i] == MULTIPLE_THREAD) {
                 fprintf(file, "%s%d-th word:%s,", prefix, i, "true");
