@@ -18,7 +18,7 @@ class CacheLineDetailedInfo {
     unsigned int readNumBeforeLastWrite;
     unsigned int continualReadNumAfterAWrite;
     unsigned long accessThreadsBitMask[THERAD_BIT_MASK_LENGTH / (8 * sizeof(unsigned long))];
-    unsigned short threadIdAndIsMultipleThreadsUnion;
+    short threadIdAndIsMultipleThreadsUnion;
     short wordThreadIdAndIsMultipleThreadsUnion[WORD_NUMBER_IN_CACHELINE];
 
 private:
@@ -28,6 +28,7 @@ private:
 
     inline void resetThreadBitMask() {
         memset(accessThreadsBitMask, 0, THERAD_BIT_MASK_LENGTH / 8);
+        threadIdAndIsMultipleThreadsUnion = -1;
         for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
             wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
         }
@@ -67,6 +68,7 @@ public:
 
     void clear() {
         memset(&(this->invalidationNumberInFirstThread), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
+        threadIdAndIsMultipleThreadsUnion = -1;
         for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
             wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
         }
@@ -179,15 +181,17 @@ public:
             return;        // for cache false sharing detect
         }
 
-        if (threadIdAndIsMultipleThreadsUnion == 0) {
+        if (threadIdAndIsMultipleThreadsUnion == -1) {
             threadIdAndIsMultipleThreadsUnion = threadId;
             return;
         }
 
+        if (threadIdAndIsMultipleThreadsUnion == threadId) {
+            return;
+        }
+
         if (threadIdAndIsMultipleThreadsUnion != MULTIPLE_THREAD) {
-            if (threadIdAndIsMultipleThreadsUnion != threadId) {
-                threadIdAndIsMultipleThreadsUnion = MULTIPLE_THREAD;
-            }
+            threadIdAndIsMultipleThreadsUnion = MULTIPLE_THREAD;
             return;
         }
 
