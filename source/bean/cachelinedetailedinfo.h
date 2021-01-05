@@ -49,6 +49,9 @@ private:
 
 public:
 
+    CacheLineDetailedInfo() {
+    }
+
     CacheLineDetailedInfo(unsigned long cacheLineStartAddress, unsigned long firstTouchThreadId) {
         memset(this, 0, sizeof(CacheLineDetailedInfo));
         this->startAddress = cacheLineStartAddress;
