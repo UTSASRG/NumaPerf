@@ -10,7 +10,7 @@
 #include "../../xdefines.h"
 #include "../asserts.h"
 
-#define BLOCK_SIZE 8
+#define PTR_SIZE 8
 #define CACHE_PTR_MAX_FRAGMENTS 8
 
 class AddressToCachePtrIndexShadowMap {
@@ -37,7 +37,7 @@ private:
         }
 
         unsigned long index = hashKey(key);
-        unsigned long offset = index * BLOCK_SIZE;
+        unsigned long offset = index * PTR_SIZE;
 //        assert(offset < fragmentSize);
         return ((char *) startAddress[fragmentIndex]) + offset;
     }
@@ -63,10 +63,10 @@ public:
             startAddress[i] = NULL;
         }
         this->fragmentSize = fragmentSize;
-        unsigned long fragmentMappingSize = (fragmentSize / BLOCK_SIZE) * CACHE_LINE_SIZE;
+        unsigned long fragmentMappingSize = (fragmentSize / PTR_SIZE) * CACHE_LINE_SIZE;
         this->fragmentMappingBitNum = Maths::getCeilingPowerOf2(fragmentMappingSize);
         this->fragmentMappingBitMask = Maths::getCeilingBitMask(fragmentMappingSize);
-        this->fragmentSize = (1ul << this->fragmentMappingBitNum) / CACHE_LINE_SIZE * BLOCK_SIZE;
+        this->fragmentSize = (1ul << this->fragmentMappingBitNum) / CACHE_LINE_SIZE * PTR_SIZE;
         lock.init();
     }
 
