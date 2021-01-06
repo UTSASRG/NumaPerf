@@ -16,6 +16,7 @@
 #include "utils/log/Logger.h"
 #include "utils/timer.h"
 #include <execinfo.h>
+#include "utils/collection/addrtocacheptrindexshadowmap.h"
 #include "bean/threadstageinfo.h"
 #include "bean/threadbasedinfo.h"
 #include "bean/lockinfo.h"
@@ -39,7 +40,7 @@ typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInf
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
 typedef HashMap<unsigned long, LockInfo *, spinlock, localAllocator> LockInfoMap;
 typedef AddressToPageIndexSingleFragShadowMap<PageBasicAccessInfo> PageBasicAccessInfoShadowMap;
-typedef AddressToCacheIndexShadowMap<CacheLineDetailedInfo> CacheLineDetailedInfoShadowMap;
+typedef AddressToCachePtrIndexShadowMap CacheLineDetailedInfoShadowMap;
 
 
 thread_local int pageBasicSamplingFrequency = 0;
@@ -69,7 +70,7 @@ static void initializer(void) {
     lockInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 4 * 1024);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(2ul * TB, true);
+    cacheLineDetailedInfoShadowMap.initialize(128ul * GB);
     threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL);
     GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
@@ -726,7 +727,8 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
 
     for (unsigned long cacheLineAddress = objStartAddress;
          cacheLineAddress < objEndAddress; cacheLineAddress += CACHE_LINE_SIZE) {
-        CacheLineDetailedInfo *cacheLineDetailedInfo = cacheLineDetailedInfoShadowMap.find(cacheLineAddress);
+        CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
+                cacheLineAddress);
         // remove the info in cache level, even there maybe are more objs inside it.
         if (NULL == cacheLineDetailedInfo) {
             continue;
@@ -917,11 +919,15 @@ recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadI
     inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
 #endif
 //    Logger::debug("record cache detailed info\n");
-    CacheLineDetailedInfo *cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.find(addr);
+    CacheLineDetailedInfo *cacheLineInfoPtr = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(addr);
     if (NULL == cacheLineInfoPtr) {
-        CacheLineDetailedInfo newCacheLineDetail = CacheLineDetailedInfo(ADDRESSES::getCacheLineStartAddress(addr),
-                                                                         firstTouchThreadId);
-        cacheLineInfoPtr = cacheLineDetailedInfoShadowMap.insert(addr, newCacheLineDetail);
+        cacheLineInfoPtr = CacheLineDetailedInfo::createNewCacheLineDetailedInfo(
+                ADDRESSES::getCacheLineStartAddress(addr));
+        bool ret = cacheLineDetailedInfoShadowMap.insertIfAbsent(addr, cacheLineInfoPtr);
+        if (!ret) {
+            CacheLineDetailedInfo::release(cacheLineInfoPtr);
+            cacheLineInfoPtr = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(addr);
+        }
     }
 #ifdef SAMPLING
     cacheLineInfoPtr->recordAccess(currentThreadIndex, firstTouchThreadId, type, addr, sampled);

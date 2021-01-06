@@ -13,7 +13,6 @@
 #define BLOCK_SIZE 8
 #define CACHE_PTR_MAX_FRAGMENTS 8
 
-template<class ValueType>
 class AddressToCachePtrIndexShadowMap {
 
     unsigned long fragmentSize;

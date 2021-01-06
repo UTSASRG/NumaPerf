@@ -49,11 +49,19 @@ private:
 
 public:
 
+    static CacheLineDetailedInfo *
+    createNewCacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
+        void *buff = localMemoryPool.get();
+//        Logger::debug("new PageDetailedAccessInfo buff address:%lu \n", buff);
+        CacheLineDetailedInfo *ret = new(buff) CacheLineDetailedInfo(cacheLineStartAddress);
+        return ret;
+    }
+
     CacheLineDetailedInfo() {
     }
 
-    CacheLineDetailedInfo(unsigned long cacheLineStartAddress, unsigned long firstTouchThreadId) {
-        memset(this, 0, sizeof(CacheLineDetailedInfo));
+    CacheLineDetailedInfo(unsigned long cacheLineStartAddress) {
+//        memset(this, 0, sizeof(CacheLineDetailedInfo));
         this->startAddress = cacheLineStartAddress;
         threadIdAndIsMultipleThreadsUnion = -1;
         for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
@@ -61,12 +69,12 @@ public:
         }
     }
 
-    CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
-        this->startAddress = cacheLineDetailedInfo.startAddress;
-        this->threadIdAndIsMultipleThreadsUnion = cacheLineDetailedInfo.threadIdAndIsMultipleThreadsUnion;
-        memcpy(this->wordThreadIdAndIsMultipleThreadsUnion, cacheLineDetailedInfo.wordThreadIdAndIsMultipleThreadsUnion,
-               sizeof(short) * WORD_NUMBER_IN_CACHELINE);
-    }
+//    CacheLineDetailedInfo(const CacheLineDetailedInfo &cacheLineDetailedInfo) {
+//        this->startAddress = cacheLineDetailedInfo.startAddress;
+//        this->threadIdAndIsMultipleThreadsUnion = cacheLineDetailedInfo.threadIdAndIsMultipleThreadsUnion;
+//        memcpy(this->wordThreadIdAndIsMultipleThreadsUnion, cacheLineDetailedInfo.wordThreadIdAndIsMultipleThreadsUnion,
+//               sizeof(short) * WORD_NUMBER_IN_CACHELINE);
+//    }
 
     void clear() {
         memset(&(this->invalidationNumberInFirstThread), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
