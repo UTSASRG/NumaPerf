@@ -330,7 +330,7 @@ int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
 //    getLocalBalancedThread(threadBasedAverageAccessNumber, localBalancedThread);
     getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
     int balancedThreadNum = getGlobalBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
-                                                    globalBalancedThread);
+                                                    globalBalancedThread, totalRunningCycles);
 #ifdef DEBUG_LOG
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadBasedAverageAccessNumber[i] > 0 || threadBasedAccessNumberDeviation[i] > 0) {
