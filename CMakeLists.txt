@@ -20,6 +20,7 @@ add_executable(NumaPerf
         source/utils/collection/hashmap.h
         source/utils/collection/priorityqueue.h
         source/utils/collection/addrtopagesinglefragshadowmap.h
+        source/utils/collection/addrtocacheptrindexshadowmap.h
         source/libnumaperf.cpp
         source/libnumaperf.h
         source/bean/callstacks.h
