@@ -7,10 +7,10 @@
 #include "pagedetailAccessInfo.h"
 #include "../utils/concurrency/automics.h"
 
-#define BASIC_BLOCK_SHIFT_BITS ((unsigned int)(CACHE_LINE_SHIFT_BITS+1))
+#define BASIC_BLOCK_SHIFT_BITS ((unsigned int)(CACHE_LINE_SHIFT_BITS))
 #define BASIC_BLOCK_SIZE (1 << BASIC_BLOCK_SHIFT_BITS)
 #define BASIC_BLOCK_NUM (PAGE_SIZE/BASIC_BLOCK_SIZE)
-#define BASIC_BLOCK_MASK ((unsigned long)0b111110000000)
+#define BASIC_BLOCK_MASK ((unsigned long)0b111111000000)
 
 class PageBasicAccessInfo {
 //    unsigned long pageStartAddress;
@@ -18,8 +18,8 @@ class PageBasicAccessInfo {
 //    bool isPageContainMultipleObjects;
 //    unsigned long accessNumberByFirstTouchThread;
     PageDetailedAccessInfo *pageDetailedAccessInfo;
-    unsigned int accessNumberByOtherThreads;
-    unsigned long blockWritingNumberCacheDetailPtrUnion[BASIC_BLOCK_NUM];
+    unsigned short accessNumberByOtherThreads;
+    unsigned short blockWritingNumberCacheDetailPtrUnion[BASIC_BLOCK_NUM];
 
 private:
 
