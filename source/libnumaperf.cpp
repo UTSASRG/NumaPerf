@@ -176,7 +176,7 @@ inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber
 
 inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
                                    unsigned long *threadBasedAccessNumberDeviation,
-                                   bool *balancedThread) {
+                                   bool *balancedThread, unsigned long totalRunningCycles) {
     int balancedThreadNum = 0;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadBasedAverageAccessNumber[i] < threadBasedAccessNumberDeviation[i]) {
@@ -324,10 +324,10 @@ getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *bala
 
 int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
                                 unsigned long *threadBasedAccessNumberDeviation, bool *localBalancedThread,
-                                bool *globalBalancedThread) {
+                                bool *globalBalancedThread, unsigned long totalRunningCycles) {
     preAccessThreadBasedAccessNumber();
     getThreadBasedAverageAccessNumber(threadBasedAverageAccessNumber);
-    getLocalBalancedThread(threadBasedAverageAccessNumber, localBalancedThread);
+//    getLocalBalancedThread(threadBasedAverageAccessNumber, localBalancedThread);
     getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
     int balancedThreadNum = getGlobalBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
                                                     globalBalancedThread);
@@ -346,7 +346,7 @@ int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
     getDeviationWOBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation, globalBalancedThread,
                                  balancedThreadNum);
     balancedThreadNum = getGlobalBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
-                                                globalBalancedThread);
+                                                globalBalancedThread, totalRunningCycles);
     return balancedThreadNum;
 }
 
@@ -467,7 +467,18 @@ __attribute__ ((destructor)) void finalizer(void) {
     bool localBalancedThread[MAX_THREAD_NUM];
     int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
                                                         threadBasedAccessNumberDeviation, localBalancedThread,
-                                                        globalBalancedThread);
+                                                        globalBalancedThread, totalRunningCycles);
+#if 1
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        fprintf(dumpFile, "threadBasedAverageAccessNumber-%lu:%lu, score:%f\n", i, threadBasedAverageAccessNumber[i],
+                Scores::getSeriousScore(threadBasedAverageAccessNumber[i], totalRunningCycles));
+    }
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        fprintf(dumpFile, "threadBasedAccessNumberDeviation-%lu:%lu, score:%f\n", i,
+                threadBasedAccessNumberDeviation[i],
+                Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles));
+    }
+#endif
 //    fprintf(dumpFile,
 //            "2.1 Local ImBalanced Threads:\n");
 //    for (
