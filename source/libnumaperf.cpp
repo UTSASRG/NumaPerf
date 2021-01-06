@@ -70,7 +70,7 @@ static void initializer(void) {
     lockInfoMap.initialize(HashFuncs::hashUnsignedlong, HashFuncs::compareUnsignedLong, 4 * 1024);
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
-    cacheLineDetailedInfoShadowMap.initialize(128ul * GB);
+    cacheLineDetailedInfoShadowMap.initialize(4ul * TB);
     threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL);
     GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
