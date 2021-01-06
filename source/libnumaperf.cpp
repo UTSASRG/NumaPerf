@@ -468,23 +468,23 @@ __attribute__ ((destructor)) void finalizer(void) {
     int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
                                                         threadBasedAccessNumberDeviation, localBalancedThread,
                                                         globalBalancedThread);
-    fprintf(dumpFile,
-            "2.1 Local ImBalanced Threads:\n");
-    for (
-            unsigned long i = 0;
-            i <=
-            largestThreadIndex;
-            i++) {
-        if (!localBalancedThread[i]) {
-            fprintf(dumpFile,
-                    "%ld,", i);
-        }
-    }
-    fprintf(dumpFile,
-            "\n\n");
+//    fprintf(dumpFile,
+//            "2.1 Local ImBalanced Threads:\n");
+//    for (
+//            unsigned long i = 0;
+//            i <=
+//            largestThreadIndex;
+//            i++) {
+//        if (!localBalancedThread[i]) {
+//            fprintf(dumpFile,
+//                    "%ld,", i);
+//        }
+//    }
+//    fprintf(dumpFile,
+//            "\n\n");
 
     fprintf(dumpFile,
-            "2.2 Global Balanced Threads:\n");
+            "2.1 Global Balanced Threads:\n");
     for (
             unsigned long i = 0;
             i <=
@@ -499,7 +499,7 @@ __attribute__ ((destructor)) void finalizer(void) {
             "\n\n");
 
     fprintf(dumpFile,
-            "2.3 Global ImBalanced Threads:\n");
+            "2.2 Global ImBalanced Threads:\n");
     for (
             unsigned long i = 0;
             i <=
@@ -513,7 +513,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile,
             "\n\n");
     fprintf(dumpFile,
-            "2.4 Threads binding recomendations:\n");
+            "2.3 Threads binding recomendations:\n");
 // get threads binding recommendations
     ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
     memset(threadClusters,
