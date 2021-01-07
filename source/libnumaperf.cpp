@@ -132,11 +132,21 @@ inline void preAccessThreadBasedAccessNumber() {
     }
 }
 
+#define IGNORE_EXTRAM_CASE 20
+#define SMALL_THREAD_ACCESS_THRESHOLD 20
+
 inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageAccessNumber) {
+    int ignoreExtramCase = largestThreadIndex / IGNORE_EXTRAM_CASE;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAverageAccessNumber[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
+                continue;
+            }
+            // bypass some extrem data
+            if (ignoreExtramCase > 0 &&
+                GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
+                ignoreExtramCase--;
                 continue;
             }
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
@@ -147,10 +157,17 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
 
 inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverageAccessNumber,
                                                 unsigned long *threadBasedAccessNumberDeviation) {
+    int ignoreExtramCase = largestThreadIndex / IGNORE_EXTRAM_CASE;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAccessNumberDeviation[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
+                continue;
+            }
+            // bypass some extrem data
+            if (ignoreExtramCase > 0 &&
+                GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
+                ignoreExtramCase--;
                 continue;
             }
             threadBasedAccessNumberDeviation[i] += abs((long long)

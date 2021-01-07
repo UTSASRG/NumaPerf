@@ -79,6 +79,7 @@ public:
     /**
      * min heap: if not full, insert new value into end and then pop it.
      * if full and new value is bigger than the head , replace the head with the new value and sink the new head
+     * used to find the biggest top N values by a min heap
      *
      * return the old value which are evicted, or the new value that are not inserted.
      * return null if the queue is not full
