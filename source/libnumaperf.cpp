@@ -136,17 +136,14 @@ inline void preAccessThreadBasedAccessNumber() {
 #define SMALL_THREAD_ACCESS_THRESHOLD 20
 
 inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageAccessNumber) {
-    int ignoreExtramCase = largestThreadIndex / IGNORE_EXTRAM_CASE;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAverageAccessNumber[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
                 continue;
             }
-            // bypass some extrem data
-            if (ignoreExtramCase > 0 &&
-                GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
-                ignoreExtramCase--;
+            //bypass small number , treat it as zero
+            if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
@@ -157,17 +154,14 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
 
 inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverageAccessNumber,
                                                 unsigned long *threadBasedAccessNumberDeviation) {
-    int ignoreExtramCase = largestThreadIndex / IGNORE_EXTRAM_CASE;
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAccessNumberDeviation[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
                 continue;
             }
-            // bypass some extrem data
-            if (ignoreExtramCase > 0 &&
-                GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
-                ignoreExtramCase--;
+            //bypass small number , treat it as zero
+            if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
             threadBasedAccessNumberDeviation[i] += abs((long long)
@@ -200,6 +194,17 @@ inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber
             balancedThread[i] = false;
             continue;
         }
+        int bigAccessThreadNum = 0;
+        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] > SMALL_THREAD_ACCESS_THRESHOLD) {
+                bigAccessThreadNum++;
+            }
+        }
+        // thread i is sparse, so it is imbalance even with small deviation
+        if (bigAccessThreadNum < 2 * largestThreadIndex / NUMA_NODES) {
+            balancedThread[i] = false;
+            continue;
+        }
         balancedThreadNum++;
         balancedThread[i] = true;
     }
@@ -215,6 +220,10 @@ inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNu
         threadBasedAverageAccessNumber[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (balancedThread[j] || i == j) {
+                continue;
+            }
+            //bypass small number , treat it as zero
+            if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
@@ -233,10 +242,11 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
         }
         threadBasedAccessNumberDeviation[i] = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            if (i == j) {
+            if (balancedThread[j] || i == j) {
                 continue;
             }
-            if (balancedThread[j]) {
+            //bypass small number , treat it as zero
+            if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
             threadBasedAccessNumberDeviation[i] += abs((long long)
