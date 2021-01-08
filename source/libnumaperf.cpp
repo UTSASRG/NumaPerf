@@ -88,6 +88,10 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessI
                                                    sizeof(PageDetailedAccessInfo),
                                                    GB * 128);
 
+MemoryPool PageBasicAccessInfo::localMemoryPool((char *) "PageBasicAccessInfo",
+                                                sizeof(unsigned short) * CACHE_NUM_IN_PAGE,
+                                                GB * 128);
+
 //MemoryPool PageDetailedAccessInfo::localThreadAccessNumberFirstLayerMemoryPool(
 //        (char *) "AccessNumberFirstLayerMemPool",
 //        (SLOTS_IN_FIRST_LAYER * sizeof(unsigned short *)),

@@ -7,10 +7,10 @@
 #include "pagedetailAccessInfo.h"
 #include "../utils/concurrency/automics.h"
 
-#define BASIC_BLOCK_SHIFT_BITS ((unsigned int)(CACHE_LINE_SHIFT_BITS))
-#define BASIC_BLOCK_SIZE (1 << BASIC_BLOCK_SHIFT_BITS)
-#define BASIC_BLOCK_NUM (PAGE_SIZE/BASIC_BLOCK_SIZE)
-#define BASIC_BLOCK_MASK ((unsigned long)0b111111000000)
+//#define BASIC_BLOCK_SHIFT_BITS ((unsigned int)(CACHE_LINE_SHIFT_BITS))
+//#define BASIC_BLOCK_SIZE (1 << BASIC_BLOCK_SHIFT_BITS)
+//#define BASIC_BLOCK_NUM (PAGE_SIZE/BASIC_BLOCK_SIZE)
+//#define BASIC_BLOCK_MASK ((unsigned long)0b111111000000)
 
 class PageBasicAccessInfo {
 //    unsigned long pageStartAddress;
@@ -19,12 +19,15 @@ class PageBasicAccessInfo {
 //    unsigned long accessNumberByFirstTouchThread;
     PageDetailedAccessInfo *pageDetailedAccessInfo;
     unsigned short accessNumberByOtherThreads;
-    unsigned short blockWritingNumberCacheDetailPtrUnion[BASIC_BLOCK_NUM];
+    unsigned short *cacheWriteNumPtr;
+//    unsigned short cacheWriteNumPtr[BASIC_BLOCK_NUM];
 
 private:
 
+    static MemoryPool localMemoryPool;
+
     inline int getBlockIndex(unsigned long address) const {
-        return (address & BASIC_BLOCK_MASK) >> BASIC_BLOCK_SHIFT_BITS;
+        return (address & CACHE_INDEX_MASK) >> CACHE_LINE_SHIFT_BITS;
     }
 //    inline int getStartIndex(unsigned long objStartAddress, unsigned long size) const {
 //        if (objStartAddress <= pageStartAddress) {
@@ -73,13 +76,21 @@ public:
 
     inline void recordAccessForCacheSharing(unsigned long addr, eAccessType type) {
 //        if (type == E_ACCESS_WRITE && accessNumberByOtherThreads > PAGE_CACHE_BASIC_THRESHOLD) {
-        if (type == E_ACCESS_WRITE) {
-            unsigned int index = getBlockIndex(addr);
-            if (blockWritingNumberCacheDetailPtrUnion[index] > CACHE_SHARING_DETAIL_THRESHOLD) {
-                return;
-            }
-            blockWritingNumberCacheDetailPtrUnion[index]++;
+        if (type != E_ACCESS_WRITE || accessNumberByOtherThreads < PAGE_CACHE_BASIC_THRESHOLD) {
+            return;
         }
+        if (NULL == cacheWriteNumPtr) {
+            unsigned short *mem = (unsigned short *) localMemoryPool.get();
+            if (!Automics::compare_set<unsigned short *>(&(this->cacheWriteNumPtr), NULL,
+                                                         mem)) {
+                localMemoryPool.release(mem);
+            }
+        }
+        unsigned int index = getBlockIndex(addr);
+        if (cacheWriteNumPtr[index] > CACHE_SHARING_DETAIL_THRESHOLD) {
+            return;
+        }
+        cacheWriteNumPtr[index]++;
     }
 
     inline bool needPageSharingDetailInfo() {
@@ -87,8 +98,7 @@ public:
     }
 
     inline bool needCacheLineSharingDetailInfo(unsigned long addr) {
-        return blockWritingNumberCacheDetailPtrUnion[getBlockIndex(addr)] > CACHE_SHARING_DETAIL_THRESHOLD &&
-               accessNumberByOtherThreads > PAGE_CACHE_BASIC_THRESHOLD;
+        return NULL != cacheWriteNumPtr && cacheWriteNumPtr[getBlockIndex(addr)] > CACHE_SHARING_DETAIL_THRESHOLD;
     }
 
     inline long getFirstTouchThreadId() {

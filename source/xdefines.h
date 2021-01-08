@@ -22,6 +22,7 @@
 #define CACHE_LINE_SIZE (1 << CACHE_LINE_SHIFT_BITS)
 #define CACHE_MASK 0b111111
 #define CACHE_INDEX_MASK ((unsigned int)0b111111000000)
+#define CACHE_NUM_IN_PAGE (PAGE_SIZE / CACHE_LINE_SIZE)
 
 // treate int as an normal word, 4bytes
 #define WORD_SHIFT_BITS 2
