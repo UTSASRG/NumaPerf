@@ -138,7 +138,10 @@ inline void preAccessThreadBasedAccessNumber() {
 inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageAccessNumber) {
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAverageAccessNumber[i] = 0;
+        int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            printf("thread-%lu,to thread:%lu, access number:%lu\n", i, j,
+                   GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j]);
             if (i == j) {
                 continue;
             }
@@ -146,9 +149,10 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
+            num++;
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
         }
-        threadBasedAverageAccessNumber[i] = threadBasedAverageAccessNumber[i] / (largestThreadIndex);
+        threadBasedAverageAccessNumber[i] = num == 0 ? num : threadBasedAverageAccessNumber[i] / num;
     }
 }
 
@@ -156,6 +160,7 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
                                                 unsigned long *threadBasedAccessNumberDeviation) {
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAccessNumberDeviation[i] = 0;
+        int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
                 continue;
@@ -164,11 +169,12 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
+            num++;
             threadBasedAccessNumberDeviation[i] += abs((long long)
                                                                (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] -
                                                                 threadBasedAverageAccessNumber[i]));
         }
-        threadBasedAccessNumberDeviation[i] = threadBasedAccessNumberDeviation[i] / (largestThreadIndex);
+        threadBasedAccessNumberDeviation[i] = num == 0 ? num : threadBasedAccessNumberDeviation[i] / num;
     }
 }
 
@@ -196,6 +202,7 @@ inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber
         }
         int bigAccessThreadNum = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+            // todo remove balanced one
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] > SMALL_THREAD_ACCESS_THRESHOLD) {
                 bigAccessThreadNum++;
             }
@@ -218,6 +225,7 @@ inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNu
             continue;
         }
         threadBasedAverageAccessNumber[i] = 0;
+        int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (balancedThread[j] || i == j) {
                 continue;
@@ -226,10 +234,11 @@ inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNu
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
+            num++;
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
         }
         threadBasedAverageAccessNumber[i] =
-                threadBasedAverageAccessNumber[i] / (largestThreadIndex - balancedThreadNum);
+                num == 0 ? num : threadBasedAverageAccessNumber[i] / num;
     }
 }
 
@@ -241,6 +250,7 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
             continue;
         }
         threadBasedAccessNumberDeviation[i] = 0;
+        int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (balancedThread[j] || i == j) {
                 continue;
@@ -249,12 +259,13 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
+            num++;
             threadBasedAccessNumberDeviation[i] += abs((long long)
                                                                (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] -
                                                                 threadBasedAverageAccessNumber[i]));
         }
         threadBasedAccessNumberDeviation[i] =
-                threadBasedAccessNumberDeviation[i] / (largestThreadIndex - balancedThreadNum);
+                num == 0 ? num : threadBasedAccessNumberDeviation[i] / num;
     }
 }
 
@@ -497,14 +508,14 @@ __attribute__ ((destructor)) void finalizer(void) {
                                                         globalBalancedThread, totalRunningCycles);
 #if 1
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        fprintf(dumpFile, "threadBasedAverageAccessNumber-%lu:%lu, score:%f\n", i, threadBasedAverageAccessNumber[i],
-                Scores::getSeriousScore(threadBasedAverageAccessNumber[i], totalRunningCycles));
-    }
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        fprintf(dumpFile, "threadBasedAccessNumberDeviation-%lu:%lu, score:%f\n", i,
+        fprintf(dumpFile,
+                "threadBasedAverageAccessNumber-%lu:%lu, score:%f\nthreadBasedAccessNumberDeviation-%lu:%lu, score:%f\n\n",
+                i, threadBasedAverageAccessNumber[i],
+                Scores::getSeriousScore(threadBasedAverageAccessNumber[i], totalRunningCycles), i,
                 threadBasedAccessNumberDeviation[i],
                 Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles));
     }
+
 #endif
 //    fprintf(dumpFile,
 //            "2.1 Local ImBalanced Threads:\n");
