@@ -213,7 +213,8 @@ inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber
             }
         }
         // thread i is sparse, so it is imbalance even with small deviation
-        if (bigAccessThreadNum < 2 * largestThreadIndex / NUMA_NODES && bigAccessThreadNum > largestThreadIndex / NUMA_NODES / 3) {
+        if (bigAccessThreadNum < 2 * largestThreadIndex / NUMA_NODES &&
+            bigAccessThreadNum > largestThreadIndex / NUMA_NODES / 3) {
             balancedThread[i] = false;
             continue;
         }
@@ -585,7 +586,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
         cluster++;
         fprintf(dumpFile,
-                "Thread cluster-%d:", cluster);
+                "Thread cluster-%d (%d):", cluster, threadClusters[i].num);
         for (
                 unsigned long j = 0;
                 j < threadClusters[i].
