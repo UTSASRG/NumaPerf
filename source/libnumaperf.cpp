@@ -140,9 +140,10 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
         threadBasedAverageAccessNumber[i] = 0;
         int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            printf("thread-%lu,to thread:%lu, access number:%lu\n", i, j,
-                   GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j]);
-            if (i == j) {
+//            printf("thread-%lu,to thread:%lu, access number:%lu\n", i, j,
+//                   GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j]);
+            // thread 0 usually has massive mem access, so make it as balanced one by default.
+            if (i == j || j == 0) {
                 continue;
             }
             //bypass small number , treat it as zero
@@ -162,7 +163,7 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
         threadBasedAccessNumberDeviation[i] = 0;
         int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            if (i == j) {
+            if (i == j || j == 0) {
                 continue;
             }
             //bypass small number , treat it as zero
@@ -190,31 +191,36 @@ inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber
     }
 }
 
+#define BALANCE_DEVIATION_THRESHOLD 0.1
 
 inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
                                    unsigned long *threadBasedAccessNumberDeviation,
                                    bool *balancedThread, unsigned long totalRunningCycles) {
-    int balancedThreadNum = 0;
-    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
-        if (threadBasedAverageAccessNumber[i] < threadBasedAccessNumberDeviation[i]) {
+    int balancedThreadNum = 1;
+    balancedThread[0] = true;
+    // thread 0 usually has massive mem access, so make it as balanced one by default.
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        if (BALANCE_DEVIATION_THRESHOLD <
+            Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles)) {
             balancedThread[i] = false;
             continue;
         }
         int bigAccessThreadNum = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            // todo remove balanced one
+            // todo maybe remove balanced one
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] > SMALL_THREAD_ACCESS_THRESHOLD) {
                 bigAccessThreadNum++;
             }
         }
         // thread i is sparse, so it is imbalance even with small deviation
-        if (bigAccessThreadNum < 2 * largestThreadIndex / NUMA_NODES) {
+        if (bigAccessThreadNum < 2 * largestThreadIndex / NUMA_NODES && bigAccessThreadNum > largestThreadIndex / NUMA_NODES / 3) {
             balancedThread[i] = false;
             continue;
         }
         balancedThreadNum++;
         balancedThread[i] = true;
     }
+
     return balancedThreadNum;
 }
 
@@ -506,7 +512,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     int balancedThreadNum = threadBasedImbalancedDetect(threadBasedAverageAccessNumber,
                                                         threadBasedAccessNumberDeviation, localBalancedThread,
                                                         globalBalancedThread, totalRunningCycles);
-#if 1
+#if 0
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         fprintf(dumpFile,
                 "threadBasedAverageAccessNumber-%lu:%lu, score:%f\nthreadBasedAccessNumberDeviation-%lu:%lu, score:%f\n\n",
@@ -515,7 +521,6 @@ __attribute__ ((destructor)) void finalizer(void) {
                 threadBasedAccessNumberDeviation[i],
                 Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles));
     }
-
 #endif
 //    fprintf(dumpFile,
 //            "2.1 Local ImBalanced Threads:\n");
