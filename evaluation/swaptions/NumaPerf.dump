@@ -1,0 +1,138 @@
+Table of Contents
+    Part One: Thread number recommendation for each stage.
+    Part Two: Thread based node migration times.
+    Part Three: Thread based imbalance detection & threads binding recommendation.
+    Part Four: Top 20 problematical callsites.
+
+
+Part One: Thread number recommendation for each stage.
+
+Part Two: Thread based node migration times:0
+
+
+Part Three: Thread based imbalance detection & threads binding recommendation:
+
+2.1 Global Balanced Threads:
+0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,
+
+2.2 Global ImBalanced Threads:
+
+
+2.3 Threads binding recomendations:
+
+
+Part Four: Top 20 problematical callsites:
+   Top problematical callsites 1:
+address: 0x40becc  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/swaptions/nr_routines.cpp:160
+address: 0x408f63  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/swaptions/HJM_Securities.cpp:190
+address: 0x7fab3f03409a  ??:0
+address: 0x402239  ??:?
+    SeriousScore:             981.783292
+    InvalidNumInMainThread:   0
+    InvalidNumInOtherThreads: 0
+    AccessNumInMainThread:    0
+    AccessNumInOtherThreads:  26137262
+    Top Object 0:
+      Object Start Address:   0x20add00
+      Object Size:            32
+      SeriousScore:             61.364766
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 0
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  1633667
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       0/0
+      Top Pages 0:
+        PageStartAddress:         0x20ad000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  4573994
+                this page is shared by multiple threads
+    Top Object 1:
+      Object Start Address:   0x20ad550
+      Object Size:            32
+      SeriousScore:             61.364766
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 0
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  1633667
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       0/0
+      Top Pages 0:
+        PageStartAddress:         0x20ad000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  14890076
+                this page is shared by multiple threads
+    Top Object 2:
+      Object Start Address:   0x20ada70
+      Object Size:            32
+      SeriousScore:             61.364766
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 0
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  1633667
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       0/0
+      Top Pages 0:
+        PageStartAddress:         0x20ad000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  9662732
+                this page is shared by multiple threads
+
+
+   Top problematical callsites 2:
+address: 0x40bf04  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/swaptions/nr_routines.cpp:167
+address: 0x408f63  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/swaptions/HJM_Securities.cpp:190
+address: 0x7fab3f03409a  ??:0
+address: 0x402239  ??:?
+    SeriousScore:             3315.220601
+    InvalidNumInMainThread:   0
+    InvalidNumInOtherThreads: 0
+    AccessNumInMainThread:    0
+    AccessNumInOtherThreads:  88258570
+    Top Object 0:
+      Object Start Address:   0x20add80
+      Object Size:            248
+      SeriousScore:             61.364766
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 0
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  1633667
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       0/0
+      Top Pages 0:
+        PageStartAddress:         0x20ad000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  6207661
+                this page is shared by multiple threads
+    Top Object 1:
+      Object Start Address:   0x20ad5d0
+      Object Size:            248
+      SeriousScore:             61.364766
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 0
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  1633667
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       0/0
+      Top Pages 0:
+        PageStartAddress:         0x20ad000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  16523743
+                this page is shared by multiple threads
+    Top Object 2:
+      Object Start Address:   0x20adaf0
+      Object Size:            248
+      SeriousScore:             61.364766
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 0
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  1633667
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       0/0
+      Top Pages 0:
+        PageStartAddress:         0x20ad000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  11296399
+                this page is shared by multiple threads
+
+

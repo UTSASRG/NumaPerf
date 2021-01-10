@@ -1,0 +1,105 @@
+Table of Contents
+    Part One: Thread number recommendation for each stage.
+    Part Two: Thread based node migration times.
+    Part Three: Thread based imbalance detection & threads binding recommendation.
+    Part Four: Top 20 problematical callsites.
+
+
+Part One: Thread number recommendation for each stage.
+Thread Stage-1: 
+address: 0x408aae  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/dedup/encoder.c:1233
+address: 0x405ce3  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/dedup/dedup.c:136
+address: 0x7f5290caa09a  ??:0
+address: 0x4042f9  ??:?
+Current Thread Number:32, MemoryLatency:13999404
+
+Thread Stage-2: 
+address: 0x408b4b  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/dedup/encoder.c:1240
+address: 0x405ce3  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/dedup/dedup.c:136
+address: 0x7f5290caa09a  ??:0
+address: 0x4042f9  ??:?
+Current Thread Number:32, MemoryLatency:148411
+
+Thread Stage-3: 
+address: 0x408a11  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/dedup/encoder.c:1225
+address: 0x405ce3  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/dedup/dedup.c:136
+address: 0x7f5290caa09a  ??:0
+address: 0x4042f9  ??:?
+Current Thread Number:32, MemoryLatency:2581766
+
+
+Part Two: Thread based node migration times:135
+  Thread-:2, migrate to another noodes times: 2
+  Thread-:3, migrate to another noodes times: 1
+  Thread-:4, migrate to another noodes times: 2
+  Thread-:5, migrate to another noodes times: 5
+  Thread-:6, migrate to another noodes times: 4
+  Thread-:7, migrate to another noodes times: 5
+  Thread-:8, migrate to another noodes times: 3
+  Thread-:9, migrate to another noodes times: 6
+  Thread-:10, migrate to another noodes times: 5
+  Thread-:11, migrate to another noodes times: 3
+  Thread-:12, migrate to another noodes times: 1
+  Thread-:13, migrate to another noodes times: 4
+  Thread-:14, migrate to another noodes times: 2
+  Thread-:15, migrate to another noodes times: 3
+  Thread-:16, migrate to another noodes times: 4
+  Thread-:17, migrate to another noodes times: 2
+  Thread-:18, migrate to another noodes times: 5
+  Thread-:19, migrate to another noodes times: 5
+  Thread-:20, migrate to another noodes times: 5
+  Thread-:21, migrate to another noodes times: 6
+  Thread-:22, migrate to another noodes times: 3
+  Thread-:23, migrate to another noodes times: 5
+  Thread-:24, migrate to another noodes times: 1
+  Thread-:25, migrate to another noodes times: 6
+  Thread-:26, migrate to another noodes times: 3
+  Thread-:27, migrate to another noodes times: 2
+  Thread-:28, migrate to another noodes times: 2
+  Thread-:29, migrate to another noodes times: 2
+  Thread-:30, migrate to another noodes times: 1
+  Thread-:31, migrate to another noodes times: 6
+  Thread-:32, migrate to another noodes times: 1
+  Thread-:33, migrate to another noodes times: 3
+  Thread-:51, migrate to another noodes times: 1
+  Thread-:69, migrate to another noodes times: 2
+  Thread-:70, migrate to another noodes times: 1
+  Thread-:71, migrate to another noodes times: 1
+  Thread-:72, migrate to another noodes times: 1
+  Thread-:73, migrate to another noodes times: 1
+  Thread-:74, migrate to another noodes times: 1
+  Thread-:75, migrate to another noodes times: 2
+  Thread-:76, migrate to another noodes times: 1
+  Thread-:80, migrate to another noodes times: 2
+  Thread-:81, migrate to another noodes times: 1
+  Thread-:83, migrate to another noodes times: 1
+  Thread-:85, migrate to another noodes times: 3
+  Thread-:90, migrate to another noodes times: 1
+  Thread-:91, migrate to another noodes times: 2
+  Thread-:92, migrate to another noodes times: 1
+  Thread-:94, migrate to another noodes times: 1
+  Thread-:96, migrate to another noodes times: 2
+  Thread-:97, migrate to another noodes times: 1
+  Thread-:98, migrate to another noodes times: 1
+
+
+Part Three: Thread based imbalance detection & threads binding recommendation:
+
+2.1 Global Balanced Threads:
+0,1,4,8,10,11,16,17,20,23,27,28,
+
+2.2 Global ImBalanced Threads:
+2,3,5,6,7,9,12,13,14,15,18,19,21,22,24,25,26,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,
+
+2.3 Threads binding recomendations:
+Thread cluster-1 (10):32,30,31,3,7,15,13,25,21,22,
+Thread cluster-2 (12):62,63,64,65,88,86,89,87,54,55,56,57,
+Thread cluster-3 (8):68,66,69,67,34,35,37,36,
+Thread cluster-4 (12):76,75,74,77,42,45,43,44,38,39,40,41,
+Thread cluster-5 (8):80,79,81,78,48,47,49,46,
+Thread cluster-6 (12):84,85,83,82,51,52,50,53,70,73,71,72,
+Thread cluster-7 (12):96,95,97,94,91,90,93,92,58,60,61,59,
+Thread cluster-8 (13):98,24,2,12,14,26,6,29,33,19,5,18,9,
+
+
+Part Four: Top 20 problematical callsites:

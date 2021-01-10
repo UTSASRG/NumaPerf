@@ -1,0 +1,430 @@
+Table of Contents
+    Part One: Thread number recommendation for each stage.
+    Part Two: Thread based node migration times.
+    Part Three: Thread based imbalance detection & threads binding recommendation.
+    Part Four: Top 20 problematical callsites.
+
+
+Part One: Thread number recommendation for each stage.
+
+Part Two: Thread based node migration times:1451
+  Thread-:1, migrate to another noodes times: 10
+  Thread-:2, migrate to another noodes times: 11
+  Thread-:3, migrate to another noodes times: 12
+  Thread-:4, migrate to another noodes times: 11
+  Thread-:5, migrate to another noodes times: 8
+  Thread-:6, migrate to another noodes times: 18
+  Thread-:7, migrate to another noodes times: 16
+  Thread-:8, migrate to another noodes times: 12
+  Thread-:9, migrate to another noodes times: 15
+  Thread-:10, migrate to another noodes times: 11
+  Thread-:11, migrate to another noodes times: 18
+  Thread-:12, migrate to another noodes times: 15
+  Thread-:13, migrate to another noodes times: 11
+  Thread-:14, migrate to another noodes times: 10
+  Thread-:15, migrate to another noodes times: 12
+  Thread-:16, migrate to another noodes times: 14
+  Thread-:17, migrate to another noodes times: 12
+  Thread-:18, migrate to another noodes times: 8
+  Thread-:19, migrate to another noodes times: 9
+  Thread-:20, migrate to another noodes times: 6
+  Thread-:21, migrate to another noodes times: 14
+  Thread-:22, migrate to another noodes times: 18
+  Thread-:23, migrate to another noodes times: 13
+  Thread-:24, migrate to another noodes times: 14
+  Thread-:25, migrate to another noodes times: 12
+  Thread-:26, migrate to another noodes times: 8
+  Thread-:27, migrate to another noodes times: 6
+  Thread-:28, migrate to another noodes times: 12
+  Thread-:29, migrate to another noodes times: 14
+  Thread-:30, migrate to another noodes times: 10
+  Thread-:31, migrate to another noodes times: 12
+  Thread-:32, migrate to another noodes times: 18
+  Thread-:33, migrate to another noodes times: 14
+  Thread-:34, migrate to another noodes times: 7
+  Thread-:35, migrate to another noodes times: 12
+  Thread-:36, migrate to another noodes times: 7
+  Thread-:37, migrate to another noodes times: 10
+  Thread-:38, migrate to another noodes times: 11
+  Thread-:39, migrate to another noodes times: 10
+  Thread-:40, migrate to another noodes times: 10
+  Thread-:41, migrate to another noodes times: 12
+  Thread-:42, migrate to another noodes times: 14
+  Thread-:43, migrate to another noodes times: 14
+  Thread-:44, migrate to another noodes times: 14
+  Thread-:45, migrate to another noodes times: 12
+  Thread-:46, migrate to another noodes times: 15
+  Thread-:47, migrate to another noodes times: 11
+  Thread-:48, migrate to another noodes times: 14
+  Thread-:49, migrate to another noodes times: 13
+  Thread-:50, migrate to another noodes times: 15
+  Thread-:51, migrate to another noodes times: 11
+  Thread-:52, migrate to another noodes times: 13
+  Thread-:53, migrate to another noodes times: 9
+  Thread-:54, migrate to another noodes times: 11
+  Thread-:55, migrate to another noodes times: 8
+  Thread-:56, migrate to another noodes times: 4
+  Thread-:57, migrate to another noodes times: 13
+  Thread-:58, migrate to another noodes times: 11
+  Thread-:59, migrate to another noodes times: 12
+  Thread-:60, migrate to another noodes times: 11
+  Thread-:61, migrate to another noodes times: 13
+  Thread-:62, migrate to another noodes times: 12
+  Thread-:63, migrate to another noodes times: 11
+  Thread-:64, migrate to another noodes times: 12
+  Thread-:65, migrate to another noodes times: 7
+  Thread-:66, migrate to another noodes times: 11
+  Thread-:67, migrate to another noodes times: 11
+  Thread-:68, migrate to another noodes times: 9
+  Thread-:69, migrate to another noodes times: 17
+  Thread-:70, migrate to another noodes times: 21
+  Thread-:71, migrate to another noodes times: 10
+  Thread-:72, migrate to another noodes times: 14
+  Thread-:73, migrate to another noodes times: 18
+  Thread-:74, migrate to another noodes times: 10
+  Thread-:75, migrate to another noodes times: 12
+  Thread-:76, migrate to another noodes times: 20
+  Thread-:77, migrate to another noodes times: 10
+  Thread-:78, migrate to another noodes times: 6
+  Thread-:79, migrate to another noodes times: 9
+  Thread-:80, migrate to another noodes times: 8
+  Thread-:81, migrate to another noodes times: 13
+  Thread-:82, migrate to another noodes times: 10
+  Thread-:83, migrate to another noodes times: 17
+  Thread-:84, migrate to another noodes times: 14
+  Thread-:85, migrate to another noodes times: 7
+  Thread-:86, migrate to another noodes times: 11
+  Thread-:87, migrate to another noodes times: 5
+  Thread-:88, migrate to another noodes times: 14
+  Thread-:89, migrate to another noodes times: 11
+  Thread-:90, migrate to another noodes times: 10
+  Thread-:91, migrate to another noodes times: 11
+  Thread-:92, migrate to another noodes times: 11
+  Thread-:93, migrate to another noodes times: 10
+  Thread-:94, migrate to another noodes times: 18
+  Thread-:95, migrate to another noodes times: 10
+  Thread-:96, migrate to another noodes times: 8
+  Thread-:97, migrate to another noodes times: 11
+  Thread-:98, migrate to another noodes times: 8
+  Thread-:99, migrate to another noodes times: 10
+  Thread-:100, migrate to another noodes times: 6
+  Thread-:101, migrate to another noodes times: 17
+  Thread-:102, migrate to another noodes times: 14
+  Thread-:103, migrate to another noodes times: 8
+  Thread-:104, migrate to another noodes times: 9
+  Thread-:105, migrate to another noodes times: 14
+  Thread-:106, migrate to another noodes times: 10
+  Thread-:107, migrate to another noodes times: 7
+  Thread-:108, migrate to another noodes times: 8
+  Thread-:109, migrate to another noodes times: 8
+  Thread-:110, migrate to another noodes times: 14
+  Thread-:111, migrate to another noodes times: 14
+  Thread-:112, migrate to another noodes times: 8
+  Thread-:113, migrate to another noodes times: 19
+  Thread-:114, migrate to another noodes times: 11
+  Thread-:115, migrate to another noodes times: 10
+  Thread-:116, migrate to another noodes times: 12
+  Thread-:117, migrate to another noodes times: 10
+  Thread-:118, migrate to another noodes times: 7
+  Thread-:119, migrate to another noodes times: 14
+  Thread-:120, migrate to another noodes times: 10
+  Thread-:121, migrate to another noodes times: 9
+  Thread-:122, migrate to another noodes times: 11
+  Thread-:123, migrate to another noodes times: 9
+  Thread-:124, migrate to another noodes times: 10
+  Thread-:125, migrate to another noodes times: 10
+  Thread-:126, migrate to another noodes times: 8
+  Thread-:127, migrate to another noodes times: 6
+
+
+Part Three: Thread based imbalance detection & threads binding recommendation:
+
+2.1 Global Balanced Threads:
+0,3,6,7,8,9,10,15,16,20,23,25,26,27,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,52,53,54,55,56,57,59,60,61,62,63,64,65,67,68,69,70,71,72,75,76,77,78,79,80,81,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,99,100,102,103,104,105,106,107,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
+
+2.2 Global ImBalanced Threads:
+1,2,4,5,11,12,13,14,17,18,19,21,22,24,28,43,58,66,73,74,84,98,101,108,
+
+2.3 Threads binding recomendations:
+Thread cluster-1 (17):18,17,19,21,24,22,14,13,12,11,5,4,28,1,43,2,58,
+Thread cluster-2 (7):74,73,66,84,98,108,101,
+
+
+Part Four: Top 20 problematical callsites:
+   Top problematical callsites 1:
+address: 0x571a81  ??:?
+address: 0x56efe8  ??:?
+address: 0x5854cb  ??:?
+address: 0x58196a  ??:?
+address: 0x57cda6  ??:?
+    SeriousScore:             3063.076928
+    InvalidNumInMainThread:   3184740189
+    InvalidNumInOtherThreads: 1396864757
+    AccessNumInMainThread:    24609817
+    AccessNumInOtherThreads:  23763575
+    Top Object 0:
+      Object Start Address:   0x89ef5890
+      Object Size:            967176
+      SeriousScore:             9.211885
+      InvalidNumInMainThread:   330026
+      InvalidNumInOtherThreads: 4271776
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  616
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       43351/353
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x89f32380
+        SeriousScore:             0.009289
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 4308
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       23/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x89f372c0
+        SeriousScore:             0.009640
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 4471
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       23/1
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x89f41c40
+        SeriousScore:             0.009815
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 4552
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       21/1
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x89f32300
+        SeriousScore:             0.010106
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 4687
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       23/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x89f3d4c0
+        SeriousScore:             0.010164
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 4714
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       34/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top Pages 0:
+        PageStartAddress:         0x89fe1000
+        FirstTouchThreadId:         54
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  616
+                this page is shared by multiple threads
+    Top Object 1:
+      Object Start Address:   0x89fe1aa0
+      Object Size:            967176
+      SeriousScore:             21.753538
+      InvalidNumInMainThread:   34386995
+      InvalidNumInOtherThreads: 10087114
+      AccessNumInMainThread:    434
+      AccessNumInOtherThreads:  1987
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       328617/0
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x89fe1d00
+        SeriousScore:             0.027806
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 12896
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       90/0
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x89fe1c00
+        SeriousScore:             0.029063
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 13479
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       65/0
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x89fe1dc0
+        SeriousScore:             0.029080
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 13487
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       61/0
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x89fe1bc0
+        SeriousScore:             0.031620
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 14665
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       74/0
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x89fe1d80
+        SeriousScore:             0.037927
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 17590
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       95/0
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top Pages 0:
+        PageStartAddress:         0x8a029000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    434
+        AccessNumInOtherThreads:  165
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x89fe1000
+        FirstTouchThreadId:         54
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  2438
+                this page is shared by multiple threads
+    Top Object 2:
+      Object Start Address:   0x8a0cdcb0
+      Object Size:            967176
+      SeriousScore:             3032.062590
+      InvalidNumInMainThread:   3150023168
+      InvalidNumInOtherThreads: 1382505867
+      AccessNumInMainThread:    24609383
+      AccessNumInOtherThreads:  23738286
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       33740463/0
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x8a129ac0
+        SeriousScore:             3.448556
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 1599410
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6334/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x8a10a740
+        SeriousScore:             3.448558
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 1599411
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6191/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x8a1227c0
+        SeriousScore:             3.792739
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 1759039
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6358/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x8a10a040
+        SeriousScore:             3.793459
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 1759373
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6481/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x8a10a7c0
+        SeriousScore:             3.534775
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 1639398
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6253/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top Pages 0:
+        PageStartAddress:         0x8a196000
+        FirstTouchThreadId:         109
+        AccessNumInMainThread:    33036
+        AccessNumInOtherThreads:  488642
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x8a0ee000
+        FirstTouchThreadId:         18
+        AccessNumInMainThread:    17765
+        AccessNumInOtherThreads:  589808
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x8a115000
+        FirstTouchThreadId:         39
+        AccessNumInMainThread:    136623
+        AccessNumInOtherThreads:  512565
+                this page is shared by multiple threads
+
+
+   Top problematical callsites 2:
+address: 0x55cf42  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/facesim/taskQ.c:219
+address: 0x60f2ba  ??:?
+address: 0x537204  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/facesim/././Public_Library/Thread_Utilities/THREAD_POOL.h:21
+/home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/facesim/./Storytelling/../FACE_EXAMPLE.h:168
+address: 0x51abe8  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/facesim/./Storytelling/../FACE_EXAMPLE.h:105
+address: 0x517278  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/facesim/./Storytelling/STORYTELLING_EXAMPLE.h:83
+    SeriousScore:             3789.205135
+    InvalidNumInMainThread:   49916652
+    InvalidNumInOtherThreads: 1734887868
+    AccessNumInMainThread:    1001197
+    AccessNumInOtherThreads:  22512386
+    Top Object 0:
+      Object Start Address:   0xb2e8e0
+      Object Size:            109568
+      SeriousScore:             3789.205135
+      InvalidNumInMainThread:   49916652
+      InvalidNumInOtherThreads: 1734887868
+      AccessNumInMainThread:    1001197
+      AccessNumInOtherThreads:  22512386
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       22710885/170
+      Top CacheLines 0:
+        CacheLineStartAddress:    0xb45340
+        SeriousScore:             29.457502
+        InvalidNumInMainThread:   371433
+        InvalidNumInOtherThreads: 13662132
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       177354/3
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:-1,        3-th word:true,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0xb48200
+        SeriousScore:             29.463929
+        InvalidNumInMainThread:   371644
+        InvalidNumInOtherThreads: 13665113
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       177426/1
+        FalseSharing(sharing in each word):1025
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:true,        5-th word:true,        6-th word:-1,        7-th word:true,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0xb40d00
+        SeriousScore:             29.479255
+        InvalidNumInMainThread:   370800
+        InvalidNumInOtherThreads: 13672221
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       178542/1
+        FalseSharing(sharing in each word):1025
+        0-th word:-1,        1-th word:-1,        2-th word:true,        3-th word:true,        4-th word:-1,        5-th word:true,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0xb40980
+        SeriousScore:             29.514833
+        InvalidNumInMainThread:   370785
+        InvalidNumInOtherThreads: 13688722
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       173926/2
+        FalseSharing(sharing in each word):1025
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:true,        13-th word:true,        14-th word:-1,        15-th word:true,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0xb47140
+        SeriousScore:             29.542704
+        InvalidNumInMainThread:   371630
+        InvalidNumInOtherThreads: 13701648
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       177822/2
+        FalseSharing(sharing in each word):1025
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:true,        7-th word:true,        8-th word:-1,        9-th word:true,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top Pages 0:
+        PageStartAddress:         0xb2f000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    39192
+        AccessNumInOtherThreads:  889228
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0xb36000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    38420
+        AccessNumInOtherThreads:  889991
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0xb2e000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    38772
+        AccessNumInOtherThreads:  336382
+                this page is shared by multiple threads
+
+

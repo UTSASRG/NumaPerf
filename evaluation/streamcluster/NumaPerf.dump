@@ -1,0 +1,1259 @@
+Table of Contents
+    Part One: Thread number recommendation for each stage.
+    Part Two: Thread based node migration times.
+    Part Three: Thread based imbalance detection & threads binding recommendation.
+    Part Four: Top 20 problematical callsites.
+
+
+Part One: Thread number recommendation for each stage.
+Thread Stage-1: 
+address: 0x407227  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1726
+address: 0x4085e7  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1954
+address: 0x408fb7  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:2029
+address: 0x7f1b4e64e09a  ??:0
+address: 0x402329  ??:?
+Current Thread Number:128, MemoryLatency:44133
+
+Thread Stage-2: 
+address: 0x407227  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1726
+address: 0x407b3c  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1915
+address: 0x408fb7  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:2029
+address: 0x7f1b4e64e09a  ??:0
+address: 0x402329  ??:?
+Current Thread Number:640, MemoryLatency:8503346419
+
+
+Part Two: Thread based node migration times:2918
+  Thread-:1, migrate to another noodes times: 39
+  Thread-:2, migrate to another noodes times: 6
+  Thread-:4, migrate to another noodes times: 5
+  Thread-:5, migrate to another noodes times: 8
+  Thread-:6, migrate to another noodes times: 8
+  Thread-:7, migrate to another noodes times: 6
+  Thread-:8, migrate to another noodes times: 12
+  Thread-:9, migrate to another noodes times: 6
+  Thread-:10, migrate to another noodes times: 7
+  Thread-:11, migrate to another noodes times: 8
+  Thread-:12, migrate to another noodes times: 2
+  Thread-:13, migrate to another noodes times: 6
+  Thread-:14, migrate to another noodes times: 4
+  Thread-:15, migrate to another noodes times: 16
+  Thread-:16, migrate to another noodes times: 7
+  Thread-:17, migrate to another noodes times: 17
+  Thread-:18, migrate to another noodes times: 5
+  Thread-:19, migrate to another noodes times: 5
+  Thread-:20, migrate to another noodes times: 4
+  Thread-:21, migrate to another noodes times: 4
+  Thread-:22, migrate to another noodes times: 8
+  Thread-:23, migrate to another noodes times: 9
+  Thread-:24, migrate to another noodes times: 10
+  Thread-:25, migrate to another noodes times: 5
+  Thread-:26, migrate to another noodes times: 10
+  Thread-:27, migrate to another noodes times: 11
+  Thread-:28, migrate to another noodes times: 6
+  Thread-:29, migrate to another noodes times: 7
+  Thread-:30, migrate to another noodes times: 8
+  Thread-:31, migrate to another noodes times: 6
+  Thread-:32, migrate to another noodes times: 7
+  Thread-:33, migrate to another noodes times: 11
+  Thread-:34, migrate to another noodes times: 3
+  Thread-:35, migrate to another noodes times: 7
+  Thread-:36, migrate to another noodes times: 5
+  Thread-:37, migrate to another noodes times: 5
+  Thread-:38, migrate to another noodes times: 9
+  Thread-:39, migrate to another noodes times: 21
+  Thread-:40, migrate to another noodes times: 4
+  Thread-:41, migrate to another noodes times: 8
+  Thread-:42, migrate to another noodes times: 7
+  Thread-:43, migrate to another noodes times: 1
+  Thread-:44, migrate to another noodes times: 9
+  Thread-:45, migrate to another noodes times: 4
+  Thread-:46, migrate to another noodes times: 4
+  Thread-:47, migrate to another noodes times: 9
+  Thread-:48, migrate to another noodes times: 6
+  Thread-:49, migrate to another noodes times: 4
+  Thread-:50, migrate to another noodes times: 2
+  Thread-:51, migrate to another noodes times: 4
+  Thread-:52, migrate to another noodes times: 8
+  Thread-:53, migrate to another noodes times: 4
+  Thread-:54, migrate to another noodes times: 2
+  Thread-:55, migrate to another noodes times: 9
+  Thread-:56, migrate to another noodes times: 6
+  Thread-:57, migrate to another noodes times: 6
+  Thread-:58, migrate to another noodes times: 11
+  Thread-:59, migrate to another noodes times: 4
+  Thread-:60, migrate to another noodes times: 6
+  Thread-:61, migrate to another noodes times: 1
+  Thread-:62, migrate to another noodes times: 2
+  Thread-:63, migrate to another noodes times: 9
+  Thread-:64, migrate to another noodes times: 8
+  Thread-:65, migrate to another noodes times: 8
+  Thread-:66, migrate to another noodes times: 22
+  Thread-:67, migrate to another noodes times: 5
+  Thread-:68, migrate to another noodes times: 17
+  Thread-:69, migrate to another noodes times: 10
+  Thread-:70, migrate to another noodes times: 6
+  Thread-:71, migrate to another noodes times: 7
+  Thread-:72, migrate to another noodes times: 6
+  Thread-:73, migrate to another noodes times: 6
+  Thread-:74, migrate to another noodes times: 4
+  Thread-:75, migrate to another noodes times: 5
+  Thread-:76, migrate to another noodes times: 3
+  Thread-:77, migrate to another noodes times: 3
+  Thread-:78, migrate to another noodes times: 7
+  Thread-:79, migrate to another noodes times: 5
+  Thread-:80, migrate to another noodes times: 8
+  Thread-:81, migrate to another noodes times: 6
+  Thread-:82, migrate to another noodes times: 10
+  Thread-:83, migrate to another noodes times: 6
+  Thread-:85, migrate to another noodes times: 5
+  Thread-:86, migrate to another noodes times: 3
+  Thread-:87, migrate to another noodes times: 9
+  Thread-:88, migrate to another noodes times: 1
+  Thread-:89, migrate to another noodes times: 3
+  Thread-:90, migrate to another noodes times: 10
+  Thread-:91, migrate to another noodes times: 3
+  Thread-:92, migrate to another noodes times: 3
+  Thread-:93, migrate to another noodes times: 1
+  Thread-:94, migrate to another noodes times: 4
+  Thread-:95, migrate to another noodes times: 2
+  Thread-:96, migrate to another noodes times: 10
+  Thread-:97, migrate to another noodes times: 8
+  Thread-:98, migrate to another noodes times: 9
+  Thread-:99, migrate to another noodes times: 13
+  Thread-:100, migrate to another noodes times: 6
+  Thread-:101, migrate to another noodes times: 13
+  Thread-:102, migrate to another noodes times: 8
+  Thread-:103, migrate to another noodes times: 6
+  Thread-:104, migrate to another noodes times: 5
+  Thread-:105, migrate to another noodes times: 1
+  Thread-:106, migrate to another noodes times: 5
+  Thread-:107, migrate to another noodes times: 9
+  Thread-:108, migrate to another noodes times: 6
+  Thread-:109, migrate to another noodes times: 7
+  Thread-:110, migrate to another noodes times: 6
+  Thread-:111, migrate to another noodes times: 4
+  Thread-:112, migrate to another noodes times: 5
+  Thread-:113, migrate to another noodes times: 7
+  Thread-:114, migrate to another noodes times: 3
+  Thread-:115, migrate to another noodes times: 7
+  Thread-:116, migrate to another noodes times: 6
+  Thread-:117, migrate to another noodes times: 8
+  Thread-:118, migrate to another noodes times: 5
+  Thread-:119, migrate to another noodes times: 12
+  Thread-:120, migrate to another noodes times: 12
+  Thread-:121, migrate to another noodes times: 7
+  Thread-:122, migrate to another noodes times: 5
+  Thread-:123, migrate to another noodes times: 2
+  Thread-:124, migrate to another noodes times: 2
+  Thread-:125, migrate to another noodes times: 9
+  Thread-:126, migrate to another noodes times: 4
+  Thread-:127, migrate to another noodes times: 25
+  Thread-:128, migrate to another noodes times: 21
+  Thread-:129, migrate to another noodes times: 23
+  Thread-:130, migrate to another noodes times: 4
+  Thread-:131, migrate to another noodes times: 4
+  Thread-:132, migrate to another noodes times: 3
+  Thread-:133, migrate to another noodes times: 3
+  Thread-:134, migrate to another noodes times: 4
+  Thread-:135, migrate to another noodes times: 6
+  Thread-:136, migrate to another noodes times: 6
+  Thread-:137, migrate to another noodes times: 7
+  Thread-:138, migrate to another noodes times: 7
+  Thread-:139, migrate to another noodes times: 2
+  Thread-:140, migrate to another noodes times: 2
+  Thread-:141, migrate to another noodes times: 3
+  Thread-:142, migrate to another noodes times: 6
+  Thread-:143, migrate to another noodes times: 5
+  Thread-:144, migrate to another noodes times: 2
+  Thread-:145, migrate to another noodes times: 4
+  Thread-:146, migrate to another noodes times: 6
+  Thread-:147, migrate to another noodes times: 5
+  Thread-:148, migrate to another noodes times: 4
+  Thread-:149, migrate to another noodes times: 3
+  Thread-:150, migrate to another noodes times: 2
+  Thread-:151, migrate to another noodes times: 4
+  Thread-:152, migrate to another noodes times: 8
+  Thread-:153, migrate to another noodes times: 7
+  Thread-:155, migrate to another noodes times: 2
+  Thread-:156, migrate to another noodes times: 6
+  Thread-:157, migrate to another noodes times: 8
+  Thread-:158, migrate to another noodes times: 4
+  Thread-:159, migrate to another noodes times: 3
+  Thread-:160, migrate to another noodes times: 9
+  Thread-:161, migrate to another noodes times: 9
+  Thread-:162, migrate to another noodes times: 7
+  Thread-:163, migrate to another noodes times: 4
+  Thread-:164, migrate to another noodes times: 5
+  Thread-:165, migrate to another noodes times: 1
+  Thread-:166, migrate to another noodes times: 21
+  Thread-:167, migrate to another noodes times: 4
+  Thread-:168, migrate to another noodes times: 7
+  Thread-:169, migrate to another noodes times: 7
+  Thread-:170, migrate to another noodes times: 12
+  Thread-:171, migrate to another noodes times: 2
+  Thread-:172, migrate to another noodes times: 3
+  Thread-:173, migrate to another noodes times: 7
+  Thread-:174, migrate to another noodes times: 7
+  Thread-:175, migrate to another noodes times: 9
+  Thread-:176, migrate to another noodes times: 4
+  Thread-:177, migrate to another noodes times: 5
+  Thread-:178, migrate to another noodes times: 6
+  Thread-:179, migrate to another noodes times: 5
+  Thread-:180, migrate to another noodes times: 4
+  Thread-:181, migrate to another noodes times: 4
+  Thread-:182, migrate to another noodes times: 6
+  Thread-:183, migrate to another noodes times: 7
+  Thread-:184, migrate to another noodes times: 4
+  Thread-:185, migrate to another noodes times: 8
+  Thread-:186, migrate to another noodes times: 7
+  Thread-:187, migrate to another noodes times: 5
+  Thread-:188, migrate to another noodes times: 3
+  Thread-:189, migrate to another noodes times: 10
+  Thread-:190, migrate to another noodes times: 8
+  Thread-:191, migrate to another noodes times: 6
+  Thread-:192, migrate to another noodes times: 2
+  Thread-:193, migrate to another noodes times: 4
+  Thread-:194, migrate to another noodes times: 5
+  Thread-:195, migrate to another noodes times: 1
+  Thread-:196, migrate to another noodes times: 8
+  Thread-:197, migrate to another noodes times: 7
+  Thread-:198, migrate to another noodes times: 1
+  Thread-:199, migrate to another noodes times: 7
+  Thread-:200, migrate to another noodes times: 4
+  Thread-:201, migrate to another noodes times: 7
+  Thread-:202, migrate to another noodes times: 3
+  Thread-:203, migrate to another noodes times: 8
+  Thread-:204, migrate to another noodes times: 5
+  Thread-:205, migrate to another noodes times: 3
+  Thread-:206, migrate to another noodes times: 7
+  Thread-:207, migrate to another noodes times: 7
+  Thread-:208, migrate to another noodes times: 6
+  Thread-:209, migrate to another noodes times: 15
+  Thread-:210, migrate to another noodes times: 1
+  Thread-:211, migrate to another noodes times: 6
+  Thread-:212, migrate to another noodes times: 2
+  Thread-:213, migrate to another noodes times: 4
+  Thread-:214, migrate to another noodes times: 2
+  Thread-:215, migrate to another noodes times: 16
+  Thread-:216, migrate to another noodes times: 5
+  Thread-:217, migrate to another noodes times: 6
+  Thread-:218, migrate to another noodes times: 4
+  Thread-:219, migrate to another noodes times: 2
+  Thread-:220, migrate to another noodes times: 4
+  Thread-:221, migrate to another noodes times: 2
+  Thread-:222, migrate to another noodes times: 4
+  Thread-:223, migrate to another noodes times: 4
+  Thread-:224, migrate to another noodes times: 6
+  Thread-:225, migrate to another noodes times: 5
+  Thread-:226, migrate to another noodes times: 6
+  Thread-:227, migrate to another noodes times: 14
+  Thread-:228, migrate to another noodes times: 8
+  Thread-:229, migrate to another noodes times: 10
+  Thread-:230, migrate to another noodes times: 4
+  Thread-:231, migrate to another noodes times: 3
+  Thread-:232, migrate to another noodes times: 5
+  Thread-:233, migrate to another noodes times: 4
+  Thread-:234, migrate to another noodes times: 5
+  Thread-:235, migrate to another noodes times: 1
+  Thread-:236, migrate to another noodes times: 7
+  Thread-:237, migrate to another noodes times: 11
+  Thread-:238, migrate to another noodes times: 8
+  Thread-:239, migrate to another noodes times: 3
+  Thread-:240, migrate to another noodes times: 8
+  Thread-:241, migrate to another noodes times: 8
+  Thread-:242, migrate to another noodes times: 5
+  Thread-:243, migrate to another noodes times: 3
+  Thread-:244, migrate to another noodes times: 1
+  Thread-:245, migrate to another noodes times: 5
+  Thread-:246, migrate to another noodes times: 10
+  Thread-:247, migrate to another noodes times: 13
+  Thread-:249, migrate to another noodes times: 7
+  Thread-:250, migrate to another noodes times: 5
+  Thread-:251, migrate to another noodes times: 6
+  Thread-:252, migrate to another noodes times: 5
+  Thread-:253, migrate to another noodes times: 6
+  Thread-:254, migrate to another noodes times: 6
+  Thread-:255, migrate to another noodes times: 5
+  Thread-:256, migrate to another noodes times: 14
+  Thread-:257, migrate to another noodes times: 25
+  Thread-:258, migrate to another noodes times: 12
+  Thread-:259, migrate to another noodes times: 4
+  Thread-:260, migrate to another noodes times: 14
+  Thread-:261, migrate to another noodes times: 8
+  Thread-:262, migrate to another noodes times: 2
+  Thread-:263, migrate to another noodes times: 7
+  Thread-:264, migrate to another noodes times: 4
+  Thread-:265, migrate to another noodes times: 7
+  Thread-:266, migrate to another noodes times: 7
+  Thread-:267, migrate to another noodes times: 2
+  Thread-:268, migrate to another noodes times: 5
+  Thread-:269, migrate to another noodes times: 3
+  Thread-:270, migrate to another noodes times: 2
+  Thread-:271, migrate to another noodes times: 6
+  Thread-:272, migrate to another noodes times: 3
+  Thread-:273, migrate to another noodes times: 9
+  Thread-:274, migrate to another noodes times: 10
+  Thread-:275, migrate to another noodes times: 3
+  Thread-:276, migrate to another noodes times: 13
+  Thread-:277, migrate to another noodes times: 4
+  Thread-:278, migrate to another noodes times: 4
+  Thread-:279, migrate to another noodes times: 5
+  Thread-:280, migrate to another noodes times: 5
+  Thread-:281, migrate to another noodes times: 3
+  Thread-:282, migrate to another noodes times: 7
+  Thread-:283, migrate to another noodes times: 5
+  Thread-:284, migrate to another noodes times: 6
+  Thread-:285, migrate to another noodes times: 2
+  Thread-:287, migrate to another noodes times: 2
+  Thread-:288, migrate to another noodes times: 3
+  Thread-:289, migrate to another noodes times: 16
+  Thread-:290, migrate to another noodes times: 4
+  Thread-:291, migrate to another noodes times: 3
+  Thread-:292, migrate to another noodes times: 3
+  Thread-:293, migrate to another noodes times: 9
+  Thread-:294, migrate to another noodes times: 5
+  Thread-:295, migrate to another noodes times: 9
+  Thread-:296, migrate to another noodes times: 10
+  Thread-:298, migrate to another noodes times: 2
+  Thread-:299, migrate to another noodes times: 5
+  Thread-:300, migrate to another noodes times: 4
+  Thread-:301, migrate to another noodes times: 2
+  Thread-:302, migrate to another noodes times: 5
+  Thread-:303, migrate to another noodes times: 2
+  Thread-:304, migrate to another noodes times: 3
+  Thread-:305, migrate to another noodes times: 5
+  Thread-:306, migrate to another noodes times: 4
+  Thread-:307, migrate to another noodes times: 1
+  Thread-:308, migrate to another noodes times: 7
+  Thread-:310, migrate to another noodes times: 4
+  Thread-:311, migrate to another noodes times: 7
+  Thread-:312, migrate to another noodes times: 2
+  Thread-:313, migrate to another noodes times: 5
+  Thread-:314, migrate to another noodes times: 4
+  Thread-:315, migrate to another noodes times: 7
+  Thread-:316, migrate to another noodes times: 2
+  Thread-:317, migrate to another noodes times: 3
+  Thread-:318, migrate to another noodes times: 5
+  Thread-:319, migrate to another noodes times: 12
+  Thread-:320, migrate to another noodes times: 1
+  Thread-:321, migrate to another noodes times: 2
+  Thread-:322, migrate to another noodes times: 1
+  Thread-:323, migrate to another noodes times: 1
+  Thread-:324, migrate to another noodes times: 6
+  Thread-:325, migrate to another noodes times: 3
+  Thread-:326, migrate to another noodes times: 3
+  Thread-:327, migrate to another noodes times: 24
+  Thread-:328, migrate to another noodes times: 3
+  Thread-:329, migrate to another noodes times: 2
+  Thread-:330, migrate to another noodes times: 1
+  Thread-:331, migrate to another noodes times: 9
+  Thread-:332, migrate to another noodes times: 1
+  Thread-:333, migrate to another noodes times: 2
+  Thread-:334, migrate to another noodes times: 4
+  Thread-:335, migrate to another noodes times: 2
+  Thread-:336, migrate to another noodes times: 11
+  Thread-:337, migrate to another noodes times: 8
+  Thread-:338, migrate to another noodes times: 2
+  Thread-:339, migrate to another noodes times: 6
+  Thread-:340, migrate to another noodes times: 1
+  Thread-:341, migrate to another noodes times: 7
+  Thread-:342, migrate to another noodes times: 1
+  Thread-:343, migrate to another noodes times: 2
+  Thread-:344, migrate to another noodes times: 8
+  Thread-:345, migrate to another noodes times: 1
+  Thread-:346, migrate to another noodes times: 4
+  Thread-:347, migrate to another noodes times: 5
+  Thread-:348, migrate to another noodes times: 5
+  Thread-:349, migrate to another noodes times: 1
+  Thread-:350, migrate to another noodes times: 4
+  Thread-:351, migrate to another noodes times: 5
+  Thread-:352, migrate to another noodes times: 5
+  Thread-:353, migrate to another noodes times: 1
+  Thread-:354, migrate to another noodes times: 7
+  Thread-:355, migrate to another noodes times: 3
+  Thread-:356, migrate to another noodes times: 3
+  Thread-:358, migrate to another noodes times: 9
+  Thread-:359, migrate to another noodes times: 6
+  Thread-:360, migrate to another noodes times: 5
+  Thread-:361, migrate to another noodes times: 1
+  Thread-:362, migrate to another noodes times: 7
+  Thread-:363, migrate to another noodes times: 2
+  Thread-:364, migrate to another noodes times: 5
+  Thread-:365, migrate to another noodes times: 4
+  Thread-:366, migrate to another noodes times: 8
+  Thread-:367, migrate to another noodes times: 3
+  Thread-:368, migrate to another noodes times: 5
+  Thread-:369, migrate to another noodes times: 3
+  Thread-:370, migrate to another noodes times: 5
+  Thread-:371, migrate to another noodes times: 6
+  Thread-:372, migrate to another noodes times: 7
+  Thread-:373, migrate to another noodes times: 13
+  Thread-:374, migrate to another noodes times: 4
+  Thread-:375, migrate to another noodes times: 1
+  Thread-:376, migrate to another noodes times: 9
+  Thread-:377, migrate to another noodes times: 4
+  Thread-:378, migrate to another noodes times: 4
+  Thread-:379, migrate to another noodes times: 3
+  Thread-:380, migrate to another noodes times: 4
+  Thread-:381, migrate to another noodes times: 11
+  Thread-:382, migrate to another noodes times: 5
+  Thread-:383, migrate to another noodes times: 7
+  Thread-:384, migrate to another noodes times: 8
+  Thread-:385, migrate to another noodes times: 2
+  Thread-:386, migrate to another noodes times: 3
+  Thread-:387, migrate to another noodes times: 1
+  Thread-:388, migrate to another noodes times: 3
+  Thread-:389, migrate to another noodes times: 6
+  Thread-:390, migrate to another noodes times: 1
+  Thread-:392, migrate to another noodes times: 1
+  Thread-:393, migrate to another noodes times: 2
+  Thread-:394, migrate to another noodes times: 1
+  Thread-:395, migrate to another noodes times: 1
+  Thread-:396, migrate to another noodes times: 1
+  Thread-:397, migrate to another noodes times: 4
+  Thread-:398, migrate to another noodes times: 1
+  Thread-:399, migrate to another noodes times: 1
+  Thread-:400, migrate to another noodes times: 1
+  Thread-:402, migrate to another noodes times: 3
+  Thread-:403, migrate to another noodes times: 2
+  Thread-:404, migrate to another noodes times: 1
+  Thread-:405, migrate to another noodes times: 3
+  Thread-:406, migrate to another noodes times: 2
+  Thread-:407, migrate to another noodes times: 4
+  Thread-:408, migrate to another noodes times: 1
+  Thread-:409, migrate to another noodes times: 1
+  Thread-:410, migrate to another noodes times: 1
+  Thread-:411, migrate to another noodes times: 4
+  Thread-:412, migrate to another noodes times: 1
+  Thread-:413, migrate to another noodes times: 1
+  Thread-:415, migrate to another noodes times: 1
+  Thread-:416, migrate to another noodes times: 1
+  Thread-:417, migrate to another noodes times: 2
+  Thread-:418, migrate to another noodes times: 1
+  Thread-:419, migrate to another noodes times: 2
+  Thread-:420, migrate to another noodes times: 2
+  Thread-:421, migrate to another noodes times: 5
+  Thread-:422, migrate to another noodes times: 1
+  Thread-:423, migrate to another noodes times: 2
+  Thread-:424, migrate to another noodes times: 4
+  Thread-:425, migrate to another noodes times: 1
+  Thread-:426, migrate to another noodes times: 2
+  Thread-:427, migrate to another noodes times: 2
+  Thread-:429, migrate to another noodes times: 1
+  Thread-:430, migrate to another noodes times: 3
+  Thread-:431, migrate to another noodes times: 3
+  Thread-:432, migrate to another noodes times: 1
+  Thread-:433, migrate to another noodes times: 2
+  Thread-:434, migrate to another noodes times: 3
+  Thread-:435, migrate to another noodes times: 1
+  Thread-:436, migrate to another noodes times: 3
+  Thread-:437, migrate to another noodes times: 1
+  Thread-:438, migrate to another noodes times: 1
+  Thread-:439, migrate to another noodes times: 3
+  Thread-:441, migrate to another noodes times: 3
+  Thread-:444, migrate to another noodes times: 2
+  Thread-:445, migrate to another noodes times: 1
+  Thread-:446, migrate to another noodes times: 4
+  Thread-:447, migrate to another noodes times: 5
+  Thread-:448, migrate to another noodes times: 3
+  Thread-:449, migrate to another noodes times: 2
+  Thread-:450, migrate to another noodes times: 1
+  Thread-:452, migrate to another noodes times: 1
+  Thread-:453, migrate to another noodes times: 3
+  Thread-:454, migrate to another noodes times: 2
+  Thread-:455, migrate to another noodes times: 2
+  Thread-:456, migrate to another noodes times: 4
+  Thread-:457, migrate to another noodes times: 2
+  Thread-:458, migrate to another noodes times: 1
+  Thread-:460, migrate to another noodes times: 1
+  Thread-:461, migrate to another noodes times: 2
+  Thread-:462, migrate to another noodes times: 1
+  Thread-:463, migrate to another noodes times: 1
+  Thread-:464, migrate to another noodes times: 1
+  Thread-:465, migrate to another noodes times: 1
+  Thread-:466, migrate to another noodes times: 1
+  Thread-:467, migrate to another noodes times: 2
+  Thread-:468, migrate to another noodes times: 2
+  Thread-:469, migrate to another noodes times: 2
+  Thread-:470, migrate to another noodes times: 1
+  Thread-:471, migrate to another noodes times: 2
+  Thread-:472, migrate to another noodes times: 3
+  Thread-:473, migrate to another noodes times: 3
+  Thread-:474, migrate to another noodes times: 1
+  Thread-:476, migrate to another noodes times: 1
+  Thread-:477, migrate to another noodes times: 5
+  Thread-:478, migrate to another noodes times: 1
+  Thread-:480, migrate to another noodes times: 2
+  Thread-:481, migrate to another noodes times: 2
+  Thread-:482, migrate to another noodes times: 1
+  Thread-:484, migrate to another noodes times: 1
+  Thread-:486, migrate to another noodes times: 3
+  Thread-:487, migrate to another noodes times: 1
+  Thread-:488, migrate to another noodes times: 3
+  Thread-:489, migrate to another noodes times: 1
+  Thread-:491, migrate to another noodes times: 2
+  Thread-:492, migrate to another noodes times: 1
+  Thread-:493, migrate to another noodes times: 2
+  Thread-:495, migrate to another noodes times: 2
+  Thread-:496, migrate to another noodes times: 2
+  Thread-:497, migrate to another noodes times: 2
+  Thread-:498, migrate to another noodes times: 1
+  Thread-:499, migrate to another noodes times: 2
+  Thread-:500, migrate to another noodes times: 2
+  Thread-:501, migrate to another noodes times: 1
+  Thread-:502, migrate to another noodes times: 1
+  Thread-:504, migrate to another noodes times: 2
+  Thread-:505, migrate to another noodes times: 3
+  Thread-:506, migrate to another noodes times: 1
+  Thread-:507, migrate to another noodes times: 1
+  Thread-:508, migrate to another noodes times: 1
+  Thread-:509, migrate to another noodes times: 2
+  Thread-:510, migrate to another noodes times: 1
+  Thread-:511, migrate to another noodes times: 2
+  Thread-:512, migrate to another noodes times: 6
+  Thread-:513, migrate to another noodes times: 1
+  Thread-:514, migrate to another noodes times: 2
+  Thread-:515, migrate to another noodes times: 1
+  Thread-:517, migrate to another noodes times: 3
+  Thread-:518, migrate to another noodes times: 2
+  Thread-:519, migrate to another noodes times: 1
+  Thread-:520, migrate to another noodes times: 4
+  Thread-:521, migrate to another noodes times: 2
+  Thread-:522, migrate to another noodes times: 1
+  Thread-:523, migrate to another noodes times: 3
+  Thread-:524, migrate to another noodes times: 2
+  Thread-:525, migrate to another noodes times: 3
+  Thread-:526, migrate to another noodes times: 3
+  Thread-:527, migrate to another noodes times: 2
+  Thread-:528, migrate to another noodes times: 2
+  Thread-:529, migrate to another noodes times: 2
+  Thread-:532, migrate to another noodes times: 2
+  Thread-:533, migrate to another noodes times: 4
+  Thread-:534, migrate to another noodes times: 2
+  Thread-:535, migrate to another noodes times: 2
+  Thread-:536, migrate to another noodes times: 2
+  Thread-:537, migrate to another noodes times: 4
+  Thread-:538, migrate to another noodes times: 1
+  Thread-:539, migrate to another noodes times: 2
+  Thread-:540, migrate to another noodes times: 1
+  Thread-:542, migrate to another noodes times: 1
+  Thread-:544, migrate to another noodes times: 3
+  Thread-:546, migrate to another noodes times: 4
+  Thread-:547, migrate to another noodes times: 2
+  Thread-:548, migrate to another noodes times: 1
+  Thread-:551, migrate to another noodes times: 2
+  Thread-:554, migrate to another noodes times: 3
+  Thread-:555, migrate to another noodes times: 2
+  Thread-:556, migrate to another noodes times: 3
+  Thread-:557, migrate to another noodes times: 1
+  Thread-:558, migrate to another noodes times: 5
+  Thread-:559, migrate to another noodes times: 4
+  Thread-:560, migrate to another noodes times: 3
+  Thread-:563, migrate to another noodes times: 4
+  Thread-:565, migrate to another noodes times: 1
+  Thread-:566, migrate to another noodes times: 2
+  Thread-:567, migrate to another noodes times: 1
+  Thread-:568, migrate to another noodes times: 2
+  Thread-:569, migrate to another noodes times: 2
+  Thread-:570, migrate to another noodes times: 1
+  Thread-:571, migrate to another noodes times: 1
+  Thread-:572, migrate to another noodes times: 3
+  Thread-:573, migrate to another noodes times: 1
+  Thread-:574, migrate to another noodes times: 2
+  Thread-:575, migrate to another noodes times: 5
+  Thread-:576, migrate to another noodes times: 2
+  Thread-:577, migrate to another noodes times: 2
+  Thread-:578, migrate to another noodes times: 1
+  Thread-:579, migrate to another noodes times: 4
+  Thread-:580, migrate to another noodes times: 2
+  Thread-:581, migrate to another noodes times: 2
+  Thread-:582, migrate to another noodes times: 2
+  Thread-:583, migrate to another noodes times: 3
+  Thread-:584, migrate to another noodes times: 3
+  Thread-:585, migrate to another noodes times: 1
+  Thread-:587, migrate to another noodes times: 1
+  Thread-:589, migrate to another noodes times: 2
+  Thread-:590, migrate to another noodes times: 2
+  Thread-:592, migrate to another noodes times: 3
+  Thread-:593, migrate to another noodes times: 2
+  Thread-:594, migrate to another noodes times: 1
+  Thread-:595, migrate to another noodes times: 2
+  Thread-:596, migrate to another noodes times: 1
+  Thread-:597, migrate to another noodes times: 2
+  Thread-:598, migrate to another noodes times: 1
+  Thread-:601, migrate to another noodes times: 1
+  Thread-:603, migrate to another noodes times: 3
+  Thread-:604, migrate to another noodes times: 3
+  Thread-:606, migrate to another noodes times: 2
+  Thread-:607, migrate to another noodes times: 1
+  Thread-:608, migrate to another noodes times: 2
+  Thread-:609, migrate to another noodes times: 1
+  Thread-:610, migrate to another noodes times: 2
+  Thread-:612, migrate to another noodes times: 1
+  Thread-:613, migrate to another noodes times: 1
+  Thread-:614, migrate to another noodes times: 1
+  Thread-:615, migrate to another noodes times: 2
+  Thread-:616, migrate to another noodes times: 3
+  Thread-:617, migrate to another noodes times: 2
+  Thread-:618, migrate to another noodes times: 2
+  Thread-:619, migrate to another noodes times: 3
+  Thread-:620, migrate to another noodes times: 1
+  Thread-:621, migrate to another noodes times: 3
+  Thread-:622, migrate to another noodes times: 1
+  Thread-:623, migrate to another noodes times: 1
+  Thread-:624, migrate to another noodes times: 4
+  Thread-:626, migrate to another noodes times: 2
+  Thread-:627, migrate to another noodes times: 2
+  Thread-:628, migrate to another noodes times: 6
+  Thread-:629, migrate to another noodes times: 3
+  Thread-:630, migrate to another noodes times: 1
+  Thread-:631, migrate to another noodes times: 2
+  Thread-:632, migrate to another noodes times: 2
+  Thread-:633, migrate to another noodes times: 2
+  Thread-:634, migrate to another noodes times: 4
+  Thread-:635, migrate to another noodes times: 1
+  Thread-:636, migrate to another noodes times: 2
+  Thread-:637, migrate to another noodes times: 3
+  Thread-:639, migrate to another noodes times: 3
+  Thread-:640, migrate to another noodes times: 3
+  Thread-:641, migrate to another noodes times: 1
+  Thread-:642, migrate to another noodes times: 2
+  Thread-:643, migrate to another noodes times: 4
+  Thread-:644, migrate to another noodes times: 3
+  Thread-:645, migrate to another noodes times: 1
+  Thread-:646, migrate to another noodes times: 2
+  Thread-:647, migrate to another noodes times: 2
+  Thread-:648, migrate to another noodes times: 1
+  Thread-:649, migrate to another noodes times: 3
+  Thread-:650, migrate to another noodes times: 5
+  Thread-:651, migrate to another noodes times: 1
+  Thread-:652, migrate to another noodes times: 1
+  Thread-:653, migrate to another noodes times: 3
+  Thread-:654, migrate to another noodes times: 2
+  Thread-:655, migrate to another noodes times: 1
+  Thread-:656, migrate to another noodes times: 1
+  Thread-:657, migrate to another noodes times: 2
+  Thread-:658, migrate to another noodes times: 1
+  Thread-:659, migrate to another noodes times: 1
+  Thread-:660, migrate to another noodes times: 2
+  Thread-:661, migrate to another noodes times: 1
+  Thread-:662, migrate to another noodes times: 1
+  Thread-:663, migrate to another noodes times: 1
+  Thread-:664, migrate to another noodes times: 2
+  Thread-:665, migrate to another noodes times: 1
+  Thread-:666, migrate to another noodes times: 4
+  Thread-:667, migrate to another noodes times: 1
+  Thread-:668, migrate to another noodes times: 1
+  Thread-:669, migrate to another noodes times: 2
+  Thread-:670, migrate to another noodes times: 1
+  Thread-:671, migrate to another noodes times: 1
+  Thread-:672, migrate to another noodes times: 2
+  Thread-:673, migrate to another noodes times: 1
+  Thread-:674, migrate to another noodes times: 1
+  Thread-:675, migrate to another noodes times: 1
+  Thread-:677, migrate to another noodes times: 2
+  Thread-:678, migrate to another noodes times: 2
+  Thread-:679, migrate to another noodes times: 1
+  Thread-:680, migrate to another noodes times: 1
+  Thread-:681, migrate to another noodes times: 1
+  Thread-:682, migrate to another noodes times: 2
+  Thread-:684, migrate to another noodes times: 2
+  Thread-:685, migrate to another noodes times: 2
+  Thread-:686, migrate to another noodes times: 1
+  Thread-:687, migrate to another noodes times: 3
+  Thread-:688, migrate to another noodes times: 1
+  Thread-:689, migrate to another noodes times: 2
+  Thread-:690, migrate to another noodes times: 1
+  Thread-:691, migrate to another noodes times: 2
+  Thread-:692, migrate to another noodes times: 2
+  Thread-:693, migrate to another noodes times: 2
+  Thread-:694, migrate to another noodes times: 1
+  Thread-:695, migrate to another noodes times: 2
+  Thread-:696, migrate to another noodes times: 3
+  Thread-:697, migrate to another noodes times: 2
+  Thread-:698, migrate to another noodes times: 2
+  Thread-:699, migrate to another noodes times: 2
+  Thread-:700, migrate to another noodes times: 1
+  Thread-:701, migrate to another noodes times: 1
+  Thread-:702, migrate to another noodes times: 1
+  Thread-:703, migrate to another noodes times: 2
+  Thread-:704, migrate to another noodes times: 1
+  Thread-:705, migrate to another noodes times: 1
+  Thread-:706, migrate to another noodes times: 1
+  Thread-:707, migrate to another noodes times: 1
+  Thread-:709, migrate to another noodes times: 2
+  Thread-:710, migrate to another noodes times: 2
+  Thread-:711, migrate to another noodes times: 3
+  Thread-:712, migrate to another noodes times: 1
+  Thread-:713, migrate to another noodes times: 4
+  Thread-:715, migrate to another noodes times: 3
+  Thread-:716, migrate to another noodes times: 1
+  Thread-:717, migrate to another noodes times: 1
+  Thread-:718, migrate to another noodes times: 1
+  Thread-:719, migrate to another noodes times: 2
+  Thread-:720, migrate to another noodes times: 2
+  Thread-:721, migrate to another noodes times: 2
+  Thread-:722, migrate to another noodes times: 1
+  Thread-:723, migrate to another noodes times: 1
+  Thread-:724, migrate to another noodes times: 1
+  Thread-:725, migrate to another noodes times: 1
+  Thread-:726, migrate to another noodes times: 1
+  Thread-:727, migrate to another noodes times: 2
+  Thread-:728, migrate to another noodes times: 2
+  Thread-:729, migrate to another noodes times: 2
+  Thread-:730, migrate to another noodes times: 1
+  Thread-:731, migrate to another noodes times: 1
+  Thread-:732, migrate to another noodes times: 2
+  Thread-:733, migrate to another noodes times: 2
+  Thread-:734, migrate to another noodes times: 2
+  Thread-:735, migrate to another noodes times: 2
+  Thread-:737, migrate to another noodes times: 2
+  Thread-:738, migrate to another noodes times: 1
+  Thread-:739, migrate to another noodes times: 1
+  Thread-:740, migrate to another noodes times: 1
+  Thread-:741, migrate to another noodes times: 2
+  Thread-:742, migrate to another noodes times: 2
+  Thread-:743, migrate to another noodes times: 1
+  Thread-:744, migrate to another noodes times: 1
+  Thread-:745, migrate to another noodes times: 1
+  Thread-:747, migrate to another noodes times: 1
+  Thread-:748, migrate to another noodes times: 1
+  Thread-:749, migrate to another noodes times: 2
+  Thread-:750, migrate to another noodes times: 1
+  Thread-:751, migrate to another noodes times: 2
+  Thread-:752, migrate to another noodes times: 1
+  Thread-:753, migrate to another noodes times: 1
+  Thread-:754, migrate to another noodes times: 1
+  Thread-:755, migrate to another noodes times: 3
+  Thread-:757, migrate to another noodes times: 2
+  Thread-:758, migrate to another noodes times: 1
+  Thread-:759, migrate to another noodes times: 1
+  Thread-:761, migrate to another noodes times: 2
+  Thread-:762, migrate to another noodes times: 2
+  Thread-:763, migrate to another noodes times: 1
+  Thread-:764, migrate to another noodes times: 2
+  Thread-:765, migrate to another noodes times: 1
+  Thread-:766, migrate to another noodes times: 1
+  Thread-:767, migrate to another noodes times: 1
+
+
+Part Three: Thread based imbalance detection & threads binding recommendation:
+
+2.1 Global Balanced Threads:
+0,1,2,3,4,5,6,7,9,10,11,12,13,14,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,40,42,43,44,45,46,47,48,49,50,51,52,53,54,56,58,59,60,61,62,63,64,65,67,69,70,71,72,73,74,75,76,77,78,79,80,81,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,100,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,157,158,159,160,161,162,163,164,165,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,195,196,197,198,199,200,201,202,203,204,205,206,207,208,210,211,213,214,217,218,219,220,221,222,223,224,225,227,228,229,230,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,259,261,262,263,264,265,266,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,285,286,287,288,290,291,292,293,294,295,296,297,298,300,301,302,303,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,328,329,330,331,332,333,334,335,336,337,338,339,340,341,342,343,344,345,346,347,348,349,350,351,353,354,355,356,357,358,359,360,361,362,363,364,365,366,367,368,369,370,371,372,374,375,376,377,378,379,380,381,382,384,386,387,388,389,390,391,392,393,394,395,396,397,398,399,400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,422,423,424,425,427,428,429,430,431,433,434,435,436,437,438,439,441,442,443,444,445,447,448,449,450,451,452,453,455,456,457,458,459,460,461,462,463,464,465,466,467,468,469,470,471,472,473,474,475,476,477,478,479,480,481,482,483,484,485,486,487,488,489,490,491,492,493,494,495,496,498,499,500,501,502,503,504,506,507,508,509,510,511,512,514,515,516,517,518,519,520,521,522,523,524,525,526,527,528,529,530,531,532,534,535,536,537,538,539,540,541,542,543,544,545,546,548,549,550,551,552,553,554,555,556,557,558,559,561,563,564,565,566,568,569,570,571,572,573,574,575,576,577,578,579,580,581,582,583,584,585,586,587,588,589,590,591,593,594,595,596,597,598,599,600,601,602,603,604,605,606,607,608,609,610,611,612,613,614,615,616,617,618,619,623,624,625,626,627,629,630,631,632,633,634,635,637,638,639,640,642,643,644,645,646,647,648,649,650,651,652,653,654,655,656,657,658,659,660,661,662,663,664,665,666,667,668,669,670,671,672,673,674,675,676,677,678,679,680,681,682,683,684,685,686,687,688,689,690,691,692,693,694,695,696,697,698,699,700,701,702,703,704,705,706,707,708,709,710,711,712,713,714,715,716,717,718,719,720,721,722,723,724,725,726,727,728,729,730,731,732,733,734,735,736,737,738,739,740,741,742,743,744,745,746,747,748,749,750,751,752,753,754,755,756,757,758,759,760,761,762,763,764,765,766,767,768,
+
+2.2 Global ImBalanced Threads:
+8,15,17,39,41,55,57,66,68,82,98,99,101,127,156,166,194,209,212,215,216,226,231,257,258,260,289,299,327,352,373,383,385,421,426,432,440,446,454,497,505,513,533,547,560,562,567,592,620,621,622,628,636,641,
+
+2.3 Threads binding recomendations:
+Thread cluster-1 (54):166,215,156,194,209,385,497,426,513,621,592,562,567,628,533,560,620,636,547,622,212,454,440,421,432,505,446,216,226,231,641,257,258,373,327,383,299,289,260,352,127,39,66,8,15,101,68,41,99,82,17,55,57,98,
+
+
+Part Four: Top 20 problematical callsites:
+   Top problematical callsites 1:
+address: 0x407ae8  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1906
+address: 0x408fb7  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:2029
+address: 0x7f1b4e64e09a  ??:0
+address: 0x402329  ??:?
+    SeriousScore:             941.076738
+    InvalidNumInMainThread:   0
+    InvalidNumInOtherThreads: 343734622
+    AccessNumInMainThread:    0
+    AccessNumInOtherThreads:  1470799
+    Top Object 0:
+      Object Start Address:   0x1ff65b0
+      Object Size:            200000
+      SeriousScore:             159.382847
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 58180572
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  284185
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       58767/0
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x20247c0
+        SeriousScore:             0.059970
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 21998
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       21/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x2005ac0
+        SeriousScore:             0.060248
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 22100
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       21/0
+        FalseSharing(sharing in each word):1025
+        0-th word:297,        1-th word:297,        2-th word:297,        3-th word:297,        4-th word:297,        5-th word:297,        6-th word:297,        7-th word:297,        8-th word:297,        9-th word:297,        10-th word:297,        11-th word:297,        12-th word:297,        13-th word:297,        14-th word:297,        15-th word:297,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x2012040
+        SeriousScore:             0.060119
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 22053
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       21/0
+        FalseSharing(sharing in each word):1025
+        0-th word:329,        1-th word:329,        2-th word:329,        3-th word:329,        4-th word:329,        5-th word:329,        6-th word:329,        7-th word:329,        8-th word:329,        9-th word:329,        10-th word:329,        11-th word:329,        12-th word:329,        13-th word:329,        14-th word:329,        15-th word:329,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x200a780
+        SeriousScore:             0.061254
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 22469
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       15/0
+        FalseSharing(sharing in each word):1025
+        0-th word:309,        1-th word:309,        2-th word:309,        3-th word:309,        4-th word:309,        5-th word:309,        6-th word:309,        7-th word:309,        8-th word:309,        9-th word:309,        10-th word:309,        11-th word:309,        12-th word:309,        13-th word:309,        14-th word:309,        15-th word:309,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x2018000
+        SeriousScore:             0.061444
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 22539
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       23/0
+        FalseSharing(sharing in each word):1025
+        0-th word:345,        1-th word:345,        2-th word:345,        3-th word:345,        4-th word:345,        5-th word:345,        6-th word:345,        7-th word:345,        8-th word:345,        9-th word:345,        10-th word:345,        11-th word:345,        12-th word:345,        13-th word:345,        14-th word:345,        15-th word:345,
+      Top Pages 0:
+        PageStartAddress:         0x2012000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  11605
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x200e000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  11848
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x2024000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  11919
+                this page is shared by multiple threads
+    Top Object 1:
+      Object Start Address:   0x1ff6580
+      Object Size:            200000
+      SeriousScore:             261.451700
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 95579010
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  326606
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       103252/0
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x2026980
+        SeriousScore:             0.096819
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 35515
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       39/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x2018900
+        SeriousScore:             0.097050
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 35600
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       39/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x200de00
+        SeriousScore:             0.097132
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 35630
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       29/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x200b840
+        SeriousScore:             0.097939
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 35926
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       32/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x1ff88c0
+        SeriousScore:             0.097195
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 35653
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       32/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top Pages 0:
+        PageStartAddress:         0x2000000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  8729
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x1fff000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  8859
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x2012000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  8810
+                this page is shared by multiple threads
+    Top Object 2:
+      Object Start Address:   0x1ff6580
+      Object Size:            200000
+      SeriousScore:             338.361641
+      InvalidNumInMainThread:   0
+      InvalidNumInOtherThreads: 123814729
+      AccessNumInMainThread:    0
+      AccessNumInOtherThreads:  302963
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       137074/0
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x2021700
+        SeriousScore:             0.123197
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 45191
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       44/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x201fec0
+        SeriousScore:             0.123486
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 45297
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       43/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x2023400
+        SeriousScore:             0.123837
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 45426
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       39/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x2004ec0
+        SeriousScore:             0.124328
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 45606
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       54/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x2008900
+        SeriousScore:             0.123753
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 45395
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       44/0
+        FalseSharing(sharing in each word):1025
+        0-th word:true,        1-th word:true,        2-th word:true,        3-th word:true,        4-th word:true,        5-th word:true,        6-th word:true,        7-th word:true,        8-th word:true,        9-th word:true,        10-th word:true,        11-th word:true,        12-th word:true,        13-th word:true,        14-th word:true,        15-th word:true,
+      Top Pages 0:
+        PageStartAddress:         0x2001000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  15280
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x2002000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  15542
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x2003000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  15571
+                this page is shared by multiple threads
+
+
+   Top problematical callsites 2:
+address: 0x407638  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1845
+address: 0x408fb7  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:2029
+address: 0x7f1b4e64e09a  ??:0
+address: 0x402329  ??:?
+    SeriousScore:             6416.455225
+    InvalidNumInMainThread:   63795598
+    InvalidNumInOtherThreads: 6265
+    AccessNumInMainThread:    2281100
+    AccessNumInOtherThreads:  2353675468
+    Top Object 0:
+      Object Start Address:   0x3ed94645c010
+      Object Size:            102400000
+      SeriousScore:             6416.455225
+      InvalidNumInMainThread:   63795598
+      InvalidNumInOtherThreads: 6265
+      AccessNumInMainThread:    2281100
+      AccessNumInOtherThreads:  2353675468
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       489469/119893
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x3ed94b615c00
+        SeriousScore:             0.000104
+        InvalidNumInMainThread:   137147
+        InvalidNumInOtherThreads: 38
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       1420/263
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x3ed947a03a00
+        SeriousScore:             0.000104
+        InvalidNumInMainThread:   23619
+        InvalidNumInOtherThreads: 38
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       876/258
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x3ed948ad3600
+        SeriousScore:             0.000104
+        InvalidNumInMainThread:   27233
+        InvalidNumInOtherThreads: 38
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       857/260
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x3ed946fc8c00
+        SeriousScore:             0.000104
+        InvalidNumInMainThread:   115595
+        InvalidNumInOtherThreads: 38
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       1311/271
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x3ed946fc8e00
+        SeriousScore:             0.000104
+        InvalidNumInMainThread:   38307
+        InvalidNumInOtherThreads: 38
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       914/269
+        FalseSharing(sharing in each word):0
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top Pages 0:
+        PageStartAddress:         0x3ed94a25c000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    49
+        AccessNumInOtherThreads:  1451740
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x3ed947c9c000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    13901
+        AccessNumInOtherThreads:  2266049
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x3ed949158000
+        FirstTouchThreadId:         0
+        AccessNumInMainThread:    49
+        AccessNumInOtherThreads:  1575717
+                this page is shared by multiple threads
+
+
+   Top problematical callsites 3:
+address: 0x403a51  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:984
+address: 0x40533a  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1234
+address: 0x40674f  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1574
+address: 0x407109  /home/tpliu/xinzhao/multithreadingtests.old/parsec/tests/streamcluster/streamcluster.cpp:1692
+address: 0x7f1b4eb35722  ??:0
+    SeriousScore:             12108.230324
+    InvalidNumInMainThread:   17178310
+    InvalidNumInOtherThreads: 4225977774
+    AccessNumInMainThread:    1337135
+    AccessNumInOtherThreads:  215558796
+    Top Object 0:
+      Object Start Address:   0x3ed940007860
+      Object Size:            16512
+      SeriousScore:             2.551085
+      InvalidNumInMainThread:   2857
+      InvalidNumInOtherThreads: 752252
+      AccessNumInMainThread:    278
+      AccessNumInOtherThreads:  183536
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6411/12
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x3ed94000ab40
+        SeriousScore:             0.018314
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 6718
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       45/0
+        FalseSharing(sharing in each word):1025
+        0-th word:102,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:102,        5-th word:-1,        6-th word:102,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:103,        11-th word:-1,        12-th word:103,        13-th word:-1,        14-th word:103,        15-th word:-1,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x3ed94000b440
+        SeriousScore:             0.018333
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 6725
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       55/0
+        FalseSharing(sharing in each word):1025
+        0-th word:120,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:120,        5-th word:-1,        6-th word:120,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:121,        11-th word:-1,        12-th word:121,        13-th word:-1,        14-th word:121,        15-th word:-1,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x3ed94000b140
+        SeriousScore:             0.018974
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 6960
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       59/0
+        FalseSharing(sharing in each word):1025
+        0-th word:114,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:114,        5-th word:-1,        6-th word:114,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:115,        11-th word:-1,        12-th word:115,        13-th word:-1,        14-th word:115,        15-th word:-1,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x3ed94000b340
+        SeriousScore:             0.019658
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 7211
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       30/0
+        FalseSharing(sharing in each word):1025
+        0-th word:118,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:118,        5-th word:-1,        6-th word:118,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:119,        11-th word:-1,        12-th word:119,        13-th word:-1,        14-th word:119,        15-th word:-1,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x3ed94000b6c0
+        SeriousScore:             0.020405
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 7485
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       56/0
+        FalseSharing(sharing in each word):1025
+        0-th word:125,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:125,        5-th word:-1,        6-th word:125,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:126,        11-th word:-1,        12-th word:126,        13-th word:-1,        14-th word:126,        15-th word:-1,
+      Top Pages 0:
+        PageStartAddress:         0x3ed94000a000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    0
+        AccessNumInOtherThreads:  977
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x3ed940009000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    2
+        AccessNumInOtherThreads:  983
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x3ed940008000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    2
+        AccessNumInOtherThreads:  991
+                this page is shared by multiple threads
+    Top Object 1:
+      Object Start Address:   0x3ed940007860
+      Object Size:            16512
+      SeriousScore:             2.585222
+      InvalidNumInMainThread:   2886
+      InvalidNumInOtherThreads: 769889
+      AccessNumInMainThread:    280
+      AccessNumInOtherThreads:  178421
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6414/15
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x3ed94000b040
+        SeriousScore:             0.016736
+        InvalidNumInMainThread:   18
+        InvalidNumInOtherThreads: 6139
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       43/0
+        FalseSharing(sharing in each word):1025
+        0-th word:112,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:112,        5-th word:-1,        6-th word:112,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:113,        11-th word:-1,        12-th word:113,        13-th word:-1,        14-th word:113,        15-th word:-1,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x3ed94000b640
+        SeriousScore:             0.017529
+        InvalidNumInMainThread:   18
+        InvalidNumInOtherThreads: 6430
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       42/0
+        FalseSharing(sharing in each word):1025
+        0-th word:124,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:124,        5-th word:-1,        6-th word:124,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:125,        11-th word:-1,        12-th word:125,        13-th word:-1,        14-th word:125,        15-th word:-1,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x3ed94000a5c0
+        SeriousScore:             0.017087
+        InvalidNumInMainThread:   18
+        InvalidNumInOtherThreads: 6268
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       35/0
+        FalseSharing(sharing in each word):1025
+        0-th word:91,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:91,        5-th word:-1,        6-th word:91,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:92,        11-th word:-1,        12-th word:92,        13-th word:-1,        14-th word:92,        15-th word:-1,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x3ed94000b540
+        SeriousScore:             0.018186
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 6671
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       45/0
+        FalseSharing(sharing in each word):1025
+        0-th word:122,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:122,        5-th word:-1,        6-th word:122,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:123,        11-th word:-1,        12-th word:123,        13-th word:-1,        14-th word:123,        15-th word:-1,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x3ed94000a6c0
+        SeriousScore:             0.018246
+        InvalidNumInMainThread:   18
+        InvalidNumInOtherThreads: 6693
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       43/0
+        FalseSharing(sharing in each word):1025
+        0-th word:93,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:93,        5-th word:-1,        6-th word:93,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:94,        11-th word:-1,        12-th word:94,        13-th word:-1,        14-th word:94,        15-th word:-1,
+      Top Pages 0:
+        PageStartAddress:         0x3ed940009000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    1
+        AccessNumInOtherThreads:  944
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x3ed94000a000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    1
+        AccessNumInOtherThreads:  999
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x3ed940008000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    2
+        AccessNumInOtherThreads:  969
+                this page is shared by multiple threads
+    Top Object 2:
+      Object Start Address:   0x3ed940007860
+      Object Size:            16512
+      SeriousScore:             2.551712
+      InvalidNumInMainThread:   2773
+      InvalidNumInOtherThreads: 752006
+      AccessNumInMainThread:    280
+      AccessNumInOtherThreads:  184012
+      Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       6486/15
+      Top CacheLines 0:
+        CacheLineStartAddress:    0x3ed94000b800
+        SeriousScore:             0.018540
+        InvalidNumInMainThread:   0
+        InvalidNumInOtherThreads: 6801
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       58/0
+        FalseSharing(sharing in each word):128
+        0-th word:-1,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:-1,        5-th word:-1,        6-th word:-1,        7-th word:-1,        8-th word:-1,        9-th word:-1,        10-th word:-1,        11-th word:-1,        12-th word:-1,        13-th word:-1,        14-th word:-1,        15-th word:-1,
+      Top CacheLines 1:
+        CacheLineStartAddress:    0x3ed94000afc0
+        SeriousScore:             0.019004
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 6971
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       52/0
+        FalseSharing(sharing in each word):1025
+        0-th word:111,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:111,        5-th word:-1,        6-th word:111,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:112,        11-th word:-1,        12-th word:112,        13-th word:-1,        14-th word:112,        15-th word:-1,
+      Top CacheLines 2:
+        CacheLineStartAddress:    0x3ed94000b5c0
+        SeriousScore:             0.019827
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 7273
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       50/0
+        FalseSharing(sharing in each word):1025
+        0-th word:123,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:123,        5-th word:-1,        6-th word:123,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:124,        11-th word:-1,        12-th word:124,        13-th word:-1,        14-th word:124,        15-th word:-1,
+      Top CacheLines 3:
+        CacheLineStartAddress:    0x3ed94000b740
+        SeriousScore:             0.019985
+        InvalidNumInMainThread:   24
+        InvalidNumInOtherThreads: 7331
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       51/0
+        FalseSharing(sharing in each word):1025
+        0-th word:126,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:126,        5-th word:-1,        6-th word:126,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:127,        11-th word:-1,        12-th word:127,        13-th word:-1,        14-th word:127,        15-th word:-1,
+      Top CacheLines 4:
+        CacheLineStartAddress:    0x3ed94000b7c0
+        SeriousScore:             0.019383
+        InvalidNumInMainThread:   21
+        InvalidNumInOtherThreads: 7110
+        Duplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       65/0
+        FalseSharing(sharing in each word):1025
+        0-th word:127,        1-th word:-1,        2-th word:-1,        3-th word:-1,        4-th word:127,        5-th word:-1,        6-th word:127,        7-th word:-1,        8-th word:true,        9-th word:-1,        10-th word:128,        11-th word:-1,        12-th word:128,        13-th word:-1,        14-th word:128,        15-th word:-1,
+      Top Pages 0:
+        PageStartAddress:         0x3ed940009000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    1
+        AccessNumInOtherThreads:  967
+                this page is shared by multiple threads
+      Top Pages 1:
+        PageStartAddress:         0x3ed94000a000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    1
+        AccessNumInOtherThreads:  992
+                this page is shared by multiple threads
+      Top Pages 2:
+        PageStartAddress:         0x3ed940008000
+        FirstTouchThreadId:         1
+        AccessNumInMainThread:    2
+        AccessNumInOtherThreads:  987
+                this page is shared by multiple threads
+
+
