@@ -17,10 +17,6 @@ typedef enum e_access_type {
     E_ACCESS_WRITE
 } eAccessType;
 
-__attribute__ ((destructor)) void finalizer(void);
-
-inline void handleAccess(unsigned long addr, size_t size, eAccessType type);
-
 extern "C" {
 extern void *malloc(size_t __size)
 __THROW __attribute_malloc__
@@ -43,16 +39,16 @@ int pthread_spin_lock(pthread_spinlock_t *lock);
 int pthread_spin_unlock(pthread_spinlock_t *lock);
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 
-void store_16bytes(unsigned long addr);
-void store_8bytes(unsigned long addr);
-void store_4bytes(unsigned long addr);
-void store_2bytes(unsigned long addr);
-void store_1bytes(unsigned long addr);
-void load_16bytes(unsigned long addr);
-void load_8bytes(unsigned long addr);
-void load_4bytes(unsigned long addr);
-void load_2bytes(unsigned long addr);
-void load_1bytes(unsigned long addr);
+void store_16bytes(unsigned long addr, unsigned long isGlobal);
+void store_8bytes(unsigned long addr, unsigned long isGlobal);
+void store_4bytes(unsigned long addr, unsigned long isGlobal);
+void store_2bytes(unsigned long addr, unsigned long isGlobal);
+void store_1bytes(unsigned long addr, unsigned long isGlobal);
+void load_16bytes(unsigned long addr, unsigned long isGlobal);
+void load_8bytes(unsigned long addr, unsigned long isGlobal);
+void load_4bytes(unsigned long addr, unsigned long isGlobal);
+void load_2bytes(unsigned long addr, unsigned long isGlobal);
+void load_1bytes(unsigned long addr, unsigned long isGlobal);
 }
 
 
