@@ -20,16 +20,16 @@ __attribute__ ((destructor)) void finalizer(void);
 void handleAccess(unsigned long addr, size_t size, eAccessType type);
 
 extern "C" {
-void store_16bytes(unsigned long addr, unsigned long isGlobal);
-void store_8bytes(unsigned long addr, unsigned long isGlobal);
-void store_4bytes(unsigned long addr, unsigned long isGlobal);
-void store_2bytes(unsigned long addr, unsigned long isGlobal);
-void store_1bytes(unsigned long addr, unsigned long isGlobal);
-void load_16bytes(unsigned long addr, unsigned long isGlobal);
-void load_8bytes(unsigned long addr, unsigned long isGlobal);
-void load_4bytes(unsigned long addr, unsigned long isGlobal);
-void load_2bytes(unsigned long addr, unsigned long isGlobal);
-void load_1bytes(unsigned long addr, unsigned long isGlobal);
+void store_16bytes(unsigned long addr);
+void store_8bytes(unsigned long addr);
+void store_4bytes(unsigned long addr);
+void store_2bytes(unsigned long addr);
+void store_1bytes(unsigned long addr);
+void load_16bytes(unsigned long addr);
+void load_8bytes(unsigned long addr);
+void load_4bytes(unsigned long addr);
+void load_2bytes(unsigned long addr);
+void load_1bytes(unsigned long addr);
 }
 
 

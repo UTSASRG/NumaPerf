@@ -27,8 +27,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 static int const do_init = (initializer(), 0);
 
-void handleAccess(unsigned long addr, size_t size, eAccessType type, unsigned long isGlobalVariable) {
-    printf("isGlobal:%d, accessType:%d\n", isGlobal, type);
+void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     if (type == E_ACCESS_READ) {
         threadLoadNum++;
         if (threadLoadNum > sum_frequency) {
@@ -49,22 +48,22 @@ void handleAccess(unsigned long addr, size_t size, eAccessType type, unsigned lo
 /*
 * handleAccess functions.
 */
-void store_16bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 16, E_ACCESS_WRITE, isGlobal); }
+void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
 
-void store_8bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 8, E_ACCESS_WRITE, isGlobal); }
+void store_8bytes(unsigned long addr) { handleAccess(addr, 8, E_ACCESS_WRITE); }
 
-void store_4bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 4, E_ACCESS_WRITE, isGlobal); }
+void store_4bytes(unsigned long addr) { handleAccess(addr, 4, E_ACCESS_WRITE); }
 
-void store_2bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 2, E_ACCESS_WRITE, isGlobal); }
+void store_2bytes(unsigned long addr) { handleAccess(addr, 2, E_ACCESS_WRITE); }
 
-void store_1bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 1, E_ACCESS_WRITE, isGlobal); }
+void store_1bytes(unsigned long addr) { handleAccess(addr, 1, E_ACCESS_WRITE); }
 
-void load_16bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 16, E_ACCESS_READ, isGlobal); }
+void load_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_READ); }
 
-void load_8bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 8, E_ACCESS_READ, isGlobal); }
+void load_8bytes(unsigned long addr) { handleAccess(addr, 8, E_ACCESS_READ); }
 
-void load_4bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 4, E_ACCESS_READ, isGlobal); }
+void load_4bytes(unsigned long addr) { handleAccess(addr, 4, E_ACCESS_READ); }
 
-void load_2bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 2, E_ACCESS_READ, isGlobal); }
+void load_2bytes(unsigned long addr) { handleAccess(addr, 2, E_ACCESS_READ); }
 
-void load_1bytes(unsigned long addr, unsigned long isGlobal) { handleAccess(addr, 1, E_ACCESS_READ, isGlobal); }
+void load_1bytes(unsigned long addr) { handleAccess(addr, 1, E_ACCESS_READ); }
