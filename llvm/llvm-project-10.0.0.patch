@@ -842,6 +842,7 @@ diff -ruN llvm-project-10.0.0.old/llvm/lib/Transforms/Instrumentation/RWInstrume
 +    // negatives) and make the decision on the optimization.
 +    uint32_t Exp = ClForceExperiment;
 +
++#if 0
 +    //if (ClOpt && ClOptGlobals) {
 +    // If initialization order checking is disabled, a simple access to a
 +    // dynamically initialized global is always valid.
@@ -851,6 +852,7 @@ diff -ruN llvm-project-10.0.0.old/llvm/lib/Transforms/Instrumentation/RWInstrume
 +        NumOptimizedAccessesToGlobalVar++;
 +        return;
 +    }
++#endif
 +    //}
 +
 +    //if (ClOpt && ClOptStack) {
