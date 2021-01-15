@@ -13,6 +13,10 @@ class DiagnoseCallSiteInfo {
     unsigned long allInvalidNumInOtherThreads;
     unsigned long allAccessNumInMainThread;
     unsigned long allAccessNumInOtherThread;
+    unsigned long readNumBeforeLastWrite;
+    unsigned long continualReadNumAfterAWrite;
+    unsigned long invalidNumInOtherThreadByTrueCacheSharing;
+    unsigned long invalidNumInOtherThreadByFalseCacheSharing;
     PriorityQueue<DiagnoseObjInfo> topObjInfoQueue;
 
 private:
@@ -23,6 +27,10 @@ private:
         allInvalidNumInOtherThreads = 0;
         allAccessNumInMainThread = 0;
         allAccessNumInOtherThread = 0;
+        readNumBeforeLastWrite = 0;
+        continualReadNumAfterAWrite = 0;
+        invalidNumInOtherThreadByTrueCacheSharing = 0;
+        invalidNumInOtherThreadByFalseCacheSharing = 0;
     }
 
 public:
@@ -50,6 +58,10 @@ public:
         this->allInvalidNumInOtherThreads += diagnoseObjInfo->getAllInvalidNumInOtherThreads();
         this->allAccessNumInMainThread += diagnoseObjInfo->getAllAccessNumInMainThread();
         this->allAccessNumInOtherThread += diagnoseObjInfo->getAllAccessNumInOtherThread();
+        this->readNumBeforeLastWrite += diagnoseObjInfo->getReadNumBeforeLastWrite();
+        this->continualReadNumAfterAWrite += diagnoseObjInfo->getContinualReadNumAfterAWrite();
+        this->invalidNumInOtherThreadByTrueCacheSharing += diagnoseObjInfo->getInvalidNumInOtherThreadByTrueCacheSharing();
+        this->invalidNumInOtherThreadByFalseCacheSharing += diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing();
     }
 
     inline bool mayCanInsertToTopObjQueue(DiagnoseObjInfo *diagnoseObjInfo) {
@@ -120,6 +132,24 @@ public:
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidNumInOtherThread());
         fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAccessNumInMainThread());
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix, this->getAccessNumInOtherThread());
+
+        fprintf(file, "%sinvalidNumInOtherThreadByTrueCacheSharing:  %lu\n", prefix,
+                this->invalidNumInOtherThreadByTrueCacheSharing);
+        fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing:  %lu\n", prefix,
+                this->invalidNumInOtherThreadByFalseCacheSharing);
+        fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %lu/%lu\n", prefix,
+                this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
+
+        fprintf(file, "%sAccessNumInOtherThreads score:  %f\n", prefix,
+                Scores::getSeriousScore(this->getAccessNumInOtherThread(), totalRunningCycles));
+        fprintf(file, "%sinvalidNumInOtherThreadByTrueCacheSharing score:  %f\n", prefix,
+                Scores::getSeriousScore(this->invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles));
+        fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,
+                Scores::getSeriousScore(this->invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
+        fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber) score:       %f/%f\n",
+                prefix,
+                Scores::getSeriousScore(this->readNumBeforeLastWrite, totalRunningCycles),
+                Scores::getSeriousScore(this->continualReadNumAfterAWrite, totalRunningCycles));
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
             fprintf(file, "%sTop Object %d:\n", prefix, i);
             topObjInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);

@@ -485,7 +485,8 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     }
     fprintf(dumpFile,
-            "Part Two: Thread based node migration times:%lu\n", totalMigrationNum);
+            "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalMigrationNum,
+            Scores::getSeriousScore(totalMigrationNum, totalRunningCycles));
     for (
             unsigned long i = 1;
             i <=

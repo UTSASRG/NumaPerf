@@ -2,7 +2,7 @@ How to build llvm:
 
 
 1. download llvm-project-10.0.0
-2. apply llvm-project-10.0.0.patch
+2. apply llvm-project-10.0.0.patch (go to the directory of llvm-project-10.0.0 and patch -p1 < /home/tpliu/xinzhao/NumaPerf/llvm/llvm-project-10.0.0.patch)
 3. mkdir a build directory in which you will build your llvm
 4. cd your build directory
 4. cmake -G 'Unix Makefiles' -DLLVM_ENABLE_PROJECTS="clang;compiler-rt" -DCMAKE_INSTALL_PREFIX=/media/umass/datasystem/xin/llvm-project/install -DCMAKE_BUILD_TYPE=Release ../llvm

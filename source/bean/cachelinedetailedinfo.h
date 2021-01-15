@@ -11,6 +11,10 @@
 #define THERAD_BIT_MASK_LENGTH (MAX_THREAD_NUM >> 2)   //256
 #define THERAD_BIT_MASK ((unsigned long)((1 << (MAX_THREAD_NUM_SHIFT_BITS - 2)) - 1))
 
+#define NO_TRUE_OR_FALSE_SHARING 0b0
+#define TRUE_SHARING 0b1
+#define FALSE_SHARING 0b10
+
 class CacheLineDetailedInfo {
     unsigned long startAddress;
     unsigned int invalidationNumberInFirstThread;
@@ -220,6 +224,23 @@ public:
         }
     }
 
+    inline unsigned int getSharingType() {
+        if (threadIdAndIsMultipleThreadsUnion != MULTIPLE_THREAD) {
+            return NO_TRUE_OR_FALSE_SHARING;
+        }
+        int result = NO_TRUE_OR_FALSE_SHARING;
+        for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
+            if (wordThreadIdAndIsMultipleThreadsUnion[i] == MULTIPLE_THREAD) {
+                return TRUE_SHARING;
+            }
+            if (wordThreadIdAndIsMultipleThreadsUnion[i] >= 0 &&
+                wordThreadIdAndIsMultipleThreadsUnion[i] < MULTIPLE_THREAD) {
+                result = FALSE_SHARING;
+            }
+        }
+        return result;
+    }
+    
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
