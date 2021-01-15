@@ -57,8 +57,8 @@ CallSiteInfoMap callSiteInfoMap;
 LockInfoMap lockInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
-PriorityQueue<DiagnoseCacheLineInfo> topCacheLineQueue(MAX_TOP_GLOBAL_CACHELINE_DETAIL_INFO);
-PriorityQueue<DiagnosePageInfo> topPageQueue(MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
+//PriorityQueue<DiagnoseCacheLineInfo> topCacheLineQueue(MAX_TOP_GLOBAL_CACHELINE_DETAIL_INFO);
+//PriorityQueue<DiagnosePageInfo> topPageQueue(MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
 
 static void initializer(void) {
     Logger::info("NumaPerf initializer\n");
@@ -751,15 +751,15 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
         unsigned long seriousScore = pageDetailedAccessInfo->getTotalRemoteAccess();
 
         // insert into global top page queue
-        if (topPageQueue.mayCanInsert(seriousScore)) {
-            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo->copy(),
-                                                                                          diagnoseCallSiteInfo,
-                                                                                          pageDetailedAccessInfo);
-            DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
-            if (NULL != diagnosePageInfoOld) {
-                DiagnosePageInfo::release(diagnosePageInfoOld);
-            }
-        }
+//        if (topPageQueue.mayCanInsert(seriousScore)) {
+//            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo->copy(),
+//                                                                                          diagnoseCallSiteInfo,
+//                                                                                          pageDetailedAccessInfo);
+//            DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
+//            if (NULL != diagnosePageInfoOld) {
+//                DiagnosePageInfo::release(diagnosePageInfoOld);
+//            }
+//        }
 
         // insert into obj's top page queue
         PageDetailedAccessInfo *pageCanClear = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo,
@@ -795,14 +795,14 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         }
         unsigned long seriousScore = cacheLineDetailedInfo->getTotalRemoteAccess();
         // insert into global top cache queue
-        if (topCacheLineQueue.mayCanInsert(seriousScore)) {
-            DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(
-                    objectInfo->copy(), diagnoseCallSiteInfo, cacheLineDetailedInfo);
-            DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
-            if (NULL != oldTopCacheLine) {
-                DiagnoseCacheLineInfo::release(oldTopCacheLine);
-            }
-        }
+//        if (topCacheLineQueue.mayCanInsert(seriousScore)) {
+//            DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(
+//                    objectInfo->copy(), diagnoseCallSiteInfo, cacheLineDetailedInfo);
+//            DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
+//            if (NULL != oldTopCacheLine) {
+//                DiagnoseCacheLineInfo::release(oldTopCacheLine);
+//            }
+//        }
 
         // insert into obj's top cache queue
         CacheLineDetailedInfo *cacheCanClear = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
