@@ -108,9 +108,6 @@ public:
         return NULL;
     }
 #endif
-    inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
-        return topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
-    }
 
     inline DiagnosePageInfo *insertInfoPageQueue(DiagnosePageInfo *diagnosePageInfo) {
         return topPageDetailedAccessInfoQueue.insert(diagnosePageInfo);
@@ -185,6 +182,10 @@ public:
 
     inline bool operator>=(unsigned long seriousScore) {
         return this->getTotalRemoteAccess() >= seriousScore;
+    }
+
+    inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
+        return topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
     }
 
     inline unsigned long getAllInvalidNumInOtherThreads() const {

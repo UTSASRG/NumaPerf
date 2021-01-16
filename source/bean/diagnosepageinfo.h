@@ -120,9 +120,9 @@ public:
         return (this->getTotalRemoteMainMemoryAccess()) == (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
 
-//    inline bool operator>=(unsigned long seriousScore) {
-//        return this->getTotalRemoteMainMemoryAccess() >= seriousScore;
-//    }
+    inline bool operator>=(unsigned long remoteMemAccess) {
+        return this->getTotalRemoteMainMemoryAccess() >= remoteMemAccess;
+    }
 
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
@@ -130,7 +130,7 @@ public:
             prefix[i] = ' ';
             prefix[i + 1] = '\0';
         }
-        fprintf(file, "%sPage start address:%p\n", prefix, pageStartAddress);
+        fprintf(file, "%sPage start address:%lu\n", prefix, pageStartAddress);
         fprintf(file, "%sSerious Score:%f\n", prefix,
                 Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess(), totalRunningCycles));
         fprintf(file, "%sPage Sharing threadIdAndIsSharedUnion:%d\n", prefix, threadIdAndIsSharedUnion);

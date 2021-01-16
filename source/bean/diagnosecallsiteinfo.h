@@ -126,8 +126,7 @@ public:
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
-        fprintf(file, "%sDuplicatable score:       %f/%f\n",
-                prefix,
+        fprintf(file, "%sDuplicatable score:       %f\n", prefix,
                 Scores::getSeriousScore(this->allAccessNumInOtherThread - this->readNumBeforeLastWrite,
                                         totalRunningCycles));
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {

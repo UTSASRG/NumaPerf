@@ -813,6 +813,7 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
     }
 }
 #endif
+
 inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseObjInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
@@ -913,8 +914,6 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
             }
         }
     }
-}
-
 }
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
