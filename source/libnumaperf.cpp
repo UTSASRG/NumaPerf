@@ -813,9 +813,113 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
     }
 }
 
+inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseObjInfo) {
+    unsigned long objStartAddress = objectInfo->getStartAddress();
+    unsigned long objSize = objectInfo->getSize();
+    unsigned long objEndAddress = objStartAddress + objSize;
+    for (unsigned long beginningAddress = objStartAddress;      // for page
+         beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
+        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
+        if (NULL == pageBasicAccessInfo) {
+            Logger::error("pageBasicAccessInfo is lost\n");
+            continue;
+        }
+        PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+        if (pageDetailedAccessInfo != NULL) {
+            localDiagnoseObjInfo->recordPageInfo(pageDetailedAccessInfo);
+        }
+        for (unsigned long cacheLineAddress = beginningAddress;  // for cache
+             cacheLineAddress < objEndAddress &&
+             cacheLineAddress < beginningAddress + PAGE_SIZE; cacheLineAddress += CACHE_LINE_SIZE) {
+            CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
+                    cacheLineAddress);
+            // remove the info in cache level, even there maybe are more objs inside it.
+            if (NULL == cacheLineDetailedInfo) {
+                continue;
+            }
+            localDiagnoseObjInfo->recordCacheInfo(cacheLineDetailedInfo);
+        }
+    }
+}
+
+inline void __clearCachePageInfo(ObjectInfo *objectInfo) {
+    unsigned long objStartAddress = objectInfo->getStartAddress();
+    unsigned long objSize = objectInfo->getSize();
+    unsigned long objEndAddress = objStartAddress + objSize;
+    for (unsigned long beginningAddress = objStartAddress;      // for page
+         beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
+        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
+        if (NULL == pageBasicAccessInfo) {
+            Logger::error("pageBasicAccessInfo is lost\n");
+            continue;
+        }
+        PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+        if (pageDetailedAccessInfo != NULL) {
+            if (pageDetailedAccessInfo->isCoveredByObj(objStartAddress, objSize)) {
+                pageDetailedAccessInfo->clearAll();
+                continue;
+            }
+            pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+            pageDetailedAccessInfo->clearSumValue();
+        }
+        for (unsigned long cacheLineAddress = beginningAddress;  // for cache
+             cacheLineAddress < objEndAddress &&
+             cacheLineAddress < beginningAddress + PAGE_SIZE; cacheLineAddress += CACHE_LINE_SIZE) {
+            CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
+                    cacheLineAddress);
+            // remove the info in cache level, even there maybe are more objs inside it.
+            if (NULL == cacheLineDetailedInfo) {
+                continue;
+            }
+            cacheLineDetailedInfo->clear();
+        }
+    }
+}
+
+inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnoseObjInfo) {
+    unsigned long objStartAddress = objectInfo->getStartAddress();
+    unsigned long objSize = objectInfo->getSize();
+    unsigned long objEndAddress = objStartAddress + objSize;
+    for (unsigned long beginningAddress = objStartAddress;      // for page
+         beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
+        PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
+        if (NULL == pageBasicAccessInfo) {
+            Logger::error("pageBasicAccessInfo is lost\n");
+            continue;
+        }
+        PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
+        DiagnosePageInfo localDiagnosePageInfo(ADDRESSES::getPageStartAddress(beginningAddress));
+        if (pageDetailedAccessInfo != NULL) {
+            localDiagnosePageInfo.recordPageInfo(pageDetailedAccessInfo, objStartAddress,
+                                                 objEndAddress);
+        }
+        for (unsigned long cacheLineAddress = beginningAddress;  // for cache
+             cacheLineAddress < objEndAddress &&
+             cacheLineAddress < beginningAddress + PAGE_SIZE; cacheLineAddress += CACHE_LINE_SIZE) {
+            CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
+                    cacheLineAddress);
+            // remove the info in cache level, even there maybe are more objs inside it.
+            if (NULL == cacheLineDetailedInfo) {
+                continue;
+            }
+            localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
+        }
+
+        if (diagnoseObjInfo->mayCanInsertToTopPageQueue(&localDiagnosePageInfo)) {
+            DiagnosePageInfo *diagnosePageInfo = localDiagnosePageInfo.deepCopy();
+            DiagnosePageInfo *oldPage = diagnoseObjInfo->insertInfoPageQueue(diagnosePageInfo);
+            if (NULL != oldPage) {
+                DiagnosePageInfo::releaseAll(oldPage);
+            }
+        }
+    }
+}
+
+}
+
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
-    unsigned long startAddress = objectInfo->getStartAddress();
-    unsigned long size = objectInfo->getSize();
+//    unsigned long startAddress = objectInfo->getStartAddress();
+//    unsigned long size = objectInfo->getSize();
     unsigned long mallocCallSite = objectInfo->getMallocCallSite();
     DiagnoseCallSiteInfo *diagnoseCallSiteInfo = callSiteInfoMap.find(mallocCallSite, 0);
     if (NULL == diagnoseCallSiteInfo) {
@@ -823,13 +927,14 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         return;
     }
     DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
-    __collectAndClearPageInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
-    __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
-
+    __recordInfo(objectInfo, &diagnoseObjInfo);
     diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
+//    __collectAndClearPageInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
+//    __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
 
     if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
         DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
+        __collectDetailInfo(objectInfo, newDiagnoseObjInfo);
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
         if (oldDiagnoseObj != NULL) {
             DiagnoseObjInfo::release(oldDiagnoseObj);
@@ -838,7 +943,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         ObjectInfo::release(objectInfo);
     }
 
-    diagnoseObjInfo.clearCacheAndPage();
+    __clearCachePageInfo(objectInfo);
 
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);

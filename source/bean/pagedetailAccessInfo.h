@@ -163,6 +163,14 @@ public:
         threadIdAndIsSharedUnion = MAX_THREAD_NUM + 1;
     }
 
+    inline unsigned long getStartAddress() {
+        return startAddress;
+    }
+
+    inline unsigned long getThreadIdAndIsSharedUnion() {
+        return threadIdAndIsSharedUnion;
+    }
+
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
         if (objStartAddress > this->startAddress) {
             return false;

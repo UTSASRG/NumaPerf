@@ -6,76 +6,144 @@
 
 class DiagnosePageInfo {
 private:
-    ObjectInfo *objectInfo;
-    DiagnoseCallSiteInfo *diagnoseCallSiteInfo;
-    PageDetailedAccessInfo pageDetailedAccessInfo;
+//    ObjectInfo *objectInfo;
+//    DiagnoseCallSiteInfo *diagnoseCallSiteInfo;
+    unsigned long pageStartAddress;
+    int threadIdAndIsSharedUnion;           // this could used to identify block wise interleaved or page interleaved
+    unsigned long remoteMemAccessNum;
+    unsigned long remoteInvalidationNum;    // remoteMemAccessNum + remoteInvalidationNum is the final remote main memory access, to quantify the serious the NUMA issue
+    unsigned long readNumBeforeLastWrite;   // remoteMemAccessNum - readNumBeforeLastWrite is basically the duplicated reading
+
+    unsigned long invalidationByTrueSharing;  // to identify true sharing and false sharing issues in this page
+    unsigned long invalidationByFalseSharing;
+    PriorityQueue<CacheLineDetailedInfo> topCacheLineDetailQueue;
 
     static MemoryPool localMemoryPool;
 
-    DiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo,
-                     PageDetailedAccessInfo *pageDetailedAccessInfo) {
-        this->objectInfo = objectInfo;
-        this->diagnoseCallSiteInfo = diagnoseCallSiteInfo;
-        memcpy(&(this->pageDetailedAccessInfo), pageDetailedAccessInfo, sizeof(PageDetailedAccessInfo));
+public:
+
+    DiagnosePageInfo(unsigned long pageStartAddress) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO) {
+        this->pageStartAddress = pageStartAddress;
+        this->threadIdAndIsSharedUnion = -1;
+        this->remoteMemAccessNum = 0;
+        this->remoteInvalidationNum = 0;
+        this->readNumBeforeLastWrite = 0;
+        this->invalidationByTrueSharing = 0;
+        this->invalidationByFalseSharing = 0;
     }
 
-public:
-    inline static DiagnosePageInfo *
-    createDiagnosePageInfo(ObjectInfo *objectInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo,
-                           PageDetailedAccessInfo *pageDetailedAccessInfo1) {
+    inline static DiagnosePageInfo *createDiagnosePageInfo(unsigned long pageStartAddress) {
         void *buff = localMemoryPool.get();
 //        Logger::debug("new DiagnosePageInfo buff address:%lu \n", buff);
-        DiagnosePageInfo *ret = new(buff) DiagnosePageInfo(objectInfo, diagnoseCallSiteInfo, pageDetailedAccessInfo1);
+        DiagnosePageInfo *ret = new(buff) DiagnosePageInfo(pageStartAddress);
         return ret;
     }
 
-    inline static void release(DiagnosePageInfo *buff) {
-        ObjectInfo::release(buff->objectInfo);
+//    inline static void releaseOnlyDiagnosePageInfo(DiagnosePageInfo *buff) {
+//        localMemoryPool.release((void *) buff);
+//    }
+
+    inline static void releaseAll(DiagnosePageInfo *buff) {
+        for (int i = 0; i < buff->topCacheLineDetailQueue.getSize(); i++) {
+            CacheLineDetailedInfo::release(buff->topCacheLineDetailQueue.getValues()[i]);
+        }
         localMemoryPool.release((void *) buff);
     }
 
-    inline unsigned long getSeriousScore() {
-        return this->pageDetailedAccessInfo.getTotalRemoteAccess();
+    void recordPageInfo(PageDetailedAccessInfo *pageDetailedAccessInfo, unsigned long objAddress,
+                        unsigned long objSize) {
+        this->pageStartAddress = pageDetailedAccessInfo->getStartAddress();
+        this->threadIdAndIsSharedUnion = pageDetailedAccessInfo->getThreadIdAndIsSharedUnion();
+        bool wholePageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(objAddress, objSize);
+        if (wholePageCoveredByObj) {
+            this->remoteMemAccessNum = pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(0, 0);
+        } else {
+            this->remoteMemAccessNum = pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
+                    objAddress, objSize);
+        }
+    }
+
+    void recordCacheInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
+        this->remoteInvalidationNum = cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        this->readNumBeforeLastWrite = cacheLineDetailedInfo->getReadNumBeforeLastWrite();
+        int cacheSharingType = cacheLineDetailedInfo->getSharingType();
+        if (cacheSharingType == TRUE_SHARING) {
+            this->invalidationByTrueSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        } else if (cacheSharingType == FALSE_SHARING) {
+            this->invalidationByFalseSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        }
+    }
+
+
+    void clearResidentDetailedInfo(unsigned long objAddress, unsigned long objSize) {
+        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
+            this->topCacheLineDetailQueue.getValues()[i]->clear();
+        }
+    }
+
+    DiagnosePageInfo *deepCopy() {
+        DiagnosePageInfo *diagnosePageInfo = createDiagnosePageInfo(this->pageStartAddress);
+        diagnosePageInfo->pageStartAddress = this->pageStartAddress;
+        diagnosePageInfo->threadIdAndIsSharedUnion = this->threadIdAndIsSharedUnion;
+        diagnosePageInfo->remoteMemAccessNum = this->remoteMemAccessNum;
+        diagnosePageInfo->remoteInvalidationNum = this->remoteInvalidationNum;
+        diagnosePageInfo->readNumBeforeLastWrite = this->readNumBeforeLastWrite;
+        diagnosePageInfo->invalidationByTrueSharing = this->invalidationByTrueSharing;
+        diagnosePageInfo->invalidationByFalseSharing = this->invalidationByFalseSharing;
+        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
+            diagnosePageInfo->topCacheLineDetailQueue.insert(this->topCacheLineDetailQueue.getValues()[i]->copy());
+        }
+        return diagnosePageInfo;
+    }
+
+    inline unsigned long getTotalRemoteMainMemoryAccess() {
+        return this->remoteMemAccessNum + this->remoteInvalidationNum;
     }
 
     inline bool operator<(DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return (this->pageDetailedAccessInfo) < *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+        return (this->getTotalRemoteMainMemoryAccess()) < (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
 
     inline bool operator>(DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return (this->pageDetailedAccessInfo) > *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+        return (this->getTotalRemoteMainMemoryAccess()) > (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
 
     inline bool operator<=(DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return (this->pageDetailedAccessInfo) <= *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+        return (this->getTotalRemoteMainMemoryAccess()) <= (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
 
     inline bool operator>=(DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return (this->pageDetailedAccessInfo) >= *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+        return (this->getTotalRemoteMainMemoryAccess()) >= (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
 
     inline bool operator==(DiagnosePageInfo &diagnoseCacheLineInfo) {
-        return (this->pageDetailedAccessInfo) == *(diagnoseCacheLineInfo.pagePageDetailedAccessInfo());
+        return (this->getTotalRemoteMainMemoryAccess()) == (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
 
-    inline bool operator>=(unsigned long seriousScore) {
-        return this->pageDetailedAccessInfo >= seriousScore;
-    }
-
-    inline PageDetailedAccessInfo *pagePageDetailedAccessInfo() {
-        return &pageDetailedAccessInfo;
-    }
+//    inline bool operator>=(unsigned long seriousScore) {
+//        return this->getTotalRemoteMainMemoryAccess() >= seriousScore;
+//    }
 
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
-        this->pageDetailedAccessInfo.dump(file, blackSpaceNum + 2, totalRunningCycles);
-        this->objectInfo->dump(file, blackSpaceNum + 2);
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
             prefix[i] = ' ';
             prefix[i + 1] = '\0';
         }
-        fprintf(file, "%sCall Site Stacks:\n", prefix);
-        this->diagnoseCallSiteInfo->dump_call_stacks(file);
+        fprintf(file, "%sPage start address:%p\n", prefix, pageStartAddress);
+        fprintf(file, "%sSerious Score:%f\n", prefix,
+                Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess(), totalRunningCycles));
+        fprintf(file, "%sPage Sharing threadIdAndIsSharedUnion:%d\n", prefix, threadIdAndIsSharedUnion);
+        fprintf(file, "%sInvalidationByTrueSharing score:%f\n", prefix,
+                Scores::getSeriousScore(invalidationByTrueSharing, totalRunningCycles));
+        fprintf(file, "%sInvalidationByFalseSharing score:%f\n", prefix,
+                Scores::getSeriousScore(invalidationByFalseSharing, totalRunningCycles));
+        fprintf(file, "%sDuplicate score:%f\n", prefix,
+                Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess() - readNumBeforeLastWrite,
+                                        totalRunningCycles));
+        for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
+            topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
+        }
     }
 };
 
