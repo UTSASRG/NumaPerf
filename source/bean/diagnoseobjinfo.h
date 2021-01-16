@@ -187,16 +187,8 @@ public:
         return this->getTotalRemoteAccess() >= seriousScore;
     }
 
-    inline unsigned long getAllInvalidNumInMainThread() const {
-        return allInvalidNumInMainThread;
-    }
-
     inline unsigned long getAllInvalidNumInOtherThreads() const {
         return allInvalidNumInOtherThreads;
-    }
-
-    inline unsigned long getAllAccessNumInMainThread() const {
-        return allAccessNumInMainThread;
     }
 
     inline unsigned long getAllAccessNumInOtherThread() const {
@@ -205,10 +197,6 @@ public:
 
     inline unsigned long getReadNumBeforeLastWrite() const {
         return readNumBeforeLastWrite;
-    }
-
-    inline unsigned long getContinualReadNumAfterAWrite() const {
-        return continualReadNumAfterAWrite;
     }
 
     inline unsigned long getInvalidNumInOtherThreadByTrueCacheSharing() const {
@@ -245,7 +233,7 @@ public:
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
-        fprintf(file, "%sDuplicatable score:       %f/%f\n", prefix,
+        fprintf(file, "%sDuplicatable score:       %f\n", prefix,
                 Scores::getSeriousScore(this->allAccessNumInOtherThread - this->readNumBeforeLastWrite,
                                         totalRunningCycles));
 
