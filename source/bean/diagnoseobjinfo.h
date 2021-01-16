@@ -125,7 +125,7 @@ public:
     }
 
     inline void recordCacheInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
-        this->allInvalidNumInOtherThreads + = cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
         this->readNumBeforeLastWrite += cacheLineDetailedInfo->getReadNumBeforeLastWrite();
         int cacheSharingType = cacheLineDetailedInfo->getSharingType();
         if (cacheSharingType == TRUE_SHARING) {
