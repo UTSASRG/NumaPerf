@@ -7,7 +7,6 @@
 #include <assert.h>
 #include "utils/collection/priorityqueue.h"
 #include "bean/pagedetailAccessInfo.h"
-#include "bean/diagnoseobjinfo.h"
 #include "bean/diagnosecacheinfo.h"
 #include "utils/memorypool.h"
 #include "bean/pagebasicaccessinfo.h"
@@ -725,6 +724,7 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     return objectStartAddress;
 }
 
+#if 0
 inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnoseObjInfo,
                                       DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
@@ -812,7 +812,7 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         cacheCanClear->clear();
     }
 }
-
+#endif
 inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseObjInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();

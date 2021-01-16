@@ -85,7 +85,7 @@ public:
         //todo
         return allInvalidNumInOtherThreads + allAccessNumInOtherThread;
     }
-
+#if 0
     inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
         this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
@@ -107,7 +107,7 @@ public:
         }
         return NULL;
     }
-
+#endif
     inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
         return topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
     }

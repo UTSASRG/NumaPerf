@@ -7,8 +7,6 @@
 #include "callstacks.h"
 #include "diagnoseobjinfo.h"
 
-class DiagnoseObjInfo;
-
 class DiagnoseCallSiteInfo {
     CallStack callStack;
     unsigned long allAccessNumInOtherThread;
