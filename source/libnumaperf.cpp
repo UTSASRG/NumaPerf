@@ -938,15 +938,14 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
         __collectDetailInfo(objectInfo, newDiagnoseObjInfo);
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
+        __clearCachePageInfo(objectInfo);
         if (oldDiagnoseObj != NULL) {
             DiagnoseObjInfo::releaseAll(oldDiagnoseObj);
         }
     } else {
+        __clearCachePageInfo(objectInfo);
         ObjectInfo::release(objectInfo);
     }
-
-    __clearCachePageInfo(objectInfo);
-
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);
 }

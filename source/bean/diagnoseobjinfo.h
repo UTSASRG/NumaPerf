@@ -108,6 +108,10 @@ public:
         return topPageDetailedAccessInfoQueue.insert(diagnosePageInfo);
     }
 
+    ObjectInfo *getObjectInfo() {
+        return objectInfo;
+    }
+
     inline void recordPageInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
         bool wholePageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(this->objectInfo->getStartAddress(),
                                                                             this->objectInfo->getSize());
