@@ -36,12 +36,13 @@ public:
 
     inline DiagnoseObjInfo *deepCopy() {
         DiagnoseObjInfo *buff = (DiagnoseObjInfo *) localMemoryPool.get();
-        buff->objectInfo = this->objectInfo;
+        buff = new((void *) buff) DiagnoseObjInfo(this->objectInfo);
         buff->allAccessNumInOtherThread = this->allAccessNumInOtherThread;
         buff->allInvalidNumInOtherThreads = this->allInvalidNumInOtherThreads;
         buff->readNumBeforeLastWrite = this->readNumBeforeLastWrite;
         buff->invalidNumInOtherThreadByTrueCacheSharing = this->invalidNumInOtherThreadByTrueCacheSharing;
         buff->invalidNumInOtherThreadByFalseCacheSharing = this->invalidNumInOtherThreadByFalseCacheSharing;
+        buff->topPageDetailedAccessInfoQueue.setEndIndex(this->topPageDetailedAccessInfoQueue.getSize());
         for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
             buff->topPageDetailedAccessInfoQueue.getValues()[i] = this->topPageDetailedAccessInfoQueue.getValues()[i]->deepCopy();
         }
@@ -66,18 +67,11 @@ public:
         }
     }
 
-    inline void release() {
-//        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
-//            CacheLineDetailedInfo::release(this->topCacheLineDetailQueue.getValues()[i]);
-//        }
-        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
-            DiagnosePageInfo::releaseAll(this->topPageDetailedAccessInfoQueue.getValues()[i]);
+    inline static void releaseAll(DiagnoseObjInfo *buff) {
+        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
+            DiagnosePageInfo::releaseAll(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
         }
-        ObjectInfo::release(this->objectInfo);
-    }
-
-    inline static void release(DiagnoseObjInfo *buff) {
-        buff->release();
+        ObjectInfo::release(buff->objectInfo);
         localMemoryPool.release((void *) buff);
     }
 
@@ -85,6 +79,7 @@ public:
         //todo
         return allInvalidNumInOtherThreads + allAccessNumInOtherThread;
     }
+
 #if 0
     inline CacheLineDetailedInfo *insertCacheLineDetailedInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
         this->allInvalidNumInMainThread += cacheLineDetailedInfo->getInvalidationNumberInFirstThread();
@@ -185,7 +180,11 @@ public:
     }
 
     inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
-        return topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
+        return this->topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
+    }
+
+    inline bool mayCanInsertToTopPageQueue(unsigned long remoteAccess) {
+        return this->topPageDetailedAccessInfoQueue.mayCanInsert(remoteAccess);
     }
 
     inline unsigned long getAllInvalidNumInOtherThreads() const {

@@ -858,10 +858,10 @@ inline void __clearCachePageInfo(ObjectInfo *objectInfo) {
         if (pageDetailedAccessInfo != NULL) {
             if (pageDetailedAccessInfo->isCoveredByObj(objStartAddress, objSize)) {
                 pageDetailedAccessInfo->clearAll();
-                continue;
+            } else {
+                pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+                pageDetailedAccessInfo->clearSumValue();
             }
-            pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-            pageDetailedAccessInfo->clearSumValue();
         }
         for (unsigned long cacheLineAddress = beginningAddress;  // for cache
              cacheLineAddress < objEndAddress &&
@@ -916,6 +916,8 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
     }
 }
 
+#define MIN_REMOTE_ACCESS_PER_OBJ 100
+
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
 //    unsigned long startAddress = objectInfo->getStartAddress();
 //    unsigned long size = objectInfo->getSize();
@@ -931,12 +933,13 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
 //    __collectAndClearPageInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
 //    __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
 
-    if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
+    if (diagnoseObjInfo.getTotalRemoteAccess() > MIN_REMOTE_ACCESS_PER_OBJ &&
+        diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
         DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
         __collectDetailInfo(objectInfo, newDiagnoseObjInfo);
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
         if (oldDiagnoseObj != NULL) {
-            DiagnoseObjInfo::release(oldDiagnoseObj);
+            DiagnoseObjInfo::releaseAll(oldDiagnoseObj);
         }
     } else {
         ObjectInfo::release(objectInfo);
