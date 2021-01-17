@@ -9,6 +9,7 @@
 
 class DiagnoseCallSiteInfo {
     CallStack callStack;
+    unsigned long objNum;
     unsigned long allAccessNumInOtherThread;
     unsigned long allInvalidNumInOtherThreads;
     unsigned long readNumBeforeLastWrite;
@@ -20,6 +21,7 @@ private:
     static MemoryPool localMemoryPool;
 
     DiagnoseCallSiteInfo() : callStack(), topObjInfoQueue(MAX_TOP_OBJ_INFO) {
+        objNum = 0;
         allInvalidNumInOtherThreads = 0;
         allAccessNumInOtherThread = 0;
         readNumBeforeLastWrite = 0;
@@ -45,6 +47,7 @@ public:
     }
 
     inline void recordDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo) {
+        this->objNum++;
         this->allAccessNumInOtherThread += diagnoseObjInfo->getAllAccessNumInOtherThread();
         this->allInvalidNumInOtherThreads += diagnoseObjInfo->getAllInvalidNumInOtherThreads();
         this->readNumBeforeLastWrite += diagnoseObjInfo->getReadNumBeforeLastWrite();
@@ -108,6 +111,7 @@ public:
             prefix[i + 1] = '\0';
         }
         fprintf(file, "%sSeriousScore:             %f\n", prefix, this->getSeriousScore(totalRunningCycles));
+        fprintf(file, "%sObjectNumber:             %lu\n", prefix, this->objNum);
 //        fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidNumInMainThread());
 //        fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidNumInOtherThread());
 //        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix, this->getAccessNumInMainThread());

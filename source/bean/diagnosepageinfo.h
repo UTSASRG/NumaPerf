@@ -64,8 +64,8 @@ public:
     }
 
     void recordCacheInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
-        this->remoteInvalidationNum = cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
-        this->readNumBeforeLastWrite = cacheLineDetailedInfo->getReadNumBeforeLastWrite();
+        this->remoteInvalidationNum += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+        this->readNumBeforeLastWrite += cacheLineDetailedInfo->getReadNumBeforeLastWrite();
         int cacheSharingType = cacheLineDetailedInfo->getSharingType();
         if (cacheSharingType == TRUE_SHARING) {
             this->invalidationByTrueSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();

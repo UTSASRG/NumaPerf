@@ -877,6 +877,8 @@ inline void __clearCachePageInfo(ObjectInfo *objectInfo) {
     }
 }
 
+#define MIN_REMOTE_ACCESS_PER_PAGE 100
+
 inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnoseObjInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
@@ -906,7 +908,8 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
             localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
         }
 
-        if (diagnoseObjInfo->mayCanInsertToTopPageQueue(&localDiagnosePageInfo)) {
+        if (localDiagnosePageInfo.getTotalRemoteMainMemoryAccess() > MIN_REMOTE_ACCESS_PER_PAGE &&
+            diagnoseObjInfo->mayCanInsertToTopPageQueue(&localDiagnosePageInfo)) {
             DiagnosePageInfo *diagnosePageInfo = localDiagnosePageInfo.deepCopy();
             DiagnosePageInfo *oldPage = diagnoseObjInfo->insertInfoPageQueue(diagnosePageInfo);
             if (NULL != oldPage) {
