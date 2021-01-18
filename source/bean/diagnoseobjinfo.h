@@ -100,7 +100,7 @@ public:
 //                CacheLineDetailedInfo::release(oldCacheLineInfo);
 //            }
         }
-        return NULL;
+        return cacheLineDetailedInfo;
     }
 #endif
 
@@ -156,7 +156,7 @@ public:
 ////                PageDetailedAccessInfo::release(oldPageInfo);
 ////            }
 //        }
-//        return NULL;
+//        return pageDetailedAccessInfo;
 //    }
 
     inline bool operator<(const DiagnoseObjInfo &diagnoseObjInfo) {
@@ -232,7 +232,10 @@ public:
 //                this->invalidNumInOtherThreadByFalseCacheSharing);
 //        fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %lu/%lu\n", prefix,
 //                this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
-
+        fprintf(file, "%sPage score:               %f\n", prefix,
+                Scores::getSeriousScore(allAccessNumInOtherThread + allInvalidNumInOtherThreads -
+                                        invalidNumInOtherThreadByTrueCacheSharing -
+                                        invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByTrueCacheSharing score:  %f\n", prefix,
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,

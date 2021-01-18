@@ -908,6 +908,10 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
             localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
         }
 
+        if (localDiagnosePageInfo.isDominatedByCacheSharing()) {
+            continue;
+        }
+
         if (localDiagnosePageInfo.getTotalRemoteMainMemoryAccess() > MIN_REMOTE_ACCESS_PER_PAGE &&
             diagnoseObjInfo->mayCanInsertToTopPageQueue(&localDiagnosePageInfo)) {
             DiagnosePageInfo *diagnosePageInfo = localDiagnosePageInfo.deepCopy();
@@ -917,6 +921,17 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
             }
         }
     }
+}
+
+inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo) {
+    unsigned long objSize = diagnoseObjInfo->getObjectInfo()->getSize();
+    if (objSize < NUMA_NODES * PAGE_SIZE >> 1) {
+        return (diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing() >
+                diagnoseObjInfo->getTotalRemoteAccess() * 0.7) ||
+               (diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing() >
+                diagnoseObjInfo->getTotalRemoteAccess() * 0.7);
+    }
+    return true;
 }
 
 #define MIN_REMOTE_ACCESS_PER_OBJ 100
@@ -932,12 +947,14 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     }
     DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
     __recordInfo(objectInfo, &diagnoseObjInfo);
-    diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
-//    __collectAndClearPageInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
-//    __collectAndClearCacheInfo(objectInfo, &diagnoseObjInfo, diagnoseCallSiteInfo);
+    if (diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
+            &diagnoseObjInfo)) {
+        __clearCachePageInfo(objectInfo);
+        return;
+    }
 
-    if (diagnoseObjInfo.getTotalRemoteAccess() > MIN_REMOTE_ACCESS_PER_OBJ &&
-        diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
+    diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
+    if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
         DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
         __collectDetailInfo(objectInfo, newDiagnoseObjInfo);
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);

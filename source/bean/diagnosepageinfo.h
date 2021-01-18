@@ -4,6 +4,10 @@
 #include "objectInfo.h"
 #include "diagnosecallsiteinfo.h"
 
+#define PAGE_TRUE_SHARING_DOMINATE_PERCENT 0.5
+#define PAGE_FALSE_SHARING_DOMINATE_PERCENT 0.7
+#define PAGE_TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT 0.6
+
 class DiagnosePageInfo {
 private:
 //    ObjectInfo *objectInfo;
@@ -81,6 +85,23 @@ public:
         }
     }
 
+    bool isDominatedByCacheSharing() {
+        unsigned long totalRemoteAccess = this->getTotalRemoteMainMemoryAccess();
+        if (this->invalidationByTrueSharing >
+            totalRemoteAccess * PAGE_TRUE_SHARING_DOMINATE_PERCENT) {
+            return true;
+        }
+        if (this->invalidationByTrueSharing >
+            totalRemoteAccess * PAGE_FALSE_SHARING_DOMINATE_PERCENT) {
+            return true;
+        }
+        if ((this->invalidationByTrueSharing + this->invalidationByTrueSharing) >
+            totalRemoteAccess * PAGE_TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT) {
+            return true;
+        }
+        return false;
+    }
+
     DiagnosePageInfo *deepCopy() {
         DiagnosePageInfo *diagnosePageInfo = createDiagnosePageInfo(this->pageStartAddress);
         diagnosePageInfo->pageStartAddress = this->pageStartAddress;
@@ -134,8 +155,12 @@ public:
         fprintf(file, "%sSerious Score:%f\n", prefix,
                 Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess(), totalRunningCycles));
         fprintf(file, "%sPage Sharing threadIdAndIsSharedUnion:%d\n", prefix, threadIdAndIsSharedUnion);
+        fprintf(file, "%sPage score:               %f\n", prefix,
+                Scores::getSeriousScore(remoteMemAccessNum + remoteInvalidationNum -
+                                        remoteInvalidationNum -
+                                        invalidationByFalseSharing, totalRunningCycles));
         fprintf(file, "%sInvalidationByTrueSharing score:%f\n", prefix,
-                Scores::getSeriousScore(invalidationByTrueSharing, totalRunningCycles));
+                Scores::getSeriousScore(remoteInvalidationNum, totalRunningCycles));
         fprintf(file, "%sInvalidationByFalseSharing score:%f\n", prefix,
                 Scores::getSeriousScore(invalidationByFalseSharing, totalRunningCycles));
         fprintf(file, "%sDuplicate score:%f\n", prefix,
