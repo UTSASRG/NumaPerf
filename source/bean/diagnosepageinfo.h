@@ -121,6 +121,26 @@ public:
         return this->remoteMemAccessNum + this->remoteInvalidationNum;
     }
 
+    inline unsigned long getRemoteMemAccessNum() {
+        return this->remoteMemAccessNum;
+    }
+
+    inline unsigned long getRemoteInvalidationNum() {
+        return this->remoteInvalidationNum;
+    }
+
+    inline unsigned long getReadNumBeforeLastWrite() {
+        return this->readNumBeforeLastWrite;
+    }
+
+    inline unsigned long getInvalidationByTrueSharing() {
+        return this->invalidationByTrueSharing;
+    }
+
+    inline unsigned long getInvalidationByFalseSharing() {
+        return this->invalidationByFalseSharing;
+    }
+
     inline bool operator<(DiagnosePageInfo &diagnoseCacheLineInfo) {
         return (this->getTotalRemoteMainMemoryAccess()) < (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }

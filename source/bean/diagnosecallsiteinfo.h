@@ -46,6 +46,16 @@ public:
         return allAccessNumInOtherThread + allInvalidNumInOtherThreads;
     }
 
+    inline unsigned long getRemoteAccessWithoutSharing() const {
+        return getTotalRemoteAccess() - invalidNumInOtherThreadByTrueCacheSharing -
+               invalidNumInOtherThreadByFalseCacheSharing;
+    }
+
+    inline unsigned long getDuplicateNumber() const {
+        return this->allAccessNumInOtherThread - this->readNumBeforeLastWrite;
+
+    }
+
     inline void recordDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo) {
         this->objNum++;
         this->allAccessNumInOtherThread += diagnoseObjInfo->getAllAccessNumInOtherThread();
@@ -103,6 +113,22 @@ public:
         return Scores::getSeriousScore(getTotalRemoteAccess(), totalRunningCycles);
     }
 
+    inline double getPageSeriousScore(unsigned long totalRunningCycles) {
+        return Scores::getSeriousScore(getRemoteAccessWithoutSharing(), totalRunningCycles);
+    }
+
+    inline double getTrueSharingSeriousScore(unsigned long totalRunningCycles) {
+        return Scores::getSeriousScore(invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles);
+    }
+
+    inline double getFalseSharingSeriousScore(unsigned long totalRunningCycles) {
+        return Scores::getSeriousScore(invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles);
+    }
+
+    inline double getDuplicateSeriousScore(unsigned long totalRunningCycles) {
+        return Scores::getSeriousScore(getDuplicateNumber(), totalRunningCycles);
+    }
+
     inline void dump(FILE *file, unsigned long totalRunningCycles, int blackSpaceNum) {
         this->dump_call_stacks(file);
         char prefix[blackSpaceNum + 2];
@@ -125,17 +151,13 @@ public:
 
 //        fprintf(file, "%sAccessNumInOtherThreads score:  %f\n", prefix,
 //                Scores::getSeriousScore(this->getAccessNumInOtherThread(), totalRunningCycles));
-        fprintf(file, "%sPage score:               %f\n", prefix,
-                Scores::getSeriousScore(allAccessNumInOtherThread + allInvalidNumInOtherThreads -
-                                        invalidNumInOtherThreadByTrueCacheSharing -
-                                        invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
+        fprintf(file, "%sPage score:               %f\n", prefix, this->getPageSeriousScore(totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByTrueCacheSharing score:  %f\n", prefix,
-                Scores::getSeriousScore(this->invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles));
+                getTrueSharingSeriousScore(totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,
-                Scores::getSeriousScore(this->invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
+                this->getFalseSharingSeriousScore(totalRunningCycles));
         fprintf(file, "%sDuplicatable score:       %f\n", prefix,
-                Scores::getSeriousScore(this->allAccessNumInOtherThread - this->readNumBeforeLastWrite,
-                                        totalRunningCycles));
+                this->getDuplicateSeriousScore(totalRunningCycles));
         fprintf(file, "%sObjectNumber:             %lu\n", prefix, this->objNum);
         for (int i = 0; i < topObjInfoQueue.getSize(); i++) {
             fprintf(file, "%sTop Object %d:\n", prefix, i);

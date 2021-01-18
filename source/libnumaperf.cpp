@@ -415,6 +415,25 @@ __attribute__ ((destructor)) void finalizer(void) {
             continue;
         }
         topDiadCallSiteInfoQueue.insert(iterator.getData());
+#if 0
+        if (iterator.getData()->getPageSeriousScore(totalRunningCycles) > PAGE_SERIOUS_SCORE_THRESHOLD) {
+            topDiadCallSiteInfoQueue.insert(iterator.getData());
+            continue;
+        }
+        if (iterator.getData()->getTrueSharingSeriousScore(totalRunningCycles) > TRUE_SHARING_SERIOUS_SCORE_THRESHOLD) {
+            topDiadCallSiteInfoQueue.insert(iterator.getData());
+            continue;
+        }
+        if (iterator.getData()->getFalseSharingSeriousScore(totalRunningCycles) >
+            FALSE_SHARING_SERIOUS_SCORE_THRESHOLD) {
+            topDiadCallSiteInfoQueue.insert(iterator.getData());
+            continue;
+        }
+        if (iterator.getData()->getDuplicateSeriousScore(totalRunningCycles) > DUPLICATE_SERIOUS_SCORE_THRESHOLD) {
+            topDiadCallSiteInfoQueue.insert(iterator.getData());
+            continue;
+        }
+#endif
     }
     FILE *dumpFile = fopen("NumaPerf.dump", "w");
     if (!dumpFile) {
@@ -825,9 +844,11 @@ inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseO
             Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
+        DiagnosePageInfo localDiagnosePageInfo(ADDRESSES::getPageStartAddress(beginningAddress));
         PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
         if (pageDetailedAccessInfo != NULL) {
-            localDiagnoseObjInfo->recordPageInfo(pageDetailedAccessInfo);
+            localDiagnosePageInfo.recordPageInfo(pageDetailedAccessInfo, objStartAddress,
+                                                 objEndAddress);
         }
         for (unsigned long cacheLineAddress = beginningAddress;  // for cache
              cacheLineAddress < objEndAddress &&
@@ -838,8 +859,12 @@ inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseO
             if (NULL == cacheLineDetailedInfo) {
                 continue;
             }
-            localDiagnoseObjInfo->recordCacheInfo(cacheLineDetailedInfo);
+            localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
         }
+        if (localDiagnosePageInfo.isDominatedByCacheSharing()) {
+            continue;
+        }
+        localDiagnoseObjInfo->recordDiagnosePageInfo(&localDiagnosePageInfo);
     }
 }
 
@@ -908,10 +933,6 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
             localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
         }
 
-        if (localDiagnosePageInfo.isDominatedByCacheSharing()) {
-            continue;
-        }
-
         if (localDiagnosePageInfo.getTotalRemoteMainMemoryAccess() > MIN_REMOTE_ACCESS_PER_PAGE &&
             diagnoseObjInfo->mayCanInsertToTopPageQueue(&localDiagnosePageInfo)) {
             DiagnosePageInfo *diagnosePageInfo = localDiagnosePageInfo.deepCopy();
@@ -928,7 +949,7 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo) {
     if (objSize < NUMA_NODES * PAGE_SIZE >> 1) {
         return (diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing() >
                 diagnoseObjInfo->getTotalRemoteAccess() * 0.7) ||
-               (diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing() >
+               (diagnoseObjInfo->getDuplicateNum() >
                 diagnoseObjInfo->getTotalRemoteAccess() * 0.7);
     }
     return true;

@@ -112,26 +112,34 @@ public:
         return objectInfo;
     }
 
-    inline void recordPageInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
-        bool wholePageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(this->objectInfo->getStartAddress(),
-                                                                            this->objectInfo->getSize());
-        if (wholePageCoveredByObj) {
-            this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(0, 0);
-        } else {
-            this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
-                    objectInfo->getStartAddress(), objectInfo->getSize());
-        }
-    }
+//    inline void recordPageInfo(PageDetailedAccessInfo *pageDetailedAccessInfo) {
+//        bool wholePageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(this->objectInfo->getStartAddress(),
+//                                                                            this->objectInfo->getSize());
+//        if (wholePageCoveredByObj) {
+//            this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(0, 0);
+//        } else {
+//            this->allAccessNumInOtherThread += pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(
+//                    objectInfo->getStartAddress(), objectInfo->getSize());
+//        }
+//    }
+//
+//    inline void recordCacheInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
+//        this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+//        this->readNumBeforeLastWrite += cacheLineDetailedInfo->getReadNumBeforeLastWrite();
+//        int cacheSharingType = cacheLineDetailedInfo->getSharingType();
+//        if (cacheSharingType == TRUE_SHARING) {
+//            this->invalidNumInOtherThreadByTrueCacheSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+//        } else if (cacheSharingType == FALSE_SHARING) {
+//            this->invalidNumInOtherThreadByFalseCacheSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
+//        }
+//    }
 
-    inline void recordCacheInfo(CacheLineDetailedInfo *cacheLineDetailedInfo) {
-        this->allInvalidNumInOtherThreads += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
-        this->readNumBeforeLastWrite += cacheLineDetailedInfo->getReadNumBeforeLastWrite();
-        int cacheSharingType = cacheLineDetailedInfo->getSharingType();
-        if (cacheSharingType == TRUE_SHARING) {
-            this->invalidNumInOtherThreadByTrueCacheSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
-        } else if (cacheSharingType == FALSE_SHARING) {
-            this->invalidNumInOtherThreadByFalseCacheSharing += cacheLineDetailedInfo->getInvalidationNumberInOtherThreads();
-        }
+    inline void recordDiagnosePageInfo(DiagnosePageInfo *diagnosePageInfo) {
+        this->allAccessNumInOtherThread += diagnosePageInfo->getRemoteMemAccessNum();
+        this->allInvalidNumInOtherThreads += diagnosePageInfo->getRemoteInvalidationNum();
+        this->readNumBeforeLastWrite += diagnosePageInfo->getReadNumBeforeLastWrite();
+        this->invalidNumInOtherThreadByTrueCacheSharing += diagnosePageInfo->getInvalidationByTrueSharing();
+        this->invalidNumInOtherThreadByFalseCacheSharing += diagnosePageInfo->getInvalidationByFalseSharing();
     }
 
 //    inline PageDetailedAccessInfo *
@@ -211,6 +219,15 @@ public:
         return invalidNumInOtherThreadByFalseCacheSharing;
     }
 
+    inline unsigned long getAccessNumWithOutCacheSharing() const {
+        return getTotalRemoteAccess() - invalidNumInOtherThreadByTrueCacheSharing -
+               invalidNumInOtherThreadByFalseCacheSharing;
+    }
+
+    inline unsigned long getDuplicateNum() const {
+        return this->allAccessNumInOtherThread - this->readNumBeforeLastWrite;
+    }
+
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {
@@ -233,15 +250,13 @@ public:
 //        fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %lu/%lu\n", prefix,
 //                this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
         fprintf(file, "%sPage score:               %f\n", prefix,
-                Scores::getSeriousScore(allAccessNumInOtherThread + allInvalidNumInOtherThreads -
-                                        invalidNumInOtherThreadByTrueCacheSharing -
-                                        invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
+                Scores::getSeriousScore(getAccessNumWithOutCacheSharing(), totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByTrueCacheSharing score:  %f\n", prefix,
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByTrueCacheSharing, totalRunningCycles));
         fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
         fprintf(file, "%sDuplicatable score:       %f\n", prefix,
-                Scores::getSeriousScore(this->allAccessNumInOtherThread - this->readNumBeforeLastWrite,
+                Scores::getSeriousScore(getDuplicateNum(),
                                         totalRunningCycles));
 
 //        for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {

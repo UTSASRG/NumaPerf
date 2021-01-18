@@ -60,6 +60,10 @@
 #define MAX_FRAGMENTS 20000
 #define CYCLES_PER_MS 2000000
 #define SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS)  //1000 / 2
+#define PAGE_SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS)  //1000 / 2
+#define TRUE_SHARING_SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS)  //1000 / 2
+#define FALSE_SHARING_SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS)  //1000 / 2
+#define DUPLICATE_SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS)  //1000 / 2
 // 512K will be the threshold for small objects
 // If an object is larger than this, it will be treated as large objects.  from Numalloc
 #define HUGE_OBJ_SIZE 0x80000
