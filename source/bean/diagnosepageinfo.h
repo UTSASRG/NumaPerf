@@ -91,11 +91,11 @@ public:
             totalRemoteAccess * PAGE_TRUE_SHARING_DOMINATE_PERCENT) {
             return true;
         }
-        if (this->invalidationByTrueSharing >
+        if (this->invalidationByFalseSharing >
             totalRemoteAccess * PAGE_FALSE_SHARING_DOMINATE_PERCENT) {
             return true;
         }
-        if ((this->invalidationByTrueSharing + this->invalidationByTrueSharing) >
+        if ((this->invalidationByTrueSharing + this->invalidationByFalseSharing) >
             totalRemoteAccess * PAGE_TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT) {
             return true;
         }
@@ -141,6 +141,15 @@ public:
         return this->invalidationByFalseSharing;
     }
 
+    inline unsigned long getAccessNumWithOutCacheSharing() {
+        return getTotalRemoteMainMemoryAccess() - invalidationByTrueSharing -
+               invalidationByFalseSharing;
+    }
+
+    inline unsigned long getDuplicateNum() {
+        return this->remoteMemAccessNum - this->readNumBeforeLastWrite;
+    }
+
     inline bool operator<(DiagnosePageInfo &diagnoseCacheLineInfo) {
         return (this->getTotalRemoteMainMemoryAccess()) < (diagnoseCacheLineInfo.getTotalRemoteMainMemoryAccess());
     }
@@ -176,15 +185,13 @@ public:
                 Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess(), totalRunningCycles));
         fprintf(file, "%sPage Sharing threadIdAndIsSharedUnion:%d\n", prefix, threadIdAndIsSharedUnion);
         fprintf(file, "%sPage score:               %f\n", prefix,
-                Scores::getSeriousScore(remoteMemAccessNum + remoteInvalidationNum -
-                                        remoteInvalidationNum -
-                                        invalidationByFalseSharing, totalRunningCycles));
+                Scores::getSeriousScore(getAccessNumWithOutCacheSharing(), totalRunningCycles));
         fprintf(file, "%sInvalidationByTrueSharing score:%f\n", prefix,
-                Scores::getSeriousScore(remoteInvalidationNum, totalRunningCycles));
+                Scores::getSeriousScore(invalidationByTrueSharing, totalRunningCycles));
         fprintf(file, "%sInvalidationByFalseSharing score:%f\n", prefix,
                 Scores::getSeriousScore(invalidationByFalseSharing, totalRunningCycles));
         fprintf(file, "%sDuplicate score:%f\n", prefix,
-                Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess() - readNumBeforeLastWrite,
+                Scores::getSeriousScore(getDuplicateNum(),
                                         totalRunningCycles));
         for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
             topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
