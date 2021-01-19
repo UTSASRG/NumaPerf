@@ -68,4 +68,9 @@
 // If an object is larger than this, it will be treated as large objects.  from Numalloc
 #define HUGE_OBJ_SIZE 0x80000
 
+#define TRUE_SHARING_DOMINATE_PERCENT 0.5
+#define FALSE_SHARING_DOMINATE_PERCENT 0.7
+#define TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT 0.6
+#define DUPLICATE_DOMINATE_PERCENT 0.7
+
 #endif //ACCESSPATERN_XDEFINES_H

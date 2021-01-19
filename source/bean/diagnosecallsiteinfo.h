@@ -46,6 +46,10 @@ public:
         return allAccessNumInOtherThread + allInvalidNumInOtherThreads;
     }
 
+    inline unsigned long getInvalidNumInOtherThreadByFalseCacheSharing() const {
+        return invalidNumInOtherThreadByFalseCacheSharing;
+    }
+
     inline unsigned long getRemoteAccessWithoutSharing() const {
         return getTotalRemoteAccess() - invalidNumInOtherThreadByTrueCacheSharing -
                invalidNumInOtherThreadByFalseCacheSharing;
@@ -131,6 +135,11 @@ public:
 
     inline double getDuplicateSeriousScore(unsigned long totalRunningCycles) {
         return Scores::getSeriousScore(getDuplicateNumber(), totalRunningCycles);
+    }
+
+    inline bool isDominateByFalseSharing() {
+        return getInvalidNumInOtherThreadByFalseCacheSharing() >=
+               FALSE_SHARING_DOMINATE_PERCENT * getTotalRemoteAccess();
     }
 
     inline void dump(FILE *file, unsigned long totalRunningCycles, int blackSpaceNum) {

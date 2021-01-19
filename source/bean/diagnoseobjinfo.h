@@ -231,6 +231,15 @@ public:
         return this->allAccessNumInOtherThread - this->readNumBeforeLastWrite;
     }
 
+    inline bool isDuplicatable() {
+        return getDuplicateNum() >= getTotalRemoteAccess() * DUPLICATE_DOMINATE_PERCENT;
+    }
+
+    inline bool isDominateByFalseSharing() {
+        return getInvalidNumInOtherThreadByFalseCacheSharing() >=
+               FALSE_SHARING_DOMINATE_PERCENT * getTotalRemoteAccess();
+    }
+
     inline void dump(FILE *file, int blackSpaceNum, unsigned long totalRunningCycles) {
         char prefix[blackSpaceNum + 2];
         for (int i = 0; i < blackSpaceNum; i++) {

@@ -4,10 +4,6 @@
 #include "objectInfo.h"
 #include "diagnosecallsiteinfo.h"
 
-#define PAGE_TRUE_SHARING_DOMINATE_PERCENT 0.5
-#define PAGE_FALSE_SHARING_DOMINATE_PERCENT 0.7
-#define PAGE_TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT 0.6
-
 class DiagnosePageInfo {
 private:
 //    ObjectInfo *objectInfo;
@@ -88,15 +84,15 @@ public:
     bool isDominatedByCacheSharing() {
         unsigned long totalRemoteAccess = this->getTotalRemoteMainMemoryAccess();
         if (this->invalidationByTrueSharing >
-            totalRemoteAccess * PAGE_TRUE_SHARING_DOMINATE_PERCENT) {
+            totalRemoteAccess * TRUE_SHARING_DOMINATE_PERCENT) {
             return true;
         }
         if (this->invalidationByFalseSharing >
-            totalRemoteAccess * PAGE_FALSE_SHARING_DOMINATE_PERCENT) {
+            totalRemoteAccess * FALSE_SHARING_DOMINATE_PERCENT) {
             return true;
         }
         if ((this->invalidationByTrueSharing + this->invalidationByFalseSharing) >
-            totalRemoteAccess * PAGE_TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT) {
+            totalRemoteAccess * TRUE_AND_FALSE_SHARING_DOMINATE_PERCENT) {
             return true;
         }
         return false;

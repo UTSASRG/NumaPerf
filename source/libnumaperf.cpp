@@ -944,15 +944,30 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
     }
 }
 
-inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo) {
+inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objSize = diagnoseObjInfo->getObjectInfo()->getSize();
-    if (objSize < NUMA_NODES * PAGE_SIZE >> 1) {
-        return (diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing() >
-                diagnoseObjInfo->getTotalRemoteAccess() * 0.7) ||
-               (diagnoseObjInfo->getDuplicateNum() >
-                diagnoseObjInfo->getTotalRemoteAccess() * 0.7);
+    if (objSize > PAGE_SIZE << 1) {  // skip big objects
+        return true;
     }
-    return true;
+    if (diagnoseObjInfo->isDominateByFalseSharing() &&
+        (diagnoseCallSiteInfo->getInvalidNumInOtherThreadByFalseCacheSharing() +
+         diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing()) >= FALSE_SHARING_DOMINATE_PERCENT *
+                                                                              (diagnoseObjInfo->getTotalRemoteAccess() +
+                                                                               diagnoseCallSiteInfo->getTotalRemoteAccess())) {
+        return true;
+    }
+    if (diagnoseObjInfo->isDuplicatable()) {
+        unsigned long newAllAccessNum =
+                diagnoseCallSiteInfo->getAccessNumInOtherThread() + diagnoseObjInfo->getAllAccessNumInOtherThread();
+        unsigned long newDuplicateNumber = diagnoseObjInfo->getDuplicateNum();
+        if (newAllAccessNum < newDuplicateNumber) {
+            return false;
+        }
+        if (newDuplicateNumber > DUPLICATE_DOMINATE_PERCENT * newAllAccessNum) {
+            return true;
+        }
+    }
+    return false;
 }
 
 #define MIN_REMOTE_ACCESS_PER_OBJ 100
@@ -969,7 +984,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
     __recordInfo(objectInfo, &diagnoseObjInfo);
     if (diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
-            &diagnoseObjInfo)) {
+            &diagnoseObjInfo, diagnoseCallSiteInfo)) {
         __clearCachePageInfo(objectInfo);
         return;
     }
