@@ -147,6 +147,9 @@ public:
     }
 
     inline unsigned long getDuplicateNum() {
+        if (this->remoteMemAccessNum < this->readNumBeforeLastWrite) {
+            return 0;
+        }
         return this->remoteMemAccessNum - this->readNumBeforeLastWrite;
     }
 

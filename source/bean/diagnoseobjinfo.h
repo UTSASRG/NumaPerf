@@ -225,6 +225,9 @@ public:
     }
 
     inline unsigned long getDuplicateNum() const {
+        if (this->allAccessNumInOtherThread < this->readNumBeforeLastWrite) {
+            return 0;
+        }
         return this->allAccessNumInOtherThread - this->readNumBeforeLastWrite;
     }
 

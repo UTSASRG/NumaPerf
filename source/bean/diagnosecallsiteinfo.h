@@ -52,15 +52,19 @@ public:
     }
 
     inline unsigned long getDuplicateNumber() const {
+        if (this->allAccessNumInOtherThread < this->readNumBeforeLastWrite) {
+            return 0;
+        }
         return this->allAccessNumInOtherThread - this->readNumBeforeLastWrite;
 
     }
 
     inline void recordDiagnoseObjInfo(DiagnoseObjInfo *diagnoseObjInfo) {
         this->objNum++;
+        // if a obj is newly allocated in a same callsite, we belive it also equals a writing operation
+        this->readNumBeforeLastWrite = this->allAccessNumInOtherThread + diagnoseObjInfo->getReadNumBeforeLastWrite();
         this->allAccessNumInOtherThread += diagnoseObjInfo->getAllAccessNumInOtherThread();
         this->allInvalidNumInOtherThreads += diagnoseObjInfo->getAllInvalidNumInOtherThreads();
-        this->readNumBeforeLastWrite += diagnoseObjInfo->getReadNumBeforeLastWrite();
         this->invalidNumInOtherThreadByTrueCacheSharing += diagnoseObjInfo->getInvalidNumInOtherThreadByTrueCacheSharing();
         this->invalidNumInOtherThreadByFalseCacheSharing += diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing();
     }
