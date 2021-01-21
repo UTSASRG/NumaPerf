@@ -411,11 +411,11 @@ __attribute__ ((destructor)) void finalizer(void) {
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
 //        fprintf(stderr, "%lu ,", iterator.getData()->getTotalRemoteAccess());
 //        fprintf(stderr, "callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
-        if (iterator.getData()->getSeriousScore(totalRunningCycles) <= SERIOUS_SCORE_THRESHOLD) {
-            continue;
-        }
-        topDiadCallSiteInfoQueue.insert(iterator.getData());
-#if 0
+//        if (iterator.getData()->getSeriousScore(totalRunningCycles) <= SERIOUS_SCORE_THRESHOLD) {
+//            continue;
+//        }
+//        topDiadCallSiteInfoQueue.insert(iterator.getData());
+#if 1
         if (iterator.getData()->getPageSeriousScore(totalRunningCycles) > PAGE_SERIOUS_SCORE_THRESHOLD) {
             topDiadCallSiteInfoQueue.insert(iterator.getData());
             continue;
@@ -946,7 +946,7 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
 
 inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objSize = diagnoseObjInfo->getObjectInfo()->getSize();
-    if (objSize > PAGE_SIZE << 1) {  // skip big objects
+    if (objSize > PAGE_SIZE) {  // skip big objects
         return true;
     }
     if (diagnoseObjInfo->isDominateByFalseSharing() &&
