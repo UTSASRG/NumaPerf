@@ -20,11 +20,11 @@ public:
     }
 
     inline void acquireLock() {
-        Automics::automicIncrease(&threadsAcquire, 1, -1);
+        Automics::automicIncrease<unsigned long>(&threadsAcquire, 1, -1);
     }
 
     inline void releaseLock() {
-        Automics::automicIncrease(&threadsAcquire, -1, -1);
+        Automics::automicIncrease<unsigned long>(&threadsAcquire, -1, -1);
     }
 
     inline bool hasContention() {

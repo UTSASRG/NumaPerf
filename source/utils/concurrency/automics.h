@@ -18,12 +18,13 @@ public:
         return false;
     }
 
-    static inline unsigned long
-    automicIncrease(unsigned long *targetValue, long increaseNumber, int retry_num = 5) {
+    template<typename T>
+    static inline T
+    automicIncrease(T *targetValue, long increaseNumber, int retry_num = 5) {
         if (retry_num < 0) {
             while (1) {
-                volatile unsigned long expect_value = *targetValue;
-                if (__atomic_compare_exchange_n(targetValue, (unsigned long *) &expect_value,
+                volatile T expect_value = *targetValue;
+                if (__atomic_compare_exchange_n(targetValue, (T *) &expect_value,
                                                 expect_value + increaseNumber, false,
                                                 __ATOMIC_SEQ_CST,
                                                 __ATOMIC_SEQ_CST)) {
@@ -33,8 +34,8 @@ public:
         }
 
         for (int i = 0; i < retry_num; i++) {
-            volatile unsigned long expect_value = *targetValue;
-            if (__atomic_compare_exchange_n(targetValue, (unsigned long *) &expect_value, expect_value + increaseNumber,
+            volatile T expect_value = *targetValue;
+            if (__atomic_compare_exchange_n(targetValue, (T *) &expect_value, expect_value + increaseNumber,
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {

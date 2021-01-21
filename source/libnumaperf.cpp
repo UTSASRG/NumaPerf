@@ -50,6 +50,11 @@ unsigned long largestThreadIndex = 0;
 thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
 
+long liveThreads = 0;
+unsigned long parallelRunningTime = 0;
+unsigned long parallelStartTime = 0;
+
+
 ThreadBasedInfo *GlobalThreadBasedInfo[MAX_THREAD_NUM];
 ObjectInfoMap objectInfoMap;
 CallSiteInfoMap callSiteInfoMap;
@@ -398,10 +403,25 @@ int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
     return balancedThreadNum;
 }
 
+float __getParallelPercent(unsigned long totalRunningCycles) {
+    return (float) parallelRunningTime / (float) totalRunningCycles;
+}
+
 __attribute__ ((destructor)) void finalizer(void) {
     unsigned long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
     Logger::info("NumaPerf finalizer, totalRunningCycles:%lu\n", totalRunningCycles);
     inited = false;
+    FILE *dumpFile = fopen("NumaPerf.dump", "w");
+    if (!dumpFile) {
+        Logger::error("can not reate dump file:NumaPerf.dump\n");
+        exit(9);
+    }
+    float parallelPercent = __getParallelPercent(totalRunningCycles);
+    fprintf(dumpFile, "Parallel Running Percent:%f\n", parallelPercent);
+    if (parallelPercent < MIN_PARALLEL_PERCENT) {
+        fprintf(dumpFile, "Parallel Running Percent too small\n");
+        return;
+    }
     // collect and clear some objects that are not explicitly freed.
     for (auto iterator = objectInfoMap.begin(); iterator != objectInfoMap.end(); iterator++) {
         collectAndClearObjInfo(iterator.getData());
@@ -435,11 +455,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
 #endif
     }
-    FILE *dumpFile = fopen("NumaPerf.dump", "w");
-    if (!dumpFile) {
-        Logger::error("can not reate dump file:NumaPerf.dump\n");
-        exit(9);
-    }
+
     fprintf(dumpFile, "Table of Contents\n");
     fprintf(dumpFile, "    Part One: Thread number recommendation for each stage.\n");
     fprintf(dumpFile, "    Part Two: Thread based node migration times.\n");
@@ -1093,7 +1109,18 @@ void *initThreadIndexRoutine(void *args) {
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
     threadBasedInfo->start();
+    long currentAliveThreadNum = Automics::automicIncrease<long>(&liveThreads, 1, -1);
+//    printf("currentAliveThreadNum:%lu\n", currentAliveThreadNum);
+    if (currentAliveThreadNum == MIN_PARALLEL_THREAD_NUM) {
+        parallelStartTime = Timer::getCurrentCycle();
+    }
     void *result = startRoutineFunPtr(arguments->parameterPtr);
+    currentAliveThreadNum = Automics::automicIncrease<long>(&liveThreads, -1, -1);
+//    printf("currentAliveThreadNum:%lu\n", currentAliveThreadNum);
+    if (currentAliveThreadNum == MIN_PARALLEL_THREAD_NUM) {
+        parallelRunningTime += (Timer::getCurrentCycle() - parallelStartTime);
+        parallelStartTime = 0;
+    }
     threadBasedInfo->end();
 //    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
 //           sizeof(unsigned long) * MAX_THREAD_NUM);
@@ -1109,7 +1136,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     }
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) Real::malloc(
             sizeof(ThreadStartRoutineParameter));
-    unsigned long threadIndex = Automics::automicIncrease(&largestThreadIndex, 1, -1);
+    unsigned long threadIndex = Automics::automicIncrease<unsigned long>(&largestThreadIndex, 1, -1);
     Asserts::assertt(threadIndex < MAX_THREAD_NUM, 1, (char *) "max thread id out of range");
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
