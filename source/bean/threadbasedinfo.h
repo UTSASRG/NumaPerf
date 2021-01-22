@@ -92,6 +92,10 @@ public:
     inline float getParallelPercent(unsigned long totalRunningCycle) {
         return (float) (this->totalRunningTime - this->idleTime) / (float) totalRunningCycle;
     }
+
+    inline bool isEnd() {
+        return this->totalRunningTime != 0;
+    }
 };
 
 #endif //NUMAPERF_THREADBASEDINFO_H

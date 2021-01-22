@@ -414,6 +414,9 @@ float __getParallelPercent(unsigned long totalRunningCycles) {
     if (totalRunningCycles < parallelRunningTime) {
         return 1;
     }
+//    if (liveThreads > MIN_PARALLEL_THREAD_NUM && parallelRunningTime == 0) {
+//        return 1;
+//    }
     return (float) parallelRunningTime / (float) totalRunningCycles;
 }
 
@@ -425,6 +428,11 @@ __attribute__ ((destructor)) void finalizer(void) {
     if (!dumpFile) {
         Logger::error("can not reate dump file:NumaPerf.dump\n");
         exit(9);
+    }
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        if (!GlobalThreadBasedInfo[i]->isEnd()) {
+            GlobalThreadBasedInfo[i]->end();
+        }
     }
     float parallelPercent = __getParallelPercent(totalRunningCycles);
     fprintf(dumpFile, "Parallel Running Percent:%f\n", parallelPercent);
