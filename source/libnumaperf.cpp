@@ -200,6 +200,7 @@ inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber
 }
 
 #define BALANCE_DEVIATION_THRESHOLD 0.1
+#define MIN_AVERAGE_THRESHOLD_THRESHOLD 1000
 
 inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
                                    unsigned long *threadBasedAccessNumberDeviation,
@@ -208,6 +209,12 @@ inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber
     balancedThread[0] = true;
     // thread 0 usually has massive mem access, so make it as balanced one by default.
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+//        printf("deviation:%lu\n", threadBasedAccessNumberDeviation[i]);
+        // small average means very few latency.
+        if (threadBasedAverageAccessNumber[i] < MIN_AVERAGE_THRESHOLD_THRESHOLD) {
+            balancedThread[i] = true;
+            continue;
+        }
         if (BALANCE_DEVIATION_THRESHOLD <
             Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles)) {
             balancedThread[i] = false;
@@ -521,7 +528,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     if (totalMigrationScore < THREAD_MIGRATION_SERIOUS_SCORE_THRESHOLD) {
         fprintf(dumpFile, "  low migration scores, does not need to do thread binding\n");
     }
-    
+
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
             fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
@@ -731,9 +738,9 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
                                                                  callerAddress);
     objectInfoMap.insert((unsigned long) objectStartAddress, 0, objectInfoPtr);
     long firstTouchThreadId = currentThreadIndex;
-//    if (size > HUGE_OBJ_SIZE) {
-//        firstTouchThreadId = -1;
-//    }
+    if (size > HUGE_OBJ_SIZE) {
+        firstTouchThreadId = -1;
+    }
     for (unsigned long address = (unsigned long) objectStartAddress;
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
         if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
@@ -1194,15 +1201,15 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
-    // set real first touch thread id for huge objects
-//    if (firstTouchThreadId < 0 && type == E_ACCESS_READ) {
-//        return;
-//    }
-//    if (firstTouchThreadId < 0) {
-//        basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
-//        firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+//     set real first touch thread id for huge objects
+    if (firstTouchThreadId < 0 && type == E_ACCESS_READ) {
+        return;
+    }
+    if (firstTouchThreadId < 0) {
+        basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
+        firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 //        Logger::warn("firstTouchThread:%lu\n", firstTouchThreadId);
-//    }
+    }
 #ifdef SAMPLING
     // todo thread local sampling is still too costing
     // but did not find a better way. generating a random number is slower than this
