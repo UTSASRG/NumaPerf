@@ -62,7 +62,7 @@
 //#define SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS)  //1000
 #define PAGE_SERIOUS_SCORE_THRESHOLD (0.01 * CYCLES_PER_MS)  //20000
 #define TRUE_SHARING_SERIOUS_SCORE_THRESHOLD (0.01 * CYCLES_PER_MS)  //20000
-#define FALSE_SHARING_SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS / 5)  //1000 / 5
+#define FALSE_SHARING_SERIOUS_SCORE_THRESHOLD (0.0005 * CYCLES_PER_MS / 10)  //1000 / 10
 #define DUPLICATE_SERIOUS_SCORE_THRESHOLD (0.0025 * CYCLES_PER_MS)  //5000
 // 512K will be the threshold for small objects
 // If an object is larger than this, it will be treated as large objects.  from Numalloc
