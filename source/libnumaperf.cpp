@@ -414,6 +414,10 @@ float __getParallelPercent(unsigned long totalRunningCycles) {
     if (totalRunningCycles < parallelRunningTime) {
         return 1;
     }
+    // some application children threads exit after main thread like lulesh amg..
+    if (liveThreads > MIN_PARALLEL_THREAD_NUM) {
+        parallelRunningTime += Timer::getCurrentCycle() - parallelStartTime;
+    }
 //    if (liveThreads > MIN_PARALLEL_THREAD_NUM && parallelRunningTime == 0) {
 //        return 1;
 //    }
