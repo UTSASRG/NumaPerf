@@ -86,7 +86,11 @@ public:
     }
 
     inline float getMigrationScore(unsigned long totalRunningCycle) {
-        return this->nodeMigrationNum * (this->totalRunningTime - this->idleTime) / totalRunningCycle;
+        return this->nodeMigrationNum * getParallelPercent(totalRunningCycle);
+    }
+
+    inline float getParallelPercent(unsigned long totalRunningCycle) {
+        return (float) (this->totalRunningTime - this->idleTime) / (float) totalRunningCycle;
     }
 };
 

@@ -199,7 +199,7 @@ inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber
     }
 }
 
-#define BALANCE_DEVIATION_THRESHOLD 0.1
+#define BALANCE_DEVIATION_THRESHOLD 1
 #define MIN_AVERAGE_THRESHOLD_THRESHOLD 1000
 
 inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
@@ -209,12 +209,12 @@ inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber
     balancedThread[0] = true;
     // thread 0 usually has massive mem access, so make it as balanced one by default.
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-//        printf("deviation:%lu\n", threadBasedAccessNumberDeviation[i]);
+//        printf("thread:%lu, deviation:%lu, score:%f, average:%lu, score:%f, parallelPercent:%f\n", i, threadBasedAccessNumberDeviation[i],Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles),threadBasedAverageAccessNumber[i],Scores::getSeriousScore(threadBasedAverageAccessNumber[i], totalRunningCycles),GlobalThreadBasedInfo[i]->getParallelPercent(totalRunningCycles));
         // small average means very few latency.
-        if (threadBasedAverageAccessNumber[i] < MIN_AVERAGE_THRESHOLD_THRESHOLD) {
-            balancedThread[i] = true;
-            continue;
-        }
+//        if (threadBasedAverageAccessNumber[i] < MIN_AVERAGE_THRESHOLD_THRESHOLD) {
+//            balancedThread[i] = true;
+//            continue;
+//        }
         if (BALANCE_DEVIATION_THRESHOLD <
             Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles)) {
             balancedThread[i] = false;
