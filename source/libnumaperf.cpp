@@ -75,7 +75,7 @@ static void initializer(void) {
     // could support 32T/sizeOf(BasicPageAccessInfo)*4K > 2000T
     pageBasicAccessInfoShadowMap.initialize(BASIC_PAGE_SHADOW_MAP_SIZE, true);
     cacheLineDetailedInfoShadowMap.initialize(32ul * TB);
-    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL);
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL, NULL);
     GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
     inited = true;
@@ -507,7 +507,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
     }
 
-    fprintf(dumpFile,"\n");
+    fprintf(dumpFile, "\n");
 
     long totalMigrationNum = 0;
     float totalMigrationScore = 0;
@@ -588,7 +588,7 @@ __attribute__ ((destructor)) void finalizer(void) {
                     "%ld,", i);
         }
     }
-    fprintf(dumpFile,"\n\n");
+    fprintf(dumpFile, "\n\n");
     fprintf(dumpFile,
             "2.3 Threads binding recomendations:\n");
 // get threads binding recommendations
@@ -1087,7 +1087,7 @@ typedef void *(*threadStartRoutineFunPtr)(void *);
 void *initThreadIndexRoutine(void *args) {
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) args;
     currentThreadIndex = arguments->threadIndex;
-    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite);
+    threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite, arguments->startRoutinePtr);
     GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
