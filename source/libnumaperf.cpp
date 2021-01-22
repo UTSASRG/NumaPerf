@@ -517,8 +517,11 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
     fprintf(dumpFile,
             "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalMigrationNum,
-            totalMigrationScore / (float) largestThreadIndex);
-
+            totalMigrationScore);
+    if (totalMigrationScore < THREAD_MIGRATION_SERIOUS_SCORE_THRESHOLD) {
+        fprintf(dumpFile, "  low migration scores, does not need to do thread binding\n");
+    }
+    
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
             fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
