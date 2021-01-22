@@ -6,6 +6,7 @@
 
 class ThreadBasedInfo {
     CallStack *threadCreateCallSiteStack;
+    void *threadStartFunPtr;
     unsigned long long startTime;
     unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
@@ -20,10 +21,11 @@ private:
 
 public:
 
-    inline static ThreadBasedInfo *createThreadBasedInfo(CallStack *threadCreateCallSite) {
+    inline static ThreadBasedInfo *createThreadBasedInfo(CallStack *threadCreateCallSite, void *threadStartFunPtr) {
         void *mem = Real::malloc(sizeof(ThreadBasedInfo));
         ThreadBasedInfo *ret = new(mem)ThreadBasedInfo();
         ret->threadCreateCallSiteStack = threadCreateCallSite;
+        ret->threadStartFunPtr = threadStartFunPtr;
         return ret;
     }
 
@@ -55,6 +57,10 @@ public:
         return threadCreateCallSiteStack;
     }
 
+    void *getThreadStartFunPtr() const {
+        return threadStartFunPtr;
+    }
+
     inline unsigned long getTotalRunningTime() const {
         return totalRunningTime;
     }
@@ -77,6 +83,10 @@ public:
 
     inline const unsigned long *getThreadBasedAccessNumber() {
         return threadBasedAccessNumber;
+    }
+
+    inline float getMigrationScore(unsigned long totalRunningCycle) {
+        return this->nodeMigrationNum * (this->totalRunningTime - this->idleTime) / totalRunningCycle;
     }
 };
 

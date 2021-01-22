@@ -404,6 +404,9 @@ int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
 }
 
 float __getParallelPercent(unsigned long totalRunningCycles) {
+    if (totalRunningCycles < parallelRunningTime) {
+        return 1;
+    }
     return (float) parallelRunningTime / (float) totalRunningCycles;
 }
 
@@ -473,7 +476,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         if (GlobalThreadBasedInfo[i]->getTotalRunningTime() == 0) {
             GlobalThreadBasedInfo[i]->end();
         }
-        unsigned long callSiteKey = GlobalThreadBasedInfo[i]->getThreadCreateCallSiteStack()->getKey();
+        unsigned long callSiteKey = (unsigned long) (GlobalThreadBasedInfo[i]->getThreadStartFunPtr());
         ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSiteKey, 0);
         if (NULL == threadStageInfo) {
             callsiteNum++;
@@ -504,44 +507,25 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
     }
 
-    fprintf(dumpFile,
-            "\n");
+    fprintf(dumpFile,"\n");
 
     long totalMigrationNum = 0;
-    for (
-            unsigned long i = 1;
-            i <=
-            largestThreadIndex;
-            i++) {
-        totalMigrationNum += GlobalThreadBasedInfo[i]->
-
-                getNodeMigrationNum();
-
+    float totalMigrationScore = 0;
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
+        totalMigrationScore += GlobalThreadBasedInfo[i]->getMigrationScore(totalRunningCycles);
     }
     fprintf(dumpFile,
             "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalMigrationNum,
-            Scores::getSeriousScore(totalMigrationNum, totalRunningCycles));
-    for (
-            unsigned long i = 1;
-            i <=
-            largestThreadIndex;
-            i++) {
-        if (GlobalThreadBasedInfo[i]->
+            totalMigrationScore / (float) largestThreadIndex);
 
-                getNodeMigrationNum()
-
-            > 0) {
-            fprintf(dumpFile,
-                    "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
-                    GlobalThreadBasedInfo[i]->
-
-                            getNodeMigrationNum()
-
-            );
+    for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
+            fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
+                    GlobalThreadBasedInfo[i]->getNodeMigrationNum());
         }
     }
-    fprintf(dumpFile,
-            "\n\n");
+    fprintf(dumpFile, "\n\n");
 
     fprintf(dumpFile,
             "Part Three: Thread based imbalance detection & threads binding recommendation:\n\n");
@@ -604,8 +588,7 @@ __attribute__ ((destructor)) void finalizer(void) {
                     "%ld,", i);
         }
     }
-    fprintf(dumpFile,
-            "\n\n");
+    fprintf(dumpFile,"\n\n");
     fprintf(dumpFile,
             "2.3 Threads binding recomendations:\n");
 // get threads binding recommendations
@@ -745,9 +728,9 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
                                                                  callerAddress);
     objectInfoMap.insert((unsigned long) objectStartAddress, 0, objectInfoPtr);
     long firstTouchThreadId = currentThreadIndex;
-    if (size > HUGE_OBJ_SIZE) {
-        firstTouchThreadId = -1;
-    }
+//    if (size > HUGE_OBJ_SIZE) {
+//        firstTouchThreadId = -1;
+//    }
     for (unsigned long address = (unsigned long) objectStartAddress;
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
         if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
@@ -1209,14 +1192,14 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     bool needCahceDetailInfo = basicPageAccessInfo->needCacheLineSharingDetailInfo(addr);
     long firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
     // set real first touch thread id for huge objects
-    if (firstTouchThreadId < 0 && type == E_ACCESS_READ) {
-        return;
-    }
-    if (firstTouchThreadId < 0) {
-        basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
-        firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
+//    if (firstTouchThreadId < 0 && type == E_ACCESS_READ) {
+//        return;
+//    }
+//    if (firstTouchThreadId < 0) {
+//        basicPageAccessInfo->setFirstTouchThreadIdIfAbsent(currentThreadIndex);
+//        firstTouchThreadId = basicPageAccessInfo->getFirstTouchThreadId();
 //        Logger::warn("firstTouchThread:%lu\n", firstTouchThreadId);
-    }
+//    }
 #ifdef SAMPLING
     // todo thread local sampling is still too costing
     // but did not find a better way. generating a random number is slower than this
