@@ -109,9 +109,9 @@ public:
     }
 #endif
 
-    inline DiagnosePageInfo *insertInfoPageQueue(DiagnosePageInfo *diagnosePageInfo) {
+//    inline DiagnosePageInfo *insertInfoPageQueue(DiagnosePageInfo *diagnosePageInfo) {
 //        return topPageDetailedAccessInfoQueue.insert(diagnosePageInfo);
-    }
+//    }
 
     ObjectInfo *getObjectInfo() {
         return objectInfo;
@@ -203,13 +203,13 @@ public:
         return this->getTotalRemoteAccess() >= seriousScore;
     }
 
-    inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
+//    inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
 //        return this->topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
-    }
+//    }
 
-    inline bool mayCanInsertToTopPageQueue(unsigned long remoteAccess) {
+//    inline bool mayCanInsertToTopPageQueue(unsigned long remoteAccess) {
 //        return this->topPageDetailedAccessInfoQueue.mayCanInsert(remoteAccess);
-    }
+//    }
 
     inline unsigned long getAllInvalidNumInOtherThreads() const {
         return allInvalidNumInOtherThreads;
