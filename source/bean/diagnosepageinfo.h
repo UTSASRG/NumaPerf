@@ -50,6 +50,10 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
+    int getThreadIdAndIsSharedUnion() {
+        return this->threadIdAndIsSharedUnion;
+    }
+
     void recordPageInfo(PageDetailedAccessInfo *pageDetailedAccessInfo, unsigned long objAddress,
                         unsigned long objSize) {
         this->pageStartAddress = pageDetailedAccessInfo->getStartAddress();

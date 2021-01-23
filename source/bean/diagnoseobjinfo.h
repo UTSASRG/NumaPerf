@@ -18,35 +18,25 @@ private:
 //    unsigned long continualReadNumAfterAWrite;
     unsigned long invalidNumInOtherThreadByTrueCacheSharing;
     unsigned long invalidNumInOtherThreadByFalseCacheSharing;
-    PriorityQueue<DiagnosePageInfo> topPageDetailedAccessInfoQueue;
+    int sharedPageNum;
+    int detailPageSharingInfoNum;
+    int *detailPageSharingInfoPtr;
+//    PriorityQueue<DiagnosePageInfo> topPageDetailedAccessInfoQueue;
 
 private:
     static MemoryPool localMemoryPool;
 
 public:
 
-    DiagnoseObjInfo(ObjectInfo *objectInfo) : topPageDetailedAccessInfoQueue(MAX_TOP_PAGE_DETAIL_INFO) {
+    DiagnoseObjInfo(ObjectInfo *objectInfo) {
+        memset(this, 0, sizeof(DiagnoseObjInfo));
         this->objectInfo = objectInfo;
-        this->allAccessNumInOtherThread = 0;
-        this->allInvalidNumInOtherThreads = 0;
-        this->readNumBeforeLastWrite = 0;
-        this->invalidNumInOtherThreadByTrueCacheSharing = 0;
-        this->invalidNumInOtherThreadByFalseCacheSharing = 0;
     }
 
     inline DiagnoseObjInfo *deepCopy() {
         DiagnoseObjInfo *buff = (DiagnoseObjInfo *) localMemoryPool.get();
-        buff = new((void *) buff) DiagnoseObjInfo(this->objectInfo);
-        buff->allAccessNumInOtherThread = this->allAccessNumInOtherThread;
-        buff->allInvalidNumInOtherThreads = this->allInvalidNumInOtherThreads;
-        buff->readNumBeforeLastWrite = this->readNumBeforeLastWrite;
-        buff->invalidNumInOtherThreadByTrueCacheSharing = this->invalidNumInOtherThreadByTrueCacheSharing;
-        buff->invalidNumInOtherThreadByFalseCacheSharing = this->invalidNumInOtherThreadByFalseCacheSharing;
-        buff->topPageDetailedAccessInfoQueue.setEndIndex(this->topPageDetailedAccessInfoQueue.getSize());
-        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
-            buff->topPageDetailedAccessInfoQueue.getValues()[i] = this->topPageDetailedAccessInfoQueue.getValues()[i]->deepCopy();
-        }
-        return (DiagnoseObjInfo *) buff;
+        memcpy(buff, this, sizeof(DiagnoseObjInfo));
+        return buff;
     }
 
     inline static DiagnoseObjInfo *createNewDiagnoseObjInfo(ObjectInfo *objectInfo) {
@@ -56,22 +46,37 @@ public:
         return ret;
     }
 
-    inline void clearCacheAndPage() {
+//    inline void clearCacheAndPage() {
 //        for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
 //            this->topCacheLineDetailQueue.getValues()[i]->clear();
 //        }
-        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
-            unsigned long objAddress = this->objectInfo->getStartAddress();
-            unsigned long objSize = this->objectInfo->getSize();
-            this->topPageDetailedAccessInfoQueue.getValues()[i]->clearResidentDetailedInfo(objAddress, objSize);
+//        for (int i = 0; i < this->topPageDetailedAccessInfoQueue.getSize(); i++) {
+//            unsigned long objAddress = this->objectInfo->getStartAddress();
+//            unsigned long objSize = this->objectInfo->getSize();
+//            this->topPageDetailedAccessInfoQueue.getValues()[i]->clearResidentDetailedInfo(objAddress, objSize);
+//        }
+//    }
+
+    void createPageSharingDetail() {
+        int num = objectInfo->getSize() / PAGE_SIZE + 2;
+        this->detailPageSharingInfoPtr = (int *) Real::malloc(num * sizeof(int));
+    }
+
+    inline void releaseInternal() {
+        if (this->detailPageSharingInfoPtr != NULL) {
+            Real::free(this->detailPageSharingInfoPtr);
+            this->detailPageSharingInfoNum = 0;
+        }
+        if (this->objectInfo != NULL) {
+            ObjectInfo::release(this->objectInfo);
         }
     }
 
     inline static void releaseAll(DiagnoseObjInfo *buff) {
-        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
-            DiagnosePageInfo::releaseAll(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
-        }
-        ObjectInfo::release(buff->objectInfo);
+//        for (int i = 0; i < buff->topPageDetailedAccessInfoQueue.getSize(); i++) {
+//            DiagnosePageInfo::releaseAll(buff->topPageDetailedAccessInfoQueue.getValues()[i]);
+//        }
+        buff->releaseInternal();
         localMemoryPool.release((void *) buff);
     }
 
@@ -105,7 +110,7 @@ public:
 #endif
 
     inline DiagnosePageInfo *insertInfoPageQueue(DiagnosePageInfo *diagnosePageInfo) {
-        return topPageDetailedAccessInfoQueue.insert(diagnosePageInfo);
+//        return topPageDetailedAccessInfoQueue.insert(diagnosePageInfo);
     }
 
     ObjectInfo *getObjectInfo() {
@@ -140,6 +145,13 @@ public:
         this->readNumBeforeLastWrite += diagnosePageInfo->getReadNumBeforeLastWrite();
         this->invalidNumInOtherThreadByTrueCacheSharing += diagnosePageInfo->getInvalidationByTrueSharing();
         this->invalidNumInOtherThreadByFalseCacheSharing += diagnosePageInfo->getInvalidationByFalseSharing();
+        if (diagnosePageInfo->getThreadIdAndIsSharedUnion() > MAX_THREAD_NUM) {
+            this->sharedPageNum++;
+        }
+        if (this->detailPageSharingInfoPtr != NULL) {
+            this->detailPageSharingInfoPtr[detailPageSharingInfoNum] = diagnosePageInfo->getThreadIdAndIsSharedUnion();
+            this->detailPageSharingInfoNum++;
+        }
     }
 
 //    inline PageDetailedAccessInfo *
@@ -192,11 +204,11 @@ public:
     }
 
     inline bool mayCanInsertToTopPageQueue(DiagnosePageInfo *diagnosePageInfo) {
-        return this->topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
+//        return this->topPageDetailedAccessInfoQueue.mayCanInsert(diagnosePageInfo->getTotalRemoteMainMemoryAccess());
     }
 
     inline bool mayCanInsertToTopPageQueue(unsigned long remoteAccess) {
-        return this->topPageDetailedAccessInfoQueue.mayCanInsert(remoteAccess);
+//        return this->topPageDetailedAccessInfoQueue.mayCanInsert(remoteAccess);
     }
 
     inline unsigned long getAllInvalidNumInOtherThreads() const {
@@ -268,17 +280,24 @@ public:
         fprintf(file, "%sinvalidNumInOtherThreadByFalseCacheSharing score:  %f\n", prefix,
                 Scores::getSeriousScore(this->invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles));
         fprintf(file, "%sDuplicatable score:       %f\n", prefix,
-                Scores::getSeriousScore(getDuplicateNum(),
-                                        totalRunningCycles));
+                Scores::getSeriousScore(getDuplicateNum(), totalRunningCycles));
+        fprintf(file, "%sShared page number:       %d\n", prefix, this->sharedPageNum);
+        fprintf(file, "%sShared page detailed: ", prefix);
+        if (this->detailPageSharingInfoPtr != NULL) {
+            for (int i = 0; i < detailPageSharingInfoNum; i++) {
+                fprintf(file, "%d, ", this->detailPageSharingInfoPtr[i]);
+            }
+        }
+        fprintf(file, "\n");
 
 //        for (int i = 0; i < topCacheLineDetailQueue.getSize(); i++) {
 //            fprintf(file, "%sTop CacheLines %d:\n", prefix, i);
 //            topCacheLineDetailQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
 //        }
-        for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
-            fprintf(file, "%sTop Pages %d:\n", prefix, i);
-            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
-        }
+//        for (int i = 0; i < topPageDetailedAccessInfoQueue.getSize(); i++) {
+//            fprintf(file, "%sTop Pages %d:\n", prefix, i);
+//            topPageDetailedAccessInfoQueue.getValues()[i]->dump(file, blackSpaceNum + 2, totalRunningCycles);
+//        }
     }
 };
 

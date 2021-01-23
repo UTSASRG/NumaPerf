@@ -854,10 +854,14 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
 }
 #endif
 
-inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseObjInfo) {
+inline void __recordAndClearInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseObjInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
     unsigned long objEndAddress = objStartAddress + objSize;
+    // record each page sharing info if obj size is large enough
+    if (objSize > (NUMA_NODES * PAGE_SIZE << 1)) {
+        localDiagnoseObjInfo->createPageSharingDetail();
+    }
     for (unsigned long beginningAddress = objStartAddress;      // for page
          beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
@@ -870,6 +874,11 @@ inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseO
         if (pageDetailedAccessInfo != NULL) {
             localDiagnosePageInfo.recordPageInfo(pageDetailedAccessInfo, objStartAddress,
                                                  objEndAddress);
+            if (pageDetailedAccessInfo->isCoveredByObj(objStartAddress, objSize)) {
+                pageDetailedAccessInfo->clearAll();
+            } else {
+                pageDetailedAccessInfo->clearResidObjInfo(objStartAddress, objSize);
+            }
         }
         for (unsigned long cacheLineAddress = beginningAddress;  // for cache
              cacheLineAddress < objEndAddress &&
@@ -881,6 +890,8 @@ inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseO
                 continue;
             }
             localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
+            // remove the info in cache level, even there maybe are more objs inside it.
+            cacheLineDetailedInfo->clear();
         }
         if (localDiagnosePageInfo.isDominatedByCacheSharing()) {
             continue;
@@ -889,6 +900,7 @@ inline void __recordInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localDiagnoseO
     }
 }
 
+#if 0
 inline void __clearCachePageInfo(ObjectInfo *objectInfo) {
     unsigned long objStartAddress = objectInfo->getStartAddress();
     unsigned long objSize = objectInfo->getSize();
@@ -964,6 +976,7 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
         }
     }
 }
+#endif
 
 inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objSize = diagnoseObjInfo->getObjectInfo()->getSize();
@@ -1003,25 +1016,22 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
         return;
     }
     DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
-    __recordInfo(objectInfo, &diagnoseObjInfo);
+    __recordAndClearInfo(objectInfo, &diagnoseObjInfo);
     if (diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
             &diagnoseObjInfo, diagnoseCallSiteInfo)) {
-        __clearCachePageInfo(objectInfo);
+        diagnoseObjInfo.releaseInternal();
         return;
     }
 
     diagnoseCallSiteInfo->recordDiagnoseObjInfo(&diagnoseObjInfo);
     if (diagnoseCallSiteInfo->mayCanInsertToTopObjQueue(&diagnoseObjInfo)) {
         DiagnoseObjInfo *newDiagnoseObjInfo = diagnoseObjInfo.deepCopy();
-        __collectDetailInfo(objectInfo, newDiagnoseObjInfo);
         DiagnoseObjInfo *oldDiagnoseObj = diagnoseCallSiteInfo->insertToTopObjQueue(newDiagnoseObjInfo);
-        __clearCachePageInfo(objectInfo);
         if (oldDiagnoseObj != NULL) {
             DiagnoseObjInfo::releaseAll(oldDiagnoseObj);
         }
     } else {
-        __clearCachePageInfo(objectInfo);
-        ObjectInfo::release(objectInfo);
+        diagnoseObjInfo.releaseInternal();
     }
 //    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
 //                 allInvalidNumInOtherThreads);

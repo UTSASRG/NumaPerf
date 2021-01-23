@@ -26,7 +26,7 @@ class PageDetailedAccessInfo {
 //    unsigned long seriousScore;
     unsigned long firstTouchThreadId;
     unsigned long startAddress;
-    unsigned long allAccessNumByOtherThread;
+//    unsigned long allAccessNumByOtherThread;
     unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
     unsigned int accessNumberByOtherThread[BLOCK_NUM];
     int threadIdAndIsSharedUnion;
@@ -183,7 +183,7 @@ public:
 
     inline void clearAll() {
 //        releaseTwoLayersBlockAccessNum();
-        memset(&(this->allAccessNumByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
+        memset(&(this->accessNumberByFirstTouchThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
         this->threadIdAndIsSharedUnion = -1;
     }
 
@@ -208,18 +208,18 @@ public:
     }
 
     inline unsigned long getAccessNumberByOtherTouchThread(unsigned long objStartAddress, unsigned long size) {
-        if (0 == objStartAddress && 0 == size && 0 != allAccessNumByOtherThread) {
-            return allAccessNumByOtherThread;
-        }
+//        if (0 == objStartAddress && 0 == size && 0 != allAccessNumByOtherThread) {
+//            return allAccessNumByOtherThread;
+//        }
         unsigned long accessNumInOtherThread = 0;
         int startIndex = getResidentStartIndex(objStartAddress, size);
         int endIndex = getResidentEndIndex(objStartAddress, size);
         for (unsigned int i = startIndex; i <= endIndex; i++) {
             accessNumInOtherThread += this->accessNumberByOtherThread[i];
         }
-        if (0 == objStartAddress && 0 == size) {
-            allAccessNumByOtherThread = accessNumInOtherThread;
-        }
+//        if (0 == objStartAddress && 0 == size) {
+//            allAccessNumByOtherThread = accessNumInOtherThread;
+//        }
         return accessNumInOtherThread;
     }
 
@@ -229,9 +229,9 @@ public:
         return this->getAccessNumberByOtherTouchThread(0, 0);
     }
 
-    inline void clearSumValue() {
-        this->allAccessNumByOtherThread = 0;
-    }
+//    inline void clearSumValue() {
+//        this->allAccessNumByOtherThread = 0;
+//    }
 
     inline bool operator<(PageDetailedAccessInfo &pageDetailedAccessInfo) {
         return this->getTotalRemoteAccess() < pageDetailedAccessInfo.getTotalRemoteAccess();
