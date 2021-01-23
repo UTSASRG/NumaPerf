@@ -159,11 +159,11 @@ public:
             accessNumberByOtherThread[index]++;
         }
 
-        if (maxThreadId < accessThreadId) {
-            maxThreadId = accessThreadId;
+        if (maxThreadId < (int) accessThreadId) {
+            maxThreadId = (int) accessThreadId;
         }
-        if (minThreadId > accessThreadId) {
-            minThreadId = accessThreadId;
+        if (minThreadId > (int) accessThreadId) {
+            minThreadId = (int) accessThreadId;
         }
     }
 
