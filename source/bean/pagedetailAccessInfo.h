@@ -29,18 +29,24 @@ class PageDetailedAccessInfo {
 //    unsigned long allAccessNumByOtherThread;
     unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
     unsigned int accessNumberByOtherThread[BLOCK_NUM];
-    int threadIdAndIsSharedUnion;
+    int minThreadId;
+    int maxThreadId;
 
 private:
     static MemoryPool localMemoryPool;
 //    static MemoryPool localThreadAccessNumberFirstLayerMemoryPool;
 //    static MemoryPool localThreadAccessNumberSecondLayerMemoryPool;
 
+    void resetMinMaxThreadId() {
+        minThreadId = MAX_THREAD_NUM + 1;
+        maxThreadId = -1;
+    }
+
     PageDetailedAccessInfo(unsigned long pageStartAddress, unsigned long firstTouchThreadId) {
         memset(this, 0, sizeof(PageDetailedAccessInfo));
         this->firstTouchThreadId = firstTouchThreadId;
         this->startAddress = pageStartAddress;
-        this->threadIdAndIsSharedUnion = -1;
+        resetMinMaxThreadId();
     }
 
     inline int getBlockIndex(unsigned long address) const {
@@ -93,7 +99,10 @@ private:
     }
 
     inline bool isThisPageShared() {
-        return threadIdAndIsSharedUnion > MAX_THREAD_NUM;
+        if (maxThreadId > 0) {
+            return false;
+        }
+        return maxThreadId != minThreadId;
     }
 
 //    // may go down 0
@@ -150,25 +159,24 @@ public:
             accessNumberByOtherThread[index]++;
         }
 
-        if (threadIdAndIsSharedUnion == accessThreadId) {
-            return;
+        if (maxThreadId < accessThreadId) {
+            maxThreadId = accessThreadId;
         }
-        if (threadIdAndIsSharedUnion == -1) {
-            threadIdAndIsSharedUnion = accessThreadId;
-            return;
+        if (minThreadId > accessThreadId) {
+            minThreadId = accessThreadId;
         }
-        if (isThisPageShared()) {
-            return;
-        }
-        threadIdAndIsSharedUnion = MAX_THREAD_NUM + 1;
     }
 
     inline unsigned long getStartAddress() {
         return startAddress;
     }
 
-    inline unsigned long getThreadIdAndIsSharedUnion() {
-        return threadIdAndIsSharedUnion;
+    int getMinThreadId() {
+        return minThreadId;
+    }
+
+    int getMaxThreadId() {
+        return maxThreadId;
     }
 
     inline bool isCoveredByObj(unsigned long objStartAddress, unsigned long objSize) {
@@ -184,7 +192,7 @@ public:
     inline void clearAll() {
 //        releaseTwoLayersBlockAccessNum();
         memset(&(this->accessNumberByFirstTouchThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
-        this->threadIdAndIsSharedUnion = -1;
+        resetMinMaxThreadId();
     }
 
     inline void clearResidObjInfo(unsigned long objAddress, unsigned long size) {
@@ -194,6 +202,7 @@ public:
             this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
         }
+        resetMinMaxThreadId();
 //        releaseTwoLayersBlockAccessNum();
     }
 
@@ -270,12 +279,7 @@ public:
                 this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
-        if (!isThisPageShared()) {
-            fprintf(file, "%s        only access by one thread:%d\n", prefix,
-                    threadIdAndIsSharedUnion);
-        } else {
-            fprintf(file, "%s        this page is shared by multiple threads\n", prefix);
-        }
+        fprintf(file, "%sthis page is shared by thread range:%d--%d\n", prefix, minThreadId, maxThreadId);
         // print access num in cacheline level
     }
 };

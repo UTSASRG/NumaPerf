@@ -9,7 +9,8 @@ private:
 //    ObjectInfo *objectInfo;
 //    DiagnoseCallSiteInfo *diagnoseCallSiteInfo;
     unsigned long pageStartAddress;
-    int threadIdAndIsSharedUnion;           // this could used to identify block wise interleaved or page interleaved
+    int minThreadId;
+    int maxThreadId;
     unsigned long remoteMemAccessNum;
     unsigned long remoteInvalidationNum;    // remoteMemAccessNum + remoteInvalidationNum is the final remote main memory access, to quantify the serious the NUMA issue
     unsigned long readNumBeforeLastWrite;   // remoteMemAccessNum - readNumBeforeLastWrite is basically the duplicated reading
@@ -20,11 +21,17 @@ private:
 
     static MemoryPool localMemoryPool;
 
+    void resetMinMaxThreadId() {
+        minThreadId = MAX_THREAD_NUM + 1;
+        maxThreadId = -1;
+    }
+
 public:
+
 
     DiagnosePageInfo(unsigned long pageStartAddress) : topCacheLineDetailQueue(MAX_TOP_CACHELINE_DETAIL_INFO) {
         this->pageStartAddress = pageStartAddress;
-        this->threadIdAndIsSharedUnion = -1;
+        resetMinMaxThreadId();
         this->remoteMemAccessNum = 0;
         this->remoteInvalidationNum = 0;
         this->readNumBeforeLastWrite = 0;
@@ -50,14 +57,11 @@ public:
         localMemoryPool.release((void *) buff);
     }
 
-    int getThreadIdAndIsSharedUnion() {
-        return this->threadIdAndIsSharedUnion;
-    }
-
     void recordPageInfo(PageDetailedAccessInfo *pageDetailedAccessInfo, unsigned long objAddress,
                         unsigned long objSize) {
         this->pageStartAddress = pageDetailedAccessInfo->getStartAddress();
-        this->threadIdAndIsSharedUnion = pageDetailedAccessInfo->getThreadIdAndIsSharedUnion();
+        this->minThreadId = pageDetailedAccessInfo->getMinThreadId();
+        this->maxThreadId = pageDetailedAccessInfo->getMaxThreadId();
         bool wholePageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(objAddress, objSize);
         if (wholePageCoveredByObj) {
             this->remoteMemAccessNum = pageDetailedAccessInfo->getAccessNumberByOtherTouchThread(0, 0);
@@ -78,6 +82,20 @@ public:
         }
     }
 
+    int getMinThreadId() {
+        return minThreadId;
+    }
+
+    int getMaxThreadId() {
+        return maxThreadId;
+    }
+
+    inline bool isThisPageShared() {
+        if (maxThreadId < 0) {
+            return false;
+        }
+        return maxThreadId != minThreadId;
+    }
 
     void clearResidentDetailedInfo(unsigned long objAddress, unsigned long objSize) {
         for (int i = 0; i < this->topCacheLineDetailQueue.getSize(); i++) {
@@ -105,7 +123,8 @@ public:
     DiagnosePageInfo *deepCopy() {
         DiagnosePageInfo *diagnosePageInfo = createDiagnosePageInfo(this->pageStartAddress);
         diagnosePageInfo->pageStartAddress = this->pageStartAddress;
-        diagnosePageInfo->threadIdAndIsSharedUnion = this->threadIdAndIsSharedUnion;
+        diagnosePageInfo->minThreadId = this->minThreadId;
+        diagnosePageInfo->maxThreadId = this->maxThreadId;
         diagnosePageInfo->remoteMemAccessNum = this->remoteMemAccessNum;
         diagnosePageInfo->remoteInvalidationNum = this->remoteInvalidationNum;
         diagnosePageInfo->readNumBeforeLastWrite = this->readNumBeforeLastWrite;
@@ -186,7 +205,7 @@ public:
         fprintf(file, "%sPage start address:%lu\n", prefix, pageStartAddress);
         fprintf(file, "%sSerious Score:%f\n", prefix,
                 Scores::getSeriousScore(this->getTotalRemoteMainMemoryAccess(), totalRunningCycles));
-        fprintf(file, "%sPage Sharing threadIdAndIsSharedUnion:%d\n", prefix, threadIdAndIsSharedUnion);
+        fprintf(file, "%sthis page is shared by thread range:%d--%d\n", prefix, minThreadId, maxThreadId);
         fprintf(file, "%sPage score:               %f\n", prefix,
                 Scores::getSeriousScore(getAccessNumWithOutCacheSharing(), totalRunningCycles));
         fprintf(file, "%sInvalidationByTrueSharing score:%f\n", prefix,

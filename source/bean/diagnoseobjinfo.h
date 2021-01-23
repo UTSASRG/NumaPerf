@@ -8,6 +8,11 @@
 #include "../utils/collection/priorityqueue.h"
 #include "diagnosepageinfo.h"
 
+typedef struct {
+    int minThreadId;
+    int maxThreadId;
+} ThreadRange;
+
 class DiagnoseObjInfo {
 
 private:
@@ -20,7 +25,7 @@ private:
     unsigned long invalidNumInOtherThreadByFalseCacheSharing;
     int sharedPageNum;
     int detailPageSharingInfoNum;
-    int *detailPageSharingInfoPtr;
+    ThreadRange *detailPageSharingInfoPtr;
 //    PriorityQueue<DiagnosePageInfo> topPageDetailedAccessInfoQueue;
 
 private:
@@ -59,7 +64,7 @@ public:
 
     void createPageSharingDetail() {
         int num = objectInfo->getSize() / PAGE_SIZE + 2;
-        this->detailPageSharingInfoPtr = (int *) Real::malloc(num * sizeof(int));
+        this->detailPageSharingInfoPtr = (ThreadRange *) Real::malloc(num * sizeof(ThreadRange));
     }
 
     inline void releaseInternal() {
@@ -145,11 +150,12 @@ public:
         this->readNumBeforeLastWrite += diagnosePageInfo->getReadNumBeforeLastWrite();
         this->invalidNumInOtherThreadByTrueCacheSharing += diagnosePageInfo->getInvalidationByTrueSharing();
         this->invalidNumInOtherThreadByFalseCacheSharing += diagnosePageInfo->getInvalidationByFalseSharing();
-        if (diagnosePageInfo->getThreadIdAndIsSharedUnion() > MAX_THREAD_NUM) {
+        if (diagnosePageInfo->isThisPageShared()) {
             this->sharedPageNum++;
         }
         if (this->detailPageSharingInfoPtr != NULL) {
-            this->detailPageSharingInfoPtr[detailPageSharingInfoNum] = diagnosePageInfo->getThreadIdAndIsSharedUnion();
+            this->detailPageSharingInfoPtr[detailPageSharingInfoNum].minThreadId = diagnosePageInfo->getMinThreadId();
+            this->detailPageSharingInfoPtr[detailPageSharingInfoNum].maxThreadId = diagnosePageInfo->getMaxThreadId();
             this->detailPageSharingInfoNum++;
         }
     }
@@ -282,10 +288,11 @@ public:
         fprintf(file, "%sDuplicatable score:       %f\n", prefix,
                 Scores::getSeriousScore(getDuplicateNum(), totalRunningCycles));
         fprintf(file, "%sShared page number:       %d\n", prefix, this->sharedPageNum);
-        fprintf(file, "%sShared page detailed: ", prefix);
+        fprintf(file, "%sShared page detailed thread ranges: ", prefix);
         if (this->detailPageSharingInfoPtr != NULL) {
             for (int i = 0; i < detailPageSharingInfoNum; i++) {
-                fprintf(file, "%d, ", this->detailPageSharingInfoPtr[i]);
+                fprintf(file, "%d--%d, ", this->detailPageSharingInfoPtr[i].minThreadId,
+                        this->detailPageSharingInfoPtr[i].maxThreadId);
             }
         }
         fprintf(file, "\n");
