@@ -43,6 +43,9 @@ int pthread_spin_lock(pthread_spinlock_t *lock);
 int pthread_spin_unlock(pthread_spinlock_t *lock);
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 
+void openmp_fork_after();
+void openmp_join_after();
+
 void store_16bytes(unsigned long addr);
 void store_8bytes(unsigned long addr);
 void store_4bytes(unsigned long addr);

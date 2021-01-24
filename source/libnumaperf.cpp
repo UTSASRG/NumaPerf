@@ -1120,6 +1120,7 @@ void *initThreadIndexRoutine(void *args) {
     ThreadStartRoutineParameter *arguments = (ThreadStartRoutineParameter *) args;
     currentThreadIndex = arguments->threadIndex;
     threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(arguments->callSite, arguments->startRoutinePtr);
+    threadBasedInfo->setCurrentNumaNodeIndex(Numas::getNodeOfCurrentThread());
     GlobalThreadBasedInfo[currentThreadIndex] = threadBasedInfo;
 //        Logger::debug("new thread index:%lu\n", currentThreadIndex);
     threadStartRoutineFunPtr startRoutineFunPtr = (threadStartRoutineFunPtr) arguments->startRoutinePtr;
@@ -1310,7 +1311,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         }\
         return ret;\
     }\
-    int nodeBefore = Numas::getNodeOfCurrentThread();\
+    int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = lockFuncPtr(lock);\
     if (releaseLockAfterAcquire) {\
@@ -1320,6 +1321,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
         threadBasedInfo->nodeMigrate();\
+        threadBasedInfo->setCurrentNumaNodeIndex(nodeAfter);\
     }\
     return ret;
 
@@ -1327,13 +1329,14 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
 
 
 #define WAIT_HANDLE(waiTFuncPtr, cond, lock)\
-    int nodeBefore = Numas::getNodeOfCurrentThread();\
+    int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     int nodeAfter = Numas::getNodeOfCurrentThread();\
     if (nodeBefore != nodeAfter) {\
         threadBasedInfo->nodeMigrate();\
+        threadBasedInfo->setCurrentNumaNodeIndex(nodeAfter);\
     }\
     return ret;
 
@@ -1376,6 +1379,24 @@ int pthread_cond_wait(pthread_cond_t *cond,
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 //    fprintf(stderr, "pthread_barrier_wait\n");
     LOCK_HANDLE(Real::pthread_barrier_wait, barrier, true);
+}
+
+
+void openmp_fork_after() {
+    int newNodeIndex = Numas::getNodeOfCurrentThread();
+    if (threadBasedInfo->getCurrentNumaNodeIndex() != newNodeIndex) {
+        threadBasedInfo->nodeMigrate();
+        threadBasedInfo->setCurrentNumaNodeIndex(newNodeIndex);
+    }
+    if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
+        threadBasedInfo->idle(Timer::getCurrentCycle() - applicationStartTime);
+        return;
+    }
+    threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getOpenmpLastJoinStartCycle());
+}
+
+void openmp_join_after() {
+    threadBasedInfo->setOpenmpLastJoinStartCycle(Timer::getCurrentCycle());
 }
 
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }

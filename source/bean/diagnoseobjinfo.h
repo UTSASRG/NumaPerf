@@ -153,7 +153,7 @@ public:
         if (diagnosePageInfo->isThisPageShared()) {
             this->sharedPageNum++;
         }
-        if (this->detailPageSharingInfoPtr != NULL) {
+        if (this->detailPageSharingInfoPtr != NULL && diagnosePageInfo->getMaxThreadId() >= 0) {
             this->detailPageSharingInfoPtr[detailPageSharingInfoNum].minThreadId = diagnosePageInfo->getMinThreadId();
             this->detailPageSharingInfoPtr[detailPageSharingInfoNum].maxThreadId = diagnosePageInfo->getMaxThreadId();
             this->detailPageSharingInfoNum++;

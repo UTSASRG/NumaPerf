@@ -4,7 +4,7 @@
 #include "../concurrency/spinlock.h"
 #include "../asserts.h"
 
-#define PRI_QUEUE_MAX_CAPACITY 21
+#define PRI_QUEUE_MAX_CAPACITY 31
 
 // save big values in this queue
 template<class ValueType>

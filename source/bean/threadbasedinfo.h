@@ -8,6 +8,8 @@ class ThreadBasedInfo {
     CallStack *threadCreateCallSiteStack;
     void *threadStartFunPtr;
     unsigned long long startTime;
+    unsigned int currentNumaNodeIndex;
+    unsigned long openmpLastJoinStartCycle = 0;
     unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
     long nodeMigrationNum;
@@ -59,6 +61,22 @@ public:
 
     void *getThreadStartFunPtr() const {
         return threadStartFunPtr;
+    }
+
+    unsigned int getCurrentNumaNodeIndex() {
+        return currentNumaNodeIndex;
+    }
+
+    void setCurrentNumaNodeIndex(unsigned int nodeIndex) {
+        currentNumaNodeIndex = nodeIndex;
+    }
+
+    unsigned int getOpenmpLastJoinStartCycle() {
+        return openmpLastJoinStartCycle;
+    }
+
+    void setOpenmpLastJoinStartCycle(unsigned int openmpLastJoinStartCycle) {
+        openmpLastJoinStartCycle = openmpLastJoinStartCycle;
     }
 
     inline unsigned long getTotalRunningTime() const {
