@@ -43,6 +43,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock);
 int pthread_spin_unlock(pthread_spinlock_t *lock);
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 
+// insert into kmp_barrier.cpp (__kmp_join_barrier and __kmp_fork_barrier)
 void openmp_fork_after();
 void openmp_join_after();
 

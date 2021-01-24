@@ -9,7 +9,7 @@ class ThreadBasedInfo {
     void *threadStartFunPtr;
     unsigned long long startTime;
     unsigned int currentNumaNodeIndex;
-    unsigned long openmpLastJoinStartCycle = 0;
+    unsigned long long openmpLastJoinStartCycle = 0;
     unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
     long nodeMigrationNum;
@@ -43,6 +43,10 @@ public:
         this->totalRunningTime = Timer::getCurrentCycle() - this->startTime;
     }
 
+    unsigned long long getStartTime() {
+        return this->startTime;
+    }
+
     inline void threadBasedAccess(unsigned long firstTouchThreadId) {
         threadBasedAccessNumber[firstTouchThreadId]++;
     }
@@ -71,19 +75,19 @@ public:
         currentNumaNodeIndex = nodeIndex;
     }
 
-    unsigned int getOpenmpLastJoinStartCycle() {
+    unsigned long long getOpenmpLastJoinStartCycle() {
         return openmpLastJoinStartCycle;
     }
 
-    void setOpenmpLastJoinStartCycle(unsigned int openmpLastJoinStartCycle) {
-        openmpLastJoinStartCycle = openmpLastJoinStartCycle;
+    void setOpenmpLastJoinStartCycle(unsigned long long openmpLastJoinStartCycle) {
+        this->openmpLastJoinStartCycle = openmpLastJoinStartCycle;
     }
 
     inline unsigned long getTotalRunningTime() const {
         return totalRunningTime;
     }
 
-    inline unsigned long long int getIdleTime() const {
+    inline unsigned long long getIdleTime() const {
         return idleTime;
     }
 

@@ -45,7 +45,7 @@ typedef AddressToCachePtrIndexShadowMap CacheLineDetailedInfoShadowMap;
 thread_local int pageBasicSamplingFrequency = 0;
 
 bool inited = false;
-unsigned long applicationStartTime = 0;
+unsigned long long applicationStartTime = 0;
 unsigned long largestThreadIndex = 0;
 thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
@@ -425,7 +425,7 @@ float __getParallelPercent(unsigned long totalRunningCycles) {
 }
 
 __attribute__ ((destructor)) void finalizer(void) {
-    unsigned long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
+    unsigned long long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
     Logger::info("NumaPerf finalizer, totalRunningCycles:%lu\n", totalRunningCycles);
     inited = false;
     FILE *dumpFile = fopen("NumaPerf.dump", "w");
@@ -1389,13 +1389,15 @@ void openmp_fork_after() {
         threadBasedInfo->setCurrentNumaNodeIndex(newNodeIndex);
     }
     if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
-        threadBasedInfo->idle(Timer::getCurrentCycle() - applicationStartTime);
+        threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getStartTime());
         return;
     }
     threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getOpenmpLastJoinStartCycle());
+//    printf("thread:%lu, openmp_fork_after, time:%llu\n", currentThreadIndex, Timer::getCurrentCycle());
 }
 
 void openmp_join_after() {
+//    printf("thread:%lu, openmp_join_after, time:%llu\n", currentThreadIndex, Timer::getCurrentCycle());
     threadBasedInfo->setOpenmpLastJoinStartCycle(Timer::getCurrentCycle());
 }
 
