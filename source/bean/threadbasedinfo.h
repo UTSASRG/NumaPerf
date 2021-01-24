@@ -9,7 +9,7 @@ class ThreadBasedInfo {
     void *threadStartFunPtr;
     unsigned long long startTime;
     unsigned int currentNumaNodeIndex;
-    unsigned long long openmpLastJoinStartCycle = 0;
+//    unsigned long long openmpLastJoinStartCycle = 0;
     unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
     long nodeMigrationNum;
@@ -75,13 +75,13 @@ public:
         currentNumaNodeIndex = nodeIndex;
     }
 
-    unsigned long long getOpenmpLastJoinStartCycle() {
-        return openmpLastJoinStartCycle;
-    }
-
-    void setOpenmpLastJoinStartCycle(unsigned long long openmpLastJoinStartCycle) {
-        this->openmpLastJoinStartCycle = openmpLastJoinStartCycle;
-    }
+//    unsigned long long getOpenmpLastJoinStartCycle() {
+//        return openmpLastJoinStartCycle;
+//    }
+//
+//    void setOpenmpLastJoinStartCycle(unsigned long long openmpLastJoinStartCycle) {
+//        this->openmpLastJoinStartCycle = openmpLastJoinStartCycle;
+//    }
 
     inline unsigned long getTotalRunningTime() const {
         return totalRunningTime;
@@ -107,11 +107,14 @@ public:
         return threadBasedAccessNumber;
     }
 
-    inline float getMigrationScore(unsigned long totalRunningCycle) {
+    inline float getMigrationScore(unsigned long long totalRunningCycle) {
         return this->nodeMigrationNum * getParallelPercent(totalRunningCycle);
     }
 
-    inline float getParallelPercent(unsigned long totalRunningCycle) {
+    inline float getParallelPercent(unsigned long long totalRunningCycle) {
+        if ((this->totalRunningTime - this->idleTime) > totalRunningCycle) {
+            return 1;
+        }
         return (float) (this->totalRunningTime - this->idleTime) / (float) totalRunningCycle;
     }
 

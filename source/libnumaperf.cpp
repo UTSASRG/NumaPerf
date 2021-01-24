@@ -1388,17 +1388,17 @@ void openmp_fork_after() {
         threadBasedInfo->nodeMigrate();
         threadBasedInfo->setCurrentNumaNodeIndex(newNodeIndex);
     }
-    if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
-        threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getStartTime());
-        return;
-    }
-    threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getOpenmpLastJoinStartCycle());
+//    if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
+//        threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getStartTime());
+//        return;
+//    }
+//    threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getOpenmpLastJoinStartCycle());
 //    printf("thread:%lu, openmp_fork_after, time:%llu\n", currentThreadIndex, Timer::getCurrentCycle());
 }
 
 void openmp_join_after() {
 //    printf("thread:%lu, openmp_join_after, time:%llu\n", currentThreadIndex, Timer::getCurrentCycle());
-    threadBasedInfo->setOpenmpLastJoinStartCycle(Timer::getCurrentCycle());
+//    threadBasedInfo->setOpenmpLastJoinStartCycle(Timer::getCurrentCycle());
 }
 
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
