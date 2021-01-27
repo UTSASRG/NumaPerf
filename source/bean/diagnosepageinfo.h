@@ -3,7 +3,7 @@
 
 #include "objectInfo.h"
 #include "diagnosecallsiteinfo.h"
-
+#if 0
 class DiagnosePageInfo {
 private:
 //    ObjectInfo *objectInfo;
@@ -220,5 +220,5 @@ public:
         }
     }
 };
-
+#endif
 #endif //NUMAPERF_DIAGNOSEPAGEINFO_H

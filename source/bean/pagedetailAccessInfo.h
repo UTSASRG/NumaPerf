@@ -27,7 +27,7 @@ class PageDetailedAccessInfo {
     unsigned long firstTouchThreadId;
     unsigned long startAddress;
 //    unsigned long allAccessNumByOtherThread;
-    unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
+//    unsigned int accessNumberByFirstTouchThread[BLOCK_NUM];
     unsigned int accessNumberByOtherThread[BLOCK_NUM];
     int minThreadId;
     int maxThreadId;
@@ -153,12 +153,10 @@ public:
 
     inline void recordAccess(unsigned long addr, unsigned long accessThreadId, unsigned long firstTouchThreadId) {
         unsigned int index = getBlockIndex(addr);
-        if (accessThreadId == firstTouchThreadId) {
-            accessNumberByFirstTouchThread[index]++;
-        } else {
+        if (accessThreadId != firstTouchThreadId) {
             accessNumberByOtherThread[index]++;
+//            accessNumberByFirstTouchThread[index]++;
         }
-
         if (maxThreadId < (int) accessThreadId) {
             maxThreadId = (int) accessThreadId;
         }
@@ -191,7 +189,7 @@ public:
 
     inline void clearAll() {
 //        releaseTwoLayersBlockAccessNum();
-        memset(&(this->accessNumberByFirstTouchThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
+        memset(&(this->accessNumberByOtherThread), 0, sizeof(PageDetailedAccessInfo) - 2 * sizeof(unsigned long));
         resetMinMaxThreadId();
     }
 
@@ -199,22 +197,22 @@ public:
         int startIndex = getResidentStartIndex(objAddress, size);
         int endIndex = getResidentEndIndex(objAddress, size);
         for (int i = startIndex; i <= endIndex; i++) {
-            this->accessNumberByFirstTouchThread[i] = 0;
+//            this->accessNumberByFirstTouchThread[i] = 0;
             this->accessNumberByOtherThread[i] = 0;
         }
         resetMinMaxThreadId();
 //        releaseTwoLayersBlockAccessNum();
     }
 
-    inline unsigned long getAccessNumberByFirstTouchThread(unsigned long objStartAddress, unsigned long size) const {
-        unsigned long accessNumInMainThread = 0;
-        int startIndex = getResidentStartIndex(objStartAddress, size);
-        int endIndex = getResidentEndIndex(objStartAddress, size);
-        for (unsigned int i = startIndex; i <= endIndex; i++) {
-            accessNumInMainThread += this->accessNumberByFirstTouchThread[i];
-        }
-        return accessNumInMainThread;
-    }
+//    inline unsigned long getAccessNumberByFirstTouchThread(unsigned long objStartAddress, unsigned long size) const {
+//        unsigned long accessNumInMainThread = 0;
+//        int startIndex = getResidentStartIndex(objStartAddress, size);
+//        int endIndex = getResidentEndIndex(objStartAddress, size);
+//        for (unsigned int i = startIndex; i <= endIndex; i++) {
+//            accessNumInMainThread += this->accessNumberByFirstTouchThread[i];
+//        }
+//        return accessNumInMainThread;
+//    }
 
     inline unsigned long getAccessNumberByOtherTouchThread(unsigned long objStartAddress, unsigned long size) {
 //        if (0 == objStartAddress && 0 == size && 0 != allAccessNumByOtherThread) {
@@ -275,8 +273,8 @@ public:
         fprintf(file, "%sPageStartAddress:         %p\n", prefix, (void *) (this->startAddress));
         fprintf(file, "%sFirstTouchThreadId:         %lu\n", prefix, this->firstTouchThreadId);
 //        fprintf(file, "%sSeriousScore:             %lu\n", prefix, this->getTotalRemoteAccess(0, 0));
-        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
-                this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
+//        fprintf(file, "%sAccessNumInMainThread:    %lu\n", prefix,
+//                this->getAccessNumberByFirstTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sAccessNumInOtherThreads:  %lu\n", prefix,
                 this->getAccessNumberByOtherTouchThread(0, this->startAddress + PAGE_SIZE));
         fprintf(file, "%sthis page is shared by thread range:%d--%d\n", prefix, minThreadId, maxThreadId);

@@ -17,7 +17,7 @@
 
 class CacheLineDetailedInfo {
     unsigned long startAddress;
-    unsigned int invalidationNumberInFirstThread;
+//    unsigned int invalidationNumberInFirstThread;
     unsigned int invalidationNumberInOtherThreads;
     unsigned int readNumBeforeLastWrite;
     unsigned int continualReadNumAfterAWrite;
@@ -81,7 +81,7 @@ public:
 //    }
 
     void clear() {
-        memset(&(this->invalidationNumberInFirstThread), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
+        memset(&(this->invalidationNumberInOtherThreads), 0, sizeof(CacheLineDetailedInfo) - sizeof(unsigned long));
         threadIdAndIsMultipleThreadsUnion = -1;
         for (int i = 0; i < WORD_NUMBER_IN_CACHELINE; i++) {
             wordThreadIdAndIsMultipleThreadsUnion[i] = -1;
@@ -116,9 +116,9 @@ public:
         return true;
     }
 
-    inline unsigned long getInvalidationNumberInFirstThread() {
-        return invalidationNumberInFirstThread;
-    }
+//    inline unsigned long getInvalidationNumberInFirstThread() {
+//        return invalidationNumberInFirstThread;
+//    }
 
     inline unsigned long getInvalidationNumberInOtherThreads() {
         return invalidationNumberInOtherThreads;
@@ -168,11 +168,7 @@ public:
         recordAccess(unsigned long threadId, unsigned long firstTouchThreadId, eAccessType type, unsigned long addr) {
 #endif
 
-        if (firstTouchThreadId == threadId) {
-            if (recordNewInvalidation(threadId, type)) {
-                invalidationNumberInFirstThread++;
-            }
-        } else {
+        if (firstTouchThreadId != threadId) {
             if (recordNewInvalidation(threadId, type)) {
                 invalidationNumberInOtherThreads++;
             }
@@ -250,7 +246,7 @@ public:
         fprintf(file, "%sCacheLineStartAddress:    %p\n", prefix, (void *) (this->startAddress));
         fprintf(file, "%sSeriousScore:             %f\n", prefix,
                 Scores::getSeriousScore(getTotalRemoteAccess(), totalRunningCycles));
-        fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
+//        fprintf(file, "%sInvalidNumInMainThread:   %lu\n", prefix, this->getInvalidationNumberInFirstThread());
         fprintf(file, "%sInvalidNumInOtherThreads: %lu\n", prefix, this->getInvalidationNumberInOtherThreads());
         fprintf(file, "%sDuplicatable(Non-ContinualReadingNumber/ContinualReadingNumber):       %d/%d\n", prefix,
                 this->readNumBeforeLastWrite, this->continualReadNumAfterAWrite);
