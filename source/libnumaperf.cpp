@@ -1315,6 +1315,12 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         return ret;\
     }\
     threadBasedInfo->lockContention();\
+    unsigned long long start = Timer::getCurrentCycle();\
+    int ret = lockFuncPtr(lock);\
+    if (releaseLockAfterAcquire) {\
+        lockInfo->releaseLock();\
+    }\
+    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     return ret;
 
 #if 0
