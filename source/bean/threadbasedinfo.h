@@ -13,6 +13,7 @@ class ThreadBasedInfo {
     unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
     long nodeMigrationNum;
+    long lockContentionNum;
     unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
 
 private:
@@ -55,6 +56,10 @@ public:
         this->nodeMigrationNum++;
     }
 
+    inline void lockContention() {
+        this->lockContentionNum++;
+    }
+
     inline void idle(unsigned long long newIdleTime) {
         this->idleTime += newIdleTime;
     }
@@ -95,6 +100,10 @@ public:
         return nodeMigrationNum;
     }
 
+    inline long getLockContentionNum() const {
+        return lockContentionNum;
+    }
+
     inline void setThreadBasedAccessNumber(int threadIndex, unsigned long value) {
         threadBasedAccessNumber[threadIndex] = value;
     }
@@ -109,6 +118,10 @@ public:
 
     inline float getMigrationScore(unsigned long long totalRunningCycle) {
         return this->nodeMigrationNum * getParallelPercent(totalRunningCycle);
+    }
+
+    inline float getLockContentionScore(unsigned long long totalRunningCycle) {
+        return this->lockContentionNum * getParallelPercent(totalRunningCycle);
     }
 
     inline float getParallelPercent(unsigned long long totalRunningCycle) {

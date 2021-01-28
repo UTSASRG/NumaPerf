@@ -437,7 +437,10 @@ __attribute__ ((destructor)) void finalizer(void) {
         if (!GlobalThreadBasedInfo[i]->isEnd()) {
             GlobalThreadBasedInfo[i]->end();
         }
+//        fprintf(stderr, "thread-%lu, parallel rate:%f\n", i,
+//                GlobalThreadBasedInfo[i]->getParallelPercent(totalRunningCycles));
     }
+
     float parallelPercent = __getParallelPercent(totalRunningCycles);
     fprintf(dumpFile, "Parallel Running Percent:%f\n", parallelPercent);
     if (parallelPercent < MIN_PARALLEL_PERCENT) {
@@ -531,8 +534,8 @@ __attribute__ ((destructor)) void finalizer(void) {
     long totalMigrationNum = 0;
     float totalMigrationScore = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
-        totalMigrationScore += GlobalThreadBasedInfo[i]->getMigrationScore(totalRunningCycles);
+        totalMigrationNum += GlobalThreadBasedInfo[i]->getLockContentionNum();
+        totalMigrationScore += GlobalThreadBasedInfo[i]->getLockContentionScore(totalRunningCycles);
     }
     fprintf(dumpFile,
             "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalMigrationNum,
@@ -542,9 +545,9 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
 
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        if (GlobalThreadBasedInfo[i]->getNodeMigrationNum() > 0) {
+        if (GlobalThreadBasedInfo[i]->getLockContentionNum() > 0) {
             fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
-                    GlobalThreadBasedInfo[i]->getNodeMigrationNum());
+                    GlobalThreadBasedInfo[i]->getLockContentionNum());
         }
     }
     fprintf(dumpFile, "\n\n");
@@ -1311,19 +1314,24 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         }\
         return ret;\
     }\
-    int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
-    unsigned long long start = Timer::getCurrentCycle();\
-    int ret = lockFuncPtr(lock);\
-    if (releaseLockAfterAcquire) {\
-        lockInfo->releaseLock();\
-    }\
-    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
-    int nodeAfter = Numas::getNodeOfCurrentThread();\
-    if (nodeBefore != nodeAfter) {\
-        threadBasedInfo->nodeMigrate();\
-        threadBasedInfo->setCurrentNumaNodeIndex(nodeAfter);\
-    }\
+    threadBasedInfo->lockContention();\
     return ret;
+
+#if 0
+int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
+unsigned long long start = Timer::getCurrentCycle();\
+int ret = lockFuncPtr(lock);\
+if (releaseLockAfterAcquire) {\
+    lockInfo->releaseLock();\
+}\
+threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
+int nodeAfter = Numas::getNodeOfCurrentThread();\
+if (nodeBefore != nodeAfter) {\
+    threadBasedInfo->nodeMigrate();\
+    threadBasedInfo->setCurrentNumaNodeIndex(nodeAfter);\
+}\
+return ret;
+#endif
 
 //        fprintf(stderr, "thread-%lu, node migrate\n", currentThreadIndex);
 
@@ -1333,12 +1341,17 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
-    int nodeAfter = Numas::getNodeOfCurrentThread();\
-    if (nodeBefore != nodeAfter) {\
-        threadBasedInfo->nodeMigrate();\
-        threadBasedInfo->setCurrentNumaNodeIndex(nodeAfter);\
-    }\
+    threadBasedInfo->lockContention();\
     return ret;
+
+#if 0
+int nodeAfter = Numas::getNodeOfCurrentThread();\
+if (nodeBefore != nodeAfter) {\
+    threadBasedInfo->nodeMigrate();\
+    threadBasedInfo->setCurrentNumaNodeIndex(nodeAfter);\
+}\
+return ret;
+#endif
 
 
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
@@ -1383,11 +1396,15 @@ int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
 
 
 void openmp_fork_after() {
+
+#if 0
     int newNodeIndex = Numas::getNodeOfCurrentThread();
     if (threadBasedInfo->getCurrentNumaNodeIndex() != newNodeIndex) {
         threadBasedInfo->nodeMigrate();
         threadBasedInfo->setCurrentNumaNodeIndex(newNodeIndex);
     }
+#endif
+    threadBasedInfo->lockContention();
 //    if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
 //        threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getStartTime());
 //        return;
