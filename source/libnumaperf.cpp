@@ -517,8 +517,11 @@ __attribute__ ((destructor)) void finalizer(void) {
             }
             fprintf(dumpFile, "Thread Stage-%d: \n", stage);
             data->getThreadCreateCallSite()->printFrom(1, dumpFile);
-            fprintf(dumpFile, "Current Thread Number:%lu, MemoryLatency:%llu\n", data->getThreadNumber(),
-                    data->getTotalMemoryOverheads());
+            fprintf(dumpFile, "Current Thread Number:%lu, MemoryLatency:%llu, local:%llu, remote:%llu\n",
+                    data->getThreadNumber(),
+                    data->getTotalMemoryOverheads(),
+                    data->getTotalLocalAccess(),
+                    data->getTotalRemoteAccess());
 //            fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
 //                    data->getUserUsage(), data->getRecommendThreadNum());
 //            if (data->getUserUsage() > THREAD_FULL_USAGE) {

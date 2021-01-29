@@ -8,7 +8,8 @@
 class ThreadStageInfo {
     CallStack *threadCreateCallSite;
     long threadNumber;
-    unsigned long long totalMemoryOverheads;
+    unsigned long long totalLocalAccess;
+    unsigned long long totalRemoteAccess;
     unsigned long long totalAliveTime;
     unsigned long long totalIdleTime;
 private:
@@ -32,10 +33,10 @@ public:
         this->totalIdleTime += threadBasedInfo->getIdleTime();
         for (unsigned long index = 0; index <= maxThreadIndex; index++) {
             if (currentThreadIndex == index) {
-                this->totalMemoryOverheads += threadBasedInfo->getThreadBasedAccessNumber()[index];
+                this->totalLocalAccess += threadBasedInfo->getThreadBasedAccessNumber()[index];
                 continue;
             }
-            this->totalMemoryOverheads += 2 * (threadBasedInfo->getThreadBasedAccessNumber()[index]);
+            this->totalRemoteAccess += (threadBasedInfo->getThreadBasedAccessNumber()[index]);
         }
     }
 
@@ -70,7 +71,15 @@ public:
     }
 
     unsigned long long getTotalMemoryOverheads() const {
-        return totalMemoryOverheads;
+        return totalLocalAccess + 2 * totalRemoteAccess;
+    }
+
+    unsigned long long getTotalLocalAccess() const {
+        return totalLocalAccess;
+    }
+
+    unsigned long long getTotalRemoteAccess() const {
+        return totalRemoteAccess;
     }
 
     unsigned long long int getTotalIdleTime() const {
