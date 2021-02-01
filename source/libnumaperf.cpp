@@ -1363,6 +1363,7 @@ return ret;
 #endif
 
 
+#if 0
 int pthread_spin_lock(pthread_spinlock_t *lock) throw() {
 //    fprintf(stderr, "pthread_spin_lock\n");
     if (!inited) {
@@ -1377,6 +1378,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock) throw() {
     }
     UNLOCK_HANDLE(Real::pthread_spin_unlock, lock);
 }
+#endif
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
 //    fprintf(stderr, "pthread_mutex_lock\n");

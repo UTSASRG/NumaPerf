@@ -59,4 +59,7 @@ add_executable(NumaPerf
         evaluation/commons/threadbinding/real.h
         evaluation/commons/threadbinding/automics.h
         evaluation/commons/threadbinding/files.h
+        evaluation/commons/lockintercept/liblockintercept.cpp
+        evaluation/commons/lockintercept/liblockintercept.h
+        evaluation/commons/lockintercept/real.h
         test/test.cpp)

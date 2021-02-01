@@ -39,8 +39,8 @@ __THROW;
 int pthread_barrier_wait(pthread_barrier_t *barrier);
 int pthread_mutex_lock(pthread_mutex_t *mutex);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
-int pthread_spin_lock(pthread_spinlock_t *lock);
-int pthread_spin_unlock(pthread_spinlock_t *lock);
+//int pthread_spin_lock(pthread_spinlock_t *lock);
+//int pthread_spin_unlock(pthread_spinlock_t *lock);
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 
 // insert into kmp_barrier.cpp (__kmp_join_barrier and __kmp_fork_barrier)
