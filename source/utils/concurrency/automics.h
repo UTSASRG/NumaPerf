@@ -28,6 +28,10 @@ public:
                                                 expect_value + increaseNumber, false,
                                                 __ATOMIC_SEQ_CST,
                                                 __ATOMIC_SEQ_CST)) {
+//                    if (increaseNumber == -1) {
+//                        fprintf(stderr, "expect:%li, after:%li, new:%li\n", expect_value, expect_value + increaseNumber,
+//                                *targetValue);
+//                    }
                     return expect_value + increaseNumber;
                 }
             }
@@ -39,6 +43,10 @@ public:
                                             false,
                                             __ATOMIC_SEQ_CST,
                                             __ATOMIC_SEQ_CST)) {
+//                if (increaseNumber == -1) {
+//                    fprintf(stderr, "expect:%li, after:%li, new:%li\n", expect_value, expect_value + increaseNumber,
+//                            *targetValue);
+//                }
                 return expect_value + increaseNumber;
             }
         }

@@ -1317,9 +1317,10 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         }\
         return ret;\
     }\
-    threadBasedInfo->lockContention();\
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = lockFuncPtr(lock);\
+    fprintf(stderr, "lock-%p, contention:%l\n", lock, lockInfo->getThreadsAcquire());\
+    threadBasedInfo->lockContention();\
     if (releaseLockAfterAcquire) {\
         lockInfo->releaseLock();\
     }\
@@ -1348,9 +1349,9 @@ return ret;
 #define WAIT_HANDLE(waiTFuncPtr, cond, lock)\
     int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
     unsigned long long start = Timer::getCurrentCycle();\
+    threadBasedInfo->lockContention();\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
-    threadBasedInfo->lockContention();\
     return ret;
 
 #if 0
@@ -1385,6 +1386,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     if (!inited) {
         return 0;
     }
+//    fprintf(stderr, "llock:%p\n",mutex);
     LOCK_HANDLE(Real::pthread_mutex_lock, mutex, false);
 }
 
@@ -1392,6 +1394,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
     if (!inited) {
         return 0;
     }
+//    fprintf(stderr, "unllock:%p\n",mutex);
     UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
 }
 
