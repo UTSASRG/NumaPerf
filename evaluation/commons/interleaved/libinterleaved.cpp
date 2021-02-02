@@ -1,8 +1,21 @@
 #include <cstdlib>
 #include <cstdio>
 #include "libinterleaved.h"
+#include "real.h"
 
-unsigned long MASK = (1 << NUMA_NODES) - 1;
+#define MASK ((1 << NUMA_NODES) - 1)
+#define INIT_BUFF_SIZE 1024*1024*1024
+
+static bool inited = false;
+
+static void initializer(void) {
+    fprintf(stderr, "interleaved lib init\n");
+    Real::init();
+    inited = true;
+}
+
+//https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
+static int const do_init = (initializer(), 0);
 
 inline void *__interleavedMalloc(size_t size) {
     void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
@@ -13,14 +26,31 @@ inline void *__interleavedMalloc(size_t size) {
     return ret;
 }
 
+inline void *__malloc(size_t size) {
+    static char initBuf[INIT_BUFF_SIZE];
+    static int allocated = 0;
+    if (!inited) {
+        void *resultPtr = (void *) &initBuf[allocated];
+        allocated += size;
+        //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
+        return resultPtr;
+    }
+    if (size > 100000) {
+        return __interleavedMalloc(size);
+    }
+    return Real::malloc(size);
+}
+
 void *interleavedMalloc(size_t size) {
     return __interleavedMalloc(size);
 }
 
+void *malloc(size_t size) {
+    fprintf(stderr, "operator malloc \n");
+    return __malloc(size);
+}
+
 void *operator new(size_t size) {
-    if (size < 100000) {
-        return malloc(size);
-    }
     fprintf(stderr, "operator new \n");
-    return __interleavedMalloc(size);
+    return __malloc(size);
 }

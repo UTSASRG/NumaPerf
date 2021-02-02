@@ -1319,7 +1319,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     }\
     unsigned long long start = Timer::getCurrentCycle();\
     int ret = lockFuncPtr(lock);\
-    fprintf(stderr, "lock-%p, contention:%l\n", lock, lockInfo->getThreadsAcquire());\
     threadBasedInfo->lockContention();\
     if (releaseLockAfterAcquire) {\
         lockInfo->releaseLock();\

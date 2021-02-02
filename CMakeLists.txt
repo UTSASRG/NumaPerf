@@ -62,4 +62,5 @@ add_executable(NumaPerf
         evaluation/commons/lockintercept/liblockintercept.cpp
         evaluation/commons/lockintercept/liblockintercept.h
         evaluation/commons/lockintercept/real.h
+        evaluation/commons/interleaved/real.h
         test/test.cpp)
