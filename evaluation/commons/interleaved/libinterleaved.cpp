@@ -53,12 +53,17 @@ void *interleavedMalloc(size_t size) {
     return __interleavedMalloc(size);
 }
 
+void free(void *ptr) {
+//    fprintf(stderr, "operator malloc \n");
+    return __free(ptr);
+}
+
 void *malloc(size_t size) {
-    fprintf(stderr, "operator malloc \n");
+//    fprintf(stderr, "operator malloc \n");
     return __malloc(size);
 }
 
 void *operator new(size_t size) {
-    fprintf(stderr, "operator new \n");
+//    fprintf(stderr, "operator new \n");
     return __malloc(size);
 }
