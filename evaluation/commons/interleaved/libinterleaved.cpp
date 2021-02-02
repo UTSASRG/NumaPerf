@@ -35,9 +35,6 @@ inline void *__malloc(size_t size) {
         //Logger::info("malloc address:%p, totcal cycles:%lu\n", resultPtr, Timer::getCurrentCycle() - startCycle);
         return resultPtr;
     }
-    if (size > 100000) {
-        return __interleavedMalloc(size);
-    }
     return Real::malloc(size);
 }
 
@@ -60,6 +57,9 @@ void free(void *ptr) {
 
 void *malloc(size_t size) {
 //    fprintf(stderr, "operator malloc \n");
+    if (size > 100000) {
+        return __interleavedMalloc(size);
+    }
     return __malloc(size);
 }
 
