@@ -21,12 +21,27 @@ __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
 }
 
-inline void *__interleavedMalloc(size_t size) {
+inline void *__pageInterleavedMalloc(size_t size) {
     unsigned long MASK = ((1 << NUMA_NODES) - 1);
     void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     if (mbind(ret, size, MPOL_INTERLEAVE, &MASK, NUMA_NODES + 1, 0) == -1) {
         fprintf(stderr, "mbind error \n");
         exit(-1);
+    }
+    return ret;
+}
+
+inline void *__blockInterleavedMalloc(size_t size) {
+    void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    int pageNum = size / 4096;
+    unsigned long nodeIndex = 0;
+    for (unsigned long offset = 0; offset < size; offset += pageNum * 4096) {
+        unsigned long mask = 1ul << nodeIndex;
+        if (mbind((char *) ret + offset, pageNum * 4096, MPOL_BIND, &mask, NUMA_NODES + 1, 0) == -1) {
+            fprintf(stderr, "mbind error \n");
+            exit(-1);
+        }
+        nodeIndex++;
     }
     return ret;
 }
@@ -52,7 +67,7 @@ inline void __free(void *ptr) {
 }
 
 void *interleavedMalloc(size_t size) {
-    return __interleavedMalloc(size);
+    return __pageInterleavedMalloc(size);
 }
 
 void free(void *ptr) {
