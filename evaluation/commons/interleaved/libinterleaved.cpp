@@ -41,6 +41,14 @@ inline void *__malloc(size_t size) {
     return Real::malloc(size);
 }
 
+inline void __free(void *ptr) {
+//    Logger::debug("__free pointer:%p\n", ptr);
+    if (!inited) {
+        return;
+    }
+    Real::free(ptr);
+}
+
 void *interleavedMalloc(size_t size) {
     return __interleavedMalloc(size);
 }
