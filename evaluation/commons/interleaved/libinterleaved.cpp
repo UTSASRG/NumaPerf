@@ -16,6 +16,11 @@ static void initializer(void) {
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
 
+__attribute__ ((destructor)) void finalizer(void) {
+    fprintf(stderr, "interleaved lib final\n");
+    inited = false;
+}
+
 inline void *__interleavedMalloc(size_t size) {
     unsigned long MASK = ((1 << NUMA_NODES) - 1);
     void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
@@ -57,9 +62,11 @@ void free(void *ptr) {
 
 void *malloc(size_t size) {
 //    fprintf(stderr, "operator malloc \n");
+#if 0
     if (size > 100000) {
         return __interleavedMalloc(size);
     }
+#endif
     return __malloc(size);
 }
 
