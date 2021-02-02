@@ -3,7 +3,6 @@
 #include "libinterleaved.h"
 #include "real.h"
 
-#define MASK ((1 << NUMA_NODES) - 1)
 #define INIT_BUFF_SIZE 1024*1024*1024
 
 static bool inited = false;
@@ -18,6 +17,7 @@ static void initializer(void) {
 static int const do_init = (initializer(), 0);
 
 inline void *__interleavedMalloc(size_t size) {
+    int MASK = ((1 << NUMA_NODES) - 1);
     void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     if (mbind(ret, size, MPOL_INTERLEAVE, &MASK, NUMA_NODES + 1, 0) == -1) {
         fprintf(stderr, "mbind error \n");
