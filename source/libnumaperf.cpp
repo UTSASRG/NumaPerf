@@ -1394,7 +1394,7 @@ return ret;
     int nodeBefore = Numas::getNodeOfCurrentThread();\
     unsigned long long start = Timer::getCurrentCycle();\
     threadBasedInfo->barrierContention();\
-    int ret = lockFuncPtr(barrier);\
+    int ret = waiTFuncPtr(barrier);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     if (nodeBefore != Numas::getNodeOfCurrentThread()){\
         threadBasedInfo->barrierNodeMigrate();\
