@@ -1383,11 +1383,9 @@ return ret;
     int nodeBefore = Numas::getNodeOfCurrentThread();\
     unsigned long long start = Timer::getCurrentCycle();\
     threadBasedInfo->conditionContention();\
-    fprintf(stderr, "contention_pthread_cond_wait\n");\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     if (nodeBefore != Numas::getNodeOfCurrentThread()){\
-        fprintf(stderr, "contention_pthread_cond_wait_migrate\n");\
         threadBasedInfo->conditionNodeMigrate();\
     }\
     return ret;
@@ -1437,7 +1435,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     int ret;
     unsigned long long start;
     int nodeBefore;
-    fprintf(stderr, "pthread_mutex_lock\n");
+//    fprintf(stderr, "pthread_mutex_lock\n");
     int contention = mutex->__data.__lock;
     if (contention) {
         start = Timer::getCurrentCycle();
@@ -1447,11 +1445,11 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     ret = Real::pthread_mutex_lock(mutex);
     threadBasedInfo->mutexAcquire();
     if (contention) {
-        fprintf(stderr, "contention_pthread_mutex_lock\n");
+//        fprintf(stderr, "contention_pthread_mutex_lock\n");
         threadBasedInfo->mutexLockContention();
         threadBasedInfo->idle(Timer::getCurrentCycle() - start);
         if (Numas::getNodeOfCurrentThread() != nodeBefore) {
-            fprintf(stderr, "contention_pthread_mutex_lock_migrate\n");
+//            fprintf(stderr, "contention_pthread_mutex_lock_migrate\n");
             threadBasedInfo->mutexNodeMigrate();
         }
     }
@@ -1471,12 +1469,12 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
 
 int pthread_cond_wait(pthread_cond_t *cond,
                       pthread_mutex_t *mutex) {
-    fprintf(stderr, "pthread_cond_wait\n");
+//    fprintf(stderr, "pthread_cond_wait\n");
     WAIT_HANDLE(Real::pthread_cond_wait, cond, mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
-    fprintf(stderr, "pthread_barrier_wait\n");
+//    fprintf(stderr, "pthread_barrier_wait\n");
     BARRIER_WAIT_HANDLE(Real::pthread_barrier_wait, barrier);
 }
 
