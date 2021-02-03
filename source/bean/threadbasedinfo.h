@@ -173,8 +173,8 @@ public:
         return this->getNodeMigrationNum() * getParallelPercent(totalRunningCycle);
     }
 
-    inline float getLockContentionScore(unsigned long long totalRunningCycle) {
-        return this->getLockContentionNum() * getParallelPercent(totalRunningCycle);
+    inline float getLockContentionScore(unsigned long long totalRunningCycle, unsigned long long totalRunningMs) {
+        return this->getLockContentionNum() * getParallelPercent(totalRunningCycle) / totalRunningMs;
     }
 
     inline float getParallelPercent(unsigned long long totalRunningCycle) {

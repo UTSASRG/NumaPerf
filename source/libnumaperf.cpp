@@ -46,6 +46,7 @@ thread_local int pageBasicSamplingFrequency = 0;
 
 bool inited = false;
 unsigned long long applicationStartTime = 0;
+unsigned long long applicationStartMs = 0;
 unsigned long largestThreadIndex = 0;
 thread_local ThreadBasedInfo *threadBasedInfo = NULL;
 thread_local unsigned long currentThreadIndex = 0;
@@ -78,6 +79,7 @@ static void initializer(void) {
     threadBasedInfo = ThreadBasedInfo::createThreadBasedInfo(NULL, NULL);
     GlobalThreadBasedInfo[0] = threadBasedInfo;
     applicationStartTime = Timer::getCurrentCycle();
+    applicationStartMs = Timer::getCurrentMs();
     inited = true;
 }
 
@@ -427,6 +429,7 @@ float __getParallelPercent(unsigned long totalRunningCycles) {
 __attribute__ ((destructor)) void finalizer(void) {
     unsigned long long totalRunningCycles = Timer::getCurrentCycle() - applicationStartTime;
     Logger::info("NumaPerf finalizer, totalRunningCycles:%lu\n", totalRunningCycles);
+    unsigned long long totalRunningMs = Timer::getCurrentMs() - applicationStartMs;
     inited = false;
     FILE *dumpFile = fopen("NumaPerf.dump", "w");
     if (!dumpFile) {
@@ -554,7 +557,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         totalMutexContentionNum += GlobalThreadBasedInfo[i]->getMutexContentionNum();
         totalConditionContentionNum += GlobalThreadBasedInfo[i]->getConditionContentionNum();
         totalBarrierContentionNum += GlobalThreadBasedInfo[i]->getBarrierContentionNum();
-        totalMigrationScore += GlobalThreadBasedInfo[i]->getLockContentionScore(totalRunningCycles);
+        totalMigrationScore += GlobalThreadBasedInfo[i]->getLockContentionScore(totalRunningCycles, totalRunningMs);
 
         totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
         totalMutexContentionMigrationNum += GlobalThreadBasedInfo[i]->getMutexNodeMigrationNum();
