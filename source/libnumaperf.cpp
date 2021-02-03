@@ -534,6 +534,8 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     fprintf(dumpFile, "\n");
 
+    long totalMutexAcquireNum = 0;
+
     long totalContentionNum = 0;
     long totalMutexContentionNum = 0;
     long totalConditionContentionNum = 0;
@@ -546,6 +548,8 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     float totalMigrationScore = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
+        totalMutexAcquireNum += GlobalThreadBasedInfo[i]->getMutexAcquire();
+
         totalContentionNum += GlobalThreadBasedInfo[i]->getLockContentionNum();
         totalMutexContentionNum += GlobalThreadBasedInfo[i]->getMutexContentionNum();
         totalConditionContentionNum += GlobalThreadBasedInfo[i]->getConditionContentionNum();
@@ -560,6 +564,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     fprintf(dumpFile,
             "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalContentionNum,
             totalMigrationScore);
+    fprintf(dumpFile, "totalMutexAcquireNum:%lu\n", totalMutexAcquireNum);
     fprintf(dumpFile,
             "totalContentionNum:%lu, totalMutexContentionNum:%lu, totalConditionContentionNum:%lu, totalBarrierContentionNum:%lu\n",
             totalContentionNum, totalMutexContentionNum, totalConditionContentionNum, totalBarrierContentionNum);

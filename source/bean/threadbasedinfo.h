@@ -97,6 +97,10 @@ public:
         return threadStartFunPtr;
     }
 
+    inline long getMutexAcquire() {
+        return mutexAcquireNum;
+    }
+
     unsigned int getCurrentNumaNodeIndex() {
         return currentNumaNodeIndex;
     }
