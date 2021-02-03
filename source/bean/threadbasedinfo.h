@@ -15,6 +15,7 @@ class ThreadBasedInfo {
     long mutexNodeMigrationNum;
     long conditionNodeMigrationNum;
     long barrierNodeMigrationNum;
+    long mutexAcquireNum;
     long mutexContentionNum;
     long conditionContentionNum;
     long barrierContentionNum;
@@ -66,6 +67,10 @@ public:
 
     inline void barrierNodeMigrate() {
         this->barrierNodeMigrationNum++;
+    }
+
+    inline void mutexAcquire() {
+        this->mutexAcquireNum++;
     }
 
     inline void mutexLockContention() {

@@ -1392,6 +1392,17 @@ return ret;
     }\
     return ret;
 
+#define BARRIER_WAIT_HANDLE(waiTFuncPtr, barrier)\
+    int nodeBefore = Numas::getNodeOfCurrentThread();\
+    unsigned long long start = Timer::getCurrentCycle();\
+    threadBasedInfo->barrierContention();\
+    int ret = lockFuncPtr(barrier);\
+    threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
+    if (nodeBefore != Numas::getNodeOfCurrentThread()){\
+        threadBasedInfo->barrierNodeMigrate();\
+    }\
+    return ret;
+
 #if 0
 int nodeAfter = Numas::getNodeOfCurrentThread();\
 if (nodeBefore != nodeAfter) {\
@@ -1434,7 +1445,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     }
 
     ret = Real::pthread_mutex_lock(mutex);
-
+    threadBasedInfo->mutexAcquire();
     if (contention) {
         fprintf(stderr, "contention_pthread_mutex_lock\n");
         threadBasedInfo->mutexLockContention();
@@ -1466,7 +1477,7 @@ int pthread_cond_wait(pthread_cond_t *cond,
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
     fprintf(stderr, "pthread_barrier_wait\n");
-    LOCK_HANDLE(Real::pthread_barrier_wait, barrier, true);
+    BARRIER_WAIT_HANDLE(Real::pthread_barrier_wait, barrier);
 }
 
 
