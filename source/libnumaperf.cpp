@@ -1341,13 +1341,13 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         return ret;\
     }\
     unsigned long long start = Timer::getCurrentCycle();\
-    int nodeBefore == Numas::getNodeOfCurrentThread();\
+    int nodeBefore = Numas::getNodeOfCurrentThread();\
     int ret = lockFuncPtr(lock);\
     if (releaseLockAfterAcquire) {\
         fprintf(stderr, "contention_pthread_barrier_wait\n");\
         threadBasedInfo->barrierContention();\
         lockInfo->releaseLock();\
-        int nodeAfter == Numas::getNodeOfCurrentThread();\
+        int nodeAfter = Numas::getNodeOfCurrentThread();\
         if (nodeBefore != nodeAfter){\
             fprintf(stderr, "contention_pthread_barrier_wait_migrate\n");\
             threadBasedInfo->barrierNodeMigrate();\
@@ -1429,7 +1429,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     int contention = mutex->__data.__lock;
     if (contention) {
         start = Timer::getCurrentCycle();
-        nodeBefore == Numas::getNodeOfCurrentThread();
+        nodeBefore = Numas::getNodeOfCurrentThread();
     }
 
     ret = Real::pthread_mutex_lock(mutex);
