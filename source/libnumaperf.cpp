@@ -534,15 +534,38 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     fprintf(dumpFile, "\n");
 
+    long totalContentionNum = 0;
+    long totalMutexContentionNum = 0;
+    long totalConditionContentionNum = 0;
+    long totalBarrierContentionNum = 0;
+
     long totalMigrationNum = 0;
+    long totalMutexContentionMigrationNum = 0;
+    long totalConditionContentionMigrationNum = 0;
+    long totalBarrierContentionMigrationNum = 0;
+
     float totalMigrationScore = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-        totalMigrationNum += GlobalThreadBasedInfo[i]->getLockContentionNum();
+        totalContentionNum += GlobalThreadBasedInfo[i]->getLockContentionNum();
+        totalMutexContentionNum += GlobalThreadBasedInfo[i]->getMutexContentionNum();
+        totalConditionContentionNum += GlobalThreadBasedInfo[i]->getConditionContentionNum();
+        totalBarrierContentionNum += GlobalThreadBasedInfo[i]->getBarrierContentionNum();
         totalMigrationScore += GlobalThreadBasedInfo[i]->getLockContentionScore(totalRunningCycles);
+
+        totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
+        totalMutexContentionMigrationNum += GlobalThreadBasedInfo[i]->getMutexNodeMigrationNum();
+        totalConditionContentionMigrationNum += GlobalThreadBasedInfo[i]->getconditionNodeMigrationNum();
+        totalBarrierContentionMigrationNum += GlobalThreadBasedInfo[i]->getBarrierNodeMigrationNum();
     }
     fprintf(dumpFile,
-            "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalMigrationNum,
+            "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalContentionNum,
             totalMigrationScore);
+    fprintf(dumpFile,
+            "totalContentionNum:%lu, totalMutexContentionNum:%lu, totalConditionContentionNum:%lu, totalBarrierContentionNum:%lu\n",
+            totalContentionNum, totalMutexContentionNum, totalConditionContentionNum, totalBarrierContentionNum);
+    fprintf(dumpFile,
+            "totalMigrationNum:%lu, totalMutexContentionMigrationNum:%lu, totalConditionContentionMigrationNum:%lu, totalBarrierContentionMigrationNum:%lu\n",
+            totalMigrationNum, totalMutexContentionMigrationNum, totalConditionContentionMigrationNum, totalBarrierContentionMigrationNum);
     if (totalMigrationScore < THREAD_MIGRATION_SERIOUS_SCORE_THRESHOLD) {
         fprintf(dumpFile, "  low migration scores, does not need to do thread binding\n");
     }
@@ -1318,10 +1341,20 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         return ret;\
     }\
     unsigned long long start = Timer::getCurrentCycle();\
+    int nodeBefore == Numas::getNodeOfCurrentThread();\
     int ret = lockFuncPtr(lock);\
-    threadBasedInfo->lockContention();\
     if (releaseLockAfterAcquire) {\
+        fprintf(stderr, "contention_pthread_barrier_wait\n");\
+        threadBasedInfo->barrierContention();\
         lockInfo->releaseLock();\
+        int nodeAfter == Numas::getNodeOfCurrentThread();\
+        if (nodeBefore != nodeAfter){\
+            fprintf(stderr, "contention_pthread_barrier_wait_migrate\n");\
+            threadBasedInfo->barrierNodeMigrate();\
+        }\
+    } else {\
+        fprintf(stderr, "contention_pthread_mutex_lock\n");\
+        threadBasedInfo->mutexLockContention();\
     }\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
     return ret;
@@ -1348,9 +1381,14 @@ return ret;
 #define WAIT_HANDLE(waiTFuncPtr, cond, lock)\
     int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
     unsigned long long start = Timer::getCurrentCycle();\
-    threadBasedInfo->lockContention();\
+    threadBasedInfo->conditionContention();\
+    fprintf(stderr, "contention_pthread_cond_wait\n");\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
+    if (nodeBefore != nodeAfter){\
+        fprintf(stderr, "contention_pthread_cond_wait_migrate\n");\
+        threadBasedInfo->conditionNodeMigrate();\
+    }\
     return ret;
 
 #if 0
@@ -1381,12 +1419,34 @@ int pthread_spin_unlock(pthread_spinlock_t *lock) throw() {
 #endif
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
-//    fprintf(stderr, "pthread_mutex_lock\n");
     if (!inited) {
         return 0;
     }
-//    fprintf(stderr, "llock:%p\n",mutex);
-    LOCK_HANDLE(Real::pthread_mutex_lock, mutex, false);
+    int ret;
+    unsigned long long start;
+    int nodeBefore;
+    fprintf(stderr, "pthread_mutex_lock\n");
+    int contention = mutex->__data.__lock;
+    if (contention) {
+        start = Timer::getCurrentCycle();
+        nodeBefore == Numas::getNodeOfCurrentThread();
+    }
+
+    ret = Real::pthread_mutex_lock(mutex);
+
+    if (contention) {
+        fprintf(stderr, "contention_pthread_mutex_lock\n");
+        threadBasedInfo->mutexLockContention();
+        threadBasedInfo->idle(Timer::getCurrentCycle() - start);
+        if (Numas::getNodeOfCurrentThread() != nodeBefore) {
+            fprintf(stderr, "contention_pthread_mutex_lock_migrate\n");
+            threadBasedInfo->mutexNodeMigrate();
+        }
+    }
+
+    return
+            ret;
+//    LOCK_HANDLE(Real::pthread_mutex_lock, mutex, false);
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
@@ -1394,16 +1454,17 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
         return 0;
     }
 //    fprintf(stderr, "unllock:%p\n",mutex);
-    UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
+//    UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
 }
 
 int pthread_cond_wait(pthread_cond_t *cond,
                       pthread_mutex_t *mutex) {
+    fprintf(stderr, "pthread_cond_wait\n");
     WAIT_HANDLE(Real::pthread_cond_wait, cond, mutex);
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier) throw() {
-//    fprintf(stderr, "pthread_barrier_wait\n");
+    fprintf(stderr, "pthread_barrier_wait\n");
     LOCK_HANDLE(Real::pthread_barrier_wait, barrier, true);
 }
 
@@ -1417,7 +1478,7 @@ void openmp_fork_after() {
         threadBasedInfo->setCurrentNumaNodeIndex(newNodeIndex);
     }
 #endif
-    threadBasedInfo->lockContention();
+    threadBasedInfo->barrierContention();
 //    if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
 //        threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getStartTime());
 //        return;

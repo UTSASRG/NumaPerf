@@ -12,8 +12,12 @@ class ThreadBasedInfo {
 //    unsigned long long openmpLastJoinStartCycle = 0;
     unsigned long long totalRunningTime;
     unsigned long long idleTime; // waiting lock,io(but we do not care io here)
-    long nodeMigrationNum;
-    long lockContentionNum;
+    long mutexNodeMigrationNum;
+    long conditionNodeMigrationNum;
+    long barrierNodeMigrationNum;
+    long mutexContentionNum;
+    long conditionContentionNum;
+    long barrierContentionNum;
     unsigned long threadBasedAccessNumber[MAX_THREAD_NUM];
 
 private:
@@ -52,12 +56,28 @@ public:
         threadBasedAccessNumber[firstTouchThreadId]++;
     }
 
-    inline void nodeMigrate() {
-        this->nodeMigrationNum++;
+    inline void mutexNodeMigrate() {
+        this->mutexNodeMigrationNum++;
     }
 
-    inline void lockContention() {
-        this->lockContentionNum++;
+    inline void conditionNodeMigrate() {
+        this->conditionNodeMigrationNum++;
+    }
+
+    inline void barrierNodeMigrate() {
+        this->barrierNodeMigrationNum++;
+    }
+
+    inline void mutexLockContention() {
+        this->mutexContentionNum++;
+    }
+
+    inline void barrierContention() {
+        this->barrierContentionNum++;
+    }
+
+    inline void conditionContention() {
+        this->conditionContentionNum++;
     }
 
     inline void idle(unsigned long long newIdleTime) {
@@ -97,11 +117,35 @@ public:
     }
 
     inline long getNodeMigrationNum() const {
-        return nodeMigrationNum;
+        return mutexNodeMigrationNum + conditionNodeMigrationNum + barrierNodeMigrationNum;
+    }
+
+    inline long getMutexNodeMigrationNum() const {
+        return mutexNodeMigrationNum;
+    }
+
+    inline long getconditionNodeMigrationNum() const {
+        return conditionNodeMigrationNum;
+    }
+
+    inline long getBarrierNodeMigrationNum() const {
+        return barrierNodeMigrationNum;
     }
 
     inline long getLockContentionNum() const {
-        return lockContentionNum;
+        return mutexContentionNum + conditionContentionNum + barrierContentionNum;
+    }
+
+    inline long getMutexContentionNum() const {
+        return mutexContentionNum;
+    }
+
+    inline long getConditionContentionNum() const {
+        return conditionContentionNum;
+    }
+
+    inline long getBarrierContentionNum() const {
+        return barrierContentionNum;
     }
 
     inline void setThreadBasedAccessNumber(int threadIndex, unsigned long value) {
@@ -117,11 +161,11 @@ public:
     }
 
     inline float getMigrationScore(unsigned long long totalRunningCycle) {
-        return this->nodeMigrationNum * getParallelPercent(totalRunningCycle);
+        return this->getNodeMigrationNum() * getParallelPercent(totalRunningCycle);
     }
 
     inline float getLockContentionScore(unsigned long long totalRunningCycle) {
-        return this->lockContentionNum * getParallelPercent(totalRunningCycle);
+        return this->getLockContentionNum() * getParallelPercent(totalRunningCycle);
     }
 
     inline float getParallelPercent(unsigned long long totalRunningCycle) {

@@ -31,17 +31,42 @@ inline void *__pageInterleavedMalloc(size_t size) {
     return ret;
 }
 
-inline void *__blockInterleavedMalloc(size_t size) {
+#define PAGE 4096
+
+inline void *___blockInterleavedMalloc(size_t size) {
     void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-    int pageNum = size / 4096;
-    unsigned long nodeIndex = 0;
-    for (unsigned long offset = 0; offset < size; offset += pageNum * 4096) {
+    size_t sizePerNode = size / NUMA_NODES;
+    size_t pageNum = sizePerNode / PAGE;
+    unsigned long addr = (unsigned long) ret;
+    for (unsigned long nodeIndex = 0; nodeIndex < NUMA_NODES; nodeIndex++) {
         unsigned long mask = 1ul << nodeIndex;
-        if (mbind((char *) ret + offset, pageNum * 4096, MPOL_BIND, &mask, NUMA_NODES + 1, 0) == -1) {
+        if (mbind((void *) addr, pageNum * PAGE, MPOL_BIND, &mask, NUMA_NODES + 1, 0) ==
+            -1) {
             fprintf(stderr, "mbind error \n");
             exit(-1);
         }
-        nodeIndex++;
+        addr += pageNum * PAGE;
+    }
+    return ret;
+}
+
+inline void *__blockInterleavedMalloc(size_t size) {
+    void *ret = (void *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    size_t sizePerNode = size / NUMA_NODES;
+    size_t pageNum = sizePerNode / PAGE;
+    unsigned long addr = (unsigned long) ret;
+    for (unsigned long nodeIndex = 0; nodeIndex < NUMA_NODES; nodeIndex++) {
+        unsigned long mask = 1ul << nodeIndex;
+        unsigned long currentPageNum = pageNum;
+        unsigned long
+        if (addr < (unsigned long) ret + nodeIndex * sizePerNode) {
+            currentPageNum +=
+        }
+        if (mbind((char *) ret + nodeIndex * sizePerNode + 1, pageNum * PAGE, MPOL_BIND, &mask, NUMA_NODES + 1, 0) ==
+            -1) {
+            fprintf(stderr, "mbind error \n");
+            exit(-1);
+        }
     }
     return ret;
 }
