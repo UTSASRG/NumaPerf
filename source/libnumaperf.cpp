@@ -1380,13 +1380,13 @@ return ret;
 
 
 #define WAIT_HANDLE(waiTFuncPtr, cond, lock)\
-    int nodeBefore = threadBasedInfo->getCurrentNumaNodeIndex();\
+    int nodeBefore = Numas::getNodeOfCurrentThread();\
     unsigned long long start = Timer::getCurrentCycle();\
     threadBasedInfo->conditionContention();\
     fprintf(stderr, "contention_pthread_cond_wait\n");\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
-    if (nodeBefore != threadBasedInfo->getCurrentNumaNodeIndex()){\
+    if (nodeBefore != Numas::getNodeOfCurrentThread()){\
         fprintf(stderr, "contention_pthread_cond_wait_migrate\n");\
         threadBasedInfo->conditionNodeMigrate();\
     }\
