@@ -565,7 +565,8 @@ __attribute__ ((destructor)) void finalizer(void) {
             totalContentionNum, totalMutexContentionNum, totalConditionContentionNum, totalBarrierContentionNum);
     fprintf(dumpFile,
             "totalMigrationNum:%lu, totalMutexContentionMigrationNum:%lu, totalConditionContentionMigrationNum:%lu, totalBarrierContentionMigrationNum:%lu\n",
-            totalMigrationNum, totalMutexContentionMigrationNum, totalConditionContentionMigrationNum, totalBarrierContentionMigrationNum);
+            totalMigrationNum, totalMutexContentionMigrationNum, totalConditionContentionMigrationNum,
+            totalBarrierContentionMigrationNum);
     if (totalMigrationScore < THREAD_MIGRATION_SERIOUS_SCORE_THRESHOLD) {
         fprintf(dumpFile, "  low migration scores, does not need to do thread binding\n");
     }
@@ -1444,8 +1445,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
         }
     }
 
-    return
-            ret;
+    return ret;
 //    LOCK_HANDLE(Real::pthread_mutex_lock, mutex, false);
 }
 
@@ -1453,6 +1453,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
     if (!inited) {
         return 0;
     }
+    return Real::pthread_mutex_unlock(mutex);
 //    fprintf(stderr, "unllock:%p\n",mutex);
 //    UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
 }
