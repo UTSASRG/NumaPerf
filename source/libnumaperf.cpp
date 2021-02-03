@@ -1385,7 +1385,7 @@ return ret;
     fprintf(stderr, "contention_pthread_cond_wait\n");\
     int ret = waiTFuncPtr(cond, lock);\
     threadBasedInfo->idle(Timer::getCurrentCycle() - start);\
-    if (nodeBefore != nodeAfter){\
+    if (nodeBefore != threadBasedInfo->getCurrentNumaNodeIndex()){\
         fprintf(stderr, "contention_pthread_cond_wait_migrate\n");\
         threadBasedInfo->conditionNodeMigrate();\
     }\
