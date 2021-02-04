@@ -174,7 +174,7 @@ public:
     }
 
     inline float getLockContentionScore(unsigned long long totalRunningCycle, unsigned long long totalRunningMs) {
-        return this->getLockContentionNum() * getParallelPercent(totalRunningCycle) / totalRunningMs;
+        return this->getLockContentionNum() * getParallelPercent(totalRunningCycle) / totalRunningMs * 1000 / CORE_NUMBER;
     }
 
     inline float getParallelPercent(unsigned long long totalRunningCycle) {
