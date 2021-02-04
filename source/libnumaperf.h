@@ -59,6 +59,8 @@ void load_2bytes(unsigned long addr);
 void load_1bytes(unsigned long addr);
 }
 
+float __getParallelPercent(unsigned long totalRunningCycles);
+
 
 #endif //ACCESSPATERN_LIBNUMAPERF_H
 

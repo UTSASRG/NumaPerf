@@ -423,6 +423,7 @@ float __getParallelPercent(unsigned long totalRunningCycles) {
 //    if (liveThreads > MIN_PARALLEL_THREAD_NUM && parallelRunningTime == 0) {
 //        return 1;
 //    }
+
     return (float) parallelRunningTime / (float) totalRunningCycles;
 }
 

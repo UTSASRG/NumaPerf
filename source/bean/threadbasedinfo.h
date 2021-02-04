@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include "callstacks.h"
+#include "../libnumaperf.h"
 
 class ThreadBasedInfo {
     CallStack *threadCreateCallSiteStack;
@@ -174,7 +175,10 @@ public:
     }
 
     inline float getLockContentionScore(unsigned long long totalRunningCycle, unsigned long long totalRunningMs) {
-        return this->getLockContentionNum() * getParallelPercent(totalRunningCycle) / totalRunningMs * 1000 / CORE_NUMBER;
+        float score = this->getLockContentionNum() * __getParallelPercent(totalRunningCycle) / totalRunningMs * 1000 / CORE_NUMBER;
+//        fprintf(stderr, "Notice: score = %f, ctime = %ld, parallel rate = %f, total ms = %llu, total cycles = %llu\n",
+//                score, this->getLockContentionNum(), __getParallelPercent(totalRunningCycle), totalRunningMs, totalRunningCycle);
+        return score;
     }
 
     inline float getParallelPercent(unsigned long long totalRunningCycle) {
