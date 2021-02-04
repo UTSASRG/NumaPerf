@@ -1021,6 +1021,7 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseC
     if (objSize > PAGE_SIZE) {  // skip big objects
         return true;
     }
+    return false;
     if (diagnoseObjInfo->isDominateByFalseSharing() &&
         (diagnoseCallSiteInfo->getInvalidNumInOtherThreadByFalseCacheSharing() +
          diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing()) >= FALSE_SHARING_DOMINATE_PERCENT *
