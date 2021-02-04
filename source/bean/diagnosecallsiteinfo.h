@@ -130,7 +130,7 @@ public:
     }
 
     inline double getFalseSharingSeriousScore(unsigned long totalRunningCycles) {
-        return Scores::getSeriousScore(invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles);
+        return Scores::getSeriousScore(invalidNumInOtherThreadByFalseCacheSharing, totalRunningCycles) / CORE_NUMBER;
     }
 
     inline double getDuplicateSeriousScore(unsigned long totalRunningCycles) {
