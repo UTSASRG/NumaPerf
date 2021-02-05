@@ -1022,9 +1022,9 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseC
     if (objSize > PAGE_SIZE) {  // skip big objects
         return true;
     }
-    if (objSize < KB) {
-        return false;  // ignore small objects
-    }
+//    if (objSize < KB) {
+//        return false;  // ignore small objects
+//    }
     if (diagnoseObjInfo->isDominateByFalseSharing()) {
         return true;
     }
