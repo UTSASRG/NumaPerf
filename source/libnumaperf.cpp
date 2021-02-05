@@ -1022,7 +1022,6 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseC
     if (objSize > PAGE_SIZE) {  // skip big objects
         return true;
     }
-    return false;
     if (diagnoseObjInfo->isDominateByFalseSharing() &&
         (diagnoseCallSiteInfo->getInvalidNumInOtherThreadByFalseCacheSharing() +
          diagnoseObjInfo->getInvalidNumInOtherThreadByFalseCacheSharing()) >= FALSE_SHARING_DOMINATE_PERCENT *
@@ -1057,8 +1056,7 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     }
     DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
     __recordAndClearInfo(objectInfo, &diagnoseObjInfo);
-    if (CORE_NUMBER > 48 &&
-        (diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
+    if ((diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
                 &diagnoseObjInfo, diagnoseCallSiteInfo))) {
         diagnoseObjInfo.releaseInternal();
         return;
