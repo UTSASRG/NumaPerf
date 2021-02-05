@@ -1058,8 +1058,9 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     }
     DiagnoseObjInfo diagnoseObjInfo = DiagnoseObjInfo(objectInfo);
     __recordAndClearInfo(objectInfo, &diagnoseObjInfo);
-    if ((diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
-            &diagnoseObjInfo, diagnoseCallSiteInfo))) {
+    if (CORE_NUMBER > 48 &&
+        (diagnoseObjInfo.getTotalRemoteAccess() < MIN_REMOTE_ACCESS_PER_OBJ || !canSmallObjBeFixedByUser(
+                &diagnoseObjInfo, diagnoseCallSiteInfo))) {
         diagnoseObjInfo.releaseInternal();
         return;
     }
