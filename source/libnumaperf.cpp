@@ -1019,6 +1019,8 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
 
 inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseCallSiteInfo *diagnoseCallSiteInfo) {
     unsigned long objSize = diagnoseObjInfo->getObjectInfo()->getSize();
+    return true;
+#if 0
     if (objSize > PAGE_SIZE) {  // skip big objects
         return true;
     }
@@ -1040,6 +1042,7 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseC
         }
     }
     return false;
+#endif
 }
 
 #define MIN_REMOTE_ACCESS_PER_OBJ 100
