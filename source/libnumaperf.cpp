@@ -62,8 +62,6 @@ CallSiteInfoMap callSiteInfoMap;
 LockInfoMap lockInfoMap;
 PageBasicAccessInfoShadowMap pageBasicAccessInfoShadowMap;
 CacheLineDetailedInfoShadowMap cacheLineDetailedInfoShadowMap;
-//PriorityQueue<DiagnoseCacheLineInfo> topCacheLineQueue(MAX_TOP_GLOBAL_CACHELINE_DETAIL_INFO);
-//PriorityQueue<DiagnosePageInfo> topPageQueue(MAX_TOP_GLOBAL_PAGE_DETAIL_INFO);
 
 static void initializer(void) {
     Logger::info("NumaPerf initializer\n");
@@ -85,8 +83,7 @@ static void initializer(void) {
 
 //https://stackoverflow.com/questions/50695530/gcc-attribute-constructor-is-called-before-object-constructor
 static int const do_init = (initializer(), 0);
-//MemoryPool ObjectInfo::localMemoryPool(ADDRESSES::alignUpToCacheLine(sizeof(ObjectInfo)),
-//                                       GB * 4);
+
 MemoryPool CacheLineDetailedInfo::localMemoryPool((char *) "CacheLineDetailedInfo",
                                                   sizeof(CacheLineDetailedInfo),
                                                   GB * 4);
@@ -96,17 +93,7 @@ MemoryPool PageDetailedAccessInfo::localMemoryPool((char *) "PageDetailedAccessI
 
 MemoryPool PageBasicAccessInfo::localMemoryPool((char *) "PageBasicAccessInfo",
                                                 sizeof(unsigned short) * CACHE_NUM_IN_PAGE,
-                                                GB * 128);
-
-//MemoryPool PageDetailedAccessInfo::localThreadAccessNumberFirstLayerMemoryPool(
-//        (char *) "AccessNumberFirstLayerMemPool",
-//        (SLOTS_IN_FIRST_LAYER * sizeof(unsigned short *)),
-//        GB * 4);
-//
-//MemoryPool PageDetailedAccessInfo::localThreadAccessNumberSecondLayerMemoryPool(
-//        (char *) "AccessNumberSecoLayerMemPool",
-//        (SLOTS_IN_SECOND_LAYER * sizeof(unsigned short)),
-//        GB * 4);
+                                                GB * 128);                           
 
 MemoryPool DiagnoseObjInfo::localMemoryPool((char *) "DiagnoseObjInfo",
                                             (sizeof(DiagnoseObjInfo)),
@@ -128,7 +115,6 @@ inline void preAccessThreadBasedAccessNumber() {
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
             if (i == j) {
-//                GlobalThreadBasedAccessNumber[i][j] = 0;
                 continue;
             }
             if (i > j) {
@@ -150,8 +136,6 @@ inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageA
         threadBasedAverageAccessNumber[i] = 0;
         int num = 0;
         for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-//            printf("thread-%lu,to thread:%lu, access number:%lu\n", i, j,
-//                   GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j]);
             // thread 0 usually has massive mem access, so make it as balanced one by default.
             if (i == j || j == 0) {
                 continue;
@@ -211,12 +195,6 @@ inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber
     balancedThread[0] = true;
     // thread 0 usually has massive mem access, so make it as balanced one by default.
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-//        printf("thread:%lu, deviation:%lu, score:%f, average:%lu, score:%f, parallelPercent:%f\n", i, threadBasedAccessNumberDeviation[i],Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles),threadBasedAverageAccessNumber[i],Scores::getSeriousScore(threadBasedAverageAccessNumber[i], totalRunningCycles),GlobalThreadBasedInfo[i]->getParallelPercent(totalRunningCycles));
-        // small average means very few latency.
-//        if (threadBasedAverageAccessNumber[i] < MIN_AVERAGE_THRESHOLD_THRESHOLD) {
-//            balancedThread[i] = true;
-//            continue;
-//        }
         if (BALANCE_DEVIATION_THRESHOLD <
             Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles)) {
             balancedThread[i] = false;
@@ -389,7 +367,6 @@ int threadBasedImbalancedDetect(unsigned long *threadBasedAverageAccessNumber,
                                 bool *globalBalancedThread, unsigned long totalRunningCycles) {
     preAccessThreadBasedAccessNumber();
     getThreadBasedAverageAccessNumber(threadBasedAverageAccessNumber);
-//    getLocalBalancedThread(threadBasedAverageAccessNumber, localBalancedThread);
     getThreadBasedAccessNumberDeviation(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation);
     int balancedThreadNum = getGlobalBalancedThread(threadBasedAverageAccessNumber, threadBasedAccessNumberDeviation,
                                                     globalBalancedThread, totalRunningCycles);
@@ -420,10 +397,6 @@ float __getParallelPercent(unsigned long totalRunningCycles) {
     if (liveThreads > MIN_PARALLEL_THREAD_NUM) {
         parallelRunningTime += Timer::getCurrentCycle() - parallelStartTime;
     }
-//    if (liveThreads > MIN_PARALLEL_THREAD_NUM && parallelRunningTime == 0) {
-//        return 1;
-//    }
-
     return (float) parallelRunningTime / (float) totalRunningCycles;
 }
 
@@ -441,8 +414,6 @@ __attribute__ ((destructor)) void finalizer(void) {
         if (!GlobalThreadBasedInfo[i]->isEnd()) {
             GlobalThreadBasedInfo[i]->end();
         }
-//        fprintf(stderr, "thread-%lu, parallel rate:%f\n", i,
-//                GlobalThreadBasedInfo[i]->getParallelPercent(totalRunningCycles));
     }
 
     float parallelPercent = __getParallelPercent(totalRunningCycles);
@@ -458,12 +429,6 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     PriorityQueue<DiagnoseCallSiteInfo> topDiadCallSiteInfoQueue(MAX_TOP_CALL_SITE_INFO);
     for (auto iterator = callSiteInfoMap.begin(); iterator != callSiteInfoMap.end(); iterator++) {
-//        fprintf(stderr, "%lu ,", iterator.getData()->getTotalRemoteAccess());
-//        fprintf(stderr, "callSiteInfoMap callSite:%lu\n", iterator.getData()->getCallSiteAddress());
-//        if (iterator.getData()->getSeriousScore(totalRunningCycles) <= SERIOUS_SCORE_THRESHOLD) {
-//            continue;
-//        }
-//        topDiadCallSiteInfoQueue.insert(iterator.getData());
 #if 1
         if (iterator.getData()->getPageSeriousScore(totalRunningCycles) > PAGE_SERIOUS_SCORE_THRESHOLD) {
             topDiadCallSiteInfoQueue.insert(iterator.getData());
@@ -526,11 +491,6 @@ __attribute__ ((destructor)) void finalizer(void) {
                     data->getTotalMemoryOverheads(),
                     data->getTotalLocalAccess(),
                     data->getTotalRemoteAccess());
-//            fprintf(dumpFile, "Thread Number:%lu, User Usage:%f, Recommendation:%lu", data->getThreadNumber(),
-//                    data->getUserUsage(), data->getRecommendThreadNum());
-//            if (data->getUserUsage() > THREAD_FULL_USAGE) {
-//                fprintf(dumpFile, "++");
-//            }
             fprintf(dumpFile, "\n");
             stage++;
         }
@@ -538,21 +498,13 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     fprintf(dumpFile, "\n");
 
-//    long totalMutexAcquireNum = 0;
-
     long totalContentionNum = 0;
     long totalMutexContentionNum = 0;
     long totalConditionContentionNum = 0;
     long totalBarrierContentionNum = 0;
 
-//    long totalMigrationNum = 0;
-//    long totalMutexContentionMigrationNum = 0;
-//    long totalConditionContentionMigrationNum = 0;
-//    long totalBarrierContentionMigrationNum = 0;
-
     float totalMigrationScore = 0;
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
-//        totalMutexAcquireNum += GlobalThreadBasedInfo[i]->getMutexAcquire();
 
         totalContentionNum += GlobalThreadBasedInfo[i]->getLockContentionNum();
         totalMutexContentionNum += GlobalThreadBasedInfo[i]->getMutexContentionNum();
@@ -560,22 +512,15 @@ __attribute__ ((destructor)) void finalizer(void) {
         totalBarrierContentionNum += GlobalThreadBasedInfo[i]->getBarrierContentionNum();
         totalMigrationScore += GlobalThreadBasedInfo[i]->getLockContentionScore(totalRunningCycles, totalRunningMs);
 
-//        totalMigrationNum += GlobalThreadBasedInfo[i]->getNodeMigrationNum();
-//        totalMutexContentionMigrationNum += GlobalThreadBasedInfo[i]->getMutexNodeMigrationNum();
-//        totalConditionContentionMigrationNum += GlobalThreadBasedInfo[i]->getconditionNodeMigrationNum();
-//        totalBarrierContentionMigrationNum += GlobalThreadBasedInfo[i]->getBarrierNodeMigrationNum();
     }
     fprintf(dumpFile,
             "Part Two: Thread based node migration times:%lu, serious score:%f\n", totalContentionNum,
             totalMigrationScore);
-//    fprintf(dumpFile, "totalMutexAcquireNum:%lu\n", totalMutexAcquireNum);
+
     fprintf(dumpFile,
             "totalMutexContentionNum:%lu, totalConditionContentionNum:%lu, totalBarrierContentionNum:%lu\n",
             totalMutexContentionNum, totalConditionContentionNum, totalBarrierContentionNum);
-//    fprintf(dumpFile,
-//            "totalMigrationNum:%lu, totalMutexContentionMigrationNum:%lu, totalConditionContentionMigrationNum:%lu, totalBarrierContentionMigrationNum:%lu\n",
-//            totalMigrationNum, totalMutexContentionMigrationNum, totalConditionContentionMigrationNum,
-//            totalBarrierContentionMigrationNum);
+
     if (totalMigrationScore < THREAD_MIGRATION_SERIOUS_SCORE_THRESHOLD) {
         fprintf(dumpFile, "  low migration scores, does not need to do thread binding\n");
     }
@@ -607,20 +552,6 @@ __attribute__ ((destructor)) void finalizer(void) {
                 Scores::getSeriousScore(threadBasedAccessNumberDeviation[i], totalRunningCycles));
     }
 #endif
-//    fprintf(dumpFile,
-//            "2.1 Local ImBalanced Threads:\n");
-//    for (
-//            unsigned long i = 0;
-//            i <=
-//            largestThreadIndex;
-//            i++) {
-//        if (!localBalancedThread[i]) {
-//            fprintf(dumpFile,
-//                    "%ld,", i);
-//        }
-//    }
-//    fprintf(dumpFile,
-//            "\n\n");
 
     fprintf(dumpFile,
             "2.1 Global Balanced Threads:\n");
@@ -734,8 +665,6 @@ __attribute__ ((destructor)) void finalizer(void) {
 
 
 inline void *__malloc(size_t size, unsigned long callerAddress) {
-//    unsigned long startCycle = Timer::getCurrentCycle();
-//    Logger::debug("__malloc size:%lu\n", size);
     if (size <= 0) {
         size = 1;
     }
@@ -817,28 +746,12 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
             continue;
         }
         PageDetailedAccessInfo *pageDetailedAccessInfo = pageBasicAccessInfo->getPageDetailedAccessInfo();
-//        if (allPageCoveredByObj) {
-//            pageBasicAccessInfo->clearAll();
-//        } else {
-//            pageBasicAccessInfo->clearResidObjInfo(objStartAddress, objSize);
-//        }
         if (pageDetailedAccessInfo == NULL) {
             continue;
         }
         bool allPageCoveredByObj = pageDetailedAccessInfo->isCoveredByObj(objStartAddress, objSize);
 
         unsigned long seriousScore = pageDetailedAccessInfo->getTotalRemoteAccess();
-
-        // insert into global top page queue
-//        if (topPageQueue.mayCanInsert(seriousScore)) {
-//            DiagnosePageInfo *diagnosePageInfo = DiagnosePageInfo::createDiagnosePageInfo(objectInfo->copy(),
-//                                                                                          diagnoseCallSiteInfo,
-//                                                                                          pageDetailedAccessInfo);
-//            DiagnosePageInfo *diagnosePageInfoOld = topPageQueue.insert(diagnosePageInfo, true);
-//            if (NULL != diagnosePageInfoOld) {
-//                DiagnosePageInfo::release(diagnosePageInfoOld);
-//            }
-//        }
 
         // insert into obj's top page queue
         PageDetailedAccessInfo *pageCanClear = diagnoseObjInfo->insertPageDetailedAccessInfo(pageDetailedAccessInfo,
@@ -873,15 +786,6 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
             continue;
         }
         unsigned long seriousScore = cacheLineDetailedInfo->getTotalRemoteAccess();
-        // insert into global top cache queue
-//        if (topCacheLineQueue.mayCanInsert(seriousScore)) {
-//            DiagnoseCacheLineInfo *diagnoseCacheLineInfo = DiagnoseCacheLineInfo::createDiagnoseCacheLineInfo(
-//                    objectInfo->copy(), diagnoseCallSiteInfo, cacheLineDetailedInfo);
-//            DiagnoseCacheLineInfo *oldTopCacheLine = topCacheLineQueue.insert(diagnoseCacheLineInfo, true);
-//            if (NULL != oldTopCacheLine) {
-//                DiagnoseCacheLineInfo::release(oldTopCacheLine);
-//            }
-//        }
 
         // insert into obj's top cache queue
         CacheLineDetailedInfo *cacheCanClear = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
@@ -1024,9 +928,6 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseC
     if (objSize > PAGE_SIZE) {  // skip big objects
         return true;
     }
-//    if (objSize < KB) {
-//        return false;  // ignore small objects
-//    }
     if (diagnoseObjInfo->isDominateByFalseSharing()) {
         return true;
     }
@@ -1075,8 +976,6 @@ inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
     } else {
         diagnoseObjInfo.releaseInternal();
     }
-//    Logger::info("allInvalidNumInMainThread:%lu, allInvalidNumInOtherThreads:%lu\n", allInvalidNumInMainThread,
-//                 allInvalidNumInOtherThreads);
 }
 
 inline void __free(void *ptr) {
@@ -1085,7 +984,6 @@ inline void __free(void *ptr) {
         return;
     }
     ObjectInfo *objectInfo = objectInfoMap.findAndRemove((unsigned long) ptr, 0);
-//    ObjectInfo::release(objectInfo);
     if (NULL != objectInfo) {
         collectAndClearObjInfo(objectInfo);
         Real::free(ptr);
@@ -1180,8 +1078,6 @@ void *initThreadIndexRoutine(void *args) {
         parallelStartTime = 0;
     }
     threadBasedInfo->end();
-//    memcpy(GlobalThreadBasedAccessNumber[currentThreadIndex], threadBasedInfo->getThreadBasedAccessNumber(),
-//           sizeof(unsigned long) * MAX_THREAD_NUM);
     Real::free(args);
     return result;
 }
@@ -1198,7 +1094,6 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
     Asserts::assertt(threadIndex < MAX_THREAD_NUM, 1, (char *) "max thread id out of range");
     arguments->startRoutinePtr = (void *) start_routine;
     arguments->parameterPtr = arg;
-//    arguments->callSite = (void *) Programs::getLastEip(&tid, 0x40);
     arguments->callSite = CallStack::createCallStack();
     arguments->threadIndex = threadIndex;
     //fprintf(stderr, "callSite:%p\n",arguments->callSite);
@@ -1251,7 +1146,6 @@ recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadI
 * handleAccess functions.
 */
 inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
-//    unsigned long startCycle = Timer::getCurrentCycle();
 //    Logger::debug("thread index:%lu, handle access addr:%lu, size:%lu, type:%d\n", currentThreadIndex, addr, size,
 //                  type);
     if (addr > MAX_HANDLE_ADDRESS) {
@@ -1441,7 +1335,6 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     }
     int ret;
     unsigned long long start;
-//    int nodeBefore;
 //    fprintf(stderr, "pthread_mutex_lock\n");
     int contention = mutex->__data.__lock;
     if (contention) {
@@ -1450,19 +1343,13 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) throw() {
     }
 
     ret = Real::pthread_mutex_lock(mutex);
-//    threadBasedInfo->mutexAcquire();
     if (contention) {
 //        fprintf(stderr, "contention_pthread_mutex_lock\n");
         threadBasedInfo->mutexLockContention();
         threadBasedInfo->idle(Timer::getCurrentCycle() - start);
-//        if (Numas::getNodeOfCurrentThread() != nodeBefore) {
-//            fprintf(stderr, "contention_pthread_mutex_lock_migrate\n");
-//            threadBasedInfo->mutexNodeMigrate();
-//        }
     }
 
     return ret;
-//    LOCK_HANDLE(Real::pthread_mutex_lock, mutex, false);
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
@@ -1471,7 +1358,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) throw() {
     }
     return Real::pthread_mutex_unlock(mutex);
 //    fprintf(stderr, "unllock:%p\n",mutex);
-//    UNLOCK_HANDLE(Real::pthread_mutex_unlock, mutex);
 }
 
 int pthread_cond_wait(pthread_cond_t *cond,
@@ -1496,12 +1382,6 @@ void openmp_fork_after() {
     }
 #endif
     threadBasedInfo->barrierContention();
-//    if (threadBasedInfo->getOpenmpLastJoinStartCycle() == 0) {
-//        threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getStartTime());
-//        return;
-//    }
-//    threadBasedInfo->idle(Timer::getCurrentCycle() - threadBasedInfo->getOpenmpLastJoinStartCycle());
-//    printf("thread:%lu, openmp_fork_after, time:%llu\n", currentThreadIndex, Timer::getCurrentCycle());
 }
 
 void openmp_join_after() {
