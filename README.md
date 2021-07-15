@@ -40,8 +40,11 @@ Camera Ready Site(ICS '21): https://ics21-pub.hotcrp.com/paper/52/edit
     After running your program, NumaPerf will create a .dump file in the directory you ran the program. This file is NumaPerf's performance report and has the following table of contents:
     
     > Part One: Thread number recommendation for each stage.
+    
     > Part Two: Thread based node migration times.
+    
     > Part Three: Thread based imbalance detection & threads binding recommendation.
+    
     > Part Four: Top problematical callsites.
     
     Examples of NumaPerf's reports (on AMG2006, UMT2013, lulesh, and PARSEC) can be found in the evaluation folder.
