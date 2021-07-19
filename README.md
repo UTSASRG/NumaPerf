@@ -48,3 +48,4 @@ Camera Ready Site(ICS '21): https://ics21-pub.hotcrp.com/paper/52/edit
     > Part Four: Top problematical callsites.
     
     Examples of NumaPerf's reports (on AMG2006, UMT2013, lulesh, and PARSEC) can be found in the evaluation folder.
+    Note: Instructions on how to build LLVM can be found in the "llvm" folder.

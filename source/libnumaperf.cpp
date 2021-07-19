@@ -33,7 +33,7 @@
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo);
 
 #define BASIC_PAGE_SHADOW_MAP_SIZE (32ul * TB)
-#define MAX_HANDLE_ADDRESS BASIC_PAGE_SHADOW_MAP_SIZE / sizeof(PageBasicAccessInfo) * PAGE_SIZE
+#define MAX_HANDLE_ADDRESS (BASIC_PAGE_SHADOW_MAP_SIZE / sizeof(PageBasicAccessInfo) * PAGE_SIZE)
 
 typedef HashMap<unsigned long, ObjectInfo *, spinlock, localAllocator> ObjectInfoMap;
 typedef HashMap<unsigned long, DiagnoseCallSiteInfo *, spinlock, localAllocator> CallSiteInfoMap;
@@ -128,26 +128,25 @@ inline void preAccessThreadBasedAccessNumber() {
     }
 }
 
-#define IGNORE_EXTRAM_CASE 20
 #define SMALL_THREAD_ACCESS_THRESHOLD 20
 
 inline void getThreadBasedAverageAccessNumber(unsigned long *threadBasedAverageAccessNumber) {
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAverageAccessNumber[i] = 0;
         int num = 0;
-        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
+        for (unsigned long j = 1; j <= largestThreadIndex; j++) {
             // thread 0 usually has massive mem access, so make it as balanced one by default.
-            if (i == j || j == 0) {
+            if (i == j) {
                 continue;
             }
-            //bypass small number , treat it as zero
+            //bypass small number, treat it as zero
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
             num++;
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
         }
-        threadBasedAverageAccessNumber[i] = num == 0 ? num : threadBasedAverageAccessNumber[i] / num;
+        threadBasedAverageAccessNumber[i] = num == 0 ? 0 : threadBasedAverageAccessNumber[i] / num;
     }
 }
 
@@ -156,11 +155,11 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         threadBasedAccessNumberDeviation[i] = 0;
         int num = 0;
-        for (unsigned long j = 0; j <= largestThreadIndex; j++) {
-            if (i == j || j == 0) {
+        for (unsigned long j = 1; j <= largestThreadIndex; j++) {
+            if (i == j) {
                 continue;
             }
-            //bypass small number , treat it as zero
+            //bypass small number, treat it as zero
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
@@ -169,7 +168,7 @@ inline void getThreadBasedAccessNumberDeviation(unsigned long *threadBasedAverag
                                                                (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] -
                                                                 threadBasedAverageAccessNumber[i]));
         }
-        threadBasedAccessNumberDeviation[i] = num == 0 ? num : threadBasedAccessNumberDeviation[i] / num;
+        threadBasedAccessNumberDeviation[i] = num == 0 ? 0 : threadBasedAccessNumberDeviation[i] / num;
     }
 }
 
@@ -186,7 +185,6 @@ inline void getLocalBalancedThread(unsigned long *threadBasedAverageAccessNumber
 }
 
 #define BALANCE_DEVIATION_THRESHOLD 1
-#define MIN_AVERAGE_THRESHOLD_THRESHOLD 1000
 
 inline int getGlobalBalancedThread(unsigned long *threadBasedAverageAccessNumber,
                                    unsigned long *threadBasedAccessNumberDeviation,
@@ -232,15 +230,14 @@ inline void getAverageWOBalancedThread(unsigned long *threadBasedAverageAccessNu
             if (balancedThread[j] || i == j) {
                 continue;
             }
-            //bypass small number , treat it as zero
+            //bypass small number, treat it as zero
             if (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] < SMALL_THREAD_ACCESS_THRESHOLD) {
                 continue;
             }
             num++;
             threadBasedAverageAccessNumber[i] += GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j];
         }
-        threadBasedAverageAccessNumber[i] =
-                num == 0 ? num : threadBasedAverageAccessNumber[i] / num;
+        threadBasedAverageAccessNumber[i] = num == 0 ? 0 : threadBasedAverageAccessNumber[i] / num;
     }
 }
 
@@ -266,8 +263,7 @@ inline void getDeviationWOBalancedThread(unsigned long *threadBasedAverageAccess
                                                                (GlobalThreadBasedInfo[i]->getThreadBasedAccessNumber()[j] -
                                                                 threadBasedAverageAccessNumber[i]));
         }
-        threadBasedAccessNumberDeviation[i] =
-                num == 0 ? num : threadBasedAccessNumberDeviation[i] / num;
+        threadBasedAccessNumberDeviation[i] = num == 0 ? 0 : threadBasedAccessNumberDeviation[i] / num;
     }
 }
 
@@ -277,8 +273,7 @@ typedef struct {
     long threadId[MAX_THREAD_NUM];
 } ThreadCluster;
 
-inline void
-getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *balancedThread, int balancedThreadNum,
+inline void getTightThreadClusters(unsigned long *threadBasedAverageAccessNumber, bool *balancedThread, int balancedThreadNum,
                        ThreadCluster *threadCluster) {
 
     int *ordersOfThread = (int *) Real::malloc(sizeof(int) * MAX_THREAD_NUM * MAX_THREAD_NUM);
@@ -407,7 +402,7 @@ __attribute__ ((destructor)) void finalizer(void) {
     inited = false;
     FILE *dumpFile = fopen("NumaPerf.dump", "w");
     if (!dumpFile) {
-        Logger::error("can not reate dump file:NumaPerf.dump\n");
+        Logger::error("can not create dump file: NumaPerf.dump\n");
         exit(9);
     }
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
@@ -451,10 +446,10 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
 
     fprintf(dumpFile, "Table of Contents\n");
-    fprintf(dumpFile, "    Part One: Thread number recommendation for each stage.\n");
-    fprintf(dumpFile, "    Part Two: Thread based node migration times.\n");
-    fprintf(dumpFile, "    Part Three: Thread based imbalance detection & threads binding recommendation.\n");
-    fprintf(dumpFile, "    Part Four: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
+    fprintf(dumpFile, "  Part One: Thread number recommendation for each stage.\n");
+    fprintf(dumpFile, "  Part Two: Thread based node migration times.\n");
+    fprintf(dumpFile, "  Part Three: Thread based imbalance detection & threads binding recommendation.\n");
+    fprintf(dumpFile, "  Part Four: Top %d problematical callsites.\n\n\n", MAX_TOP_CALL_SITE_INFO);
 
 
     fprintf(dumpFile, "Part One: Thread number recommendation for each stage.\n");
@@ -469,7 +464,7 @@ __attribute__ ((destructor)) void finalizer(void) {
         }
         unsigned long callSiteKey = (unsigned long) (GlobalThreadBasedInfo[i]->getThreadStartFunPtr());
         ThreadStageInfo *threadStageInfo = threadStageInfoMap.find(callSiteKey, 0);
-        if (NULL == threadStageInfo) {
+        if (threadStageInfo == NULL) {
             callsiteNum++;
             threadStageInfo = ThreadStageInfo::createThreadStageInfo(
                     GlobalThreadBasedInfo[i]->getThreadCreateCallSiteStack());
@@ -527,7 +522,7 @@ __attribute__ ((destructor)) void finalizer(void) {
 
     for (unsigned long i = 1; i <= largestThreadIndex; i++) {
         if (GlobalThreadBasedInfo[i]->getLockContentionNum() > 0) {
-            fprintf(dumpFile, "  Thread-:%lu, migrate to another noodes times: %lu\n", i,
+            fprintf(dumpFile, "  Thread-:%lu, migrate to another nodes times: %lu\n", i,
                     GlobalThreadBasedInfo[i]->getLockContentionNum());
         }
     }
@@ -553,67 +548,40 @@ __attribute__ ((destructor)) void finalizer(void) {
     }
 #endif
 
-    fprintf(dumpFile,
-            "2.1 Global Balanced Threads:\n");
-    for (
-            unsigned long i = 0;
-            i <=
-            largestThreadIndex;
-            i++) {
+    fprintf(dumpFile, "2.1 Global Balanced Threads:\n");
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (globalBalancedThread[i]) {
-            fprintf(dumpFile,
-                    "%ld,", i);
-        }
-    }
-    fprintf(dumpFile,
-            "\n\n");
-
-    fprintf(dumpFile,
-            "2.2 Global ImBalanced Threads:\n");
-    for (
-            unsigned long i = 0;
-            i <=
-            largestThreadIndex;
-            i++) {
-        if (!globalBalancedThread[i]) {
-            fprintf(dumpFile,
-                    "%ld,", i);
+            fprintf(dumpFile, "%ld,", i);
         }
     }
     fprintf(dumpFile, "\n\n");
-    fprintf(dumpFile,
-            "2.3 Threads binding recomendations:\n");
+
+    fprintf(dumpFile, "2.2 Global ImBalanced Threads:\n");
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
+        if (!globalBalancedThread[i]) {
+            fprintf(dumpFile, "%ld,", i);
+        }
+    }
+    fprintf(dumpFile, "\n\n");
+    fprintf(dumpFile, "2.3 Threads binding recomendations:\n");
+
 // get threads binding recommendations
     ThreadCluster *threadClusters = (ThreadCluster *) Real::malloc(sizeof(ThreadCluster) * MAX_THREAD_NUM);
-    memset(threadClusters,
-           0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
-    getTightThreadClusters(threadBasedAverageAccessNumber, globalBalancedThread, balancedThreadNum, threadClusters
-    );
+    memset(threadClusters, 0, sizeof(long) * MAX_THREAD_NUM * MAX_THREAD_NUM);
+    getTightThreadClusters(threadBasedAverageAccessNumber, globalBalancedThread, balancedThreadNum, threadClusters);
     int cluster = 0;
-    for (
-            unsigned long i = 0;
-            i <=
-            largestThreadIndex;
-            i++) {
+    for (unsigned long i = 0; i <= largestThreadIndex; i++) {
         if (threadClusters[i].num == 0) {
             continue;
         }
         cluster++;
-        fprintf(dumpFile,
-                "Thread cluster-%d (%d):", cluster, threadClusters[i].num);
-        for (
-                unsigned long j = 0;
-                j < threadClusters[i].
-                        num;
-                j++) {
-            fprintf(dumpFile,
-                    "%ld,", threadClusters[i].threadId[j]);
+        fprintf(dumpFile, "Thread cluster-%d (%d):", cluster, threadClusters[i].num);
+        for (unsigned long j = 0; j < threadClusters[i].num; j++) {
+            fprintf(dumpFile, "%ld,", threadClusters[i].threadId[j]);
         }
-        fprintf(dumpFile,
-                "\n");
+        fprintf(dumpFile, "\n");
     }
-    fprintf(dumpFile,
-            "\n\n");
+    fprintf(dumpFile, "\n\n");
 #ifdef DEBUG_LOG
     fprintf(dumpFile, "2.4 Thread based imbalance access:\n");
     for (unsigned long i = 0; i <= largestThreadIndex; i++) {
@@ -644,22 +612,11 @@ __attribute__ ((destructor)) void finalizer(void) {
         fprintf(dumpFile, "\n\n");
     }
 #endif
-    fprintf(dumpFile,
-            "Part Four: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
-    for (
-            int i = 0;
-            i < topDiadCallSiteInfoQueue.
-
-                    getSize();
-
-            i++) {
-        fprintf(dumpFile,
-                "   Top problematical callsites %d:\n", i + 1);
-        topDiadCallSiteInfoQueue.getValues()[i]->
-                dump(dumpFile, totalRunningCycles,
-                     4);
-        fprintf(dumpFile,
-                "\n\n");
+    fprintf(dumpFile, "Part Four: Top %d problematical callsites:\n", MAX_TOP_CALL_SITE_INFO);
+    for (int i = 0; i < topDiadCallSiteInfoQueue.getSize(); i++) {
+        fprintf(dumpFile,"  Top problematical callsites %d:\n", i + 1);
+        topDiadCallSiteInfoQueue.getValues()[i]->dump(dumpFile, totalRunningCycles,4);
+        fprintf(dumpFile,"\n\n");
     }
 }
 
@@ -723,7 +680,7 @@ inline void *__malloc(size_t size, unsigned long callerAddress) {
     }
     for (unsigned long address = (unsigned long) objectStartAddress;
          (address - (unsigned long) objectStartAddress) < size; address += PAGE_SIZE) {
-        if (NULL == pageBasicAccessInfoShadowMap.find(address)) {
+        if (pageBasicAccessInfoShadowMap.find(address) == NULL) {
             PageBasicAccessInfo basicPageAccessInfo(firstTouchThreadId, ADDRESSES::getPageStartAddress(address));
             pageBasicAccessInfoShadowMap.insert(address, basicPageAccessInfo);
         }
@@ -741,7 +698,7 @@ inline void __collectAndClearPageInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *d
     for (unsigned long beginningAddress = objStartAddress;
          beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
-        if (NULL == pageBasicAccessInfo) {
+        if (pageBasicAccessInfo == NULL) {
             Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
@@ -782,14 +739,14 @@ inline void __collectAndClearCacheInfo(ObjectInfo *objectInfo,
         CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
                 cacheLineAddress);
         // remove the info in cache level, even there maybe are more objs inside it.
-        if (NULL == cacheLineDetailedInfo) {
+        if (cacheLineDetailedInfo == NULL) {
             continue;
         }
         unsigned long seriousScore = cacheLineDetailedInfo->getTotalRemoteAccess();
 
         // insert into obj's top cache queue
         CacheLineDetailedInfo *cacheCanClear = diagnoseObjInfo->insertCacheLineDetailedInfo(cacheLineDetailedInfo);
-        if (NULL == cacheCanClear) {
+        if (cacheCanClear == NULL) {
             continue;
         }
         cacheCanClear->clear();
@@ -808,7 +765,7 @@ inline void __recordAndClearInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localD
     for (unsigned long beginningAddress = objStartAddress;      // for page
          beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
-        if (NULL == pageBasicAccessInfo) {
+        if (pageBasicAccessInfo == NULL) {
             Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
@@ -829,7 +786,7 @@ inline void __recordAndClearInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *localD
             CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
                     cacheLineAddress);
             // remove the info in cache level, even there maybe are more objs inside it.
-            if (NULL == cacheLineDetailedInfo) {
+            if (cacheLineDetailedInfo == NULL) {
                 continue;
             }
             localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
@@ -851,7 +808,7 @@ inline void __clearCachePageInfo(ObjectInfo *objectInfo) {
     for (unsigned long beginningAddress = objStartAddress;      // for page
          beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
-        if (NULL == pageBasicAccessInfo) {
+        if (pageBasicAccessInfo == NULL) {
             Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
@@ -870,7 +827,7 @@ inline void __clearCachePageInfo(ObjectInfo *objectInfo) {
             CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
                     cacheLineAddress);
             // remove the info in cache level, even there maybe are more objs inside it.
-            if (NULL == cacheLineDetailedInfo) {
+            if (cacheLineDetailedInfo == NULL) {
                 continue;
             }
             cacheLineDetailedInfo->clear();
@@ -887,7 +844,7 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
     for (unsigned long beginningAddress = objStartAddress;      // for page
          beginningAddress < objEndAddress; beginningAddress += PAGE_SIZE) {
         PageBasicAccessInfo *pageBasicAccessInfo = pageBasicAccessInfoShadowMap.find(beginningAddress);
-        if (NULL == pageBasicAccessInfo) {
+        if (pageBasicAccessInfo == NULL) {
             Logger::error("pageBasicAccessInfo is lost\n");
             continue;
         }
@@ -903,7 +860,7 @@ inline void __collectDetailInfo(ObjectInfo *objectInfo, DiagnoseObjInfo *diagnos
             CacheLineDetailedInfo *cacheLineDetailedInfo = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(
                     cacheLineAddress);
             // remove the info in cache level, even there maybe are more objs inside it.
-            if (NULL == cacheLineDetailedInfo) {
+            if (cacheLineDetailedInfo == NULL) {
                 continue;
             }
             localDiagnosePageInfo.recordCacheInfo(cacheLineDetailedInfo);
@@ -949,11 +906,9 @@ inline bool canSmallObjBeFixedByUser(DiagnoseObjInfo *diagnoseObjInfo, DiagnoseC
 #define MIN_REMOTE_ACCESS_PER_OBJ 100
 
 inline void collectAndClearObjInfo(ObjectInfo *objectInfo) {
-//    unsigned long startAddress = objectInfo->getStartAddress();
-//    unsigned long size = objectInfo->getSize();
     unsigned long mallocCallSite = objectInfo->getMallocCallSite();
     DiagnoseCallSiteInfo *diagnoseCallSiteInfo = callSiteInfoMap.find(mallocCallSite, 0);
-    if (NULL == diagnoseCallSiteInfo) {
+    if (diagnoseCallSiteInfo == NULL) {
         Logger::error("diagnoseCallSiteInfo is lost, mallocCallSite:%lu\n", (unsigned long) mallocCallSite);
         return;
     }
@@ -1102,7 +1057,7 @@ int pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 
 inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo, unsigned long addr) {
 //    Logger::debug("record page detailed info\n");
-    if (NULL == (pageBasicAccessInfo->getPageDetailedAccessInfo())) {
+    if ((pageBasicAccessInfo->getPageDetailedAccessInfo()) == NULL) {
         PageDetailedAccessInfo *pageDetailInfoPtr = PageDetailedAccessInfo::createNewPageDetailedAccessInfo(
                 ADDRESSES::getPageStartAddress(addr), pageBasicAccessInfo->getFirstTouchThreadId());
         if (!pageBasicAccessInfo->setIfBasentPageDetailedAccessInfo(pageDetailInfoPtr)) {
@@ -1114,15 +1069,13 @@ inline void recordDetailsForPageSharing(PageBasicAccessInfo *pageBasicAccessInfo
 }
 
 #ifdef SAMPLING
-
-inline void
-recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type, bool sampled) {
+    inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type, bool sampled) {
 #else
     inline void recordDetailsForCacheSharing(unsigned long addr, unsigned long firstTouchThreadId, eAccessType type) {
 #endif
-//    Logger::debug("record cache detailed info\n");
+//  Logger::debug("record cache detailed info\n");
     CacheLineDetailedInfo *cacheLineInfoPtr = (CacheLineDetailedInfo *) cacheLineDetailedInfoShadowMap.find(addr);
-    if (NULL == cacheLineInfoPtr) {
+    if (cacheLineInfoPtr == NULL) {
         cacheLineInfoPtr = CacheLineDetailedInfo::createNewCacheLineDetailedInfo(
                 ADDRESSES::getCacheLineStartAddress(addr));
         bool ret = cacheLineDetailedInfoShadowMap.insertIfAbsent(addr, cacheLineInfoPtr);
@@ -1154,7 +1107,7 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
     }
 
     PageBasicAccessInfo *basicPageAccessInfo = pageBasicAccessInfoShadowMap.find(addr);
-    if (NULL == basicPageAccessInfo) {
+    if (basicPageAccessInfo == NULL) {
         return;
     }
     bool needPageDetailInfo = basicPageAccessInfo->needPageSharingDetailInfo();
@@ -1179,7 +1132,6 @@ inline void handleAccess(unsigned long addr, size_t size, eAccessType type) {
         pageBasicSamplingFrequency = 0;
     }
 #endif
-
     if (!needPageDetailInfo) {
 #ifdef SAMPLING
         if (sampled) {
@@ -1382,11 +1334,6 @@ void openmp_fork_after() {
     }
 #endif
     threadBasedInfo->barrierContention();
-}
-
-void openmp_join_after() {
-//    printf("thread:%lu, openmp_join_after, time:%llu\n", currentThreadIndex, Timer::getCurrentCycle());
-//    threadBasedInfo->setOpenmpLastJoinStartCycle(Timer::getCurrentCycle());
 }
 
 void store_16bytes(unsigned long addr) { handleAccess(addr, 16, E_ACCESS_WRITE); }
