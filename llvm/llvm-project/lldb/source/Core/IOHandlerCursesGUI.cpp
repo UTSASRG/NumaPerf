@@ -1,4 +1,4 @@
-//===-- IOHandlerCursesGUI.cpp ----------------------------------*- C++ -*-===//
+//===-- IOHandlerCursesGUI.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -744,7 +744,8 @@ protected:
   bool m_is_subwin;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Window);
+  Window(const Window &) = delete;
+  const Window &operator=(const Window &) = delete;
 };
 
 class MenuDelegate {

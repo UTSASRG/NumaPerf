@@ -1,4 +1,4 @@
-//===-- ClangModulesDeclVendor.cpp ------------------------------*- C++ -*-===//
+//===-- ClangModulesDeclVendor.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/Parser.h"
@@ -24,10 +25,10 @@
 #include "ClangModulesDeclVendor.h"
 #include "ModuleDependencyCollector.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
@@ -54,10 +55,21 @@ public:
 
   void DumpDiagnostics(Stream &error_stream);
 
+  void BeginSourceFile(const clang::LangOptions &LangOpts,
+                       const clang::Preprocessor *PP = nullptr) override;
+  void EndSourceFile() override;
+
 private:
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
+  /// The DiagnosticPrinter used for creating the full diagnostic messages
+  /// that are stored in m_diagnostics.
+  std::shared_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
+  /// Output stream of m_diag_printer.
+  std::shared_ptr<llvm::raw_string_ostream> m_os;
+  /// Output string filled by m_os. Will be reused for different diagnostics.
+  std::string m_output;
   Log *m_log;
 };
 
@@ -108,25 +120,29 @@ private:
   typedef std::set<ModuleID> ImportedModuleSet;
   ImportedModuleMap m_imported_modules;
   ImportedModuleSet m_user_imported_modules;
-  // We assume that every ASTContext has an ClangASTContext, so we also store
-  // a custom ClangASTContext for our internal ASTContext.
-  std::unique_ptr<ClangASTContext> m_ast_context;
+  // We assume that every ASTContext has an TypeSystemClang, so we also store
+  // a custom TypeSystemClang for our internal ASTContext.
+  std::unique_ptr<TypeSystemClang> m_ast_context;
 };
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
   m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+
+  clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
+  m_os.reset(new llvm::raw_string_ostream(m_output));
+  m_diag_printer.reset(new clang::TextDiagnosticPrinter(*m_os, m_options));
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
     clang::DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &info) {
-  llvm::SmallVector<char, 256> diagnostic_string;
+  // Print the diagnostic to m_output.
+  m_output.clear();
+  m_diag_printer->HandleDiagnostic(DiagLevel, info);
+  m_os->flush();
 
-  info.FormatDiagnostic(diagnostic_string);
-
-  m_diagnostics.push_back(
-      IDAndDiagnostic(DiagLevel, std::string(diagnostic_string.data(),
-                                             diagnostic_string.size())));
+  // Store the diagnostic for later.
+  m_diagnostics.push_back(IDAndDiagnostic(DiagLevel, m_output));
 }
 
 void StoringDiagnosticConsumer::ClearDiagnostics() { m_diagnostics.clear(); }
@@ -144,6 +160,15 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
   }
 }
 
+void StoringDiagnosticConsumer::BeginSourceFile(
+    const clang::LangOptions &LangOpts, const clang::Preprocessor *PP) {
+  m_diag_printer->BeginSourceFile(LangOpts, PP);
+}
+
+void StoringDiagnosticConsumer::EndSourceFile() {
+  m_diag_printer->EndSourceFile();
+}
+
 ClangModulesDeclVendor::ClangModulesDeclVendor()
     : ClangDeclVendor(eClangModuleDeclVendor) {}
 
@@ -159,8 +184,10 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
       m_compiler_instance(std::move(compiler_instance)),
       m_parser(std::move(parser)) {
 
-  // Initialize our ClangASTContext.
-  m_ast_context.reset(new ClangASTContext(m_compiler_instance->getASTContext()));
+  // Initialize our TypeSystemClang.
+  m_ast_context.reset(
+      new TypeSystemClang("ClangModulesDeclVendor ASTContext",
+                          m_compiler_instance->getASTContext()));
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
@@ -382,7 +409,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
     if (num_matches >= max_matches)
       return num_matches;
 
-    decls.push_back(CompilerDecl(m_ast_context.get(), named_decl));
+    decls.push_back(m_ast_context->GetCompilerDecl(named_decl));
     ++num_matches;
   }
 
@@ -601,10 +628,10 @@ ClangModulesDeclVendor::Create(Target &target) {
 
   {
     llvm::SmallString<128> path;
-    auto props = ModuleList::GetGlobalModuleListProperties();
+    const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     std::string module_cache_argument("-fmodules-cache-path=");
-    module_cache_argument.append(path.str());
+    module_cache_argument.append(std::string(path.str()));
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 

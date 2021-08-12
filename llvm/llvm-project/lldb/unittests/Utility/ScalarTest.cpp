@@ -1,4 +1,4 @@
-//===-- ScalarTest.cpp ------------------------------------------*- C++ -*-===//
+//===-- ScalarTest.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -157,7 +157,7 @@ TEST(ScalarTest, ExtractBitfield) {
 template <typename T> static std::string ScalarGetValue(T value) {
   StreamString stream;
   Scalar(value).GetValue(&stream, false);
-  return stream.GetString();
+  return std::string(stream.GetString());
 }
 
 TEST(ScalarTest, GetValue) {
@@ -186,6 +186,16 @@ TEST(ScalarTest, GetValue) {
             ScalarGetValue<unsigned long long>(1234567890123ULL));
   EXPECT_EQ(std::to_string(std::numeric_limits<unsigned long long>::max()),
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
+}
+
+TEST(ScalarTest, LongLongAssigmentOperator) {
+  Scalar ull;
+  ull = std::numeric_limits<unsigned long long>::max();
+  EXPECT_EQ(std::numeric_limits<unsigned long long>::max(), ull.ULongLong());
+
+  Scalar sll;
+  sll = std::numeric_limits<signed long long>::max();
+  EXPECT_EQ(std::numeric_limits<signed long long>::max(), sll.SLongLong());
 }
 
 TEST(ScalarTest, Division) {

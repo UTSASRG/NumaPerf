@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VETargetMachine.h"
+#include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
 #include "VETargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -73,7 +74,8 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(createTLOF()), Subtarget(TT, CPU, FS, *this) {
+      TLOF(createTLOF()),
+      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
 }
 

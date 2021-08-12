@@ -12,6 +12,7 @@
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
@@ -66,7 +67,7 @@ TEST(Hover, Structured) {
       {R"cpp(
           namespace ns1 { namespace ns2 {
             struct Foo {
-              int [[b^ar]];
+              char [[b^ar]];
             };
           }}
           )cpp",
@@ -75,8 +76,11 @@ TEST(Hover, Structured) {
          HI.LocalScope = "Foo::";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Field;
-         HI.Definition = "int bar";
-         HI.Type = "int";
+         HI.Definition = "char bar";
+         HI.Type = "char";
+         HI.Offset = 0;
+         HI.Size = 1;
+         HI.AccessSpecifier = "public";
        }},
       // Local to class method.
       {R"cpp(
@@ -100,7 +104,7 @@ TEST(Hover, Structured) {
       {R"cpp(
           namespace ns1 { namespace {
             struct {
-              int [[b^ar]];
+              char [[b^ar]];
             } T;
           }}
           )cpp",
@@ -109,8 +113,22 @@ TEST(Hover, Structured) {
          HI.LocalScope = "(anonymous struct)::";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Field;
-         HI.Definition = "int bar";
-         HI.Type = "int";
+         HI.Definition = "char bar";
+         HI.Type = "char";
+         HI.Offset = 0;
+         HI.Size = 1;
+         HI.AccessSpecifier = "public";
+       }},
+      // Struct definition shows size.
+      {R"cpp(
+          struct [[^X]]{};
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "X";
+         HI.Kind = index::SymbolKind::Struct;
+         HI.Definition = "struct X {}";
+         HI.Size = 1;
        }},
       // Variable with template type
       {R"cpp(
@@ -329,6 +347,7 @@ class Foo {})cpp";
          HI.Kind = index::SymbolKind::Constructor;
          HI.Definition = "X()";
          HI.Parameters.emplace();
+         HI.AccessSpecifier = "public";
        }},
       {"class X { [[^~]]X(); };", // FIXME: Should be [[~X]]()
        [](HoverInfo &HI) {
@@ -338,8 +357,9 @@ class Foo {})cpp";
          HI.Kind = index::SymbolKind::Destructor;
          HI.Definition = "~X()";
          HI.Parameters.emplace();
+         HI.AccessSpecifier = "private";
        }},
-      {"class X { operator [[in^t]](); };",
+      {"class X { [[op^erator]] int(); };",
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "operator int";
@@ -347,6 +367,14 @@ class Foo {})cpp";
          HI.Kind = index::SymbolKind::ConversionFunction;
          HI.Definition = "operator int()";
          HI.Parameters.emplace();
+         HI.AccessSpecifier = "private";
+       }},
+      {"class X { operator [[^X]](); };",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "X";
+         HI.Kind = index::SymbolKind::Class;
+         HI.Definition = "class X {}";
        }},
 
       // auto on lambda
@@ -472,6 +500,7 @@ class Foo {})cpp";
          HI.NamespaceScope = "";
          HI.LocalScope = "Add<1, 2>::";
          HI.Value = "3";
+         HI.AccessSpecifier = "public";
        }},
       {R"cpp(
         constexpr int answer() { return 40 + 2; }
@@ -573,6 +602,100 @@ class Foo {})cpp";
          // pattern.
          HI.Documentation = "comment from primary";
        }},
+      {// Template Type Parameter
+       R"cpp(
+          template <typename [[^T]] = int> void foo();
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "T";
+         HI.Kind = index::SymbolKind::TemplateTypeParm;
+         HI.NamespaceScope = "";
+         HI.Definition = "typename T = int";
+         HI.LocalScope = "foo::";
+         HI.Type = "typename";
+         HI.AccessSpecifier = "public";
+       }},
+      {// TemplateTemplate Type Parameter
+       R"cpp(
+          template <template<typename> class [[^T]]> void foo();
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "T";
+         HI.Kind = index::SymbolKind::TemplateTemplateParm;
+         HI.NamespaceScope = "";
+         HI.Definition = "template <typename> class T";
+         HI.LocalScope = "foo::";
+         HI.Type = "template <typename> class";
+         HI.AccessSpecifier = "public";
+       }},
+      {// NonType Template Parameter
+       R"cpp(
+          template <int [[^T]] = 5> void foo();
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "T";
+         HI.Kind = index::SymbolKind::NonTypeTemplateParm;
+         HI.NamespaceScope = "";
+         HI.Definition = "int T = 5";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }},
+
+      {// Getter
+       R"cpp(
+          struct X { int Y; float [[^y]]() { return Y; } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "float y()";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial accessor for `Y`.";
+         HI.Type = "float ()";
+         HI.ReturnType = "float";
+         HI.Parameters.emplace();
+         HI.AccessSpecifier = "public";
+       }},
+      {// Setter
+       R"cpp(
+          struct X { int Y; void [[^setY]](float v) { Y = v; } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
+      {// Setter (builder)
+       R"cpp(
+          struct X { int Y; X& [[^setY]](float v) { Y = v; return *this; } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "X &setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "struct X &(float)";
+         HI.ReturnType = "struct X &";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
@@ -580,14 +703,10 @@ class Foo {})cpp";
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
-    // FIXME: This is no longer necessary, as the default behavior is no delayed
-    // parsing in the triplet below.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     // Types might be different depending on the target triplet, we chose a
     // fixed one to make sure tests passes on different platform.
     TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
     auto AST = TU.build();
-    ASSERT_TRUE(AST.getDiagnostics().empty());
 
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
     ASSERT_TRUE(H);
@@ -607,6 +726,9 @@ class Foo {})cpp";
     EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
     EXPECT_EQ(H->SymRange, Expected.SymRange);
     EXPECT_EQ(H->Value, Expected.Value);
+    EXPECT_EQ(H->Size, Expected.Size);
+    EXPECT_EQ(H->Offset, Expected.Offset);
+    EXPECT_EQ(H->AccessSpecifier, Expected.AccessSpecifier);
   }
 }
 
@@ -622,7 +744,7 @@ TEST(Hover, NoHover) {
             }
           )cpp",
       R"cpp(// Template auto parameter. Nothing (Not useful).
-            template<^auto T>
+            template<a^uto T>
             void func() {
             }
             void foo() {
@@ -654,8 +776,6 @@ TEST(Hover, NoHover) {
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
     auto AST = TU.build();
-    ASSERT_TRUE(AST.getDiagnostics().empty());
-
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
     ASSERT_FALSE(H);
   }
@@ -1530,7 +1650,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "";
             HI.Name = "foo";
-            HI.Type = "cls<cls<cls<int> > >";
+            HI.Type = "cls<cls<cls<int>>>";
             HI.Value = "{}";
           }},
       {
@@ -1542,7 +1662,7 @@ TEST(Hover, All) {
             HI.Definition = "template <> struct cls<cls<cls<int>>> {}";
             HI.Kind = index::SymbolKind::Struct;
             HI.NamespaceScope = "";
-            HI.Name = "cls<cls<cls<int> > >";
+            HI.Name = "cls<cls<cls<int>>>";
             HI.Documentation = "type of nested templates.";
           }},
       {
@@ -1615,6 +1735,35 @@ TEST(Hover, All) {
             HI.Type = "unsigned long";
             HI.Value = "1";
           }},
+      {
+          R"cpp(
+          template <typename T = int>
+          void foo(const T& = T()) {
+            [[f^oo]]<>(3);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Function;
+            HI.Type = "void (const int &)";
+            HI.ReturnType = "void";
+            HI.Parameters = {
+                {std::string("const int &"), llvm::None, std::string("T()")}};
+            HI.Definition = "template <> void foo<int>(const int &)";
+            HI.NamespaceScope = "";
+          }},
+      {
+          R"cpp(// should not crash
+           @interface ObjC {
+             char [[da^ta]];
+           }@end
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "data";
+            HI.Type = "char";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "ObjC::"; // FIXME: fix it
+            HI.Definition = "char data";
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
@@ -1631,14 +1780,13 @@ TEST(Hover, All) {
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
+    TU.ExtraArgs.push_back("-xobjective-c++");
+
     TU.ExtraArgs.push_back("-Wno-gnu-designator");
     // Types might be different depending on the target triplet, we chose a
     // fixed one to make sure tests passes on different platform.
     TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
     auto AST = TU.build();
-    for (const auto &D : AST.getDiagnostics())
-      ADD_FAILURE() << D;
-    ASSERT_TRUE(AST.getDiagnostics().empty());
 
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), Index.get());
     ASSERT_TRUE(H);
@@ -1673,10 +1821,6 @@ TEST(Hover, DocsFromIndex) {
 
   TestTU TU = TestTU::withCode(T.code());
   auto AST = TU.build();
-  for (const auto &D : AST.getDiagnostics())
-    ADD_FAILURE() << D;
-  ASSERT_TRUE(AST.getDiagnostics().empty());
-
   Symbol IndexSym;
   IndexSym.ID = *getSymbolID(&findDecl(AST, "X"));
   IndexSym.Documentation = "comment from index";
@@ -1710,10 +1854,6 @@ TEST(Hover, DocsFromAST) {
 
   TestTU TU = TestTU::withCode(T.code());
   auto AST = TU.build();
-  for (const auto &D : AST.getDiagnostics())
-    ADD_FAILURE() << D;
-  ASSERT_TRUE(AST.getDiagnostics().empty());
-
   for (const auto &P : T.points()) {
     auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
     ASSERT_TRUE(H);
@@ -1737,10 +1877,6 @@ TEST(Hover, DocsFromMostSpecial) {
 
   TestTU TU = TestTU::withCode(T.code());
   auto AST = TU.build();
-  for (const auto &D : AST.getDiagnostics())
-    ADD_FAILURE() << D;
-  ASSERT_TRUE(AST.getDiagnostics().empty());
-
   for (auto Comment : {"doc1", "doc2", "doc3"}) {
     for (const auto &P : T.points(Comment)) {
       auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
@@ -1772,6 +1908,7 @@ TEST(Hover, Present) {
       {
           [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Class;
+            HI.Size = 10;
             HI.TemplateParameters = {
                 {std::string("typename"), std::string("T"), llvm::None},
                 {std::string("typename"), std::string("C"),
@@ -1785,6 +1922,7 @@ TEST(Hover, Present) {
           },
           R"(class foo
 
+Size: 10 bytes
 documentation
 
 template <typename T, typename C = bool> class Foo {})",
@@ -1821,27 +1959,160 @@ ret_type foo(params) {})",
       },
       {
           [](HoverInfo &HI) {
-            HI.Kind = index::SymbolKind::Variable;
-            HI.LocalScope = "test::bar::";
+            HI.Kind = index::SymbolKind::Field;
+            HI.LocalScope = "test::Bar::";
             HI.Value = "value";
             HI.Name = "foo";
             HI.Type = "type";
             HI.Definition = "def";
+            HI.Size = 4;
+            HI.Offset = 12;
           },
-          R"(variable foo
+          R"(field foo
 
 Type: type
 Value = value
+Offset: 12 bytes
+Size: 4 bytes
 
-// In test::bar
+// In test::Bar
 def)",
       },
-  };
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Field;
+            HI.AccessSpecifier = "public";
+            HI.Name = "foo";
+            HI.LocalScope = "test::Bar::";
+            HI.Definition = "def";
+          },
+          R"(field foo
+
+// In test::Bar
+public: def)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Definition = "int method()";
+            HI.AccessSpecifier = "protected";
+            HI.Kind = index::SymbolKind::InstanceMethod;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "cls<int>::";
+            HI.Name = "method";
+            HI.Parameters.emplace();
+            HI.ReturnType = "int";
+            HI.Type = "int ()";
+          },
+          R"(instance-method method
+
+→ int
+
+// In cls<int>
+protected: int method())",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Union;
+            HI.AccessSpecifier = "private";
+            HI.Name = "foo";
+            HI.NamespaceScope = "ns1::";
+            HI.Definition = "union foo {}";
+          },
+          R"(union foo
+
+// In namespace ns1
+private: union foo {})",
+      }};
 
   for (const auto &C : Cases) {
     HoverInfo HI;
     C.Builder(HI);
     EXPECT_EQ(HI.present().asPlainText(), C.ExpectedRender);
+  }
+}
+
+TEST(Hover, ParseDocumentation) {
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {{
+                   " \n foo\nbar",
+                   "foo bar",
+                   "foo bar",
+               },
+               {
+                   "foo\nbar \n  ",
+                   "foo bar",
+                   "foo bar",
+               },
+               {
+                   "foo  \nbar",
+                   "foo bar",
+                   "foo bar",
+               },
+               {
+                   "foo    \nbar",
+                   "foo bar",
+                   "foo bar",
+               },
+               {
+                   "foo\n\n\nbar",
+                   "foo  \nbar",
+                   "foo\nbar",
+               },
+               {
+                   "foo\n\n\n\tbar",
+                   "foo  \nbar",
+                   "foo\nbar",
+               },
+               {
+                   "foo\n\n\n bar",
+                   "foo  \nbar",
+                   "foo\nbar",
+               },
+               {
+                   "foo.\nbar",
+                   "foo.  \nbar",
+                   "foo.\nbar",
+               },
+               {
+                   "foo. \nbar",
+                   "foo.  \nbar",
+                   "foo.\nbar",
+               },
+               {
+                   "foo\n*bar",
+                   "foo  \n\\*bar",
+                   "foo\n*bar",
+               },
+               {
+                   "foo\nbar",
+                   "foo bar",
+                   "foo bar",
+               },
+               {
+                   "Tests primality of `p`.",
+                   "Tests primality of `p`.",
+                   "Tests primality of `p`.",
+               },
+               {
+                   "'`' should not occur in `Code`",
+                   "'\\`' should not occur in `Code`",
+                   "'`' should not occur in `Code`",
+               },
+               {
+                   "`not\nparsed`",
+                   "\\`not parsed\\`",
+                   "`not parsed`",
+               }};
+
+  for (const auto &C : Cases) {
+    markup::Document Output;
+    parseDocumentation(C.Documentation, Output);
+
+    EXPECT_EQ(Output.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Output.asPlainText(), C.ExpectedRenderPlainText);
   }
 }
 
@@ -1867,7 +2138,7 @@ TEST(Hover, PresentRulers) {
   llvm::StringRef ExpectedMarkdown = R"md(### variable `foo`  
 
 ---
-Value \= `val`  
+Value = `val`  
 
 ---
 ```cpp

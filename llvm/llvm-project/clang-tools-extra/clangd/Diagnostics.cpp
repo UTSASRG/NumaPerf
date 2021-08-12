@@ -9,9 +9,9 @@
 #include "Diagnostics.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
-#include "Logger.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -124,7 +124,9 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
 bool adjustDiagFromHeader(Diag &D, const clang::Diagnostic &Info,
                           const LangOptions &LangOpts) {
   // We only report diagnostics with at least error severity from headers.
-  if (D.Severity < DiagnosticsEngine::Level::Error)
+  // Use default severity to avoid noise with -Werror.
+  if (!Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
+          Info.getID()))
     return false;
 
   const SourceManager &SM = Info.getSourceManager();
@@ -154,8 +156,8 @@ bool adjustDiagFromHeader(Diag &D, const clang::Diagnostic &Info,
   const auto *FE = SM.getFileEntryForID(SM.getFileID(DiagLoc));
   D.Notes.emplace_back();
   Note &N = D.Notes.back();
-  N.AbsFile = FE->tryGetRealPathName();
-  N.File = FE->getName();
+  N.AbsFile = std::string(FE->tryGetRealPathName());
+  N.File = std::string(FE->getName());
   N.Message = "error occurred here";
   N.Range = diagnosticRange(Info, LangOpts);
 
@@ -320,7 +322,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
 CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
   CodeAction Action;
   Action.title = F.Message;
-  Action.kind = CodeAction::QUICKFIX_KIND;
+  Action.kind = std::string(CodeAction::QUICKFIX_KIND);
   Action.edit.emplace();
   Action.edit->changes.emplace();
   (*Action.edit->changes)[File.uri()] = {F.Edits.begin(), F.Edits.end()};
@@ -430,7 +432,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
         // Almost always an error, with a name like err_enum_class_reference.
         // Drop the err_ prefix for brevity.
         Name.consume_front("err_");
-        Diag.Name = Name;
+        Diag.Name = std::string(Name);
       }
       Diag.Source = Diag::Clang;
       continue;
@@ -500,7 +502,7 @@ static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
   llvm::SmallString<64> Message;
   Info.FormatDiagnostic(Message);
 
-  D.Message = Message.str();
+  D.Message = std::string(Message.str());
   D.Severity = DiagLevel;
   D.Category = DiagnosticIDs::getCategoryNameFromID(
                    DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))
@@ -514,7 +516,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   if (Info.getLocation().isInvalid()) {
     // Handle diagnostics coming from command-line arguments. The source manager
     // is *not* available at this point, so we cannot use it.
-    if (DiagLevel < DiagnosticsEngine::Level::Error) {
+    if (!Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
+            Info.getID())) {
       IgnoreDiagnostics::log(DiagLevel, Info);
       return; // non-errors add too much noise, do not show them.
     }
@@ -544,7 +547,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     D.InsideMainFile = InsideMainFile;
     D.Range = diagnosticRange(Info, *LangOpts);
-    D.File = SM.getFilename(Info.getLocation());
+    D.File = std::string(SM.getFilename(Info.getLocation()));
     D.AbsFile = getCanonicalPath(
         SM.getFileEntryForID(SM.getFileID(Info.getLocation())), SM);
     return D;
@@ -556,10 +559,23 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (!InsideMainFile)
       return false;
 
+    // Copy as we may modify the ranges.
+    auto FixIts = Info.getFixItHints().vec();
     llvm::SmallVector<TextEdit, 1> Edits;
-    for (auto &FixIt : Info.getFixItHints()) {
-      // Follow clang's behavior, don't apply FixIt to the code in macros,
-      // we are less certain it is the right fix.
+    for (auto &FixIt : FixIts) {
+      // Allow fixits within a single macro-arg expansion to be applied.
+      // This can be incorrect if the argument is expanded multiple times in
+      // different contexts. Hopefully this is rare!
+      if (FixIt.RemoveRange.getBegin().isMacroID() &&
+          FixIt.RemoveRange.getEnd().isMacroID() &&
+          SM.getFileID(FixIt.RemoveRange.getBegin()) ==
+              SM.getFileID(FixIt.RemoveRange.getEnd())) {
+        FixIt.RemoveRange = CharSourceRange(
+            {SM.getTopMacroCallerLoc(FixIt.RemoveRange.getBegin()),
+             SM.getTopMacroCallerLoc(FixIt.RemoveRange.getEnd())},
+            FixIt.RemoveRange.isTokenRange());
+      }
+      // Otherwise, follow clang's behavior: no fixits in macros.
       if (FixIt.RemoveRange.getBegin().isMacroID() ||
           FixIt.RemoveRange.getEnd().isMacroID())
         return false;
@@ -570,8 +586,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallString<64> Message;
     // If requested and possible, create a message like "change 'foo' to 'bar'".
-    if (SyntheticMessage && Info.getNumFixItHints() == 1) {
-      const auto &FixIt = Info.getFixItHint(0);
+    if (SyntheticMessage && FixIts.size() == 1) {
+      const auto &FixIt = FixIts.front();
       bool Invalid = false;
       llvm::StringRef Remove =
           Lexer::getSourceText(FixIt.RemoveRange, SM, *LangOpts, &Invalid);
@@ -597,9 +613,10 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
         std::replace(Message.begin(), Message.end(), '\n', ' ');
       }
     }
-    if (Message.empty()) // either !SytheticMessage, or we failed to make one.
+    if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
-    LastDiag->Fixes.push_back(Fix{Message.str(), std::move(Edits)});
+    LastDiag->Fixes.push_back(
+        Fix{std::string(Message.str()), std::move(Edits)});
     return true;
   };
 

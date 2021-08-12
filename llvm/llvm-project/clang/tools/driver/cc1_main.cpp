@@ -177,7 +177,7 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuHelp", Options, None));
+      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options, None));
   return 0;
 }
 
@@ -259,6 +259,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       // FIXME(ibiryukov): make profilerOutput flush in destructor instead.
       profilerOutput->flush();
       llvm::timeTraceProfilerCleanup();
+      Clang->clearOutputFiles(false);
     }
   }
 

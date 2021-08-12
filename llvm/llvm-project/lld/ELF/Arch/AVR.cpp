@@ -36,9 +36,8 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class AVR final : public TargetInfo {
@@ -46,7 +45,8 @@ public:
   AVR();
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 };
 } // namespace
 
@@ -57,8 +57,8 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   return R_ABS;
 }
 
-void AVR::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_AVR_CALL: {
     uint16_t hi = val >> 17;
     uint16_t lo = val >> 1;
@@ -67,14 +67,12 @@ void AVR::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     break;
   }
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
+    error(getErrorLocation(loc) + "unrecognized relocation " +
+          toString(rel.type));
   }
 }
 
-TargetInfo *getAVRTargetInfo() {
+TargetInfo *elf::getAVRTargetInfo() {
   static AVR target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

@@ -1,6 +1,6 @@
 //===- UseDefAnalysis.cpp - Analysis for Transitive UseDef chains ---------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 
 ///
@@ -46,7 +44,7 @@ static void getForwardSliceImpl(Operation *op,
     for (auto *ownerInst : forOp.getInductionVar().getUsers())
       if (forwardSlice->count(ownerInst) == 0)
         getForwardSliceImpl(ownerInst, forwardSlice, filter);
-  } else if (auto forOp = dyn_cast<loop::ForOp>(op)) {
+  } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
     for (auto *ownerInst : forOp.getInductionVar().getUsers())
       if (forwardSlice->count(ownerInst) == 0)
         getForwardSliceImpl(ownerInst, forwardSlice, filter);
@@ -84,7 +82,7 @@ static void getBackwardSliceImpl(Operation *op,
     return;
 
   assert((op->getNumRegions() == 0 || isa<AffineForOp>(op) ||
-          isa<loop::ForOp>(op)) &&
+          isa<scf::ForOp>(op)) &&
          "unexpected generic op with regions");
 
   // Evaluate whether we should keep this def.
@@ -101,7 +99,7 @@ static void getBackwardSliceImpl(Operation *op,
         auto *affOp = affIv.getOperation();
         if (backwardSlice->count(affOp) == 0)
           getBackwardSliceImpl(affOp, backwardSlice, filter);
-      } else if (auto loopIv = loop::getForInductionVarOwner(operand)) {
+      } else if (auto loopIv = scf::getForInductionVarOwner(operand)) {
         auto *loopOp = loopIv.getOperation();
         if (backwardSlice->count(loopOp) == 0)
           getBackwardSliceImpl(loopOp, backwardSlice, filter);

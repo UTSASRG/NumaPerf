@@ -195,7 +195,12 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 
 bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-  if (PDT.getRoots().size() <= 1)
+
+  // If there's only one exit, we don't need to do anything, unless this is a
+  // pixel shader and that exit is an infinite loop, since we still have to
+  // insert an export in that case.
+  if (PDT.getRoots().size() <= 1 &&
+      F.getCallingConv() != CallingConv::AMDGPU_PS)
     return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
@@ -203,6 +208,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.
   SmallVector<BasicBlock *, 4> ReturningBlocks;
+  SmallVector<BasicBlock *, 4> UniformlyReachedRetBlocks;
   SmallVector<BasicBlock *, 4> UnreachableBlocks;
 
   // Dummy return block for infinite loop.
@@ -214,6 +220,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         ReturningBlocks.push_back(BB);
+      else
+        UniformlyReachedRetBlocks.push_back(BB);
     } else if (isa<UnreachableInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         UnreachableBlocks.push_back(BB);
@@ -321,12 +329,24 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   if (ReturningBlocks.empty())
     return false; // No blocks return
 
-  if (ReturningBlocks.size() == 1)
+  if (ReturningBlocks.size() == 1 && !InsertExport)
     return false; // Already has a single return block
 
   const TargetTransformInfo &TTI
     = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  unifyReturnBlockSet(F, ReturningBlocks, InsertExport, TTI, "UnifiedReturnBlock");
+  // Unify returning blocks. If we are going to insert the export it is also
+  // necessary to include blocks that are uniformly reached, because in addition
+  // to inserting the export the "done" bits on existing exports will be cleared
+  // and we do not want to end up with the normal export in a non-unified,
+  // uniformly reached block with the "done" bit cleared.
+  auto BlocksToUnify = std::move(ReturningBlocks);
+  if (InsertExport) {
+    BlocksToUnify.insert(BlocksToUnify.end(), UniformlyReachedRetBlocks.begin(),
+                         UniformlyReachedRetBlocks.end());
+  }
+
+  unifyReturnBlockSet(F, BlocksToUnify, InsertExport, TTI,
+                      "UnifiedReturnBlock");
   return true;
 }

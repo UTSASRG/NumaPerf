@@ -91,7 +91,7 @@ class ObjFile : public InputFile {
 public:
   explicit ObjFile(MemoryBufferRef m, StringRef archiveName)
       : InputFile(ObjectKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
 
@@ -118,6 +118,7 @@ public:
   std::vector<bool> typeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> tableEntries;
+  std::vector<uint32_t> tableEntriesRel;
   std::vector<bool> keptComdats;
   std::vector<InputSegment *> segments;
   std::vector<InputFunction *> functions;
@@ -154,12 +155,16 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef m, StringRef archiveName)
       : InputFile(BitcodeKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
 
   void parse();
   std::unique_ptr<llvm::lto::InputFile> obj;
+
+  // Set to true once LTO is complete in order prevent further bitcode objects
+  // being added.
+  static bool doneLTO;
 };
 
 inline bool isBitcode(MemoryBufferRef mb) {

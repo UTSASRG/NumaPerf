@@ -21,9 +21,9 @@ using namespace llvm;
 static const std::string getOptionName(const Record &R) {
   // Use the record name unless EnumName is defined.
   if (isa<UnsetInit>(R.getValueInit("EnumName")))
-    return R.getName();
+    return std::string(R.getName());
 
-  return R.getValueAsString("EnumName");
+  return std::string(R.getValueAsString("EnumName"));
 }
 
 static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
@@ -102,7 +102,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << ", \"" << R.getValueAsString("Name") << '"';
 
     // The option identifier name.
-    OS  << ", "<< getOptionName(R);
+    OS << ", " << getOptionName(R);
 
     // The option kind.
     OS << ", Group";
@@ -149,7 +149,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     write_cstring(OS, R.getValueAsString("Name"));
 
     // The option identifier name.
-    OS  << ", "<< getOptionName(R);
+    OS << ", " << getOptionName(R);
 
     // The option kind.
     OS << ", " << R.getValueAsDef("Kind")->getValueAsString("Name");
@@ -241,8 +241,9 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "bool ValuesWereAdded;\n";
     OS << R.getValueAsString("ValuesCode");
     OS << "\n";
-    for (std::string S : R.getValueAsListOfStrings("Prefixes")) {
+    for (StringRef Prefix : R.getValueAsListOfStrings("Prefixes")) {
       OS << "ValuesWereAdded = Opt.addValues(";
+      std::string S(Prefix);
       S += R.getValueAsString("Name");
       write_cstring(OS, S);
       OS << ", Values);\n";

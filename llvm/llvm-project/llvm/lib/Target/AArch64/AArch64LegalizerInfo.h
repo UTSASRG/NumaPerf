@@ -31,8 +31,8 @@ public:
                       MachineIRBuilder &MIRBuilder,
                       GISelChangeObserver &Observer) const override;
 
-  bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &MIRBuilder) const override;
+  bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                         GISelChangeObserver &Observer) const override;
 
 private:
   bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -43,6 +43,11 @@ private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
+
+  bool legalizeSmallCMGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &MIRBuilder,
+                                  GISelChangeObserver &Observer) const;
+  const AArch64Subtarget *ST;
 };
 } // End llvm namespace.
 #endif

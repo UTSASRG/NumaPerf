@@ -60,7 +60,8 @@ static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
     return llvm::None;
   }
   ASTContext &Context = AstUnit->getASTContext();
-  auto Matches = ast_matchers::match(wrapMatcher(Matcher), Context);
+  auto Matches = ast_matchers::match(
+      traverse(ast_type_traits::TK_AsIs, wrapMatcher(Matcher)), Context);
   // We expect a single, exact match for the statement.
   if (Matches.size() != 1) {
     ADD_FAILURE() << "Wrong number of matches: " << Matches.size();
@@ -111,7 +112,8 @@ protected:
   // Tests failures caused by references to unbound nodes. `unbound_id` is the
   // id that will cause the failure.
   void testUnboundNodeError(const Stencil &Stencil, StringRef UnboundId) {
-    testError(Stencil, AllOf(HasSubstr(UnboundId), HasSubstr("not bound")));
+    testError(Stencil,
+              AllOf(HasSubstr(std::string(UnboundId)), HasSubstr("not bound")));
   }
 };
 
@@ -128,8 +130,9 @@ TEST_F(StencilTest, SingleStatement) {
                       hasThen(stmt().bind(Then)), hasElse(stmt().bind(Else))));
   ASSERT_TRUE(StmtMatch);
   // Invert the if-then-else.
-  auto Stencil = cat("if (!", node(Condition), ") ", statement(Else), " else ",
-                     statement(Then));
+  auto Stencil =
+      cat("if (!", node(std::string(Condition)), ") ",
+          statement(std::string(Else)), " else ", statement(std::string(Then)));
   EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
                        HasValue("if (!true) return 0; else return 1;"));
 }
@@ -156,7 +159,8 @@ void testExpr(StringRef Id, StringRef Snippet, const Stencil &Stencil,
               StringRef Expected) {
   auto StmtMatch = matchStmt(Snippet, expr().bind(Id));
   ASSERT_TRUE(StmtMatch);
-  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result), HasValue(Expected));
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
 }
 
 void testFailure(StringRef Id, StringRef Snippet, const Stencil &Stencil,
@@ -170,7 +174,7 @@ void testFailure(StringRef Id, StringRef Snippet, const Stencil &Stencil,
 
 TEST_F(StencilTest, SelectionOp) {
   StringRef Id = "id";
-  testExpr(Id, "3;", cat(node(Id)), "3");
+  testExpr(Id, "3;", cat(node(std::string(Id))), "3");
 }
 
 TEST_F(StencilTest, IfBoundOpBound) {
@@ -330,9 +334,10 @@ TEST_F(StencilTest, AccessOpExplicitThis) {
       int foo() { return this->x; }
     };
   )cc";
-  auto StmtMatch =
-      matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
-                             hasObjectExpression(expr().bind("obj")))))));
+  auto StmtMatch = matchStmt(
+      Snippet, traverse(ast_type_traits::TK_AsIs,
+                        returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
+                            hasObjectExpression(expr().bind("obj"))))))));
   ASSERT_TRUE(StmtMatch);
   const Stencil Stencil = access("obj", "field");
   EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
@@ -366,6 +371,21 @@ TEST_F(StencilTest, RunOp) {
                                                               : "Unbound");
   };
   testExpr(Id, "3;", run(SimpleFn), "Bound");
+}
+
+TEST_F(StencilTest, CatOfInvalidRangeFails) {
+  StringRef Snippet = R"cpp(
+#define MACRO (3.77)
+  double foo(double d);
+  foo(MACRO);)cpp";
+
+  auto StmtMatch =
+      matchStmt(Snippet, callExpr(callee(functionDecl(hasName("foo"))),
+                                  argumentCountIs(1),
+                                  hasArgument(0, expr().bind("arg"))));
+  ASSERT_TRUE(StmtMatch);
+  Stencil S = cat(node("arg"));
+  EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), Failed<StringError>());
 }
 
 TEST(StencilToStringTest, RawTextOp) {
