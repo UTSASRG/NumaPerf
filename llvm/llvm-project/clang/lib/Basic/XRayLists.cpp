@@ -9,11 +9,7 @@
 // User-provided filters for always/never XRay instrumenting certain functions.
 //
 //===----------------------------------------------------------------------===//
-
 #include "clang/Basic/XRayLists.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "llvm/Support/SpecialCaseList.h"
 
 using namespace clang;
 
@@ -28,8 +24,6 @@ XRayFunctionFilter::XRayFunctionFilter(
       AttrList(llvm::SpecialCaseList::createOrDie(
           AttrListPaths, SM.getFileManager().getVirtualFileSystem())),
       SM(SM) {}
-
-XRayFunctionFilter::~XRayFunctionFilter() = default;
 
 XRayFunctionFilter::ImbueAttribute
 XRayFunctionFilter::shouldImbueFunction(StringRef FunctionName) const {

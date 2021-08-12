@@ -128,13 +128,13 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
         llvm::StringRef ParentPath = llvm::sys::path::parent_path(TestPath);
         llvm::StringRef ParentFilename = llvm::sys::path::filename(ParentPath);
         if (ParentFilename == "VC") {
-          Path = std::string(ParentPath);
+          Path = ParentPath;
           VSLayout = MSVCToolChain::ToolsetLayout::OlderVS;
           return true;
         }
         if (ParentFilename == "x86ret" || ParentFilename == "x86chk"
           || ParentFilename == "amd64ret" || ParentFilename == "amd64chk") {
-          Path = std::string(ParentPath);
+          Path = ParentPath;
           VSLayout = MSVCToolChain::ToolsetLayout::DevDivInternal;
           return true;
         }
@@ -163,7 +163,7 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
         for (int i = 0; i < 3; ++i)
           ToolChainPath = llvm::sys::path::parent_path(ToolChainPath);
 
-        Path = std::string(ToolChainPath);
+        Path = ToolChainPath;
         VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
         return true;
       }
@@ -261,7 +261,7 @@ static bool findVCToolChainViaSetupConfig(std::string &Path,
   if (!llvm::sys::fs::is_directory(ToolchainPath))
     return false;
 
-  Path = std::string(ToolchainPath.str());
+  Path = ToolchainPath.str();
   VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
   return true;
 #endif
@@ -282,7 +282,7 @@ static bool findVCToolChainViaRegistry(std::string &Path,
           VSInstallPath.c_str(), VSInstallPath.find(R"(\Common7\IDE)")));
       llvm::sys::path::append(VCPath, "VC");
 
-      Path = std::string(VCPath.str());
+      Path = VCPath.str();
       VSLayout = MSVCToolChain::ToolsetLayout::OlderVS;
       return true;
     }
@@ -300,8 +300,7 @@ static std::string FindVisualStudioExecutable(const ToolChain &TC,
   SmallString<128> FilePath(MSVC.getSubDirectoryPath(
       toolchains::MSVCToolChain::SubDirectoryType::Bin));
   llvm::sys::path::append(FilePath, Exe);
-  return std::string(llvm::sys::fs::can_execute(FilePath) ? FilePath.str()
-                                                          : Exe);
+  return llvm::sys::fs::can_execute(FilePath) ? FilePath.str() : Exe;
 }
 
 void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -349,16 +348,6 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(
           Args.MakeArgString(std::string("-libpath:") + WindowsSdkLibPath));
   }
-
-  // Add the compiler-rt library directories to libpath if they exist to help
-  // the linker find the various sanitizer, builtin, and profiling runtimes.
-  for (const auto &LibPath : TC.getLibraryPaths()) {
-    if (TC.getVFS().exists(LibPath))
-      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
-  }
-  auto CRTPath = TC.getCompilerRTPath();
-  if (TC.getVFS().exists(CRTPath))
-    CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));
 
   if (!C.getDriver().IsCLMode() && Args.hasArg(options::OPT_L))
     for (const auto &LibPath : Args.getAllArgValues(options::OPT_L))
@@ -903,7 +892,7 @@ MSVCToolChain::getSubDirectoryPath(SubDirectoryType Type,
     llvm::sys::path::append(Path, "lib", SubdirName);
     break;
   }
-  return std::string(Path.str());
+  return Path.str();
 }
 
 #ifdef _WIN32
@@ -1057,7 +1046,7 @@ static bool getWindows10SDKVersionFromPath(const std::string &SDKPath,
     if (!CandidateName.startswith("10."))
       continue;
     if (CandidateName > SDKVersion)
-      SDKVersion = std::string(CandidateName);
+      SDKVersion = CandidateName;
   }
 
   return !SDKVersion.empty();
@@ -1140,7 +1129,7 @@ bool MSVCToolChain::getWindowsSDKLibraryPath(std::string &path) const {
     }
   }
 
-  path = std::string(libPath.str());
+  path = libPath.str();
   return true;
 }
 
@@ -1179,7 +1168,7 @@ bool MSVCToolChain::getUniversalCRTLibraryPath(std::string &Path) const {
   llvm::SmallString<128> LibPath(UniversalCRTSdkPath);
   llvm::sys::path::append(LibPath, "Lib", UCRTVersion, "ucrt", ArchName);
 
-  Path = std::string(LibPath.str());
+  Path = LibPath.str();
   return true;
 }
 
@@ -1486,15 +1475,14 @@ static void TranslateDArg(Arg *A, llvm::opt::DerivedArgList &DAL,
     return;
   }
 
-  std::string NewVal = std::string(Val);
+  std::string NewVal = Val;
   NewVal[Hash] = '=';
   DAL.AddJoinedArg(A, Opts.getOption(options::OPT_D), NewVal);
 }
 
 llvm::opt::DerivedArgList *
 MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
-                             Action::OffloadKind OFK) const {
+                             StringRef BoundArch, Action::OffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 
@@ -1533,8 +1521,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     } else if (A->getOption().matches(options::OPT_D)) {
       // Translate -Dfoo#bar into -Dfoo=bar.
       TranslateDArg(A, *DAL, Opts);
-    } else if (OFK != Action::OFK_HIP) {
-      // HIP Toolchain translates input args by itself.
+    } else {
       DAL->append(A);
     }
   }

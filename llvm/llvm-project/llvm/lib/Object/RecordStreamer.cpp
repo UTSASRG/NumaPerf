@@ -81,22 +81,22 @@ RecordStreamer::const_iterator RecordStreamer::begin() {
 
 RecordStreamer::const_iterator RecordStreamer::end() { return Symbols.end(); }
 
-void RecordStreamer::emitInstruction(const MCInst &Inst,
+void RecordStreamer::EmitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
-  MCStreamer::emitInstruction(Inst, STI);
+  MCStreamer::EmitInstruction(Inst, STI);
 }
 
-void RecordStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::emitLabel(Symbol);
+void RecordStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::EmitLabel(Symbol);
   markDefined(*Symbol);
 }
 
-void RecordStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+void RecordStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   markDefined(*Symbol);
-  MCStreamer::emitAssignment(Symbol, Value);
+  MCStreamer::EmitAssignment(Symbol, Value);
 }
 
-bool RecordStreamer::emitSymbolAttribute(MCSymbol *Symbol,
+bool RecordStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
                                          MCSymbolAttr Attribute) {
   if (Attribute == MCSA_Global || Attribute == MCSA_Weak)
     markGlobal(*Symbol, Attribute);
@@ -105,13 +105,13 @@ bool RecordStreamer::emitSymbolAttribute(MCSymbol *Symbol,
   return true;
 }
 
-void RecordStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
+void RecordStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
                                   uint64_t Size, unsigned ByteAlignment,
                                   SMLoc Loc) {
   markDefined(*Symbol);
 }
 
-void RecordStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void RecordStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                       unsigned ByteAlignment) {
   markDefined(*Symbol);
 }
@@ -224,9 +224,9 @@ void RecordStreamer::flushSymverDirectives() {
       if (IsDefined)
         markDefined(*Alias);
       // Don't use EmitAssignment override as it always marks alias as defined.
-      MCStreamer::emitAssignment(Alias, Value);
+      MCStreamer::EmitAssignment(Alias, Value);
       if (Attr != MCSA_Invalid)
-        emitSymbolAttribute(Alias, Attr);
+        EmitSymbolAttribute(Alias, Attr);
     }
   }
 }

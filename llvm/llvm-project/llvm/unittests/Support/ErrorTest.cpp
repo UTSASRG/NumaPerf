@@ -761,22 +761,12 @@ TEST(Error, Stream) {
   }
 }
 
-TEST(Error, SucceededMatcher) {
+TEST(Error, ErrorMatchers) {
   EXPECT_THAT_ERROR(Error::success(), Succeeded());
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_ERROR(make_error<CustomError>(0), Succeeded()),
       "Expected: succeeded\n  Actual: failed  (CustomError {0})");
 
-  EXPECT_THAT_EXPECTED(Expected<int>(0), Succeeded());
-  EXPECT_NONFATAL_FAILURE(
-      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
-                           Succeeded()),
-      "Expected: succeeded\n  Actual: failed  (CustomError {0})");
-  int a = 1;
-  EXPECT_THAT_EXPECTED(Expected<int &>(a), Succeeded());
-}
-
-TEST(Error, FailedMatcher) {
   EXPECT_THAT_ERROR(make_error<CustomError>(0), Failed());
   EXPECT_NONFATAL_FAILURE(EXPECT_THAT_ERROR(Error::success(), Failed()),
                           "Expected: failed\n  Actual: succeeded");
@@ -806,14 +796,17 @@ TEST(Error, FailedMatcher) {
       "  Actual: failed  (CustomError {0})");
   EXPECT_THAT_ERROR(make_error<CustomError>(0), Failed<ErrorInfoBase>());
 
+  EXPECT_THAT_EXPECTED(Expected<int>(0), Succeeded());
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                           Succeeded()),
+      "Expected: succeeded\n  Actual: failed  (CustomError {0})");
+
   EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)), Failed());
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(0), Failed()),
       "Expected: failed\n  Actual: succeeded with value 0");
-  EXPECT_THAT_EXPECTED(Expected<int &>(make_error<CustomError>(0)), Failed());
-}
 
-TEST(Error, HasValueMatcher) {
   EXPECT_THAT_EXPECTED(Expected<int>(0), HasValue(0));
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
@@ -825,7 +818,9 @@ TEST(Error, HasValueMatcher) {
       "Expected: succeeded with value (is equal to 0)\n"
       "  Actual: succeeded with value 1, (isn't equal to 0)");
 
+  EXPECT_THAT_EXPECTED(Expected<int &>(make_error<CustomError>(0)), Failed());
   int a = 1;
+  EXPECT_THAT_EXPECTED(Expected<int &>(a), Succeeded());
   EXPECT_THAT_EXPECTED(Expected<int &>(a), HasValue(testing::Eq(1)));
 
   EXPECT_THAT_EXPECTED(Expected<int>(1), HasValue(testing::Gt(0)));
@@ -838,46 +833,6 @@ TEST(Error, HasValueMatcher) {
                            HasValue(testing::Gt(1))),
       "Expected: succeeded with value (is > 1)\n"
       "  Actual: failed  (CustomError {0})");
-}
-
-TEST(Error, FailedWithMessageMatcher) {
-  EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
-                       FailedWithMessage("CustomError {0}"));
-
-  EXPECT_NONFATAL_FAILURE(
-      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(1)),
-                           FailedWithMessage("CustomError {0}")),
-      "Expected: failed with Error whose message has 1 element that is equal "
-      "to \"CustomError {0}\"\n"
-      "  Actual: failed  (CustomError {1})");
-
-  EXPECT_NONFATAL_FAILURE(
-      EXPECT_THAT_EXPECTED(Expected<int>(0),
-                           FailedWithMessage("CustomError {0}")),
-      "Expected: failed with Error whose message has 1 element that is equal "
-      "to \"CustomError {0}\"\n"
-      "  Actual: succeeded with value 0");
-
-  EXPECT_NONFATAL_FAILURE(
-      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
-                           FailedWithMessage("CustomError {0}", "CustomError {0}")),
-      "Expected: failed with Error whose message has 2 elements where\n"
-      "element #0 is equal to \"CustomError {0}\",\n"
-      "element #1 is equal to \"CustomError {0}\"\n"
-      "  Actual: failed  (CustomError {0}), which has 1 element");
-
-  EXPECT_NONFATAL_FAILURE(
-      EXPECT_THAT_EXPECTED(
-          Expected<int>(joinErrors(make_error<CustomError>(0),
-                                   make_error<CustomError>(0))),
-          FailedWithMessage("CustomError {0}")),
-      "Expected: failed with Error whose message has 1 element that is equal "
-      "to \"CustomError {0}\"\n"
-      "  Actual: failed  (CustomError {0}; CustomError {0}), which has 2 elements");
-
-  EXPECT_THAT_ERROR(
-      joinErrors(make_error<CustomError>(0), make_error<CustomError>(0)),
-      FailedWithMessageArray(testing::SizeIs(2)));
 }
 
 TEST(Error, C_API) {

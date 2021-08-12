@@ -634,7 +634,7 @@ namespace range_for_loop {
 namespace operator_new {
 struct Foo {
   int j;
-  static void *operator new(size_t i) _diagnose_if(i, "oh no", "warning"); // expected-note{{from 'diagnose_if'}}
+  static void *operator new(size_t i) _diagnose_if(i, "oh no", "warning");
 };
 
 struct Bar {
@@ -643,7 +643,10 @@ struct Bar {
 };
 
 void run() {
-  new Foo(); // expected-warning{{oh no}}
+  // FIXME: This should emit a diagnostic.
+  new Foo();
+  // This is here because we sometimes pass a dummy argument `operator new`. We
+  // should ignore this, rather than complaining about it.
   new Bar();
 }
 }

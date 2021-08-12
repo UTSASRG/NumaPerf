@@ -1,8 +1,7 @@
-; XFAIL: target-arm && linux-gnu
 ; UNSUPPORTED: system-windows
 ;
 ; This test verifies that we do the right thing with DIFlagExportSymbols which is the new
-; behaviour and without the DIFlagExportSymbols which is the old behavior for the given
+; behavioir and without the DIFlagExportSymbols which is the old behavior for the given
 ; definitions below.
 ;
 ;```

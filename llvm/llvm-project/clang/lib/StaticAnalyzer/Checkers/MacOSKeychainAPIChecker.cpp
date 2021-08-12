@@ -667,6 +667,6 @@ void ento::registerMacOSKeychainAPIChecker(CheckerManager &mgr) {
   mgr.registerChecker<MacOSKeychainAPIChecker>();
 }
 
-bool ento::shouldRegisterMacOSKeychainAPIChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterMacOSKeychainAPIChecker(const LangOptions &LO) {
   return true;
 }

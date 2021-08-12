@@ -50,18 +50,18 @@
 
 using namespace clang;
 
-using ManagedAnalysisMap = llvm::DenseMap<const void *, std::unique_ptr<ManagedAnalysis>>;
+using ManagedAnalysisMap = llvm::DenseMap<const void *, ManagedAnalysis *>;
 
-AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *ADCMgr,
-                                         const Decl *D,
-                                         const CFG::BuildOptions &Options)
-    : ADCMgr(ADCMgr), D(D), cfgBuildOptions(Options) {
+AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
+                                         const Decl *d,
+                                         const CFG::BuildOptions &buildOptions)
+    : Manager(Mgr), D(d), cfgBuildOptions(buildOptions) {
   cfgBuildOptions.forcedBlkExprs = &forcedBlkExprs;
 }
 
-AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *ADCMgr,
-                                         const Decl *D)
-    : ADCMgr(ADCMgr), D(D) {
+AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
+                                         const Decl *d)
+    : Manager(Mgr), D(d) {
   cfgBuildOptions.forcedBlkExprs = &forcedBlkExprs;
 }
 
@@ -96,8 +96,8 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     Stmt *Body = FD->getBody();
     if (auto *CoroBody = dyn_cast_or_null<CoroutineBodyStmt>(Body))
       Body = CoroBody->getBody();
-    if (ADCMgr && ADCMgr->synthesizeBodies()) {
-      Stmt *SynthesizedBody = ADCMgr->getBodyFarm().getBody(FD);
+    if (Manager && Manager->synthesizeBodies()) {
+      Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(FD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -107,8 +107,8 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   }
   else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
-    if (ADCMgr && ADCMgr->synthesizeBodies()) {
-      Stmt *SynthesizedBody = ADCMgr->getBodyFarm().getBody(MD);
+    if (Manager && Manager->synthesizeBodies()) {
+      Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(MD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -309,17 +309,19 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
 const StackFrameContext *
-AnalysisDeclContext::getStackFrame(const LocationContext *ParentLC,
-                                   const Stmt *S, const CFGBlock *Blk,
-                                   unsigned BlockCount, unsigned Index) {
-  return getLocationContextManager().getStackFrame(this, ParentLC, S, Blk,
-                                                   BlockCount, Index);
+AnalysisDeclContext::getStackFrame(LocationContext const *Parent, const Stmt *S,
+                                   const CFGBlock *Blk, unsigned BlockCount,
+                                   unsigned Idx) {
+  return getLocationContextManager().getStackFrame(this, Parent, S, Blk,
+                                                   BlockCount, Idx);
 }
 
-const BlockInvocationContext *AnalysisDeclContext::getBlockInvocationContext(
-    const LocationContext *ParentLC, const BlockDecl *BD, const void *Data) {
-  return getLocationContextManager().getBlockInvocationContext(this, ParentLC,
-                                                               BD, Data);
+const BlockInvocationContext *
+AnalysisDeclContext::getBlockInvocationContext(const LocationContext *parent,
+                                               const BlockDecl *BD,
+                                               const void *ContextData) {
+  return getLocationContextManager().getBlockInvocationContext(this, parent,
+                                                               BD, ContextData);
 }
 
 bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
@@ -338,10 +340,9 @@ bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
 }
 
 LocationContextManager &AnalysisDeclContext::getLocationContextManager() {
-  assert(
-      ADCMgr &&
-      "Cannot create LocationContexts without an AnalysisDeclContextManager!");
-  return ADCMgr->getLocationContextManager();
+  assert(Manager &&
+         "Cannot create LocationContexts without an AnalysisDeclContextManager!");
+  return Manager->getLocationContextManager();
 }
 
 //===----------------------------------------------------------------------===//
@@ -364,13 +365,35 @@ void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
           BlockCount, Index);
 }
 
+void ScopeContext::Profile(llvm::FoldingSetNodeID &ID) {
+  Profile(ID, getAnalysisDeclContext(), getParent(), Enter);
+}
+
 void BlockInvocationContext::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAnalysisDeclContext(), getParent(), BD, Data);
+  Profile(ID, getAnalysisDeclContext(), getParent(), BD, ContextData);
 }
 
 //===----------------------------------------------------------------------===//
 // LocationContext creation.
 //===----------------------------------------------------------------------===//
+
+template <typename LOC, typename DATA>
+const LOC*
+LocationContextManager::getLocationContext(AnalysisDeclContext *ctx,
+                                           const LocationContext *parent,
+                                           const DATA *d) {
+  llvm::FoldingSetNodeID ID;
+  LOC::Profile(ID, ctx, parent, d);
+  void *InsertPos;
+
+  LOC *L = cast_or_null<LOC>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
+
+  if (!L) {
+    L = new LOC(ctx, parent, d, ++NewID);
+    Contexts.InsertNode(L, InsertPos);
+  }
+  return L;
+}
 
 const StackFrameContext *LocationContextManager::getStackFrame(
     AnalysisDeclContext *ctx, const LocationContext *parent, const Stmt *s,
@@ -387,17 +410,26 @@ const StackFrameContext *LocationContextManager::getStackFrame(
   return L;
 }
 
-const BlockInvocationContext *LocationContextManager::getBlockInvocationContext(
-    AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-    const BlockDecl *BD, const void *Data) {
+const ScopeContext *
+LocationContextManager::getScope(AnalysisDeclContext *ctx,
+                                 const LocationContext *parent,
+                                 const Stmt *s) {
+  return getLocationContext<ScopeContext, Stmt>(ctx, parent, s);
+}
+
+const BlockInvocationContext *
+LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
+                                                  const LocationContext *parent,
+                                                  const BlockDecl *BD,
+                                                  const void *ContextData) {
   llvm::FoldingSetNodeID ID;
-  BlockInvocationContext::Profile(ID, ADC, ParentLC, BD, Data);
+  BlockInvocationContext::Profile(ID, ctx, parent, BD, ContextData);
   void *InsertPos;
   auto *L =
     cast_or_null<BlockInvocationContext>(Contexts.FindNodeOrInsertPos(ID,
                                                                     InsertPos));
   if (!L) {
-    L = new BlockInvocationContext(ADC, ParentLC, BD, Data, ++NewID);
+    L = new BlockInvocationContext(ctx, parent, BD, ContextData, ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -441,7 +473,9 @@ static void printLocation(raw_ostream &Out, const SourceManager &SM,
     Loc.print(Out, SM);
 }
 
-void LocationContext::dumpStack(raw_ostream &Out) const {
+void LocationContext::dumpStack(raw_ostream &Out, const char *NL,
+                                std::function<void(const LocationContext *)>
+                                    printMoreInfoPerContext) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -464,6 +498,9 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
         printLocation(Out, SM, S->getBeginLoc());
       }
       break;
+    case Scope:
+      Out << "Entering scope";
+      break;
     case Block:
       Out << "Invoking block";
       if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
@@ -472,7 +509,9 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
       }
       break;
     }
-    Out << '\n';
+    Out << NL;
+
+    printMoreInfoPerContext(LCtx);
   }
 }
 
@@ -508,6 +547,9 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
       }
 
       Out << ", \"items\": ";
+      break;
+    case Scope:
+      Out << "Entering scope\" ";
       break;
     case Block:
       Out << "Invoking block\" ";
@@ -617,7 +659,7 @@ AnalysisDeclContext::getReferencedBlockVars(const BlockDecl *BD) {
   return llvm::make_range(V->begin(), V->end());
 }
 
-std::unique_ptr<ManagedAnalysis> &AnalysisDeclContext::getAnalysisImpl(const void *tag) {
+ManagedAnalysis *&AnalysisDeclContext::getAnalysisImpl(const void *tag) {
   if (!ManagedAnalyses)
     ManagedAnalyses = new ManagedAnalysisMap();
   ManagedAnalysisMap *M = (ManagedAnalysisMap*) ManagedAnalyses;
@@ -633,7 +675,12 @@ ManagedAnalysis::~ManagedAnalysis() = default;
 AnalysisDeclContext::~AnalysisDeclContext() {
   delete forcedBlkExprs;
   delete ReferencedBlockVars;
-  delete (ManagedAnalysisMap*) ManagedAnalyses;
+  // Release the managed analyses.
+  if (ManagedAnalyses) {
+    ManagedAnalysisMap *M = (ManagedAnalysisMap*) ManagedAnalyses;
+    llvm::DeleteContainerSeconds(*M);
+    delete M;
+  }
 }
 
 LocationContext::~LocationContext() = default;

@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSNAMEPARSER_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSNAMEPARSER_H
+#ifndef liblldb_CPlusPlusNameParser_h_
+#define liblldb_CPlusPlusNameParser_h_
+
 
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
@@ -173,4 +174,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSNAMEPARSER_H
+#endif // liblldb_CPlusPlusNameParser_h_

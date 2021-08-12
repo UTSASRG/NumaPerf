@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H
+#ifndef liblldb_SymbolVendorELF_h_
+#define liblldb_SymbolVendorELF_h_
 
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/lldb-private.h"
@@ -38,8 +38,7 @@ public:
   uint32_t GetPluginVersion() override;
 
 private:
-  SymbolVendorELF(const SymbolVendorELF &) = delete;
-  const SymbolVendorELF &operator=(const SymbolVendorELF &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SymbolVendorELF);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H
+#endif // liblldb_SymbolVendorELF_h_

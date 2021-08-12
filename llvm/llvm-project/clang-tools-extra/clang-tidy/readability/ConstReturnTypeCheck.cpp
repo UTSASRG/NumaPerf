@@ -79,7 +79,7 @@ static CheckResult checkDef(const clang::FunctionDecl *Def,
   Result.Hints.push_back(FixItHint::CreateRemoval(Result.ConstRange));
 
   // Fix the definition and any visible declarations, but don't warn
-  // separately for each declaration. Instead, associate all fixes with the
+  // seperately for each declaration. Instead, associate all fixes with the
   // single warning at the definition.
   for (const FunctionDecl *Decl = Def->getPreviousDecl(); Decl != nullptr;
        Decl = Decl->getPreviousDecl()) {

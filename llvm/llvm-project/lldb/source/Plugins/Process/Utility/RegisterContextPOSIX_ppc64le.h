@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_PPC64LE_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_PPC64LE_H
+#ifndef liblldb_RegisterContextPOSIX_ppc64le_h_
+#define liblldb_RegisterContextPOSIX_ppc64le_h_
 
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #include "RegisterInfoInterface.h"
@@ -74,4 +74,4 @@ protected:
   lldb::ByteOrder GetByteOrder();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_PPC64LE_H
+#endif // liblldb_RegisterContextPOSIX_ppc64le_h_

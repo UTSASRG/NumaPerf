@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_OBJECTCONTAINER_H
-#define LLDB_SYMBOL_OBJECTCONTAINER_H
+#ifndef liblldb_ObjectContainer_h_
+#define liblldb_ObjectContainer_h_
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
@@ -167,10 +167,9 @@ protected:
       m_data; ///< The data for this object file so things can be parsed lazily.
 
 private:
-  ObjectContainer(const ObjectContainer &) = delete;
-  const ObjectContainer &operator=(const ObjectContainer &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ObjectContainer);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_OBJECTCONTAINER_H
+#endif // liblldb_ObjectContainer_h_

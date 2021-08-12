@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONGROUPUUID_H
-#define LLDB_INTERPRETER_OPTIONGROUPUUID_H
+#ifndef liblldb_OptionGroupUUID_h_
+#define liblldb_OptionGroupUUID_h_
 
 #include "lldb/Interpreter/OptionValueUUID.h"
 #include "lldb/Interpreter/Options.h"
@@ -38,4 +38,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONGROUPUUID_H
+#endif // liblldb_OptionGroupUUID_h_

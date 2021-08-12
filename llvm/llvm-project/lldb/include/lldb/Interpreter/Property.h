@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_PROPERTY_H
-#define LLDB_INTERPRETER_PROPERTY_H
+#ifndef liblldb_Property_h_
+#define liblldb_Property_h_
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ConstString.h"
@@ -75,4 +75,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_PROPERTY_H
+#endif // liblldb_Property_h_

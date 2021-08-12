@@ -19,6 +19,10 @@ namespace tidy {
 namespace modernize {
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
+  // Only register the matchers for C++.
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
   // Skip list initialization and constructors with an initializer list.
   auto ConstructExpr =
       cxxConstructExpr(
@@ -31,13 +35,11 @@ void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
       has(ConstructExpr), has(cxxFunctionalCastExpr(has(ConstructExpr)))));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               functionDecl(
-                   isDefinition(), // Declarations don't have return statements.
+      functionDecl(isDefinition(), // Declarations don't have return statements.
                    returns(unless(anyOf(builtinType(), autoType()))),
                    hasDescendant(returnStmt(hasReturnValue(
                        has(cxxConstructExpr(has(CtorAsArgument)))))))
-                   .bind("fn")),
+          .bind("fn"),
       this);
 }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H
-#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H
+#ifndef liblldb_SystemRuntimeMacOSX_h_
+#define liblldb_SystemRuntimeMacOSX_h_
 
 #include <mutex>
 #include <string>
@@ -286,8 +286,7 @@ private:
   lldb::addr_t m_dispatch_voucher_offsets_addr;
   struct LibdispatchVoucherOffsets m_libdispatch_voucher_offsets;
 
-  SystemRuntimeMacOSX(const SystemRuntimeMacOSX &) = delete;
-  const SystemRuntimeMacOSX &operator=(const SystemRuntimeMacOSX &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SystemRuntimeMacOSX);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H
+#endif // liblldb_SystemRuntimeMacOSX_h_

@@ -1,4 +1,3 @@
-; REQUIRES: arm-registered-target
 ; RUN: opt -S -loop-unroll -codegenprepare < %s -domtree -analyze | FileCheck %s
 ;
 ; Checks that the dom tree is properly invalidated after an operation that will

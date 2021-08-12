@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_VSCODE_EXCEPTIONBREAKPOINT_H
-#define LLDB_TOOLS_LLDB_VSCODE_EXCEPTIONBREAKPOINT_H
+#ifndef LLDBVSCODE_EXCEPTIONBREAKPOINT_H_
+#define LLDBVSCODE_EXCEPTIONBREAKPOINT_H_
 
 #include <string>
 

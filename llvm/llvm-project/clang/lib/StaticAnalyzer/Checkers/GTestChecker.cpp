@@ -291,9 +291,8 @@ void ento::registerGTestChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<GTestChecker>();
 }
 
-bool ento::shouldRegisterGTestChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterGTestChecker(const LangOptions &LO) {
   // gtest is a C++ API so there is no sense running the checker
   // if not compiling for C++.
-  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }

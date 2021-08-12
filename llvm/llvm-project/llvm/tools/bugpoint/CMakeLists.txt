@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   BitWriter
   CodeGen
-  Extensions
   Core
   IPO
   IRReader
@@ -33,8 +32,10 @@ add_llvm_tool(bugpoint
   ToolRunner.cpp
   bugpoint.cpp
 
+  ENABLE_PLUGINS
+
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
   )
-export_executable_symbols_for_plugins(bugpoint)
+export_executable_symbols(bugpoint)

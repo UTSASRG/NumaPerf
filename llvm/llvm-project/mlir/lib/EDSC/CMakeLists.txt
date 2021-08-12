@@ -1,27 +1,37 @@
 set(LLVM_OPTIONAL_SOURCES
   Builders.cpp
   CoreAPIs.cpp
+  Helpers.cpp
+  Intrinsics.cpp
   )
 
-add_mlir_library(MLIREDSC
+add_llvm_library(MLIREDSC
   Builders.cpp
+  Helpers.cpp
+  Intrinsics.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/EDSC
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSupport
   )
+target_link_libraries(MLIREDSC
+  PUBLIC
+    MLIRAffineOps
+    MLIRLoopOps
+    MLIRStandardOps
+    MLIRTransformUtils
+    MLIRVectorOps
+    )
 
-add_mlir_library(MLIREDSCInterface
+add_llvm_library(MLIREDSCInterface
   CoreAPIs.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/EDSC
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSupport
-  MLIRParser
   )
+add_dependencies(MLIREDSCInterface MLIRIR)
+target_link_libraries(MLIREDSC
+  PUBLIC
+    MLIRIR
+    MLIRSupport
+    MLIRParser
+    )

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSLANGUAGE_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSLANGUAGE_H
+#ifndef liblldb_CPlusPlusLanguage_h_
+#define liblldb_CPlusPlusLanguage_h_
 
 #include <set>
 #include <vector>
@@ -133,4 +133,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSLANGUAGE_H
+#endif // liblldb_CPlusPlusLanguage_h_

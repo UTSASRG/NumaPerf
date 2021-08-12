@@ -8,5 +8,5 @@
 _start:
   movl $abs, %edx
 
-//CHECK:      <_start>:
+//CHECK:      start:
 //CHECK-NEXT: movl	$66, %edx

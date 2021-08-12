@@ -78,16 +78,13 @@ public:
              const char *description)
       : BugType(checker, name, categories::LogicError), desc(description) {}
 
-  BuiltinBug(class CheckerNameRef checker, const char *name)
-      : BugType(checker, name, categories::LogicError), desc(name) {}
-
   BuiltinBug(const CheckerBase *checker, const char *name)
       : BugType(checker, name, categories::LogicError), desc(name) {}
 
   StringRef getDescription() const { return desc; }
 };
 
-} // namespace ento
+} // end ento namespace
 
 } // end clang namespace
 #endif

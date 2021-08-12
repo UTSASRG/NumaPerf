@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanVerifier.h"
-#include "VPlan.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Support/CommandLine.h"
 

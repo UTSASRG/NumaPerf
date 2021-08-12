@@ -50,15 +50,15 @@ void DiffConsumer::printValue(Value *V, bool isL) {
     return;
   }
   if (V->getType()->isVoidTy()) {
-    if (auto *SI = dyn_cast<StoreInst>(V)) {
+    if (isa<StoreInst>(V)) {
       out << "store to ";
-      printValue(SI->getPointerOperand(), isL);
-    } else if (auto *CI = dyn_cast<CallInst>(V)) {
+      printValue(cast<StoreInst>(V)->getPointerOperand(), isL);
+    } else if (isa<CallInst>(V)) {
       out << "call to ";
-      printValue(CI->getCalledOperand(), isL);
-    } else if (auto *II = dyn_cast<InvokeInst>(V)) {
+      printValue(cast<CallInst>(V)->getCalledValue(), isL);
+    } else if (isa<InvokeInst>(V)) {
       out << "invoke to ";
-      printValue(II->getCalledOperand(), isL);
+      printValue(cast<InvokeInst>(V)->getCalledValue(), isL);
     } else {
       out << *V;
     }

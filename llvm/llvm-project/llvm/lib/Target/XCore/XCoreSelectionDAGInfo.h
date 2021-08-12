@@ -17,6 +17,8 @@
 
 namespace llvm {
 
+class XCoreTargetMachine;
+
 class XCoreSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,

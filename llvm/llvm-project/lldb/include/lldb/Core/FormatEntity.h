@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_FORMATENTITY_H
-#define LLDB_CORE_FORMATENTITY_H
+#ifndef liblldb_FormatEntity_h_
+#define liblldb_FormatEntity_h_
 
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
@@ -61,7 +61,6 @@ public:
       ThreadName,
       ThreadQueue,
       ThreadStopReason,
-      ThreadStopReasonRaw,
       ThreadReturnValue,
       ThreadCompletedExpression,
       ScriptThread,
@@ -219,4 +218,4 @@ protected:
 };
 } // namespace lldb_private
 
-#endif // LLDB_CORE_FORMATENTITY_H
+#endif // liblldb_FormatEntity_h_

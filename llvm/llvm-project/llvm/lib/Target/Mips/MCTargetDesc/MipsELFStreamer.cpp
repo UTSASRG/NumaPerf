@@ -33,9 +33,9 @@ MipsELFStreamer::MipsELFStreamer(MCContext &Context,
       std::unique_ptr<MipsRegInfoRecord>(RegInfoRecord));
 }
 
-void MipsELFStreamer::emitInstruction(const MCInst &Inst,
+void MipsELFStreamer::EmitInstruction(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
-  MCELFStreamer::emitInstruction(Inst, STI);
+  MCELFStreamer::EmitInstruction(Inst, STI);
 
   MCContext &Context = getContext();
   const MCRegisterInfo *MCRegInfo = Context.getRegisterInfo();
@@ -53,20 +53,20 @@ void MipsELFStreamer::emitInstruction(const MCInst &Inst,
   createPendingLabelRelocs();
 }
 
-void MipsELFStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
+void MipsELFStreamer::EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.Begin = getContext().createTempSymbol();
-  MCELFStreamer::emitLabel(Frame.Begin);
+  MCELFStreamer::EmitLabel(Frame.Begin);
 }
 
-MCSymbol *MipsELFStreamer::emitCFILabel() {
+MCSymbol *MipsELFStreamer::EmitCFILabel() {
   MCSymbol *Label = getContext().createTempSymbol("cfi", true);
-  MCELFStreamer::emitLabel(Label);
+  MCELFStreamer::EmitLabel(Label);
   return Label;
 }
 
-void MipsELFStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
+void MipsELFStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = getContext().createTempSymbol();
-  MCELFStreamer::emitLabel(Frame.End);
+  MCELFStreamer::EmitLabel(Frame.End);
 }
 
 void MipsELFStreamer::createPendingLabelRelocs() {
@@ -85,8 +85,8 @@ void MipsELFStreamer::createPendingLabelRelocs() {
   Labels.clear();
 }
 
-void MipsELFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCELFStreamer::emitLabel(Symbol);
+void MipsELFStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCELFStreamer::EmitLabel(Symbol);
   Labels.push_back(Symbol);
 }
 
@@ -96,14 +96,14 @@ void MipsELFStreamer::SwitchSection(MCSection *Section,
   Labels.clear();
 }
 
-void MipsELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+void MipsELFStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
                                     SMLoc Loc) {
-  MCELFStreamer::emitValueImpl(Value, Size, Loc);
+  MCELFStreamer::EmitValueImpl(Value, Size, Loc);
   Labels.clear();
 }
 
-void MipsELFStreamer::emitIntValue(uint64_t Value, unsigned Size) {
-  MCELFStreamer::emitIntValue(Value, Size);
+void MipsELFStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
+  MCELFStreamer::EmitIntValue(Value, Size);
   Labels.clear();
 }
 

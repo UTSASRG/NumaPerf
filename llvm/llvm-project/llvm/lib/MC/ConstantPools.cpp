@@ -26,13 +26,13 @@ using namespace llvm;
 void ConstantPool::emitEntries(MCStreamer &Streamer) {
   if (Entries.empty())
     return;
-  Streamer.emitDataRegion(MCDR_DataRegion);
+  Streamer.EmitDataRegion(MCDR_DataRegion);
   for (const ConstantPoolEntry &Entry : Entries) {
-    Streamer.emitCodeAlignment(Entry.Size); // align naturally
-    Streamer.emitLabel(Entry.Label);
-    Streamer.emitValue(Entry.Value, Entry.Size, Entry.Loc);
+    Streamer.EmitCodeAlignment(Entry.Size); // align naturally
+    Streamer.EmitLabel(Entry.Label);
+    Streamer.EmitValue(Entry.Value, Entry.Size, Entry.Loc);
   }
-  Streamer.emitDataRegion(MCDR_DataRegionEnd);
+  Streamer.EmitDataRegion(MCDR_DataRegionEnd);
   Entries.clear();
 }
 

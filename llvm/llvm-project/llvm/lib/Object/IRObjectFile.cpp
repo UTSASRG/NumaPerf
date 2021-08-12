@@ -47,7 +47,7 @@ Error IRObjectFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
   return Error::success();
 }
 
-Expected<uint32_t> IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
+uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   return SymTab.getSymbolFlags(getSym(Symb));
 }
 
@@ -94,7 +94,6 @@ IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
     return Object;
   case file_magic::elf_relocatable:
   case file_magic::macho_object:
-  case file_magic::wasm_object:
   case file_magic::coff_object: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Object, Type);

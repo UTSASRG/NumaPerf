@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_LOCKFILE_H
-#define LLDB_HOST_LOCKFILE_H
+#ifndef liblldb_Host_LockFile_h_
+#define liblldb_Host_LockFile_h_
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/LockFileWindows.h"
@@ -21,4 +21,4 @@ typedef LockFilePosix LockFile;
 }
 #endif
 
-#endif // LLDB_HOST_LOCKFILE_H
+#endif // liblldb_Host_LockFile_h_

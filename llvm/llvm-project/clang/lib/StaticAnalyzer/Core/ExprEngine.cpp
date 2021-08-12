@@ -1210,7 +1210,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
   switch (S->getStmtClass()) {
     // C++, OpenMP and ARC stuff we don't support yet.
+    case Expr::ObjCIndirectCopyRestoreExprClass:
     case Stmt::CXXDependentScopeMemberExprClass:
+    case Stmt::CXXInheritedCtorInitExprClass:
     case Stmt::CXXTryStmtClass:
     case Stmt::CXXTypeidExprClass:
     case Stmt::CXXUuidofExprClass:
@@ -1224,7 +1226,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::UnresolvedLookupExprClass:
     case Stmt::UnresolvedMemberExprClass:
     case Stmt::TypoExprClass:
-    case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
     case Stmt::SubstNonTypeTemplateParmPackExprClass:
@@ -1257,8 +1258,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTaskwaitDirectiveClass:
     case Stmt::OMPTaskgroupDirectiveClass:
     case Stmt::OMPFlushDirectiveClass:
-    case Stmt::OMPDepobjDirectiveClass:
-    case Stmt::OMPScanDirectiveClass:
     case Stmt::OMPOrderedDirectiveClass:
     case Stmt::OMPAtomicDirectiveClass:
     case Stmt::OMPTargetDirectiveClass:
@@ -1412,8 +1411,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SubstNonTypeTemplateParmExprClass:
     case Stmt::CXXNullPtrLiteralExprClass:
     case Stmt::OMPArraySectionExprClass:
-    case Stmt::OMPArrayShapingExprClass:
-    case Stmt::OMPIteratorExprClass:
     case Stmt::TypeTraitExprClass: {
       Bldr.takeNodes(Pred);
       ExplodedNodeSet preVisit;
@@ -1512,10 +1509,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.takeNodes(Pred);
       VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
-      break;
-
-    case Stmt::MatrixSubscriptExprClass:
-      llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
     case Stmt::GCCAsmStmtClass:
@@ -1625,13 +1618,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
 
-    case Stmt::CXXInheritedCtorInitExprClass:
-      Bldr.takeNodes(Pred);
-      VisitCXXInheritedCtorInitExpr(cast<CXXInheritedCtorInitExpr>(S), Pred,
-                                    Dst);
-      Bldr.addNodes(Dst);
-      break;
-
     case Stmt::CXXNewExprClass: {
       Bldr.takeNodes(Pred);
 
@@ -1652,10 +1638,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet PreVisit;
       const auto *CDE = cast<CXXDeleteExpr>(S);
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-      ExplodedNodeSet PostVisit;
-      getCheckerManager().runCheckersForPostStmt(PostVisit, PreVisit, S, *this);
 
-      for (const auto i : PostVisit)
+      for (const auto i : PreVisit)
         VisitCXXDeleteExpr(CDE, i, Dst);
 
       Bldr.addNodes(Dst);
@@ -1721,8 +1705,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXConstCastExprClass:
     case Stmt::CXXFunctionalCastExprClass:
     case Stmt::BuiltinBitCastExprClass:
-    case Stmt::ObjCBridgedCastExprClass:
-    case Stmt::CXXAddrspaceCastExprClass: {
+    case Stmt::ObjCBridgedCastExprClass: {
       Bldr.takeNodes(Pred);
       const auto *C = cast<CastExpr>(S);
       ExplodedNodeSet dstExpr;
@@ -1866,21 +1849,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                           state->BindExpr(S, Pred->getLocationContext(),
                                                    UnknownVal()));
 
-      Bldr.addNodes(Dst);
-      break;
-    }
-
-    case Expr::ObjCIndirectCopyRestoreExprClass: {
-      // ObjCIndirectCopyRestoreExpr implies passing a temporary for
-      // correctness of lifetime management.  Due to limited analysis
-      // of ARC, this is implemented as direct arg passing.
-      Bldr.takeNodes(Pred);
-      ProgramStateRef state = Pred->getState();
-      const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
-      const Expr *E = OIE->getSubExpr();
-      SVal V = state->getSVal(E, Pred->getLocationContext());
-      Bldr.generateNode(S, Pred,
-              state->BindExpr(S, Pred->getLocationContext(), V));
       Bldr.addNodes(Dst);
       break;
     }
@@ -3193,13 +3161,11 @@ std::string ExprEngine::DumpGraph(bool trim, StringRef Filename) {
     return DumpGraph(Src, Filename);
   } else {
     return llvm::WriteGraph(&G, "ExprEngine", /*ShortNames=*/false,
-                            /*Title=*/"Exploded Graph",
-                            /*Filename=*/std::string(Filename));
+                     /*Title=*/"Exploded Graph", /*Filename=*/Filename);
   }
-#else
+#endif
   llvm::errs() << "Warning: dumping graph requires assertions" << "\n";
   return "";
-#endif
 }
 
 std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode*> Nodes,
@@ -3213,7 +3179,7 @@ std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode*> Nodes,
     return llvm::WriteGraph(TrimmedG.get(), "TrimmedExprEngine",
                             /*ShortNames=*/false,
                             /*Title=*/"Trimmed Exploded Graph",
-                            /*Filename=*/std::string(Filename));
+                            /*Filename=*/Filename);
   }
 #endif
   llvm::errs() << "Warning: dumping graph requires assertions" << "\n";
@@ -3224,5 +3190,3 @@ void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {
   static int index = 0;
   return &index;
 }
-
-void ExprEngine::anchor() { }

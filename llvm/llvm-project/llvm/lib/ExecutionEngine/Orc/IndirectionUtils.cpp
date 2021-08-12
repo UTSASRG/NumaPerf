@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -27,7 +28,7 @@ public:
   CompileCallbackMaterializationUnit(SymbolStringPtr Name,
                                      CompileFunction Compile, VModuleKey K)
       : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}),
-                            nullptr, std::move(K)),
+                            std::move(K)),
         Name(std::move(Name)), Compile(std::move(Compile)) {}
 
   StringRef getName() const override { return "<Compile Callbacks>"; }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
+#ifndef lldb_RegisterContextMemory_h_
+#define lldb_RegisterContextMemory_h_
 
 #include <vector>
 
@@ -67,9 +67,7 @@ protected:
                                 // context that is stored in memmory
 
 private:
-  RegisterContextMemory(const RegisterContextMemory &) = delete;
-  const RegisterContextMemory &
-  operator=(const RegisterContextMemory &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(RegisterContextMemory);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
+#endif // lldb_RegisterContextMemory_h_

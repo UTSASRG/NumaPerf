@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H
+#ifndef liblldb_SymbolFileSymtab_h_
+#define liblldb_SymbolFileSymtab_h_
 
 #include <map>
 #include <vector>
@@ -106,8 +106,7 @@ protected:
   TypeMap m_objc_class_types;
 
 private:
-  SymbolFileSymtab(const SymbolFileSymtab &) = delete;
-  const SymbolFileSymtab &operator=(const SymbolFileSymtab &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SymbolFileSymtab);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H
+#endif // liblldb_SymbolFileSymtab_h_

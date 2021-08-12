@@ -121,11 +121,17 @@ private:
 void UpgradeGoogletestCaseCheck::registerPPCallbacks(const SourceManager &,
                                                      Preprocessor *PP,
                                                      Preprocessor *) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   PP->addPPCallbacks(
       std::make_unique<UpgradeGoogletestCasePPCallback>(this, PP));
 }
 
 void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   auto LocationFilter =
       unless(isExpansionInFileMatching("gtest/gtest(-typed-test)?\\.h$"));
 

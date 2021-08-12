@@ -146,8 +146,7 @@ bool ObjCContainerDecl::HasUserDeclaredSetterMethod(
       // auto-synthesized).
       for (const auto *P : Cat->properties())
         if (P->getIdentifier() == Property->getIdentifier()) {
-          if (P->getPropertyAttributes() &
-              ObjCPropertyAttribute::kind_readwrite)
+          if (P->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_readwrite)
             return true;
           break;
         }
@@ -1362,23 +1361,25 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
         return Found;
     } else {
       // Determine whether the container is a class.
-      ClassDecl = cast<ObjCInterfaceDecl>(Container);
+      ClassDecl = dyn_cast<ObjCInterfaceDecl>(Container);
     }
-    assert(ClassDecl && "Failed to find main class");
 
     // If we have a class, check its visible extensions.
-    for (const auto *Ext : ClassDecl->visible_extensions()) {
-      if (Ext == Container)
-        continue;
-      if (const auto *Found = findMatchingProperty(Ext))
-        return Found;
+    if (ClassDecl) {
+      for (const auto *Ext : ClassDecl->visible_extensions()) {
+        if (Ext == Container)
+          continue;
+
+        if (const auto *Found = findMatchingProperty(Ext))
+          return Found;
+      }
     }
 
     assert(isSynthesizedAccessorStub() && "expected an accessor stub");
-
     for (const auto *Cat : ClassDecl->known_categories()) {
       if (Cat == Container)
         continue;
+
       if (const auto *Found = findMatchingProperty(Cat))
         return Found;
     }

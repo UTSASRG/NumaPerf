@@ -33,6 +33,8 @@
 #CHECK: cdpt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: cdpt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cdpt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: cdpt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -46,6 +48,7 @@
 	cdpt	%f0, 0(257,%r1), 0
 	cdpt	%f0, -1(1,%r1), 0
 	cdpt	%f0, 4096(1,%r1), 0
+	cdpt	%f0, 0(1,%r0), 0
 	cdpt	%f0, 0(%r1,%r2), 0
 	cdpt	%f0, 0(-), 0
 
@@ -65,6 +68,8 @@
 #CHECK: cpdt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: cpdt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cpdt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: cpdt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -78,6 +83,7 @@
 	cpdt	%f0, 0(257,%r1), 0
 	cpdt	%f0, -1(1,%r1), 0
 	cpdt	%f0, 4096(1,%r1), 0
+	cpdt	%f0, 0(1,%r0), 0
 	cpdt	%f0, 0(%r1,%r2), 0
 	cpdt	%f0, 0(-), 0
 
@@ -97,6 +103,8 @@
 #CHECK: cpxt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: cpxt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cpxt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: cpxt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -112,6 +120,7 @@
 	cpxt	%f0, 0(257,%r1), 0
 	cpxt	%f0, -1(1,%r1), 0
 	cpxt	%f0, 4096(1,%r1), 0
+	cpxt	%f0, 0(1,%r0), 0
 	cpxt	%f0, 0(%r1,%r2), 0
 	cpxt	%f0, 0(-), 0
 	cpxt	%f15, 0(1), 0
@@ -132,6 +141,8 @@
 #CHECK: cxpt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: cxpt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cxpt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: cxpt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -147,6 +158,7 @@
 	cxpt	%f0, 0(257,%r1), 0
 	cxpt	%f0, -1(1,%r1), 0
 	cxpt	%f0, 4096(1,%r1), 0
+	cxpt	%f0, 0(1,%r0), 0
 	cxpt	%f0, 0(%r1,%r2), 0
 	cxpt	%f0, 0(-), 0
 	cxpt	%f15, 0(1), 0
@@ -1868,43 +1880,58 @@
 #CHECK: vlgv	%r0, %v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vlgv	%r0, %v0, 4096, 0
+#CHECK: error: %r0 used in an address
+#CHECK: vlgv	%r0, %v0, 0(%r0), 0
 
 	vlgv	%r0, %v0, 0, -1
 	vlgv	%r0, %v0, 0, 16
 	vlgv	%r0, %v0, -1, 0
 	vlgv	%r0, %v0, 4096, 0
+	vlgv	%r0, %v0, 0(%r0), 0
 
 #CHECK: error: invalid operand
 #CHECK: vlgvb	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlgvb	%r0, %v0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlgvb	%r0, %v0, 0(%r0)
 
 	vlgvb	%r0, %v0, -1
 	vlgvb	%r0, %v0, 4096
+	vlgvb	%r0, %v0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vlgvf	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlgvf	%r0, %v0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlgvf	%r0, %v0, 0(%r0)
 
 	vlgvf	%r0, %v0, -1
 	vlgvf	%r0, %v0, 4096
+	vlgvf	%r0, %v0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vlgvg	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlgvg	%r0, %v0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlgvg	%r0, %v0, 0(%r0)
 
 	vlgvg	%r0, %v0, -1
 	vlgvg	%r0, %v0, 4096
+	vlgvg	%r0, %v0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vlgvh	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlgvh	%r0, %v0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlgvh	%r0, %v0, 0(%r0)
 
 	vlgvh	%r0, %v0, -1
 	vlgvh	%r0, %v0, 4096
+	vlgvh	%r0, %v0, 0(%r0)
 
 #CHECK: error: instruction requires: vector-packed-decimal
 #CHECK: vlip	%v0, 0, 0
@@ -1915,9 +1942,12 @@
 #CHECK: vll	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vll	%v0, %r0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vll	%v0, %r0, 0(%r0)
 
 	vll	%v0, %r0, -1
 	vll	%v0, %r0, 4096
+	vll	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vllez	%v0, 0, -1
@@ -2078,43 +2108,58 @@
 #CHECK: vlvg	%v0, %r0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vlvg	%v0, %r0, 4096, 0
+#CHECK: error: %r0 used in an address
+#CHECK: vlvg	%v0, %r0, 0(%r0), 0
 
 	vlvg	%v0, %r0, 0, -1
 	vlvg	%v0, %r0, 0, 16
 	vlvg	%v0, %r0, -1, 0
 	vlvg	%v0, %r0, 4096, 0
+	vlvg	%v0, %r0, 0(%r0), 0
 
 #CHECK: error: invalid operand
 #CHECK: vlvgb	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vlvgb	%v0, %r0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlvgb	%v0, %r0, 0(%r0)
 
 	vlvgb	%v0, %r0, -1
 	vlvgb	%v0, %r0, 4096
+	vlvgb	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vlvgf	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vlvgf	%v0, %r0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlvgf	%v0, %r0, 0(%r0)
 
 	vlvgf	%v0, %r0, -1
 	vlvgf	%v0, %r0, 4096
+	vlvgf	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vlvgg	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vlvgg	%v0, %r0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlvgg	%v0, %r0, 0(%r0)
 
 	vlvgg	%v0, %r0, -1
 	vlvgg	%v0, %r0, 4096
+	vlvgg	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vlvgh	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vlvgh	%v0, %r0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vlvgh	%v0, %r0, 0(%r0)
 
 	vlvgh	%v0, %r0, -1
 	vlvgh	%v0, %r0, 4096
+	vlvgh	%v0, %r0, 0(%r0)
 
 #CHECK: error: instruction requires: vector-packed-decimal
 #CHECK: vmp	%v0, %v0, %v0, 0, 0
@@ -2430,9 +2475,12 @@
 #CHECK: vstl	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vstl	%v0, %r0, 4096
+#CHECK: error: %r0 used in an address
+#CHECK: vstl	%v0, %r0, 0(%r0)
 
 	vstl	%v0, %r0, -1
 	vstl	%v0, %r0, 4096
+	vstl	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vstm	%v0, %v0, -1

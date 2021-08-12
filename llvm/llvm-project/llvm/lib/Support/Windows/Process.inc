@@ -43,12 +43,6 @@
 
 using namespace llvm;
 
-Process::Pid Process::getProcessId() {
-  static_assert(sizeof(Pid) >= sizeof(DWORD),
-                "Process::Pid should be big enough to store DWORD");
-  return Pid(::GetCurrentProcessId());
-}
-
 // This function retrieves the page size using GetNativeSystemInfo() and is
 // present solely so it can be called once to initialize the self_process member
 // below.
@@ -445,38 +439,18 @@ const char *Process::ResetColor() {
   return 0;
 }
 
-static unsigned GetRandomNumberSeed() {
-  // Generate a random number seed from the millisecond-resolution Windows
-  // system clock and the current process id.
-  FILETIME Time;
-  GetSystemTimeAsFileTime(&Time);
-  DWORD Pid = GetCurrentProcessId();
-  return hash_combine(Time.dwHighDateTime, Time.dwLowDateTime, Pid);
-}
-
-static unsigned GetPseudoRandomNumber() {
-  // Arrange to call srand once when this function is first used, and
-  // otherwise (if GetRandomNumber always succeeds in using
-  // CryptGenRandom) don't bother at all.
-  static int x = (static_cast<void>(::srand(GetRandomNumberSeed())), 0);
-  (void)x;
-  return ::rand();
-}
-
 unsigned Process::GetRandomNumber() {
-  // Try to use CryptGenRandom.
   HCRYPTPROV HCPC;
-  if (::CryptAcquireContextW(&HCPC, NULL, NULL, PROV_RSA_FULL,
-                             CRYPT_VERIFYCONTEXT)) {
-    ScopedCryptContext CryptoProvider(HCPC);
-    unsigned Ret;
-    if (::CryptGenRandom(CryptoProvider, sizeof(Ret),
-                         reinterpret_cast<BYTE *>(&Ret)))
-      return Ret;
-  }
+  if (!::CryptAcquireContextW(&HCPC, NULL, NULL, PROV_RSA_FULL,
+                              CRYPT_VERIFYCONTEXT))
+    ReportLastErrorFatal("Could not acquire a cryptographic context");
 
-  // If that fails, fall back to pseudo-random numbers.
-  return GetPseudoRandomNumber();
+  ScopedCryptContext CryptoProvider(HCPC);
+  unsigned Ret;
+  if (!::CryptGenRandom(CryptoProvider, sizeof(Ret),
+                        reinterpret_cast<BYTE *>(&Ret)))
+    ReportLastErrorFatal("Could not generate a random number");
+  return Ret;
 }
 
 typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);

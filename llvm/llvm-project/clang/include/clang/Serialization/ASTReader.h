@@ -723,10 +723,9 @@ private:
 
   struct PendingMacroInfo {
     ModuleFile *M;
-    /// Offset relative to ModuleFile::MacroOffsetsBase.
-    uint32_t MacroDirectivesOffset;
+    uint64_t MacroDirectivesOffset;
 
-    PendingMacroInfo(ModuleFile *M, uint32_t MacroDirectivesOffset)
+    PendingMacroInfo(ModuleFile *M, uint64_t MacroDirectivesOffset)
         : M(M), MacroDirectivesOffset(MacroDirectivesOffset) {}
   };
 
@@ -857,18 +856,6 @@ private:
   int PragmaMSPointersToMembersState = -1;
   SourceLocation PointersToMembersPragmaLocation;
 
-  /// The pragma float_control state.
-  Optional<unsigned> FpPragmaCurrentValue;
-  SourceLocation FpPragmaCurrentLocation;
-  struct FpPragmaStackEntry {
-    unsigned Value;
-    SourceLocation Location;
-    SourceLocation PushLocation;
-    StringRef SlotLabel;
-  };
-  llvm::SmallVector<FpPragmaStackEntry, 2> FpPragmaStack;
-  llvm::SmallVector<std::string, 2> FpPragmaStrings;
-
   /// The pragma pack state.
   Optional<unsigned> PragmaPackCurrentValue;
   SourceLocation PragmaPackCurrentLocation;
@@ -902,12 +889,6 @@ private:
 
   // A list of late parsed template function data.
   SmallVector<uint64_t, 1> LateParsedTemplates;
-
-  /// The IDs of all decls to be checked for deferred diags.
-  ///
-  /// Sema tracks these to emit deferred diags.
-  SmallVector<uint64_t, 4> DeclsToCheckForDeferredDiags;
-
 
 public:
   struct ImportedSubmodule {
@@ -1367,7 +1348,7 @@ private:
                           unsigned PreviousGeneration = 0);
 
   RecordLocation getLocalBitOffset(uint64_t GlobalOffset);
-  uint64_t getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset);
+  uint64_t getGlobalBitOffset(ModuleFile &M, uint32_t LocalOffset);
 
   /// Returns the first preprocessed entity ID that begins or ends after
   /// \arg Loc.
@@ -2002,9 +1983,6 @@ public:
   void ReadUnusedLocalTypedefNameCandidates(
       llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
 
-  void ReadDeclsToCheckForDeferredDiags(
-      llvm::SmallVector<Decl *, 4> &Decls) override;
-
   void ReadReferencedSelectors(
            SmallVectorImpl<std::pair<Selector, SourceLocation>> &Sels) override;
 
@@ -2218,7 +2196,7 @@ public:
   /// \param MacroDirectivesOffset Offset of the serialized macro directive
   /// history.
   void addPendingMacro(IdentifierInfo *II, ModuleFile *M,
-                       uint32_t MacroDirectivesOffset);
+                       uint64_t MacroDirectivesOffset);
 
   /// Read the set of macros defined by this external macro source.
   void ReadDefinedMacros() override;

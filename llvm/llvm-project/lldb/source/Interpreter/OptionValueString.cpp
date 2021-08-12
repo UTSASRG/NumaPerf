@@ -1,4 +1,5 @@
-//===-- OptionValueString.cpp ---------------------------------------------===//
+//===-- OptionValueString.cpp ------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +83,7 @@ Status OptionValueString::SetValueFromString(llvm::StringRef value,
         Args::EncodeEscapeSequences(value_str.c_str(), str);
         new_value.append(str);
       } else
-        new_value.append(std::string(value));
+        new_value.append(value);
     }
     if (m_validator) {
       error = m_validator(new_value.c_str(), m_validator_baton);
@@ -127,7 +128,7 @@ Status OptionValueString::SetCurrentValue(llvm::StringRef value) {
     if (error.Fail())
       return error;
   }
-  m_current_value.assign(std::string(value));
+  m_current_value.assign(value);
   return Status();
 }
 

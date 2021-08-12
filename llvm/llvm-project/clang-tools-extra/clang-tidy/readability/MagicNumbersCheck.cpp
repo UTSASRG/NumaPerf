@@ -119,9 +119,6 @@ void MagicNumbersCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MagicNumbersCheck::check(const MatchFinder::MatchResult &Result) {
-
-  TraversalKindScope RAII(*Result.Context, ast_type_traits::TK_AsIs);
-
   checkBoundMatch<IntegerLiteral>(Result, "integer");
   checkBoundMatch<FloatingLiteral>(Result, "float");
 }

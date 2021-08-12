@@ -95,6 +95,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -466,13 +467,13 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
   for (auto UI = Old->use_begin(), UE = Old->use_end(); UI != UE;) {
     Use *U = &*UI;
     ++UI;
-    CallBase *CB = dyn_cast<CallBase>(U->getUser());
-    if (CB && CB->isCallee(U)) {
+    CallSite CS(U->getUser());
+    if (CS && CS.isCallee(U)) {
       // Do not copy attributes from the called function to the call-site.
       // Function comparison ensures that the attributes are the same up to
       // type congruences in byval(), in which case we need to keep the byval
       // type of the call-site, not the callee function.
-      remove(CB->getFunction());
+      remove(CS.getInstruction()->getFunction());
       U->set(BitcastNew);
     }
   }

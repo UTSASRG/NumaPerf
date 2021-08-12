@@ -824,6 +824,30 @@ INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
 #define MSAN_MAYBE_INTERCEPT_PRLIMIT64
 #endif
 
+#if SANITIZER_FREEBSD
+// FreeBSD's <sys/utsname.h> define uname() as
+// static __inline int uname(struct utsname *name) {
+//   return __xuname(SYS_NMLN, (void*)name);
+// }
+INTERCEPTOR(int, __xuname, int size, void *utsname) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(__xuname)(size, utsname);
+  if (!res)
+    __msan_unpoison(utsname, __sanitizer::struct_utsname_sz);
+  return res;
+}
+#define MSAN_INTERCEPT_UNAME INTERCEPT_FUNCTION(__xuname)
+#else
+INTERCEPTOR(int, uname, struct utsname *utsname) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(uname)(utsname);
+  if (!res)
+    __msan_unpoison(utsname, __sanitizer::struct_utsname_sz);
+  return res;
+}
+#define MSAN_INTERCEPT_UNAME INTERCEPT_FUNCTION(uname)
+#endif
+
 INTERCEPTOR(int, gethostname, char *name, SIZE_T len) {
   ENSURE_MSAN_INITED();
   int res = REAL(gethostname)(name, len);
@@ -929,9 +953,7 @@ void __sanitizer_dtor_callback(const void *data, uptr size) {
 template <class Mmap>
 static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
-  SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
-  void *end_addr = (char *)addr + (rounded_length - 1);
-  if (addr && (!MEM_IS_APP(addr) || !MEM_IS_APP(end_addr))) {
+  if (addr && !MEM_IS_APP(addr)) {
     if (flags & map_fixed) {
       errno = errno_EINVAL;
       return (void *)-1;
@@ -940,18 +962,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
     }
   }
   void *res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (res != (void *)-1) {
-    void *end_res = (char *)res + (rounded_length - 1);
-    if (MEM_IS_APP(res) && MEM_IS_APP(end_res)) {
-      __msan_unpoison(res, rounded_length);
-    } else {
-      // Application has attempted to map more memory than is supported by
-      // MSAN. Act as if we ran out of memory.
-      internal_munmap(res, length);
-      errno = errno_ENOMEM;
-      return (void *)-1;
-    }
-  }
+  if (res != (void *)-1) __msan_unpoison(res, RoundUpTo(length, GetPageSize()));
   return res;
 }
 
@@ -1303,8 +1314,6 @@ int OnExit() {
     if (filename && map)                                                       \
       ForEachMappedRegion(map, __msan_unpoison);                               \
   } while (false)
-
-#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!msan_inited)
 
 #define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end)                           \
   if (MsanThread *t = GetCurrentThread()) {                                    \
@@ -1683,6 +1692,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_GETRLIMIT64;
   MSAN_MAYBE_INTERCEPT_PRLIMIT;
   MSAN_MAYBE_INTERCEPT_PRLIMIT64;
+  MSAN_INTERCEPT_UNAME;
   INTERCEPT_FUNCTION(gethostname);
   MSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;

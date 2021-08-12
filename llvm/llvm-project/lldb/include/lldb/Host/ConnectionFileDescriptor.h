@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_CONNECTIONFILEDESCRIPTOR_H
-#define LLDB_HOST_CONNECTIONFILEDESCRIPTOR_H
+#ifndef liblldb_Host_ConnectionFileDescriptor_h_
+#define liblldb_Host_ConnectionFileDescriptor_h_
 
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 

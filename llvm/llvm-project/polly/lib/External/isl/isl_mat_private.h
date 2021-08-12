@@ -1,6 +1,3 @@
-#ifndef ISL_MAT_PRIVATE_H
-#define ISL_MAT_PRIVATE_H
-
 #include <isl/mat.h>
 #include <isl_blk.h>
 
@@ -50,7 +47,7 @@ __isl_give isl_vec *isl_mat_get_row(__isl_keep isl_mat *mat, unsigned row);
 
 __isl_give isl_mat *isl_mat_lexnonneg_rows(__isl_take isl_mat *mat);
 
-isl_bool isl_mat_is_scaled_identity(__isl_keep isl_mat *mat);
+int isl_mat_is_scaled_identity(__isl_keep isl_mat *mat);
 
 isl_stat isl_mat_row_gcd(__isl_keep isl_mat *mat, int row, isl_int *gcd);
 
@@ -65,5 +62,3 @@ __isl_give isl_mat *isl_mat_row_neg(__isl_take isl_mat *mat, int row);
 int isl_mat_get_element(__isl_keep isl_mat *mat, int row, int col, isl_int *v);
 __isl_give isl_mat *isl_mat_set_element(__isl_take isl_mat *mat,
 	int row, int col, isl_int v);
-
-#endif

@@ -57,17 +57,17 @@ void FaultMaps::serializeToFaultMapSection() {
   OS.SwitchSection(FaultMapSection);
 
   // Emit a dummy symbol to force section inclusion.
-  OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_FaultMaps")));
+  OS.EmitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_FaultMaps")));
 
   LLVM_DEBUG(dbgs() << "********** Fault Map Output **********\n");
 
   // Header
-  OS.emitIntValue(FaultMapVersion, 1); // Version.
-  OS.emitIntValue(0, 1);               // Reserved.
-  OS.emitInt16(0);                     // Reserved.
+  OS.EmitIntValue(FaultMapVersion, 1); // Version.
+  OS.EmitIntValue(0, 1);               // Reserved.
+  OS.EmitIntValue(0, 2);               // Reserved.
 
   LLVM_DEBUG(dbgs() << WFMP << "#functions = " << FunctionInfos.size() << "\n");
-  OS.emitInt32(FunctionInfos.size());
+  OS.EmitIntValue(FunctionInfos.size(), 4);
 
   LLVM_DEBUG(dbgs() << WFMP << "functions:\n");
 
@@ -80,25 +80,25 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
   MCStreamer &OS = *AP.OutStreamer;
 
   LLVM_DEBUG(dbgs() << WFMP << "  function addr: " << *FnLabel << "\n");
-  OS.emitSymbolValue(FnLabel, 8);
+  OS.EmitSymbolValue(FnLabel, 8);
 
   LLVM_DEBUG(dbgs() << WFMP << "  #faulting PCs: " << FFI.size() << "\n");
-  OS.emitInt32(FFI.size());
+  OS.EmitIntValue(FFI.size(), 4);
 
-  OS.emitInt32(0); // Reserved
+  OS.EmitIntValue(0, 4); // Reserved
 
   for (auto &Fault : FFI) {
     LLVM_DEBUG(dbgs() << WFMP << "    fault type: "
                       << faultTypeToString(Fault.Kind) << "\n");
-    OS.emitInt32(Fault.Kind);
+    OS.EmitIntValue(Fault.Kind, 4);
 
     LLVM_DEBUG(dbgs() << WFMP << "    faulting PC offset: "
                       << *Fault.FaultingOffsetExpr << "\n");
-    OS.emitValue(Fault.FaultingOffsetExpr, 4);
+    OS.EmitValue(Fault.FaultingOffsetExpr, 4);
 
     LLVM_DEBUG(dbgs() << WFMP << "    fault handler PC offset: "
                       << *Fault.HandlerOffsetExpr << "\n");
-    OS.emitValue(Fault.HandlerOffsetExpr, 4);
+    OS.EmitValue(Fault.HandlerOffsetExpr, 4);
   }
 }
 

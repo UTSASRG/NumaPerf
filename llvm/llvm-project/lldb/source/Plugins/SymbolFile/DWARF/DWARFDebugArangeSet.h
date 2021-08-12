@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGESET_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGESET_H
+#ifndef SymbolFileDWARF_DWARFDebugArangeSet_h_
+#define SymbolFileDWARF_DWARFDebugArangeSet_h_
 
 #include "lldb/Core/dwarf.h"
 #include <cstdint>
@@ -59,4 +59,4 @@ protected:
   DescriptorColl m_arange_descriptors;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGESET_H
+#endif // SymbolFileDWARF_DWARFDebugArangeSet_h_

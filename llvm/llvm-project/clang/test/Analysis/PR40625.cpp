@@ -1,6 +1,4 @@
-// RUN: %clang_analyze_cc1 %s -verify \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,alpha.core.CallAndMessageUnInitRefArg  %s -verify
 
 void f(const int *end);
 

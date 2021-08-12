@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_BREAKPOINTIDLIST_H
-#define LLDB_BREAKPOINT_BREAKPOINTIDLIST_H
+#ifndef liblldb_BreakpointIDList_h_
+#define liblldb_BreakpointIDList_h_
 
 #include <utility>
 #include <vector>
@@ -68,10 +68,9 @@ private:
   BreakpointIDArray m_breakpoint_ids;
   BreakpointID m_invalid_id;
 
-  BreakpointIDList(const BreakpointIDList &) = delete;
-  const BreakpointIDList &operator=(const BreakpointIDList &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(BreakpointIDList);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_BREAKPOINTIDLIST_H
+#endif // liblldb_BreakpointIDList_h_

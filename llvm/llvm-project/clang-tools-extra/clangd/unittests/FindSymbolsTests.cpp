@@ -25,6 +25,11 @@ using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
+class IgnoreDiagnostics : public DiagnosticsConsumer {
+  void onDiagnosticsReady(PathRef File,
+                          std::vector<Diag> Diagnostics) override {}
+};
+
 // GMock helpers for matching SymbolInfos items.
 MATCHER_P(QName, Name, "") {
   if (arg.containerName.empty())
@@ -51,7 +56,8 @@ ClangdServer::Options optsForTests() {
 
 class WorkspaceSymbolsTest : public ::testing::Test {
 public:
-  WorkspaceSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {
+  WorkspaceSymbolsTest()
+      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {
     // Make sure the test root directory is created.
     FSProvider.Files[testPath("unused")] = "";
     CDB.ExtraClangFlags = {"-xc++"};
@@ -60,6 +66,7 @@ public:
 protected:
   MockFSProvider FSProvider;
   MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
   ClangdServer Server;
   int Limit = 0;
 
@@ -72,7 +79,7 @@ protected:
 
   void addFile(llvm::StringRef FileName, llvm::StringRef Contents) {
     auto Path = testPath(FileName);
-    FSProvider.Files[Path] = std::string(Contents);
+    FSProvider.Files[Path] = Contents;
     Server.addDocument(Path, Contents);
   }
 };
@@ -309,11 +316,13 @@ TEST_F(WorkspaceSymbolsTest, TempSpecs) {
 namespace {
 class DocumentSymbolsTest : public ::testing::Test {
 public:
-  DocumentSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {}
+  DocumentSymbolsTest()
+      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {}
 
 protected:
   MockFSProvider FSProvider;
   MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
   ClangdServer Server;
 
   std::vector<DocumentSymbol> getSymbols(PathRef File) {
@@ -324,7 +333,7 @@ protected:
   }
 
   void addFile(llvm::StringRef FilePath, llvm::StringRef Contents) {
-    FSProvider.Files[FilePath] = std::string(Contents);
+    FSProvider.Files[FilePath] = Contents;
     Server.addDocument(FilePath, Contents);
   }
 };
@@ -438,15 +447,6 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
                                SymNameRange(Main.range("decl"))))),
           AllOf(WithName("Foo::f"), WithKind(SymbolKind::Method),
                 SymNameRange(Main.range("def")))));
-}
-
-TEST_F(DocumentSymbolsTest, Concepts) {
-  CDB.ExtraClangFlags = {"-std=c++20"};
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath,
-          "template <typename T> concept C = requires(T t) { t.foo(); };");
-
-  EXPECT_THAT(getSymbols(FilePath), ElementsAre(WithName("C")));
 }
 
 TEST_F(DocumentSymbolsTest, ExternSymbol) {
@@ -666,8 +666,7 @@ TEST_F(DocumentSymbolsTest, UsingDirectives) {
 }
 
 TEST_F(DocumentSymbolsTest, TempSpecs) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath, R"cpp(
+  addFile("foo.cpp", R"cpp(
       template <typename T, typename U, int X = 5> class Foo {};
       template <typename T> class Foo<int, T> {};
       template <> class Foo<bool, int> {};
@@ -675,7 +674,7 @@ TEST_F(DocumentSymbolsTest, TempSpecs) {
       )cpp");
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols("foo.cpp"),
       UnorderedElementsAre(
           AllOf(WithName("Foo"), WithKind(SymbolKind::Class)),
           AllOf(WithName("Foo<int, T>"), WithKind(SymbolKind::Class)),
@@ -684,8 +683,7 @@ TEST_F(DocumentSymbolsTest, TempSpecs) {
 }
 
 TEST_F(DocumentSymbolsTest, Qualifiers) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath, R"cpp(
+  addFile("foo.cpp", R"cpp(
     namespace foo { namespace bar {
       struct Cls;
 
@@ -708,7 +706,7 @@ TEST_F(DocumentSymbolsTest, Qualifiers) {
   )cpp");
 
   // All the qualifiers should be preserved exactly as written.
-  EXPECT_THAT(getSymbols(FilePath),
+  EXPECT_THAT(getSymbols("foo.cpp"),
               UnorderedElementsAre(
                   WithName("foo"), WithName("foo::bar::Cls"),
                   WithName("foo::bar::func1"), WithName("::foo::bar::func2"),
@@ -717,8 +715,7 @@ TEST_F(DocumentSymbolsTest, Qualifiers) {
 }
 
 TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath, R"cpp(
+  addFile("foo.cpp", R"cpp(
       template <typename T, typename U = double> class Foo;
 
       template <>
@@ -741,7 +738,7 @@ TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
       int Foo_type::method3() { return 30; }
       )cpp");
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols("foo.cpp"),
       UnorderedElementsAre(WithName("Foo"), WithName("Foo<int, double>"),
                            WithName("int_type"),
                            WithName("Foo<int_type, double>::method1"),

@@ -1,3 +1,3 @@
-.section .debug_str,"MS",@progbits,1
+.section .debug_str
   .asciz "CCC"
   .asciz "DDD"

@@ -1,4 +1,4 @@
-//===-- StructuredData.cpp ------------------------------------------------===//
+//===---------------------StructuredData.cpp ---------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -156,7 +156,7 @@ void StructuredData::String::Serialize(json::OStream &s) const {
 void StructuredData::Dictionary::Serialize(json::OStream &s) const {
   s.objectBegin();
   for (const auto &pair : m_dict) {
-    s.attributeBegin(pair.first.GetStringRef());
+    s.attributeBegin(pair.first.AsCString());
     pair.second->Serialize(s);
     s.attributeEnd();
   }

@@ -39,8 +39,6 @@ class BPFAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -297,7 +295,7 @@ bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     break;
   case Match_Success:
     Inst.setLoc(IDLoc);
-    Out.emitInstruction(Inst, getSTI());
+    Out.EmitInstruction(Inst, getSTI());
     return false;
   case Match_MissingFeature:
     return Error(IDLoc, "instruction use requires an option to be enabled");
@@ -324,14 +322,6 @@ bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
 bool BPFAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
-  if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
-    return Error(StartLoc, "invalid register name");
-  return false;
-}
-
-OperandMatchResultTy BPFAsmParser::tryParseRegister(unsigned &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
@@ -340,10 +330,10 @@ OperandMatchResultTy BPFAsmParser::tryParseRegister(unsigned &RegNo,
 
   if (!MatchRegisterName(Name)) {
     getParser().Lex(); // Eat identifier token.
-    return MatchOperand_Success;
+    return false;
   }
 
-  return MatchOperand_NoMatch;
+  return Error(StartLoc, "invalid register name");
 }
 
 OperandMatchResultTy

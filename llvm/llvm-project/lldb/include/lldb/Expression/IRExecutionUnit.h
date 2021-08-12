@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_IREXECUTIONUNIT_H
-#define LLDB_EXPRESSION_IREXECUTIONUNIT_H
+#ifndef liblldb_IRExecutionUnit_h_
+#define liblldb_IRExecutionUnit_h_
 
 #include <atomic>
 #include <memory>
@@ -71,7 +71,7 @@ public:
   llvm::Module *GetModule() { return m_module; }
 
   llvm::Function *GetFunction() {
-    return ((m_module != nullptr) ? m_module->getFunction(m_name.GetStringRef())
+    return ((m_module != nullptr) ? m_module->getFunction(m_name.AsCString())
                                   : nullptr);
   }
 
@@ -406,4 +406,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_EXPRESSION_IREXECUTIONUNIT_H
+#endif // liblldb_IRExecutionUnit_h_

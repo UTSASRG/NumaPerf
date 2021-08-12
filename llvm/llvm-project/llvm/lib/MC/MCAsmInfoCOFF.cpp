@@ -26,7 +26,7 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
   HasDotTypeDotSizeDirective = false;
   HasSingleParameterDotFile = true;
   WeakRefDirective = "\t.weak\t";
-  AvoidWeakIfComdat = true;
+  HasLinkOnceDirective = true;
 
   // Doesn't support visibility:
   HiddenVisibilityAttr = HiddenDeclarationVisibilityAttr = MCSA_Invalid;
@@ -35,6 +35,8 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
   // Set up DWARF directives
   SupportsDebugInformation = true;
   NeedsDwarfSectionOffsetDirective = true;
+
+  UseIntegratedAssembler = true;
 
   // At least MSVC inline-asm does AShr.
   UseLogicalShr = false;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECT_H
-#define LLDB_CORE_VALUEOBJECT_H
+#ifndef liblldb_ValueObject_h_
+#define liblldb_ValueObject_h_
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -396,8 +396,10 @@ public:
 
   bool IsIntegerType(bool &is_signed);
 
+  virtual bool GetBaseClassPath(Stream &s);
+
   virtual void GetExpressionPath(
-      Stream &s,
+      Stream &s, bool qualify_cxx_base_classes,
       GetExpressionPathFormat = eGetExpressionPathFormatDereferencePointers);
 
   lldb::ValueObjectSP GetValueForExpressionPath(
@@ -575,7 +577,7 @@ public:
 
   virtual lldb::ValueObjectSP GetNonSyntheticValue();
 
-  lldb::ValueObjectSP GetSyntheticValue();
+  lldb::ValueObjectSP GetSyntheticValue(bool use_synthetic = true);
 
   virtual bool HasSyntheticValue();
 
@@ -887,6 +889,7 @@ protected:
       m_is_synthetic_children_generated : 1;
 
   friend class ValueObjectChild;
+  friend class ClangExpressionDeclMap; // For GetValue
   friend class ExpressionVariable;     // For SetName
   friend class Target;                 // For SetName
   friend class ValueObjectConstResultImpl;
@@ -902,7 +905,7 @@ protected:
   // Use this constructor to create a "root variable object".  The ValueObject
   // will be locked to this context through-out its lifespan.
 
-  ValueObject(ExecutionContextScope *exe_scope, ValueObjectManager &manager,
+  ValueObject(ExecutionContextScope *exe_scope,
               AddressType child_ptr_or_ref_addr_type = eAddressTypeLoad);
 
   // Use this constructor to create a ValueObject owned by another ValueObject.
@@ -926,7 +929,7 @@ protected:
 
   virtual bool HasDynamicValueTypeInfo() { return false; }
 
-  virtual void CalculateSyntheticValue();
+  virtual void CalculateSyntheticValue(bool use_synthetic = true);
 
   // Should only be called by ValueObject::GetChildAtIndex() Returns a
   // ValueObject managed by this ValueObject's manager.
@@ -974,8 +977,7 @@ private:
       const GetValueForExpressionPathOptions &options,
       ExpressionPathAftermath *final_task_on_target);
 
-  ValueObject(const ValueObject &) = delete;
-  const ValueObject &operator=(const ValueObject &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ValueObject);
 };
 
 // A value object manager class that is seeded with the static variable value
@@ -1021,4 +1023,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECT_H
+#endif // liblldb_ValueObject_h_

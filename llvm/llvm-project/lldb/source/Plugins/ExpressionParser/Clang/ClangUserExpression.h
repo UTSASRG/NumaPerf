@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUSEREXPRESSION_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUSEREXPRESSION_H
+#ifndef liblldb_ClangUserExpression_h_
+#define liblldb_ClangUserExpression_h_
 
 #include <vector>
 
@@ -20,6 +20,7 @@
 #include "IRForTarget.h"
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -185,8 +186,7 @@ private:
                         ExecutionContext &exe_ctx,
                         std::vector<std::string> modules_to_import,
                         bool for_completion);
-  /// Defines how the current expression should be wrapped.
-  ClangExpressionSourceCode::WrapKind GetWrapKind() const;
+  void UpdateLanguageForExpr();
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
@@ -209,6 +209,8 @@ private:
     lldb::TargetSP m_target_sp;
   };
 
+  /// The language type of the current expression.
+  lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
   /// The include directories that should be used when parsing the expression.
   std::vector<std::string> m_include_directories;
 
@@ -249,4 +251,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUSEREXPRESSION_H
+#endif // liblldb_ClangUserExpression_h_

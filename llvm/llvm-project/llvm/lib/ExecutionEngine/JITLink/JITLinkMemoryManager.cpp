@@ -32,7 +32,7 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
     }
     JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
       assert(SegBlocks.count(Seg) && "No allocation for segment");
-      return pointerToJITTargetAddress(SegBlocks[Seg].base());
+      return reinterpret_cast<JITTargetAddress>(SegBlocks[Seg].base());
     }
     void finalizeAsync(FinalizeContinuation OnFinalize) override {
       OnFinalize(applyProtections());

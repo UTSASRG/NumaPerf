@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_DYNAMICLOADER_H
-#define LLDB_TARGET_DYNAMICLOADER_H
+#ifndef liblldb_DynamicLoader_h_
+#define liblldb_DynamicLoader_h_
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/FileSpec.h"
@@ -310,10 +310,9 @@ protected:
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
 
 private:
-  DynamicLoader(const DynamicLoader &) = delete;
-  const DynamicLoader &operator=(const DynamicLoader &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoader);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_DYNAMICLOADER_H
+#endif // liblldb_DynamicLoader_h_

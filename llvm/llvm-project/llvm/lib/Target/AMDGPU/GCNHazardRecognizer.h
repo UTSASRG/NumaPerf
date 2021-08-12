@@ -105,6 +105,7 @@ public:
   void EmitInstruction(MachineInstr *MI) override;
   HazardType getHazardType(SUnit *SU, int Stalls) override;
   void EmitNoop() override;
+  unsigned PreEmitNoops(SUnit *SU) override;
   unsigned PreEmitNoops(MachineInstr *) override;
   unsigned PreEmitNoopsCommon(MachineInstr *);
   void AdvanceCycle() override;

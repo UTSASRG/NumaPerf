@@ -50,14 +50,6 @@ void test_is_not_same()
     static_assert((!std::is_same<T, U>::value), "");
 }
 
-template <class T>
-struct OverloadTest
-{
-    void fn(std::is_same<T, int>) { }
-    void fn(std::false_type) { }
-    void x() { fn(std::false_type()); }
-};
-
 class Class
 {
 public:
@@ -77,9 +69,6 @@ int main(int, char**)
     test_is_not_same<Class, int*>();
     test_is_not_same<int*, int&>();
     test_is_not_same<int&, int>();
-
-    OverloadTest<char> t;
-    (void)t;
 
   return 0;
 }

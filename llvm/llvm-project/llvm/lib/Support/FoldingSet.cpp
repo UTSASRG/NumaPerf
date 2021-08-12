@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
@@ -224,6 +223,8 @@ static void **AllocateBuckets(unsigned NumBuckets) {
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
 
+void FoldingSetBase::anchor() {}
+
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
          "Initial hash table size out of range");
@@ -265,10 +266,8 @@ void FoldingSetBase::clear() {
   NumNodes = 0;
 }
 
-void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
-                                     const FoldingSetInfo &Info) {
-  assert((NewBucketCount > NumBuckets) &&
-         "Can't shrink a folding set with GrowBucketCount");
+void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
+  assert((NewBucketCount > NumBuckets) && "Can't shrink a folding set with GrowBucketCount");
   assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
   void **OldBuckets = Buckets;
   unsigned OldNumBuckets = NumBuckets;
@@ -291,9 +290,8 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 
       // Insert the node into the new bucket, after recomputing the hash.
       InsertNode(NodeInBucket,
-                 GetBucketFor(Info.ComputeNodeHash(this, NodeInBucket, TempID),
-                              Buckets, NumBuckets),
-                 Info);
+                 GetBucketFor(ComputeNodeHash(NodeInBucket, TempID),
+                              Buckets, NumBuckets));
       TempID.clear();
     }
   }
@@ -303,24 +301,25 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 
 /// GrowHashTable - Double the size of the hash table and rehash everything.
 ///
-void FoldingSetBase::GrowHashTable(const FoldingSetInfo &Info) {
-  GrowBucketCount(NumBuckets * 2, Info);
+void FoldingSetBase::GrowHashTable() {
+  GrowBucketCount(NumBuckets * 2);
 }
 
-void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
+void FoldingSetBase::reserve(unsigned EltCount) {
   // This will give us somewhere between EltCount / 2 and
   // EltCount buckets.  This puts us in the load factor
   // range of 1.0 - 2.0.
   if(EltCount < capacity())
     return;
-  GrowBucketCount(PowerOf2Floor(EltCount), Info);
+  GrowBucketCount(PowerOf2Floor(EltCount));
 }
 
 /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
 /// return it.  If not, return the insertion token that will make insertion
 /// faster.
-FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
-    const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
+FoldingSetBase::Node *
+FoldingSetBase::FindNodeOrInsertPos(const FoldingSetNodeID &ID,
+                                    void *&InsertPos) {
   unsigned IDHash = ID.ComputeHash();
   void **Bucket = GetBucketFor(IDHash, Buckets, NumBuckets);
   void *Probe = *Bucket;
@@ -329,7 +328,7 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
 
   FoldingSetNodeID TempID;
   while (Node *NodeInBucket = GetNextPtr(Probe)) {
-    if (Info.NodeEquals(this, NodeInBucket, ID, IDHash, TempID))
+    if (NodeEquals(NodeInBucket, ID, IDHash, TempID))
       return NodeInBucket;
     TempID.clear();
 
@@ -344,15 +343,13 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
 /// InsertNode - Insert the specified node into the folding set, knowing that it
 /// is not already in the map.  InsertPos must be obtained from
 /// FindNodeOrInsertPos.
-void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
-                                const FoldingSetInfo &Info) {
+void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
   assert(!N->getNextInBucket());
   // Do we need to grow the hashtable?
   if (NumNodes+1 > capacity()) {
-    GrowHashTable(Info);
+    GrowHashTable();
     FoldingSetNodeID TempID;
-    InsertPos = GetBucketFor(Info.ComputeNodeHash(this, N, TempID), Buckets,
-                             NumBuckets);
+    InsertPos = GetBucketFor(ComputeNodeHash(N, TempID), Buckets, NumBuckets);
   }
 
   ++NumNodes;
@@ -416,15 +413,13 @@ bool FoldingSetBase::RemoveNode(Node *N) {
 /// GetOrInsertNode - If there is an existing simple Node exactly
 /// equal to the specified node, return it.  Otherwise, insert 'N' and it
 /// instead.
-FoldingSetBase::Node *
-FoldingSetBase::GetOrInsertNode(FoldingSetBase::Node *N,
-                                const FoldingSetInfo &Info) {
+FoldingSetBase::Node *FoldingSetBase::GetOrInsertNode(FoldingSetBase::Node *N) {
   FoldingSetNodeID ID;
-  Info.GetNodeProfile(this, N, ID);
+  GetNodeProfile(N, ID);
   void *IP;
-  if (Node *E = FindNodeOrInsertPos(ID, IP, Info))
+  if (Node *E = FindNodeOrInsertPos(ID, IP))
     return E;
-  InsertNode(N, IP, Info);
+  InsertNode(N, IP);
   return N;
 }
 

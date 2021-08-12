@@ -9,8 +9,7 @@ define i8 @i8_select_0_or_neg1(i8 %x) {
 ; CHECK-LABEL: i8_select_0_or_neg1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negb %dil
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    sbbb %al, %al
 ; CHECK-NEXT:    retq
   %cmp = icmp eq i8 %x, 0
   %sel = select i1 %cmp, i8 0, i8 -1
@@ -23,8 +22,7 @@ define i16 @i16_select_0_or_neg1_as_math(i16 %x) {
 ; CHECK-LABEL: i16_select_0_or_neg1_as_math:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negw %di
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sbbw %ax, %ax
 ; CHECK-NEXT:    retq
   %cmp = icmp eq i16 %x, 0
   %ext = zext i1 %cmp to i16
@@ -92,8 +90,7 @@ define i16 @i16_select_neg1_or_0_commuted(i16 %x) {
 ; CHECK-LABEL: i16_select_neg1_or_0_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw $1, %di
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sbbw %ax, %ax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i16 %x, 0
   %sel = select i1 %cmp, i16 0, i16 -1
@@ -106,8 +103,7 @@ define i8 @i8_select_neg1_or_0_commuted_as_math(i8 %x) {
 ; CHECK-LABEL: i8_select_neg1_or_0_commuted_as_math:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    sbbb %al, %al
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i8 %x, 0
   %ext = zext i1 %cmp to i8
@@ -209,8 +205,7 @@ define i16 @ult_select_neg1_or_0_sub(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: ult_select_neg1_or_0_sub:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %di, %si
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sbbw %ax, %ax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i16 %y, %x
   %zext = zext i1 %cmp to i16
@@ -245,107 +240,3 @@ end:
   ret void
 }
 
-; Cases for PR45700
-define i32 @ult_zext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: ult_zext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %edx, %esi
-; CHECK-NEXT:    adcl $0, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp ult i32 %1, %2
-  %5 = zext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @ule_zext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: ule_zext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %esi, %edx
-; CHECK-NEXT:    sbbl $-1, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp ule i32 %1, %2
-  %5 = zext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @ugt_zext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: ugt_zext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %esi, %edx
-; CHECK-NEXT:    adcl $0, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp ugt i32 %1, %2
-  %5 = zext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @uge_zext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: uge_zext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %edx, %esi
-; CHECK-NEXT:    sbbl $-1, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp uge i32 %1, %2
-  %5 = zext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @ult_sext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: ult_sext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %edx, %esi
-; CHECK-NEXT:    sbbl $0, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp ult i32 %1, %2
-  %5 = sext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @ule_sext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: ule_sext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %esi, %edx
-; CHECK-NEXT:    adcl $-1, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp ule i32 %1, %2
-  %5 = sext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @ugt_sext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: ugt_sext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %esi, %edx
-; CHECK-NEXT:    sbbl $0, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp ugt i32 %1, %2
-  %5 = sext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}
-
-define i32 @uge_sext_add(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: uge_sext_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl %edx, %esi
-; CHECK-NEXT:    adcl $-1, %eax
-; CHECK-NEXT:    retq
-  %4 = icmp uge i32 %1, %2
-  %5 = sext i1 %4 to i32
-  %6 = add nsw i32 %5, %0
-  ret i32 %6
-}

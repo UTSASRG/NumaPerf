@@ -22,6 +22,9 @@ AST_MATCHER(Type, isStrictlyInteger) {
 } // namespace
 
 void UseToStringCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   Finder->addMatcher(
       callExpr(
           hasDeclaration(functionDecl(

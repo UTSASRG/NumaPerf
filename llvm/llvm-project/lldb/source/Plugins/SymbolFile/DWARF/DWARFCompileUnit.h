@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H
+#ifndef SymbolFileDWARF_DWARFCompileUnit_h_
+#define SymbolFileDWARF_DWARFCompileUnit_h_
 
 #include "DWARFUnit.h"
 #include "llvm/Support/Error.h"
@@ -27,10 +27,9 @@ private:
                    DIERef::Section section, bool is_dwo)
       : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
 
-  DWARFCompileUnit(const DWARFCompileUnit &) = delete;
-  const DWARFCompileUnit &operator=(const DWARFCompileUnit &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DWARFCompileUnit);
 
   friend class DWARFUnit;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H
+#endif // SymbolFileDWARF_DWARFCompileUnit_h_

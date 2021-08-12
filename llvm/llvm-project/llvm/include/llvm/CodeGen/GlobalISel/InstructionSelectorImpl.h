@@ -57,7 +57,6 @@ bool InstructionSelector::executeMatchTable(
 
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
-  uint16_t Flags = State.MIs[0]->getFlags();
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -70,15 +69,6 @@ bool InstructionSelector::executeMatchTable(
                     dbgs() << CurrentIdx << ": Resume at " << CurrentIdx << " ("
                            << OnFailResumeAt.size() << " try-blocks remain)\n");
     return RejectAndResume;
-  };
-
-  auto propagateFlags = [&](NewMIVector &OutMIs) {
-    if (Flags == MachineInstr::MIFlag::NoFlags)
-      return false;
-    for (auto MIB : OutMIs)
-      MIB.setMIFlags(Flags);
-
-    return true;
   };
 
   while (true) {
@@ -439,7 +429,7 @@ bool InstructionSelector::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIM_CheckMemoryAlignment"
                       << "(MIs[" << InsnID << "]->memoperands() + " << MMOIdx
                       << ")->getAlignment() >= " << MinAlign << ")\n");
-      if (MMO->getAlign() < MinAlign && handleReject() == RejectAndGiveUp)
+      if (MMO->getAlignment() < MinAlign && handleReject() == RejectAndGiveUp)
         return false;
 
       break;
@@ -869,25 +859,16 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
-    case GIR_AddTempRegister:
-    case GIR_AddTempSubRegister: {
+    case GIR_AddTempRegister: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t TempRegID = MatchTable[CurrentIdx++];
       uint64_t TempRegFlags = MatchTable[CurrentIdx++];
-      unsigned SubReg = 0;
-      if (MatcherOpcode == GIR_AddTempSubRegister)
-        SubReg = MatchTable[CurrentIdx++];
-
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-
-      OutMIs[InsnID].addReg(State.TempRegisters[TempRegID], TempRegFlags, SubReg);
+      OutMIs[InsnID].addReg(State.TempRegisters[TempRegID], TempRegFlags);
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddTempRegister(OutMIs["
                              << InsnID << "], TempRegisters[" << TempRegID
-                             << "]";
-                      if (SubReg)
-                        dbgs() << '.' << TRI.getSubRegIndexName(SubReg);
-                      dbgs() << ", " << TempRegFlags << ")\n");
+                             << "], " << TempRegFlags << ")\n");
       break;
     }
 
@@ -1075,7 +1056,6 @@ bool InstructionSelector::executeMatchTable(
     case GIR_Done:
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_Done\n");
-      propagateFlags(OutMIs);
       return true;
 
     default:

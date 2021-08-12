@@ -15,14 +15,13 @@
 
 #if SANITIZER_LINUX && SANITIZER_S390
 
-#include <dlfcn.h>
+#include "sanitizer_libc.h"
+#include "sanitizer_linux.h"
+
 #include <errno.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <unistd.h>
-
-#include "sanitizer_libc.h"
-#include "sanitizer_linux.h"
 
 namespace __sanitizer {
 
@@ -124,7 +123,7 @@ static bool FixedCVE_2016_2143() {
   struct utsname buf;
   unsigned int major, minor, patch = 0;
   // This should never fail, but just in case...
-  if (internal_uname(&buf))
+  if (uname(&buf))
     return false;
   const char *ptr = buf.release;
   major = internal_simple_strtoll(ptr, &ptr, 10);

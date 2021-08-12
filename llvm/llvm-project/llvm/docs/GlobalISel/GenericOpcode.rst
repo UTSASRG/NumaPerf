@@ -243,15 +243,6 @@ These each perform their respective integer arithmetic on a scalar.
 
   %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
 
-G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Signed and unsigned addition and subtraction with saturation.
-
-.. code-block:: none
-
-  %2:_(s32) = G_SADDSAT %0:_(s32), %1:_(s32)
-
 G_SHL, G_LSHR, G_ASHR
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -287,16 +278,14 @@ typically bytes but this may vary between targets.
   There are currently no in-tree targets that use this with addressable units
   not equal to 8 bit.
 
-G_PTRMASK
+G_PTR_MASK
 ^^^^^^^^^^
 
-Zero out an arbitrary mask of bits of a pointer. The mask type must be
-an integer, and the number of vector elements must match for all
-operands. This corresponds to :ref:`i_intr_llvm_ptrmask`.
+Zero the least significant N bits of a pointer.
 
 .. code-block:: none
 
-  %2:_(p0) = G_PTRMASK %0, %1
+  %1:_(p0) = G_PTR_MASK %0, 3
 
 G_SMIN, G_SMAX, G_UMIN, G_UMAX
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -567,11 +556,7 @@ Same as G_INDEXED_LOAD except that the load performed is zero-extending, as with
 G_STORE
 ^^^^^^^
 
-Generic store. Expects a MachineMemOperand in addition to explicit
-operands. If the stored value size is greater than the memory size,
-the high bits are implicitly truncated. If this is a vector store, the
-high elements are discarded (i.e. this does not function as a per-lane
-vector, truncating store)
+Generic store. Expects a MachineMemOperand in addition to explicit operands.
 
 G_INDEXED_STORE
 ^^^^^^^^^^^^^^^
@@ -648,7 +633,7 @@ G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS
 Call an intrinsic
 
 The _W_SIDE_EFFECTS version is considered to have unknown side-effects and
-as such cannot be reordered across other side-effecting instructions.
+as such cannot be reordered acrosss other side-effecting instructions.
 
 .. note::
 
@@ -678,9 +663,12 @@ Other Operations
 G_DYN_STACKALLOC
 ^^^^^^^^^^^^^^^^
 
-Dynamically realigns the stack pointer to the specified size and alignment.
-An alignment value of `0` or `1` mean no specific alignment.
+Dynamically realign the stack pointer to the specified alignment
 
 .. code-block:: none
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
+
+.. caution::
+
+  What does it mean for the immediate to be 0? It happens in the tests

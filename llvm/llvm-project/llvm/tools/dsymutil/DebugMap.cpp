@@ -41,7 +41,7 @@ using namespace llvm::object;
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
                                sys::TimePoint<std::chrono::seconds> Timestamp,
                                uint8_t Type)
-    : Filename(std::string(ObjectFilename)), Timestamp(Timestamp), Type(Type) {}
+    : Filename(ObjectFilename), Timestamp(Timestamp), Type(Type) {}
 
 bool DebugMapObject::addSymbol(StringRef Name, Optional<uint64_t> ObjectAddress,
                                uint64_t LinkedAddress, uint32_t Size) {
@@ -228,13 +228,12 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
   Timestamp = sys::toTimeT(Obj.getTimestamp());
   Entries.reserve(Obj.Symbols.size());
   for (auto &Entry : Obj.Symbols)
-    Entries.push_back(
-        std::make_pair(std::string(Entry.getKey()), Entry.getValue()));
+    Entries.push_back(std::make_pair(Entry.getKey(), Entry.getValue()));
 }
 
 dsymutil::DebugMapObject
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
-  BinaryHolder BinHolder(vfs::getRealFileSystem(), /* Verbose =*/false);
+  BinaryHolder BinHolder(/* Verbose =*/false);
   const auto &Ctxt = *reinterpret_cast<YAMLContext *>(IO.getContext());
   SmallString<80> Path(Ctxt.PrependPath);
   StringMap<uint64_t> SymbolAddresses;
@@ -254,24 +253,16 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
                            << toString(std::move(Err)) << '\n';
     } else {
       for (const auto &Sym : Object->symbols()) {
-        Expected<uint64_t> AddressOrErr = Sym.getValue();
-        if (!AddressOrErr) {
-          // TODO: Actually report errors helpfully.
-          consumeError(AddressOrErr.takeError());
-          continue;
-        }
+        uint64_t Address = Sym.getValue();
         Expected<StringRef> Name = Sym.getName();
-        Expected<uint32_t> FlagsOrErr = Sym.getFlags();
-        if (!Name || !FlagsOrErr ||
-            (*FlagsOrErr & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
+        if (!Name || (Sym.getFlags() &
+                      (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
           // TODO: Actually report errors helpfully.
-          if (!FlagsOrErr)
-            consumeError(FlagsOrErr.takeError());
           if (!Name)
             consumeError(Name.takeError());
           continue;
         }
-        SymbolAddresses[*Name] = *AddressOrErr;
+        SymbolAddresses[*Name] = Address;
       }
     }
   }

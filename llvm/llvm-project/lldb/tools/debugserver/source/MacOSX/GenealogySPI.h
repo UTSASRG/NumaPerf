@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_GENEALOGYSPI_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_GENEALOGYSPI_H
+#ifndef __GenealogySPI_h__
+#define __GenealogySPI_h__
 
 #include <xpc/xpc.h>
 

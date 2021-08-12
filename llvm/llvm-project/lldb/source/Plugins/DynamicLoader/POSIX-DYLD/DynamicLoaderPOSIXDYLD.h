@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_POSIX_DYLD_DYNAMICLOADERPOSIXDYLD_H
-#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_POSIX_DYLD_DYNAMICLOADERPOSIXDYLD_H
+#ifndef liblldb_DynamicLoaderPOSIXDYLD_h_
+#define liblldb_DynamicLoaderPOSIXDYLD_h_
 
 #include <map>
 #include <memory>
@@ -136,7 +136,7 @@ protected:
 
   void LoadVDSO();
 
-  // Loading an interpreter module (if present) assuming m_interpreter_base
+  // Loading an interpreter module (if present) assumming m_interpreter_base
   // already points to its base address.
   lldb::ModuleSP LoadInterpreterModule();
 
@@ -159,9 +159,7 @@ protected:
   bool AlwaysRelyOnEHUnwindInfo(lldb_private::SymbolContext &sym_ctx) override;
 
 private:
-  DynamicLoaderPOSIXDYLD(const DynamicLoaderPOSIXDYLD &) = delete;
-  const DynamicLoaderPOSIXDYLD &
-  operator=(const DynamicLoaderPOSIXDYLD &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderPOSIXDYLD);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_POSIX_DYLD_DYNAMICLOADERPOSIXDYLD_H
+#endif // liblldb_DynamicLoaderPOSIXDYLD_h_

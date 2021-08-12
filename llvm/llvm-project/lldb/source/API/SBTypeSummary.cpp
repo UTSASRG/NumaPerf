@@ -1,4 +1,5 @@
-//===-- SBTypeSummary.cpp -------------------------------------------------===//
+//===-- SBTypeSummary.cpp -----------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +33,7 @@ SBTypeSummaryOptions::SBTypeSummaryOptions(
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBTypeSummaryOptions::~SBTypeSummaryOptions() = default;
+SBTypeSummaryOptions::~SBTypeSummaryOptions() {}
 
 bool SBTypeSummaryOptions::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeSummaryOptions, IsValid);
@@ -192,7 +193,7 @@ SBTypeSummary::SBTypeSummary(const lldb::SBTypeSummary &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeSummary, (const lldb::SBTypeSummary &), rhs);
 }
 
-SBTypeSummary::~SBTypeSummary() = default;
+SBTypeSummary::~SBTypeSummary() {}
 
 bool SBTypeSummary::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, IsValid);

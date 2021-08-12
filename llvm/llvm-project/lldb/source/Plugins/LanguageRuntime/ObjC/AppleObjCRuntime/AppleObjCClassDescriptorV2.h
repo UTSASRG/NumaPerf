@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCCLASSDESCRIPTORV2_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCCLASSDESCRIPTORV2_H
+#ifndef liblldb_AppleObjCClassDescriptorV2_h_
+#define liblldb_AppleObjCClassDescriptorV2_h_
 
 #include <mutex>
 
@@ -328,4 +328,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCCLASSDESCRIPTORV2_H
+#endif // liblldb_AppleObjCClassDescriptorV2_h_

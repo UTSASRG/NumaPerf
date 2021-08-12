@@ -21,7 +21,6 @@
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -30,9 +29,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cassert>
@@ -43,8 +42,6 @@ namespace clang {
 class AnalysisDeclContextManager;
 class AnalyzerOptions;
 class ASTContext;
-class CFGBlock;
-class CFGElement;
 class ConstructionContext;
 class CXXBindTemporaryExpr;
 class CXXCatchStmt;
@@ -75,29 +72,16 @@ class CrossTranslationUnitContext;
 
 namespace ento {
 
-class AnalysisManager;
 class BasicValueFactory;
-class BlockCounter;
-class BranchNodeBuilder;
 class CallEvent;
 class CheckerManager;
 class ConstraintManager;
 class CXXTempObjectRegion;
-class EndOfFunctionNodeBuilder;
-class ExplodedNodeSet;
-class ExplodedNode;
-class IndirectGotoNodeBuilder;
 class MemRegion;
-struct NodeBuilderContext;
-class NodeBuilderWithSinks;
-class ProgramState;
-class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
 class SymbolManager;
-class SwitchNodeBuilder;
 
-class ExprEngine {
-  void anchor();
+class ExprEngine : public SubEngine {
 public:
   /// The modes of inlining, which override the default analysis-wide settings.
   enum InliningModes {
@@ -177,7 +161,7 @@ public:
              SetOfConstDecls *VisitedCalleesIn,
              FunctionSummariesTy *FS, InliningModes HowToInlineIn);
 
-  virtual ~ExprEngine() = default;
+  ~ExprEngine() override = default;
 
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {
@@ -197,7 +181,7 @@ public:
   /// getContext - Return the ASTContext associated with this analysis.
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
-  AnalysisManager &getAnalysisManager() { return AMgr; }
+  AnalysisManager &getAnalysisManager() override { return AMgr; }
 
   AnalysisDeclContextManager &getAnalysisDeclContextManager() {
     return AMgr.getAnalysisDeclContextManager();
@@ -212,7 +196,7 @@ public:
   BugReporter &getBugReporter() { return BR; }
 
   cross_tu::CrossTranslationUnitContext *
-  getCrossTranslationUnitContext() {
+  getCrossTranslationUnitContext() override {
     return &CTU;
   }
 
@@ -248,7 +232,7 @@ public:
 
   /// getInitialState - Return the initial state used for the root vertex
   ///  in the ExplodedGraph.
-  ProgramStateRef getInitialState(const LocationContext *InitLoc);
+  ProgramStateRef getInitialState(const LocationContext *InitLoc) override;
 
   ExplodedGraph &getGraph() { return G; }
   const ExplodedGraph &getGraph() const { return G; }
@@ -286,7 +270,7 @@ public:
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
-                         unsigned StmtIdx, NodeBuilderContext *Ctx);
+                         unsigned StmtIdx, NodeBuilderContext *Ctx) override;
 
   void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
@@ -312,7 +296,7 @@ public:
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
   void processCFGBlockEntrance(const BlockEdge &L,
                                NodeBuilderWithSinks &nodeBuilder,
-                               ExplodedNode *Pred);
+                               ExplodedNode *Pred) override;
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
@@ -321,7 +305,7 @@ public:
                      ExplodedNode *Pred,
                      ExplodedNodeSet &Dst,
                      const CFGBlock *DstT,
-                     const CFGBlock *DstF);
+                     const CFGBlock *DstF) override;
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -330,7 +314,7 @@ public:
                                      NodeBuilderContext &BldCtx,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst,
                                      const CFGBlock *DstT,
-                                     const CFGBlock *DstF);
+                                     const CFGBlock *DstF) override;
 
   /// Called by CoreEngine.  Used to processing branching behavior
   /// at static initializers.
@@ -339,27 +323,27 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst,
                                 const CFGBlock *DstT,
-                                const CFGBlock *DstF);
+                                const CFGBlock *DstF) override;
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a computed goto jump.
-  void processIndirectGoto(IndirectGotoNodeBuilder& builder);
+  void processIndirectGoto(IndirectGotoNodeBuilder& builder) override;
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(SwitchNodeBuilder& builder);
+  void processSwitch(SwitchNodeBuilder& builder) override;
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and and top-level functions.
   void processBeginOfFunction(NodeBuilderContext &BC,
                               ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                              const BlockEdge &L);
+                              const BlockEdge &L) override;
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has ended. Called for both inlined and and top-level functions.
   void processEndOfFunction(NodeBuilderContext& BC,
                             ExplodedNode *Pred,
-                            const ReturnStmt *RS = nullptr);
+                            const ReturnStmt *RS = nullptr) override;
 
   /// Remove dead bindings/symbols before exiting a function.
   void removeDeadOnEndOfFunction(NodeBuilderContext& BC,
@@ -368,19 +352,19 @@ public:
 
   /// Generate the entry node of the callee.
   void processCallEnter(NodeBuilderContext& BC, CallEnter CE,
-                        ExplodedNode *Pred);
+                        ExplodedNode *Pred) override;
 
   /// Generate the sequence of nodes that simulate the call exit and the post
   /// visit for CallExpr.
-  void processCallExit(ExplodedNode *Pred);
+  void processCallExit(ExplodedNode *Pred) override;
 
   /// Called by CoreEngine when the analysis worklist has terminated.
-  void processEndWorklist();
+  void processEndWorklist() override;
 
   /// evalAssume - Callback function invoked by the ConstraintManager when
   ///  making assumptions about state values.
   ProgramStateRef processAssume(ProgramStateRef state, SVal cond,
-                                bool assumption);
+                                bool assumption) override;
 
   /// processRegionChanges - Called by ProgramStateManager whenever a change is made
   ///  to the store. Used to update checkers that track region values.
@@ -390,21 +374,14 @@ public:
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
                        const LocationContext *LCtx,
-                       const CallEvent *Call);
-
-  inline ProgramStateRef
-  processRegionChange(ProgramStateRef state,
-                      const MemRegion* MR,
-                      const LocationContext *LCtx) {
-    return processRegionChanges(state, nullptr, MR, MR, LCtx, nullptr);
-  }
+                       const CallEvent *Call) override;
 
   /// printJson - Called by ProgramStateManager to print checker-specific data.
   void printJson(raw_ostream &Out, ProgramStateRef State,
                  const LocationContext *LCtx, const char *NL,
-                 unsigned int Space, bool IsDot) const;
+                 unsigned int Space, bool IsDot) const override;
 
-  ProgramStateManager &getStateManager() { return StateMgr; }
+  ProgramStateManager &getStateManager() override { return StateMgr; }
 
   StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
 
@@ -550,9 +527,6 @@ public:
   void VisitCXXConstructExpr(const CXXConstructExpr *E, ExplodedNode *Pred,
                              ExplodedNodeSet &Dst);
 
-  void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E,
-                                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
-
   void VisitCXXDestructor(QualType ObjectType, const MemRegion *Dest,
                           const Stmt *S, bool IsBaseDtor,
                           ExplodedNode *Pred, ExplodedNodeSet &Dst,
@@ -631,11 +605,23 @@ public:
                              const ConstructionContextItem &Item,
                              const LocationContext *LC);
 
+protected:
+  /// evalBind - Handle the semantics of binding a value to a specific location.
+  ///  This method is used by evalStore, VisitDeclStmt, and others.
+  void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
+                SVal location, SVal Val, bool atDeclInit = false,
+                const ProgramPoint *PP = nullptr);
+
   /// Call PointerEscape callback when a value escapes as a result of bind.
   ProgramStateRef processPointerEscapedOnBind(
       ProgramStateRef State, ArrayRef<std::pair<SVal, SVal>> LocAndVals,
       const LocationContext *LCtx, PointerEscapeKind Kind,
-      const CallEvent *Call);
+      const CallEvent *Call) override;
+
+  ProgramStateRef
+  processPointerEscapedOnBind(ProgramStateRef State,
+                              SVal Loc, SVal Val,
+                              const LocationContext *LCtx);
 
   /// Call PointerEscape callback when a value escapes as a result of
   /// region invalidation.
@@ -645,19 +631,7 @@ public:
                            const InvalidatedSymbols *Invalidated,
                            ArrayRef<const MemRegion *> ExplicitRegions,
                            const CallEvent *Call,
-                           RegionAndSymbolInvalidationTraits &ITraits);
-
-private:
-  /// evalBind - Handle the semantics of binding a value to a specific location.
-  ///  This method is used by evalStore, VisitDeclStmt, and others.
-  void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
-                SVal location, SVal Val, bool atDeclInit = false,
-                const ProgramPoint *PP = nullptr);
-
-  ProgramStateRef
-  processPointerEscapedOnBind(ProgramStateRef State,
-                              SVal Loc, SVal Val,
-                              const LocationContext *LCtx);
+                           RegionAndSymbolInvalidationTraits &ITraits) override;
 
   /// A simple wrapper when you only need to notify checkers of pointer-escape
   /// of some values.
@@ -833,14 +807,9 @@ private:
   /// or unusable for any reason, a dummy temporary region is returned, and the
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   /// Returns the updated program state and the new object's this-region.
-  std::pair<ProgramStateRef, SVal> handleConstructionContext(
+  std::pair<ProgramStateRef, SVal> prepareForObjectConstruction(
       const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
       const ConstructionContext *CC, EvalCallOptions &CallOpts);
-
-  /// Common code that handles either a CXXConstructExpr or a
-  /// CXXInheritedCtorInitExpr.
-  void handleConstructor(const Expr *E, ExplodedNode *Pred,
-                         ExplodedNodeSet &Dst);
 
   /// Store the location of a C++ object corresponding to a statement
   /// until the statement is actually encountered. For example, if a DeclStmt

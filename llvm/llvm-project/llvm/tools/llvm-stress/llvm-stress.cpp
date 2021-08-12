@@ -343,9 +343,7 @@ struct LoadModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    PointerType *Tp = cast<PointerType>(Ptr->getType());
-    Value *V = new LoadInst(Tp->getElementType(), Ptr, "L",
-                            BB->getTerminator());
+    Value *V = new LoadInst(Ptr, "L", BB->getTerminator());
     PT->push_back(V);
   }
 };

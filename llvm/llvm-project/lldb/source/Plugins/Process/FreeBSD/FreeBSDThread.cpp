@@ -1,4 +1,4 @@
-//===-- FreeBSDThread.cpp -------------------------------------------------===//
+//===-- FreeBSDThread.cpp ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,9 @@
 #include <sys/types.h>
 #include <sys/user.h>
 
+#include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/State.h"
+
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -23,6 +26,7 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
 #include "RegisterContextPOSIXProcessMonitor_arm.h"
@@ -40,8 +44,6 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Target/UnixSignals.h"
-#include "lldb/Target/Unwind.h"
 #include "lldb/Utility/State.h"
 #include "llvm/ADT/SmallString.h"
 
@@ -252,7 +254,8 @@ FreeBSDThread::CreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   if (concrete_frame_idx == 0)
     reg_ctx_sp = GetRegisterContext();
   else {
-    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
+    assert(GetUnwinder());
+    reg_ctx_sp = GetUnwinder()->CreateRegisterContextForFrame(frame);
   }
 
   return reg_ctx_sp;
@@ -270,6 +273,13 @@ lldb::addr_t FreeBSDThread::GetThreadPointer() {
 bool FreeBSDThread::CalculateStopInfo() {
   SetStopInfo(m_stop_info_sp);
   return true;
+}
+
+Unwind *FreeBSDThread::GetUnwinder() {
+  if (!m_unwinder_up)
+    m_unwinder_up.reset(new UnwindLLDB(*this));
+
+  return m_unwinder_up.get();
 }
 
 void FreeBSDThread::DidStop() {

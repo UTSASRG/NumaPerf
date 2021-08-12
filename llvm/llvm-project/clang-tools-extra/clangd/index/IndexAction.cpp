@@ -8,9 +8,9 @@
 
 #include "IndexAction.h"
 #include "Headers.h"
+#include "Logger.h"
 #include "index/Relation.h"
 #include "index/SymbolOrigin.h"
-#include "support/Logger.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceLocation.h"
@@ -132,19 +132,11 @@ public:
               std::function<void(RefSlab)> RefsCallback,
               std::function<void(RelationSlab)> RelationsCallback,
               std::function<void(IncludeGraph)> IncludeGraphCallback)
-      : SymbolsCallback(SymbolsCallback), RefsCallback(RefsCallback),
-        RelationsCallback(RelationsCallback),
+      : SymbolsCallback(SymbolsCallback),
+        RefsCallback(RefsCallback), RelationsCallback(RelationsCallback),
         IncludeGraphCallback(IncludeGraphCallback), Collector(C),
         Includes(std::move(Includes)), Opts(Opts),
-        PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {
-    this->Opts.ShouldTraverseDecl = [this](const Decl *D) {
-      auto &SM = D->getASTContext().getSourceManager();
-      auto FID = SM.getFileID(SM.getExpansionLoc(D->getLocation()));
-      if (!FID.isValid())
-        return true;
-      return Collector->shouldIndexFile(FID);
-    };
-  }
+        PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
 
   std::unique_ptr<ASTConsumer>
   CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
@@ -154,8 +146,15 @@ public:
       CI.getPreprocessor().addPPCallbacks(
           std::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));
 
-    return index::createIndexingASTConsumer(Collector, Opts,
-                                            CI.getPreprocessorPtr());
+    return index::createIndexingASTConsumer(
+        Collector, Opts, CI.getPreprocessorPtr(),
+        /*ShouldSkipFunctionBody=*/[this](const Decl *D) {
+          auto &SM = D->getASTContext().getSourceManager();
+          auto FID = SM.getFileID(SM.getExpansionLoc(D->getLocation()));
+          if (!FID.isValid())
+            return false;
+          return !Collector->shouldIndexFile(FID);
+        });
   }
 
   bool BeginInvocation(CompilerInstance &CI) override {

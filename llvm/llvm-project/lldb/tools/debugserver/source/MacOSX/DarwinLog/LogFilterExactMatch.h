@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTEREXACTMATCH_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTEREXACTMATCH_H
+#ifndef LogFilterExactMatch_h
+#define LogFilterExactMatch_h
 
 #include <string>
 

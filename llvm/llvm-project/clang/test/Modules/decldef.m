@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_EARLY
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify
 
-// expected-note@Inputs/def.h:5 {{here}}
+// expected-note@Inputs/def.h:5 {{previous}}
 
 @class Def;
 Def *def;
@@ -16,7 +16,7 @@ B *b1;
 // expected-error@-2{{must use 'struct' tag to refer to type 'B'}}
 #else
 // expected-error@-4{{declaration of 'B' must be imported from module 'decldef.Decl' before it is required}}
-// expected-note@Inputs/decl.h:2 {{not visible}}
+// expected-note@Inputs/decl.h:2 {{previous}}
 #endif
 @import decldef.Decl;
 

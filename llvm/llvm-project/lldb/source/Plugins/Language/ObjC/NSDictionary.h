@@ -1,4 +1,5 @@
-//===-- NSDictionary.h ------------------------------------------*- C++ -*-===//
+//===-- NSDictionary.h ---------------------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_NSDICTIONARY_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_NSDICTIONARY_H
+#ifndef liblldb_NSDictionary_h_
+#define liblldb_NSDictionary_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -90,4 +91,4 @@ public:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_NSDICTIONARY_H
+#endif // liblldb_NSDictionary_h_

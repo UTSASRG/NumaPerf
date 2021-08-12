@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHVMREGION_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHVMREGION_H
+#ifndef __MachVMRegion_h__
+#define __MachVMRegion_h__
 
 #include "DNBDefs.h"
 #include "DNBError.h"
@@ -69,4 +69,4 @@ protected:
       m_protection_size; // The size of memory that had its protections changed
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHVMREGION_H
+#endif // #ifndef __MachVMRegion_h__

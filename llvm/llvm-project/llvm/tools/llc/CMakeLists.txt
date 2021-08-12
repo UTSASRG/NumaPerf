@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   Analysis
-  AsmParser
   AsmPrinter
   CodeGen
   Core
@@ -27,5 +26,4 @@ add_llvm_tool(llc
   intrinsics_gen
   SUPPORT_PLUGINS
   )
-
-export_executable_symbols_for_plugins(llc)
+export_executable_symbols(llc)

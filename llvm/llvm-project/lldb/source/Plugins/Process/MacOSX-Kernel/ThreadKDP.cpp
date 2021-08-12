@@ -1,4 +1,4 @@
-//===-- ThreadKDP.cpp -----------------------------------------------------===//
+//===-- ThreadKDP.cpp -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -118,7 +118,9 @@ ThreadKDP::CreateRegisterContextForFrame(StackFrame *frame) {
       }
     }
   } else {
-    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
+    Unwind *unwinder = GetUnwinder();
+    if (unwinder != nullptr)
+      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;
 }

@@ -51,12 +51,6 @@ public:
     return 0;
   }
 
-  virtual unsigned getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo,
-                                         SmallVectorImpl<MCFixup> &Fixups,
-                                         const MCSubtargetInfo &STI) const {
-    return 0;
-  }
-
   virtual unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const {

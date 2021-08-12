@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_SYMTAB_H
-#define LLDB_SYMBOL_SYMTAB_H
+#ifndef liblldb_Symtab_h_
+#define liblldb_Symtab_h_
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/Symbol.h"
@@ -224,10 +224,9 @@ private:
                             const char *decl_context,
                             const std::set<const char *> &class_contexts);
 
-  Symtab(const Symtab &) = delete;
-  const Symtab &operator=(const Symtab &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Symtab);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_SYMTAB_H
+#endif // liblldb_Symtab_h_

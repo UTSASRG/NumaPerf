@@ -243,7 +243,7 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
 #ifdef OMP5
-#pragma omp teams distribute simd safelen(clen-1) aligned(arr:N+6) if(simd:b) nontemporal(argc, c, d) order(concurrent)
+#pragma omp teams distribute simd safelen(clen-1) aligned(arr:N+6) if(simd:b) nontemporal(argc, c, d)
 #else
 #pragma omp teams distribute simd safelen(clen-1) aligned(arr:N+6)
 #endif
@@ -251,7 +251,7 @@ int main (int argc, char **argv) {
     e += d + argc + arr[k];
 // CHECK: #pragma omp target
 // OMP45-NEXT: #pragma omp teams distribute simd safelen(clen - 1) aligned(arr: N + 6)
-// OMP50-NEXT: #pragma omp teams distribute simd safelen(clen - 1) aligned(arr: N + 6) if(simd: b) nontemporal(argc,c,d) order(concurrent)
+// OMP50-NEXT: #pragma omp teams distribute simd safelen(clen - 1) aligned(arr: N + 6) if(simd: b) nontemporal(argc,c,d)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc + arr[k];
   return (0);

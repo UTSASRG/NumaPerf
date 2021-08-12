@@ -1,6 +1,6 @@
 //===- PassInstrumentation.h ------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,9 +10,12 @@
 #define MLIR_PASS_PASSINSTRUMENTATION_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/TypeID.h"
+#include "mlir/Support/STLExtras.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
+using AnalysisID = ClassID;
 class Operation;
 class OperationName;
 class Pass;
@@ -69,14 +72,16 @@ public:
   virtual void runAfterPassFailed(Pass *pass, Operation *op) {}
 
   /// A callback to run before an analysis is computed. This function takes the
-  /// name of the analysis to be computed, its TypeID, as well as the
+  /// name of the analysis to be computed, its AnalysisID, as well as the
   /// current operation being analyzed.
-  virtual void runBeforeAnalysis(StringRef name, TypeID id, Operation *op) {}
+  virtual void runBeforeAnalysis(StringRef name, AnalysisID *id,
+                                 Operation *op) {}
 
   /// A callback to run before an analysis is computed. This function takes the
-  /// name of the analysis that was computed, its TypeID, as well as the
+  /// name of the analysis that was computed, its AnalysisID, as well as the
   /// current operation being analyzed.
-  virtual void runAfterAnalysis(StringRef name, TypeID id, Operation *op) {}
+  virtual void runAfterAnalysis(StringRef name, AnalysisID *id, Operation *op) {
+  }
 };
 
 /// This class holds a collection of PassInstrumentation objects, and invokes
@@ -108,10 +113,10 @@ public:
   void runAfterPassFailed(Pass *pass, Operation *op);
 
   /// See PassInstrumentation::runBeforeAnalysis for details.
-  void runBeforeAnalysis(StringRef name, TypeID id, Operation *op);
+  void runBeforeAnalysis(StringRef name, AnalysisID *id, Operation *op);
 
   /// See PassInstrumentation::runAfterAnalysis for details.
-  void runAfterAnalysis(StringRef name, TypeID id, Operation *op);
+  void runAfterAnalysis(StringRef name, AnalysisID *id, Operation *op);
 
   /// Add the given instrumentation to the collection.
   void addInstrumentation(std::unique_ptr<PassInstrumentation> pi);

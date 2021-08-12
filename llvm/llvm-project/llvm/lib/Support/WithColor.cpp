@@ -118,15 +118,3 @@ WithColor &WithColor::resetColor() {
 }
 
 WithColor::~WithColor() { resetColor(); }
-
-void WithColor::defaultErrorHandler(Error Err) {
-  handleAllErrors(std::move(Err), [](ErrorInfoBase &Info) {
-    WithColor::error() << Info.message() << '\n';
-  });
-}
-
-void WithColor::defaultWarningHandler(Error Warning) {
-  handleAllErrors(std::move(Warning), [](ErrorInfoBase &Info) {
-    WithColor::warning() << Info.message() << '\n';
-  });
-}

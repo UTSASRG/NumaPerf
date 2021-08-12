@@ -147,7 +147,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_PCREL,
+  { MCSymbolRefExpr::VK_Hexagon_PCREL,
     { _,                _,              _,                      _,
       _,                _,              P(_6_PCREL_X),          _,
       _,                P(_9_X),        _,                      _,
@@ -311,7 +311,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_PCREL,
+  { MCSymbolRefExpr::VK_Hexagon_PCREL,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -391,9 +391,15 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
 static bool RegisterMatches(unsigned Consumer, unsigned Producer,
                             unsigned Producer2) {
-  return (Consumer == Producer) || (Consumer == Producer2) ||
-         HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(Producer,
-                                                             Consumer);
+  if (Consumer == Producer)
+    return true;
+  if (Consumer == Producer2)
+    return true;
+  // Calculate if we're a single vector consumer referencing a double producer
+  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
+    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
+      return ((Consumer - Hexagon::V0) >> 1) == (Producer - Hexagon::W0);
+  return false;
 }
 
 /// EncodeSingleInstruction - Emit a single
@@ -491,7 +497,7 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
       { MCSymbolRefExpr::VK_Hexagon_LD_GOT, fixup_Hexagon_LD_GOT_32_6_X },
       { MCSymbolRefExpr::VK_Hexagon_IE,     fixup_Hexagon_IE_32_6_X },
       { MCSymbolRefExpr::VK_Hexagon_IE_GOT, fixup_Hexagon_IE_GOT_32_6_X },
-      { MCSymbolRefExpr::VK_PCREL,          fixup_Hexagon_B32_PCREL_X },
+      { MCSymbolRefExpr::VK_Hexagon_PCREL,  fixup_Hexagon_B32_PCREL_X },
       { MCSymbolRefExpr::VK_Hexagon_GD_PLT, fixup_Hexagon_GD_PLT_B32_PCREL_X },
       { MCSymbolRefExpr::VK_Hexagon_LD_PLT, fixup_Hexagon_LD_PLT_B32_PCREL_X },
     };
@@ -729,8 +735,7 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
     unsigned SOffset = 0;
     unsigned VOffset = 0;
     unsigned UseReg = MO.getReg();
-    unsigned DefReg1 = Hexagon::NoRegister;
-    unsigned DefReg2 = Hexagon::NoRegister;
+    unsigned DefReg1, DefReg2;
 
     auto Instrs = HexagonMCInstrInfo::bundleInstructions(*State.Bundle);
     const MCOperand *I = Instrs.begin() + State.Index - 1;
@@ -741,8 +746,7 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
       if (HexagonMCInstrInfo::isImmext(Inst))
         continue;
 
-      DefReg1 = Hexagon::NoRegister;
-      DefReg2 = Hexagon::NoRegister;
+      DefReg1 = DefReg2 = 0;
       ++SOffset;
       if (HexagonMCInstrInfo::isVector(MCII, Inst)) {
         // Vector instructions don't count scalars.

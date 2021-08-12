@@ -40,8 +40,8 @@ void CreateDomainConnectedSockets(llvm::StringRef path,
                                   std::unique_ptr<DomainSocket> *b_up);
 #endif
 
-bool HostSupportsIPv6();
-bool HostSupportsIPv4();
+bool IsAddressFamilySupported(std::string ip);
+bool IsIPv4(std::string ip);
 } // namespace lldb_private
 
 #endif

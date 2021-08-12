@@ -354,11 +354,15 @@ bool MergedLoadStoreMotion::run(Function &F, AliasAnalysis &AA) {
   // optimization opportunities.
   // This loop doesn't care about newly inserted/split blocks 
   // since they never will be diamond heads.
-  for (BasicBlock &BB : make_early_inc_range(F))
+  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE;) {
+    BasicBlock *BB = &*FI++;
+
     // Hoist equivalent loads and sink stores
     // outside diamonds when possible
-    if (isDiamondHead(&BB))
-      Changed |= mergeStores(&BB);
+    if (isDiamondHead(BB)) {
+      Changed |= mergeStores(BB);
+    }
+  }
   return Changed;
 }
 

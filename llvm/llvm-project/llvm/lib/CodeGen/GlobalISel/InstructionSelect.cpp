@@ -29,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "instruction-select"
 
@@ -176,7 +175,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         auto DstRC = MRI.getRegClass(DstReg);
         if (SrcRC == DstRC) {
           MRI.replaceRegWith(DstReg, SrcReg);
-          MI.eraseFromParent();
+          MI.eraseFromParentAndMarkDBGValuesForRemoval();
         }
       }
     }

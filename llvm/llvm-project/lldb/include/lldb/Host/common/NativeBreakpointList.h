@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_COMMON_NATIVEBREAKPOINTLIST_H
-#define LLDB_HOST_COMMON_NATIVEBREAKPOINTLIST_H
+#ifndef liblldb_NativeBreakpointList_h_
+#define liblldb_NativeBreakpointList_h_
 
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
@@ -23,4 +23,4 @@ struct HardwareBreakpoint {
 using HardwareBreakpointMap = std::map<lldb::addr_t, HardwareBreakpoint>;
 }
 
-#endif // LLDB_HOST_COMMON_NATIVEBREAKPOINTLIST_H
+#endif // ifndef liblldb_NativeBreakpointList_h_

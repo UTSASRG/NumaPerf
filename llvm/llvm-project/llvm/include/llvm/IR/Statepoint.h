@@ -65,24 +65,26 @@ bool isGCRelocate(const Value *V);
 bool isGCResult(const CallBase *Call);
 bool isGCResult(const Value *V);
 
-/// Represents a gc.statepoint intrinsic call.  This extends directly from
-/// CallBase as the IntrinsicInst only supports calls and gc.statepoint is
-/// invokable.
-class GCStatepointInst : public CallBase {
+/// A wrapper around a GC intrinsic call, this provides most of the actual
+/// functionality for Statepoint and ImmutableStatepoint.  It is
+/// templatized to allow easily specializing of const and non-const
+/// concrete subtypes.
+template <typename FunTy, typename InstructionTy, typename ValueTy,
+          typename CallBaseTy>
+class StatepointBase {
+  CallBaseTy *StatepointCall;
+
+protected:
+  explicit StatepointBase(InstructionTy *I) {
+    StatepointCall = isStatepoint(I) ? cast<CallBaseTy>(I) : nullptr;
+  }
+
+  explicit StatepointBase(CallBaseTy *Call) {
+    StatepointCall = isStatepoint(Call) ? Call : nullptr;
+  }
+
 public:
-  GCStatepointInst() = delete;
-  GCStatepointInst(const GCStatepointInst &) = delete;
-  GCStatepointInst &operator=(const GCStatepointInst &) = delete;
-
-  static bool classof(const CallBase *I) {
-    if (const Function *CF = I->getCalledFunction())
-      return CF->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
-    return false;
-  }
-
-  static bool classof(const Value *V) {
-    return isa<CallBase>(V) && classof(cast<CallBase>(V));
-  }
+  using arg_iterator = typename CallBaseTy::const_op_iterator;
 
   enum {
     IDPos = 0,
@@ -91,138 +93,6 @@ public:
     NumCallArgsPos = 3,
     FlagsPos = 4,
     CallArgsBeginPos = 5,
-  };
-
-  /// Return the ID associated with this statepoint.
-  uint64_t getID() const {
-    return cast<ConstantInt>(getArgOperand(IDPos))->getZExtValue();
-  }
-
-  /// Return the number of patchable bytes associated with this statepoint.
-  uint32_t getNumPatchBytes() const {
-    const Value *NumPatchBytesVal = getArgOperand(NumPatchBytesPos);
-    uint64_t NumPatchBytes =
-      cast<ConstantInt>(NumPatchBytesVal)->getZExtValue();
-    assert(isInt<32>(NumPatchBytes) && "should fit in 32 bits!");
-    return NumPatchBytes;
-  }
-
-  /// Number of arguments to be passed to the actual callee.
-  int getNumCallArgs() const {
-    return cast<ConstantInt>(getArgOperand(NumCallArgsPos))->getZExtValue();
-  }
-
-  uint64_t getFlags() const {
-    return cast<ConstantInt>(getArgOperand(FlagsPos))->getZExtValue();
-  }
-
-  /// Return the value actually being called or invoked.
-  Value *getActualCalledOperand() const {
-    return getArgOperand(CalledFunctionPos);
-  }
-
-  /// Returns the function called if this is a wrapping a direct call, and null
-  /// otherwise.
-  Function *getActualCalledFunction() const {
-    return dyn_cast_or_null<Function>(getActualCalledOperand());
-  }
-
-  /// Return the type of the value returned by the call underlying the
-  /// statepoint.
-  Type *getActualReturnType() const {
-    auto *CalleeTy =
-      cast<PointerType>(getActualCalledOperand()->getType())->getElementType();
-    return cast<FunctionType>(CalleeTy)->getReturnType();
-  }
-
-
-  /// Return the number of arguments to the underlying call.
-  size_t actual_arg_size() const { return getNumCallArgs(); }
-  /// Return an iterator to the begining of the arguments to the underlying call
-  const_op_iterator actual_arg_begin() const {
-    assert(CallArgsBeginPos <= (int)arg_size());
-    return arg_begin() + CallArgsBeginPos;
-  }
-  /// Return an end iterator of the arguments to the underlying call
-  const_op_iterator actual_arg_end() const {
-    auto I = actual_arg_begin() + actual_arg_size();
-    assert((arg_end() - I) >= 0);
-    return I;
-  }
-  /// range adapter for actual call arguments
-  iterator_range<const_op_iterator> actual_args() const {
-    return make_range(actual_arg_begin(), actual_arg_end());
-  }
-
-  /// Returns an iterator to the begining of the argument range describing gc
-  /// values for the statepoint.
-  const_op_iterator gc_args_begin() const {
-    // The current format has two length prefix bundles between call args and
-    // start of gc args.  This will be removed in the near future.
-    const Value *NumGCTransitionArgs = *actual_arg_end();
-    uint64_t NumTrans = cast<ConstantInt>(NumGCTransitionArgs)->getZExtValue();
-    const_op_iterator trans_end = actual_arg_end() + 1 + NumTrans;
-    const Value *NumDeoptArgs = *trans_end;
-    uint64_t NumDeopt = cast<ConstantInt>(NumDeoptArgs)->getZExtValue();
-    auto I = trans_end + 1 + NumDeopt;
-    assert((arg_end() - I) >= 0);
-    return I;
-  }
-
-  /// Return an end iterator for the gc argument range
-  const_op_iterator gc_args_end() const { return arg_end(); }
-
-  /// Return the operand index at which the gc args begin
-  unsigned gcArgsStartIdx() const {
-    return gc_args_begin() - op_begin();
-  }
-
-  /// range adapter for gc arguments
-  iterator_range<const_op_iterator> gc_args() const {
-    return make_range(gc_args_begin(), gc_args_end());
-  }
-
-
-  /// Get list of all gc reloactes linked to this statepoint
-  /// May contain several relocations for the same base/derived pair.
-  /// For example this could happen due to relocations on unwinding
-  /// path of invoke.
-  inline std::vector<const GCRelocateInst *> getGCRelocates() const;
-
-  /// Get the experimental_gc_result call tied to this statepoint if there is
-  /// one, otherwise return nullptr.
-  const GCResultInst *getGCResult() const {
-    for (auto *U : users())
-      if (auto *GRI = dyn_cast<GCResultInst>(U))
-        return GRI;
-    return nullptr;
-  }
-
-};
-
-/// A wrapper around a GC intrinsic call, this provides most of the actual
-/// functionality for Statepoint and ImmutableStatepoint.  It is
-/// templatized to allow easily specializing of const and non-const
-/// concrete subtypes.
-template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallTy>
-class StatepointBase {
-  CallTy *StatepointCall;
-
-protected:
-  explicit StatepointBase(InstructionTy *I) {
-    StatepointCall = dyn_cast<GCStatepointInst>(I);
-  }
-
-  explicit StatepointBase(CallTy *Call) {
-    StatepointCall = dyn_cast<GCStatepointInst>(Call);
-  }
-
-public:
-  using arg_iterator = typename CallTy::const_op_iterator;
-
-  enum {
-    CallArgsBeginPos = GCStatepointInst::CallArgsBeginPos,
   };
 
   void *operator new(size_t, unsigned) = delete;
@@ -234,27 +104,44 @@ public:
   }
 
   /// Return the underlying call instruction.
-  CallTy *getCall() const {
+  CallBaseTy *getCall() const {
     assert(*this && "check validity first!");
     return StatepointCall;
   }
 
-  // Deprecated shims (update all callers to remove)
-  uint64_t getFlags() const { return getCall()->getFlags(); }
-  uint64_t getID() const { return getCall()->getID(); }
-  uint32_t getNumPatchBytes() const { return getCall()->getNumPatchBytes(); }
-  int getNumCallArgs() const { return getCall()->getNumCallArgs(); }
-  ValueTy *getCalledValue() const {
-    return getCall()->getActualCalledOperand();
-  }
-  Type *getActualReturnType() const { return getCall()->getActualReturnType(); }
-  FunTy *getCalledFunction() const {
-    return getCall()->getActualCalledFunction();
+  uint64_t getFlags() const {
+    return cast<ConstantInt>(getCall()->getArgOperand(FlagsPos))
+        ->getZExtValue();
   }
 
-  
+  /// Return the ID associated with this statepoint.
+  uint64_t getID() const {
+    const Value *IDVal = getCall()->getArgOperand(IDPos);
+    return cast<ConstantInt>(IDVal)->getZExtValue();
+  }
+
+  /// Return the number of patchable bytes associated with this statepoint.
+  uint32_t getNumPatchBytes() const {
+    const Value *NumPatchBytesVal = getCall()->getArgOperand(NumPatchBytesPos);
+    uint64_t NumPatchBytes =
+      cast<ConstantInt>(NumPatchBytesVal)->getZExtValue();
+    assert(isInt<32>(NumPatchBytes) && "should fit in 32 bits!");
+    return NumPatchBytes;
+  }
+
+  /// Return the value actually being called or invoked.
+  ValueTy *getCalledValue() const {
+    return getCall()->getArgOperand(CalledFunctionPos);
+  }
+
   // FIXME: Migrate users of this to `getCall` and remove it.
   InstructionTy *getInstruction() const { return getCall(); }
+
+  /// Return the function being called if this is a direct call, otherwise
+  /// return null (if it's an indirect call).
+  FunTy *getCalledFunction() const {
+    return dyn_cast<Function>(getCalledValue());
+  }
 
   /// Return the caller function for this statepoint.
   FunTy *getCaller() const { return getCall()->getCaller(); }
@@ -265,16 +152,39 @@ public:
     return getCall()->doesNotThrow() || (F ? F->doesNotThrow() : false);
   }
 
-  size_t arg_size() const { return getCall()->actual_arg_size(); }
-  arg_iterator arg_begin() const { return getCall()->actual_arg_begin(); }
-  arg_iterator arg_end() const { return getCall()->actual_arg_end(); }
-  iterator_range<arg_iterator> call_args() const {
-    return getCall()->actual_args();
+  /// Return the type of the value returned by the call underlying the
+  /// statepoint.
+  Type *getActualReturnType() const {
+    auto *FTy = cast<FunctionType>(
+        cast<PointerType>(getCalledValue()->getType())->getElementType());
+    return FTy->getReturnType();
+  }
+
+  /// Number of arguments to be passed to the actual callee.
+  int getNumCallArgs() const {
+    const Value *NumCallArgsVal = getCall()->getArgOperand(NumCallArgsPos);
+    return cast<ConstantInt>(NumCallArgsVal)->getZExtValue();
+  }
+
+  size_t arg_size() const { return getNumCallArgs(); }
+  arg_iterator arg_begin() const {
+    assert(CallArgsBeginPos <= (int)getCall()->arg_size());
+    return getCall()->arg_begin() + CallArgsBeginPos;
+  }
+  arg_iterator arg_end() const {
+    auto I = arg_begin() + arg_size();
+    assert((getCall()->arg_end() - I) >= 0);
+    return I;
   }
 
   ValueTy *getArgument(unsigned Index) {
     assert(Index < arg_size() && "out of bounds!");
     return *(arg_begin() + Index);
+  }
+
+  /// range adapter for call arguments
+  iterator_range<arg_iterator> call_args() const {
+    return make_range(arg_begin(), arg_end());
   }
 
   /// Return true if the call or the callee has the given attribute.
@@ -328,22 +238,32 @@ public:
     return make_range(deopt_begin(), deopt_end());
   }
 
-  arg_iterator gc_args_begin() const {
-    auto I = getCall()->gc_args_begin();
-    assert(I == deopt_end());
-    return I;
-  }
-  arg_iterator gc_args_end() const { return getCall()->gc_args_end(); }
-  unsigned gcArgsStartIdx() const { return getCall()->gcArgsStartIdx(); }
-  iterator_range<arg_iterator> gc_args() const {
-    return getCall()->gc_args();
+  arg_iterator gc_args_begin() const { return deopt_end(); }
+  arg_iterator gc_args_end() const { return getCall()->arg_end(); }
+
+  unsigned gcArgsStartIdx() const {
+    return gc_args_begin() - getCall()->op_begin();
   }
 
-  std::vector<const GCRelocateInst *> getRelocates() const {
-    return getCall()->getGCRelocates();
+  /// range adapter for gc arguments
+  iterator_range<arg_iterator> gc_args() const {
+    return make_range(gc_args_begin(), gc_args_end());
   }
+
+  /// Get list of all gc reloactes linked to this statepoint
+  /// May contain several relocations for the same base/derived pair.
+  /// For example this could happen due to relocations on unwinding
+  /// path of invoke.
+  std::vector<const GCRelocateInst *> getRelocates() const;
+
+  /// Get the experimental_gc_result call tied to this statepoint.  Can be
+  /// nullptr if there isn't a gc_result tied to this statepoint.  Guaranteed to
+  /// be a CallInst if non-null.
   const GCResultInst *getGCResult() const {
-    return getCall()->getGCResult();
+    for (auto *U : getInstruction()->users())
+      if (auto *GRI = dyn_cast<GCResultInst>(U))
+        return GRI;
+    return nullptr;
   }
 
 #ifndef NDEBUG
@@ -371,9 +291,9 @@ public:
 /// to a gc.statepoint.
 class ImmutableStatepoint
     : public StatepointBase<const Function, const Instruction, const Value,
-                            const GCStatepointInst> {
+                            const CallBase> {
   using Base = StatepointBase<const Function, const Instruction, const Value,
-                              const GCStatepointInst>;
+                              const CallBase>;
 
 public:
   explicit ImmutableStatepoint(const Instruction *I) : Base(I) {}
@@ -383,8 +303,8 @@ public:
 /// A specialization of it's base class for read-write access
 /// to a gc.statepoint.
 class Statepoint
-    : public StatepointBase<Function, Instruction, Value, GCStatepointInst> {
-  using Base = StatepointBase<Function, Instruction, Value, GCStatepointInst>;
+    : public StatepointBase<Function, Instruction, Value, CallBase> {
+  using Base = StatepointBase<Function, Instruction, Value, CallBase>;
 
 public:
   explicit Statepoint(Instruction *I) : Base(I) {}
@@ -413,13 +333,15 @@ public:
   }
 
   /// The statepoint with which this gc.relocate is associated.
-  const GCStatepointInst *getStatepoint() const {
+  const CallBase *getStatepoint() const {
     const Value *Token = getArgOperand(0);
 
     // This takes care both of relocates for call statepoints and relocates
     // on normal path of invoke statepoint.
-    if (!isa<LandingPadInst>(Token))
-      return cast<GCStatepointInst>(Token);
+    if (!isa<LandingPadInst>(Token)) {
+      assert(isStatepoint(Token));
+      return cast<CallBase>(Token);
+    }
 
     // This relocate is on exceptional path of an invoke statepoint
     const BasicBlock *InvokeBB =
@@ -428,8 +350,9 @@ public:
     assert(InvokeBB && "safepoints should have unique landingpads");
     assert(InvokeBB->getTerminator() &&
            "safepoint block should be well formed");
+    assert(isStatepoint(InvokeBB->getTerminator()));
 
-    return cast<GCStatepointInst>(InvokeBB->getTerminator());
+    return cast<CallBase>(InvokeBB->getTerminator());
   }
 };
 
@@ -478,17 +401,21 @@ public:
   }
 };
 
-std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
+template <typename FunTy, typename InstructionTy, typename ValueTy,
+          typename CallBaseTy>
+std::vector<const GCRelocateInst *>
+StatepointBase<FunTy, InstructionTy, ValueTy, CallBaseTy>::getRelocates()
+    const {
   std::vector<const GCRelocateInst *> Result;
 
   // Search for relocated pointers.  Note that working backwards from the
   // gc_relocates ensures that we only get pairs which are actually relocated
   // and used after the statepoint.
-  for (const User *U : users())
+  for (const User *U : StatepointCall->users())
     if (auto *Relocate = dyn_cast<GCRelocateInst>(U))
       Result.push_back(Relocate);
 
-  auto *StatepointInvoke = dyn_cast<InvokeInst>(this);
+  auto *StatepointInvoke = dyn_cast<InvokeInst>(StatepointCall);
   if (!StatepointInvoke)
     return Result;
 

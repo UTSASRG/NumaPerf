@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
-#define LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
+#ifndef liblldb_BreakpointLocationCollection_h_
+#define liblldb_BreakpointLocationCollection_h_
 
 #include <mutex>
 #include <vector>
@@ -175,4 +175,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
+#endif // liblldb_BreakpointLocationCollection_h_

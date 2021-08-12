@@ -1183,22 +1183,21 @@ Init *TernOpInit::Fold(Record *CurRec) const {
       return DefInit::get(Val);
     }
     if (LHSv && MHSv && RHSv) {
-      std::string Val = std::string(RHSv->getName());
+      std::string Val = RHSv->getName();
       if (LHSv->getAsString() == RHSv->getAsString())
-        Val = std::string(MHSv->getName());
+        Val = MHSv->getName();
       return VarInit::get(Val, getType());
     }
     if (LHSs && MHSs && RHSs) {
-      std::string Val = std::string(RHSs->getValue());
+      std::string Val = RHSs->getValue();
 
       std::string::size_type found;
       std::string::size_type idx = 0;
       while (true) {
-        found = Val.find(std::string(LHSs->getValue()), idx);
+        found = Val.find(LHSs->getValue(), idx);
         if (found == std::string::npos)
           break;
-        Val.replace(found, LHSs->getValue().size(),
-                    std::string(MHSs->getValue()));
+        Val.replace(found, LHSs->getValue().size(), MHSs->getValue());
         idx = found + MHSs->getValue().size();
       }
 
@@ -1613,7 +1612,9 @@ RecTy *DefInit::getFieldType(StringInit *FieldName) const {
   return nullptr;
 }
 
-std::string DefInit::getAsString() const { return std::string(Def->getName()); }
+std::string DefInit::getAsString() const {
+  return Def->getName();
+}
 
 static void ProfileVarDefInit(FoldingSetNodeID &ID,
                               Record *Class,
@@ -1776,14 +1777,6 @@ Init *FieldInit::Fold(Record *CurRec) const {
       return FieldVal;
   }
   return const_cast<FieldInit *>(this);
-}
-
-bool FieldInit::isConcrete() const {
-  if (DefInit *DI = dyn_cast<DefInit>(Rec)) {
-    Init *FieldVal = DI->getDef()->getValue(FieldName)->getValue();
-    return FieldVal->isConcrete();
-  }
-  return false;
 }
 
 static void ProfileCondOpInit(FoldingSetNodeID &ID,
@@ -2154,6 +2147,11 @@ void Record::resolveReferences() {
   RecordResolver R(*this);
   R.setFinal(true);
   resolveReferences(R);
+}
+
+void Record::resolveReferencesTo(const RecordVal *RV) {
+  RecordValResolver R(*this, RV);
+  resolveReferences(R, RV);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

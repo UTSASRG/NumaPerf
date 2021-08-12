@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_MODULEDEPENDENCYCOLLECTOR_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_MODULEDEPENDENCYCOLLECTOR_H
+#ifndef liblldb_ModuleDependencyCollector_h_
+#define liblldb_ModuleDependencyCollector_h_
 
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/StringRef.h"

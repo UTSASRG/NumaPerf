@@ -49,11 +49,11 @@ namespace PR9654 {
 namespace AliasTagDef {
   template<typename T>
   T f() {
-    using S = struct { // expected-warning {{add a tag name}} expected-note {{}}
+    using S = struct {
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{alias declarations are a C++11 extension}}
 #endif
-      T g() { // expected-note {{}}
+      T g() {
         return T();
       }
     };

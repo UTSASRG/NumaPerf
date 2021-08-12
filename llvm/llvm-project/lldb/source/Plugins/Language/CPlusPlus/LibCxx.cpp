@@ -1,4 +1,4 @@
-//===-- LibCxx.cpp --------------------------------------------------------===//
+//===-- LibCxx.cpp ----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #include "LibCxx.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/ValueObject.h"
@@ -16,6 +17,7 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/VectorIterator.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -25,7 +27,6 @@
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -144,43 +145,6 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
   return true;
 }
 
-bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
-  if (!valobj_sp)
-    return false;
-
-  ValueObjectSP ptr_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("__ptr_"), true));
-  if (!ptr_sp)
-    return false;
-
-  ptr_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
-  if (!ptr_sp)
-    return false;
-
-  if (ptr_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
-    return true;
-  } else {
-    bool print_pointee = false;
-    Status error;
-    ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-    if (pointee_sp && error.Success()) {
-      if (pointee_sp->DumpPrintableRepresentation(
-              stream, ValueObject::eValueObjectRepresentationStyleSummary,
-              lldb::eFormatInvalid,
-              ValueObject::PrintableRepresentationSpecialCases::eDisable,
-              false))
-        print_pointee = true;
-    }
-    if (!print_pointee)
-      stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
-  }
-
-  return true;
-}
-
 /*
  (lldb) fr var ibeg --raw --ptr-depth 1
  (std::__1::__map_iterator<std::__1::__tree_iterator<std::__1::pair<int,
@@ -277,8 +241,8 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
       m_pair_ptr = nullptr;
       if (addr && addr != LLDB_INVALID_ADDRESS) {
-        TypeSystemClang *ast_ctx =
-            llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
+        ClangASTContext *ast_ctx =
+            llvm::dyn_cast_or_null<ClangASTContext>(pair_type.GetTypeSystem());
         if (!ast_ctx)
           return false;
         CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
@@ -486,67 +450,6 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator(
                     : nullptr);
 }
 
-lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_compressed_pair_sp() {
-  if (valobj_sp)
-    Update();
-}
-
-lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    ~LibcxxUniquePtrSyntheticFrontEnd() = default;
-
-SyntheticChildrenFrontEnd *
-lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
-    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return (valobj_sp ? new LibcxxUniquePtrSyntheticFrontEnd(valobj_sp)
-                    : nullptr);
-}
-
-size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    CalculateNumChildren() {
-  return (m_compressed_pair_sp ? 1 : 0);
-}
-
-lldb::ValueObjectSP
-lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
-  if (!m_compressed_pair_sp)
-    return lldb::ValueObjectSP();
-
-  if (idx != 0)
-    return lldb::ValueObjectSP();
-
-  return m_compressed_pair_sp;
-}
-
-bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
-  ValueObjectSP valobj_sp = m_backend.GetSP();
-  if (!valobj_sp)
-    return false;
-
-  ValueObjectSP ptr_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("__ptr_"), true));
-  if (!ptr_sp)
-    return false;
-
-  m_compressed_pair_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
-
-  return false;
-}
-
-bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  if (name == "__value_")
-    return 0;
-  return UINT32_MAX;
-}
-
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   if (valobj.IsPointerType()) {
@@ -566,20 +469,22 @@ enum LibcxxStringLayoutMode {
   eLibcxxStringLayoutModeInvalid = 0xffff
 };
 
-/// Determine the size in bytes of \p valobj (a libc++ std::string object) and
-/// extract its data payload. Return the size + payload pair.
-static llvm::Optional<std::pair<uint64_t, ValueObjectSP>>
-ExtractLibcxxStringInfo(ValueObject &valobj) {
+// this function abstracts away the layout and mode details of a libc++ string
+// and returns the address of the data and the size ready for callers to
+// consume
+static bool ExtractLibcxxStringInfo(ValueObject &valobj,
+                                    ValueObjectSP &location_sp,
+                                    uint64_t &size) {
   ValueObjectSP D(valobj.GetChildAtIndexPath({0, 0, 0, 0}));
   if (!D)
-    return {};
+    return false;
 
   ValueObjectSP layout_decider(
     D->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
 
   // this child should exist
   if (!layout_decider)
-    return {};
+    return false;
 
   ConstString g_data_name("__data_");
   ConstString g_size_name("__size_");
@@ -593,13 +498,13 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   if (layout == eLibcxxStringLayoutModeDSC) {
     ValueObjectSP size_mode(D->GetChildAtIndexPath({1, 1, 0}));
     if (!size_mode)
-      return {};
+      return false;
 
     if (size_mode->GetName() != g_size_name) {
       // we are hitting the padding structure, move along
       size_mode = D->GetChildAtIndexPath({1, 1, 1});
       if (!size_mode)
-        return {};
+        return false;
     }
 
     size_mode_value = (size_mode->GetValueAsUnsigned(0));
@@ -607,7 +512,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   } else {
     ValueObjectSP size_mode(D->GetChildAtIndexPath({1, 0, 0}));
     if (!size_mode)
-      return {};
+      return false;
 
     size_mode_value = (size_mode->GetValueAsUnsigned(0));
     short_mode = ((size_mode_value & 1) == 0);
@@ -616,58 +521,36 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   if (short_mode) {
     ValueObjectSP s(D->GetChildAtIndex(1, true));
     if (!s)
-      return {};
-    ValueObjectSP location_sp = s->GetChildAtIndex(
+      return false;
+    location_sp = s->GetChildAtIndex(
         (layout == eLibcxxStringLayoutModeDSC) ? 0 : 1, true);
-    const uint64_t size = (layout == eLibcxxStringLayoutModeDSC)
-                              ? size_mode_value
-                              : ((size_mode_value >> 1) % 256);
-
-    // When the small-string optimization takes place, the data must fit in the
-    // inline string buffer (23 bytes on x86_64/Darwin). If it doesn't, it's
-    // likely that the string isn't initialized and we're reading garbage.
-    ExecutionContext exe_ctx(location_sp->GetExecutionContextRef());
-    const llvm::Optional<uint64_t> max_bytes =
-        location_sp->GetCompilerType().GetByteSize(
-            exe_ctx.GetBestExecutionContextScope());
-    if (!max_bytes || size > *max_bytes || !location_sp)
-      return {};
-
-    return std::make_pair(size, location_sp);
+    size = (layout == eLibcxxStringLayoutModeDSC)
+               ? size_mode_value
+               : ((size_mode_value >> 1) % 256);
+    return (location_sp.get() != nullptr);
+  } else {
+    ValueObjectSP l(D->GetChildAtIndex(0, true));
+    if (!l)
+      return false;
+    // we can use the layout_decider object as the data pointer
+    location_sp = (layout == eLibcxxStringLayoutModeDSC)
+                      ? layout_decider
+                      : l->GetChildAtIndex(2, true);
+    ValueObjectSP size_vo(l->GetChildAtIndex(1, true));
+    if (!size_vo || !location_sp)
+      return false;
+    size = size_vo->GetValueAsUnsigned(0);
+    return true;
   }
-
-  ValueObjectSP l(D->GetChildAtIndex(0, true));
-  if (!l)
-    return {};
-  // we can use the layout_decider object as the data pointer
-  ValueObjectSP location_sp = (layout == eLibcxxStringLayoutModeDSC)
-                                  ? layout_decider
-                                  : l->GetChildAtIndex(2, true);
-  ValueObjectSP size_vo(l->GetChildAtIndex(1, true));
-  const unsigned capacity_index =
-      (layout == eLibcxxStringLayoutModeDSC) ? 2 : 0;
-  ValueObjectSP capacity_vo(l->GetChildAtIndex(capacity_index, true));
-  if (!size_vo || !location_sp || !capacity_vo)
-    return {};
-  const uint64_t size = size_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);
-  const uint64_t capacity =
-      capacity_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);
-  if (size == LLDB_INVALID_OFFSET || capacity == LLDB_INVALID_OFFSET ||
-      capacity < size)
-    return {};
-  return std::make_pair(size, location_sp);
 }
 
 bool lldb_private::formatters::LibcxxWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
-  auto string_info = ExtractLibcxxStringInfo(valobj);
-  if (!string_info)
-    return false;
-  uint64_t size;
+  uint64_t size = 0;
   ValueObjectSP location_sp;
-  std::tie(size, location_sp) = *string_info;
-
+  if (!ExtractLibcxxStringInfo(valobj, location_sp, size))
+    return false;
   if (size == 0) {
     stream.Printf("L\"\"");
     return true;
@@ -675,8 +558,10 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
   if (!location_sp)
     return false;
 
+  DataExtractor extractor;
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
+
   if (summary_options.GetCapping() == TypeSummaryCapping::eTypeSummaryCapped) {
     const auto max_size = valobj.GetTargetSP()->GetMaximumSizeOfStringSummary();
     if (size > max_size) {
@@ -684,15 +569,11 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
       options.SetIsTruncated(true);
     }
   }
-
-  DataExtractor extractor;
-  const size_t bytes_read = location_sp->GetPointeeData(extractor, 0, size);
-  if (bytes_read < size)
-    return false;
+  location_sp->GetPointeeData(extractor, 0, size);
 
   // std::wstring::size() is measured in 'characters', not bytes
-  TypeSystemClang *ast_context =
-      TypeSystemClang::GetScratch(*valobj.GetTargetSP());
+  ClangASTContext *ast_context =
+      ClangASTContext::GetScratch(*valobj.GetTargetSP());
   if (!ast_context)
     return false;
 
@@ -710,35 +591,40 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
 
   switch (*wchar_t_size) {
   case 1:
-    return StringPrinter::ReadBufferAndDumpToStream<
+    StringPrinter::ReadBufferAndDumpToStream<
         lldb_private::formatters::StringPrinter::StringElementType::UTF8>(
         options);
     break;
 
   case 2:
-    return StringPrinter::ReadBufferAndDumpToStream<
+    lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStream<
         lldb_private::formatters::StringPrinter::StringElementType::UTF16>(
         options);
     break;
 
   case 4:
-    return StringPrinter::ReadBufferAndDumpToStream<
+    lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStream<
         lldb_private::formatters::StringPrinter::StringElementType::UTF32>(
         options);
+    break;
+
+  default:
+    stream.Printf("size for wchar_t is not valid");
+    return true;
   }
-  return false;
+
+  return true;
 }
 
 template <StringPrinter::StringElementType element_type>
 bool LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
                                  const TypeSummaryOptions &summary_options,
-                                 std::string prefix_token) {
-  auto string_info = ExtractLibcxxStringInfo(valobj);
-  if (!string_info)
-    return false;
-  uint64_t size;
+                                 std::string prefix_token = "") {
+  uint64_t size = 0;
   ValueObjectSP location_sp;
-  std::tie(size, location_sp) = *string_info;
+
+  if (!ExtractLibcxxStringInfo(valobj, location_sp, size))
+    return false;
 
   if (size == 0) {
     stream.Printf("\"\"");
@@ -750,6 +636,7 @@ bool LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
 
+  DataExtractor extractor;
   if (summary_options.GetCapping() == TypeSummaryCapping::eTypeSummaryCapped) {
     const auto max_size = valobj.GetTargetSP()->GetMaximumSizeOfStringSummary();
     if (size > max_size) {
@@ -757,55 +644,41 @@ bool LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
       options.SetIsTruncated(true);
     }
   }
-
-  DataExtractor extractor;
-  const size_t bytes_read = location_sp->GetPointeeData(extractor, 0, size);
-  if (bytes_read < size)
-    return false;
+  location_sp->GetPointeeData(extractor, 0, size);
 
   options.SetData(extractor);
   options.SetStream(&stream);
+
   if (prefix_token.empty())
     options.SetPrefixToken(nullptr);
   else
     options.SetPrefixToken(prefix_token);
+
   options.SetQuote('"');
   options.SetSourceSize(size);
   options.SetBinaryZeroIsTerminator(false);
-  return StringPrinter::ReadBufferAndDumpToStream<element_type>(options);
-}
+  StringPrinter::ReadBufferAndDumpToStream<element_type>(options);
 
-template <StringPrinter::StringElementType element_type>
-static bool formatStringImpl(ValueObject &valobj, Stream &stream,
-                             const TypeSummaryOptions &summary_options,
-                             std::string prefix_token) {
-  StreamString scratch_stream;
-  const bool success = LibcxxStringSummaryProvider<element_type>(
-      valobj, scratch_stream, summary_options, prefix_token);
-  if (success)
-    stream << scratch_stream.GetData();
-  else
-    stream << "Summary Unavailable";
   return true;
 }
 
 bool lldb_private::formatters::LibcxxStringSummaryProviderASCII(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
-  return formatStringImpl<StringPrinter::StringElementType::ASCII>(
-      valobj, stream, summary_options, "");
+  return LibcxxStringSummaryProvider<StringPrinter::StringElementType::ASCII>(
+      valobj, stream, summary_options);
 }
 
 bool lldb_private::formatters::LibcxxStringSummaryProviderUTF16(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
-  return formatStringImpl<StringPrinter::StringElementType::UTF16>(
+  return LibcxxStringSummaryProvider<StringPrinter::StringElementType::UTF16>(
       valobj, stream, summary_options, "u");
 }
 
 bool lldb_private::formatters::LibcxxStringSummaryProviderUTF32(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
-  return formatStringImpl<StringPrinter::StringElementType::UTF32>(
+  return LibcxxStringSummaryProvider<StringPrinter::StringElementType::UTF32>(
       valobj, stream, summary_options, "U");
 }

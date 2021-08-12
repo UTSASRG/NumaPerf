@@ -1,4 +1,4 @@
-//===-- TypeFormat.cpp ----------------------------------------------------===//
+//===-- TypeFormat.cpp ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -60,7 +60,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
         DumpDataExtractor(data, &reg_sstr, 0, GetFormat(), reg_info->byte_size,
                           1, UINT32_MAX, LLDB_INVALID_ADDRESS, 0, 0,
                           exe_ctx.GetBestExecutionContextScope());
-        dest = std::string(reg_sstr.GetString());
+        dest = reg_sstr.GetString();
       }
     } else {
       CompilerType compiler_type = value.GetCompilerType();
@@ -114,7 +114,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
         // here, but that's about as severe as we get
         // CompilerType::DumpTypeValue() should always return something, even
         // if that something is an error message
-        dest = std::string(sstr.GetString());
+        dest = sstr.GetString();
       }
     }
     return !dest.empty();
@@ -128,7 +128,7 @@ std::string TypeFormatImpl_Format::GetDescription() {
               Cascades() ? "" : " (not cascading)",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "");
-  return std::string(sstr.GetString());
+  return sstr.GetString();
 }
 
 TypeFormatImpl_EnumType::TypeFormatImpl_EnumType(
@@ -191,7 +191,7 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
                                  data.GetByteSize(), 0, 0,
                                  exe_ctx.GetBestExecutionContextScope());
   if (!sstr.GetString().empty())
-    dest = std::string(sstr.GetString());
+    dest = sstr.GetString();
   return !dest.empty();
 }
 
@@ -201,5 +201,5 @@ std::string TypeFormatImpl_EnumType::GetDescription() {
               Cascades() ? "" : " (not cascading)",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "");
-  return std::string(sstr.GetString());
+  return sstr.GetString();
 }

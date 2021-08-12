@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_DATAENCODER_H
-#define LLDB_UTILITY_DATAENCODER_H
+#ifndef liblldb_DataEncoder_h_
+#define liblldb_DataEncoder_h_
 
 #if defined(__cplusplus)
 
@@ -243,11 +243,10 @@ private:
   /// be shared among multiple instances
   mutable lldb::DataBufferSP m_data_sp;
 
-  DataEncoder(const DataEncoder &) = delete;
-  const DataEncoder &operator=(const DataEncoder &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DataEncoder);
 };
 
 } // namespace lldb_private
 
 #endif // #if defined (__cplusplus)
-#endif // LLDB_UTILITY_DATAENCODER_H
+#endif // #ifndef liblldb_DataEncoder_h_

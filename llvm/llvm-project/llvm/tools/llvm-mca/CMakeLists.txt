@@ -1,6 +1,7 @@
 include_directories(include)
 
 set(LLVM_LINK_COMPONENTS
+  AllTargetsAsmPrinters
   AllTargetsAsmParsers
   AllTargetsDescs
   AllTargetsDisassemblers

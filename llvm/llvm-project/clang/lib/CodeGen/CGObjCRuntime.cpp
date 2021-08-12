@@ -13,15 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGObjCRuntime.h"
-#include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGCXXABI.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/CodeGen/CodeGenABITypes.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -212,7 +211,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
         CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
     }
 
-
+  
   // Emit the try body.
   CGF.EmitStmt(S.getTryBody());
 
@@ -272,7 +271,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     cleanups.ForceCleanup();
 
     CGF.EmitBranchThroughCleanup(Cont);
-  }
+  }  
 
   // Go back to the try-statement fallthrough.
   CGF.Builder.restoreIP(SavedIP);
@@ -383,10 +382,4 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   llvm::PointerType *signatureType =
     CGM.getTypes().GetFunctionType(argsInfo)->getPointerTo();
   return MessageSendInfo(argsInfo, signatureType);
-}
-
-llvm::Constant *
-clang::CodeGen::emitObjCProtocolObject(CodeGenModule &CGM,
-                                       const ObjCProtocolDecl *protocol) {
-  return CGM.getObjCRuntime().GetOrEmitProtocol(protocol);
 }

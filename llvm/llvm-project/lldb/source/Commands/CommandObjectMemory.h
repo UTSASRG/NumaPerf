@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTMEMORY_H
-#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTMEMORY_H
+#ifndef liblldb_CommandObjectMemory_h_
+#define liblldb_CommandObjectMemory_h_
 
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
@@ -22,4 +22,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTMEMORY_H
+#endif // liblldb_CommandObjectMemory_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
-#define LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
+#ifndef liblldb_ObjectFilePECOFF_h_
+#define liblldb_ObjectFilePECOFF_h_
 
 #include <vector>
 
@@ -306,4 +306,4 @@ private:
   lldb_private::UUID m_uuid;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
+#endif // liblldb_ObjectFilePECOFF_h_

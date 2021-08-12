@@ -75,8 +75,6 @@ public:
   }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
-
-  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

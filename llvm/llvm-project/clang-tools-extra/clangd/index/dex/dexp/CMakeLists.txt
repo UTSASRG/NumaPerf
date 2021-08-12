@@ -1,5 +1,4 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../../../)
 
 set(LLVM_LINK_COMPONENTS
   LineEditor
@@ -17,5 +16,4 @@ clang_target_link_libraries(dexp
 target_link_libraries(dexp
   PRIVATE
   clangDaemon
-  clangdRemoteIndex
   )

@@ -85,7 +85,7 @@ class RISCVCompressInstEmitter {
     MapKind Kind;
     union {
       unsigned Operand; // Operand number mapped to.
-      int64_t Imm;      // Integer immediate value.
+      uint64_t Imm;     // Integer immediate value.
       Record *Reg;      // Physical register.
     } Data;
     int TiedOpIdx = -1; // Tied operand index within the instruction.
@@ -141,7 +141,7 @@ bool RISCVCompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
   assert(Reg->isSubClassOf("Register") && "Reg record should be a Register\n");
   assert(RegClass->isSubClassOf("RegisterClass") && "RegClass record should be"
                                                     " a RegisterClass\n");
-  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass);
+  CodeGenRegisterClass RC = Target.getRegisterClass(RegClass);
   const CodeGenRegister *R = Target.getRegisterByName(Reg->getName().lower());
   assert((R != nullptr) &&
          ("Register" + Reg->getName().str() + " not defined!!\n").c_str());
@@ -160,8 +160,8 @@ bool RISCVCompressInstEmitter::validateTypes(Record *DagOpType,
 
   if (DagOpType->isSubClassOf("RegisterClass") &&
       InstOpType->isSubClassOf("RegisterClass")) {
-    const CodeGenRegisterClass &RC = Target.getRegisterClass(InstOpType);
-    const CodeGenRegisterClass &SubRC = Target.getRegisterClass(DagOpType);
+    CodeGenRegisterClass RC = Target.getRegisterClass(InstOpType);
+    CodeGenRegisterClass SubRC = Target.getRegisterClass(DagOpType);
     return RC.hasSubClass(&SubRC);
   }
 
@@ -474,40 +474,19 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
                                          SourceOperandMap, DestOperandMap));
 }
 
-static void
-getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
-               std::set<std::set<std::pair<bool, StringRef>>> &AnyOfFeatureSets,
-               const std::vector<Record *> &ReqFeatures) {
+static void getReqFeatures(std::set<StringRef> &FeaturesSet,
+                           const std::vector<Record *> &ReqFeatures) {
   for (auto &R : ReqFeatures) {
-    const DagInit *D = R->getValueAsDag("AssemblerCondDag");
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-    std::set<std::pair<bool, StringRef>> AnyOfSet;
+    StringRef AsmCondString = R->getValueAsString("AssemblerCondString");
 
-    for (auto *Arg : D->getArgs()) {
-      bool IsNot = false;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        IsNot = true;
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-      if (IsOr)
-        AnyOfSet.insert({IsNot, cast<DefInit>(Arg)->getDef()->getName()});
-      else
-        FeaturesSet.insert({IsNot, cast<DefInit>(Arg)->getDef()->getName()});
+    // AsmCondString has syntax [!]F(,[!]F)*
+    SmallVector<StringRef, 4> Ops;
+    SplitString(AsmCondString, Ops, ",");
+    assert(!Ops.empty() && "AssemblerCondString cannot be empty");
+    for (auto &Op : Ops) {
+      assert(!Op.empty() && "Empty operator");
+      FeaturesSet.insert(Op);
     }
-
-    if (IsOr)
-      AnyOfFeatureSets.insert(AnyOfSet);
   }
 }
 
@@ -568,7 +547,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                     "'PassSubtarget' is false. SubTargetInfo object is needed "
                     "for target features.\n");
 
-  std::string Namespace = std::string(Target.getName());
+  std::string Namespace = Target.getName();
 
   // Sort entries in CompressPatterns to handle instructions that can have more
   // than one candidate for compression\uncompression, e.g ADD can be
@@ -672,10 +651,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       CaseStream.indent(4) << "case " + Namespace + "::" + CurOp + ": {\n";
     }
 
-    std::set<std::pair<bool, StringRef>> FeaturesSet;
-    std::set<std::set<std::pair<bool, StringRef>>> AnyOfFeatureSets;
+    std::set<StringRef> FeaturesSet;
     // Add CompressPat required features.
-    getReqFeatures(FeaturesSet, AnyOfFeatureSets, CompressPat.PatReqFeatures);
+    getReqFeatures(FeaturesSet, CompressPat.PatReqFeatures);
 
     // Add Dest instruction required features.
     std::vector<Record *> ReqFeatures;
@@ -683,28 +661,19 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     copy_if(RF, std::back_inserter(ReqFeatures), [](Record *R) {
       return R->getValueAsBit("AssemblerMatcherPredicate");
     });
-    getReqFeatures(FeaturesSet, AnyOfFeatureSets, ReqFeatures);
+    getReqFeatures(FeaturesSet, ReqFeatures);
 
     // Emit checks for all required features.
     for (auto &Op : FeaturesSet) {
-      StringRef Not = Op.first ? "!" : "";
-      CondStream.indent(6)
-          << Not << ("STI.getFeatureBits()[" + Namespace + "::" + Op.second + "]").str() +
-                  " &&\n";
-    }
-
-    // Emit checks for all required feature groups.
-    for (auto &Set : AnyOfFeatureSets) {
-      CondStream.indent(6) << "(";
-      for (auto &Op : Set) {
-        bool isLast = &Op == &*Set.rbegin();
-        StringRef Not = Op.first ? "!" : "";
-        CondStream << Not << ("STI.getFeatureBits()[" + Namespace + "::" + Op.second +
-                          "]").str();
-        if (!isLast)
-          CondStream << " || ";
-      }
-      CondStream << ") &&\n";
+      if (Op[0] == '!')
+        CondStream.indent(6) << ("!STI.getFeatureBits()[" + Namespace +
+                                 "::" + Op.substr(1) + "]")
+                                        .str() +
+                                    " &&\n";
+      else
+        CondStream.indent(6)
+            << ("STI.getFeatureBits()[" + Namespace + "::" + Op + "]").str() +
+                   " &&\n";
     }
 
     // Start Source Inst operands validation.

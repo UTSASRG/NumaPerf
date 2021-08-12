@@ -65,7 +65,15 @@ define i32 @sdiv32(i32 %a, i32 %b) {
 ; Unsigned 64-bit division
 define i64 @udiv64(i64 %a, i64 %b) {
 ; CHECK-LABEL: udiv64:
-; CHECK: call __udivdi3
+; CHECK: call __udivmoddi4
+; CHECK-NEXT: ldd r18, Y+1
+; CHECK-NEXT: ldd r19, Y+2
+; CHECK-NEXT: ldd r20, Y+3
+; CHECK-NEXT: ldd r21, Y+4
+; CHECK-NEXT: ldd r22, Y+5
+; CHECK-NEXT: ldd r23, Y+6
+; CHECK-NEXT: ldd r24, Y+7
+; CHECK-NEXT: ldd r25, Y+8
 ; CHECK: ret
   %quot = udiv i64 %a, %b
   ret i64 %quot
@@ -74,7 +82,15 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; Signed 64-bit division
 define i64 @sdiv64(i64 %a, i64 %b) {
 ; CHECK-LABEL: sdiv64:
-; CHECK: call __divdi3
+; CHECK: call __divmoddi4
+; CHECK-NEXT: ldd r18, Y+1
+; CHECK-NEXT: ldd r19, Y+2
+; CHECK-NEXT: ldd r20, Y+3
+; CHECK-NEXT: ldd r21, Y+4
+; CHECK-NEXT: ldd r22, Y+5
+; CHECK-NEXT: ldd r23, Y+6
+; CHECK-NEXT: ldd r24, Y+7
+; CHECK-NEXT: ldd r25, Y+8
 ; CHECK: ret
   %quot = sdiv i64 %a, %b
   ret i64 %quot
@@ -83,7 +99,7 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; Unsigned 128-bit division
 define i128 @udiv128(i128 %a, i128 %b) {
 ; CHECK-LABEL: udiv128:
-; CHECK: call __udivti3
+; CHECK: call __udivmodti4
 ; CHECK: ret
   %quot = udiv i128 %a, %b
   ret i128 %quot
@@ -92,7 +108,7 @@ define i128 @udiv128(i128 %a, i128 %b) {
 ; Signed 128-bit division
 define i128 @sdiv128(i128 %a, i128 %b) {
 ; CHECK-LABEL: sdiv128:
-; CHECK: call __divti3
+; CHECK: call __divmodti4
 ; CHECK: ret
   %quot = sdiv i128 %a, %b
   ret i128 %quot

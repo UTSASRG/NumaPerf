@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++98, c++03
 
 // <filesystem>
 
@@ -31,8 +31,7 @@ TEST_SUITE(recursive_directory_iterator_disable_recursion_pending_tests)
 // in the 'recursion_pending()' tests.
 TEST_CASE(basic_test)
 {
-    static_test_env static_env;
-    recursive_directory_iterator it(static_env.Dir);
+    recursive_directory_iterator it(StaticEnv::Dir);
     TEST_REQUIRE(it.recursion_pending() == true);
     it.disable_recursion_pending();
     TEST_CHECK(it.recursion_pending() == false);

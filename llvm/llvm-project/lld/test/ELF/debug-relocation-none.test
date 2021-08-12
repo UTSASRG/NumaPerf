@@ -28,7 +28,8 @@ Sections:
     Link:            .symtab
     Info:            .text
     Relocations:
-      - Symbol:          bar
+      - Offset:          0x0000000000000000
+        Symbol:          bar
         Type:            R_X86_64_64
   - Name:            .debug_line
     Type:            SHT_PROGBITS

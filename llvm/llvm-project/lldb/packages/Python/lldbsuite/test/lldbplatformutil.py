@@ -57,7 +57,7 @@ def _run_adb_command(cmd, device_id):
 
 def target_is_android():
     if not hasattr(target_is_android, 'result'):
-        triple = lldb.selected_platform.GetTriple()
+        triple = lldb.DBG.GetSelectedPlatform().GetTriple()
         match = re.match(".*-.*-.*-android", triple)
         target_is_android.result = match is not None
     return target_is_android.result
@@ -129,7 +129,7 @@ def getDarwinOSTriples():
 
 def getPlatform():
     """Returns the target platform which the tests are running on."""
-    triple = lldb.selected_platform.GetTriple()
+    triple = lldb.DBG.GetSelectedPlatform().GetTriple()
     if triple is None:
       # It might be an unconnected remote platform.
       return ''
@@ -166,20 +166,19 @@ def findMainThreadCheckerDylib():
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
 
-    def __init__(self, shlib_environment_var, shlib_path_separator, shlib_prefix, shlib_extension):
+    def __init__(self, shlib_environment_var, shlib_prefix, shlib_extension):
         self.shlib_environment_var = shlib_environment_var
-        self.shlib_path_separator = shlib_path_separator
         self.shlib_prefix = shlib_prefix
         self.shlib_extension = shlib_extension
 
 
 def createPlatformContext():
     if platformIsDarwin():
-        return _PlatformContext('DYLD_LIBRARY_PATH', ':', 'lib', 'dylib')
+        return _PlatformContext('DYLD_LIBRARY_PATH', 'lib', 'dylib')
     elif getPlatform() in ("freebsd", "linux", "netbsd"):
-        return _PlatformContext('LD_LIBRARY_PATH', ':', 'lib', 'so')
+        return _PlatformContext('LD_LIBRARY_PATH', 'lib', 'so')
     else:
-        return _PlatformContext('PATH', ';', '', 'dll')
+        return None
 
 
 def hasChattyStderr(test_case):

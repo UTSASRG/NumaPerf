@@ -8,7 +8,6 @@
 
 #include "Transforms.h"
 #include "Internals.h"
-#include "clang/ARCMigrate/ARCMT.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"

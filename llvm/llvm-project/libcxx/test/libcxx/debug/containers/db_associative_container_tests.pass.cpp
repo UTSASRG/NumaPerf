@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: windows
 // UNSUPPORTED: libcpp-no-if-constexpr
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// MODULES_DEFINES: _LIBCPP_DEBUG=1
 
 // Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
+// UNSUPPORTED: with_system_cxx_lib
 
 // test container debugging
+
+#define _LIBCPP_DEBUG 1
 
 #include <map>
 #include <set>

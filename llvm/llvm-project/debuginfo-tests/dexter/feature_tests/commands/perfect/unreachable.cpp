@@ -2,9 +2,11 @@
 //    Check that \DexUnreachable has no effect if the command line is never
 //    stepped on.
 //
-// UNSUPPORTED: system-darwin
+// REQUIRES: system-linux, lldb
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_base test --fail-lt 1.0 -w \
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
+// RUN:     | FileCheck %s
 // CHECK: unreachable.cpp:
 
 int main()

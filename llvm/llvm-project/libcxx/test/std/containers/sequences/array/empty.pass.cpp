@@ -10,45 +10,28 @@
 
 // class array
 
-// constexpr bool empty() const noexcept;
+// bool empty() const noexcept;
 
 #include <array>
 #include <cassert>
 
 #include "test_macros.h"
-
-TEST_CONSTEXPR_CXX14 bool tests()
-{
-    {
-        typedef std::array<int, 2> C;
-        C c = {};
-        ASSERT_NOEXCEPT(c.empty());
-        assert(!c.empty());
-    }
-    {
-        typedef std::array<int, 0> C;
-        C c = {};
-        ASSERT_NOEXCEPT(c.empty());
-        assert(c.empty());
-    }
-
-    return true;
-}
+#include "min_allocator.h"
 
 int main(int, char**)
 {
-    tests();
-#if TEST_STD_VER >= 14
-    static_assert(tests(), "");
-#endif
-
-#if TEST_STD_VER >= 11
-    // Sanity check for constexpr in C++11
     {
-        constexpr std::array<int, 3> array = {};
-        static_assert(!array.empty(), "");
+    typedef std::array<int, 2> C;
+    C c;
+    ASSERT_NOEXCEPT(c.empty());
+    assert(!c.empty());
     }
-#endif
+    {
+    typedef std::array<int, 0> C;
+    C c;
+    ASSERT_NOEXCEPT(c.empty());
+    assert( c.empty());
+    }
 
-    return 0;
+  return 0;
 }

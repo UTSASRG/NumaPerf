@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_VSCODE_SOURCEREFERENCE_H
-#define LLDB_TOOLS_LLDB_VSCODE_SOURCEREFERENCE_H
+#ifndef LLDBVSCODE_SOURCEREFERENCE_H_
+#define LLDBVSCODE_SOURCEREFERENCE_H_
 
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"

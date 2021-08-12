@@ -203,10 +203,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
   };
   std::set<CopyHint> CopyHints;
 
-  for (MachineRegisterInfo::reg_instr_nodbg_iterator
-           I = mri.reg_instr_nodbg_begin(li.reg),
-           E = mri.reg_instr_nodbg_end();
-       I != E;) {
+  for (MachineRegisterInfo::reg_instr_iterator
+       I = mri.reg_instr_begin(li.reg), E = mri.reg_instr_end();
+       I != E; ) {
     MachineInstr *mi = &*(I++);
 
     // For local split artifacts, we are interested only in instructions between
@@ -216,7 +215,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
       continue;
 
     numInstr++;
-    if (mi->isIdentityCopy() || mi->isImplicitDef())
+    if (mi->isIdentityCopy() || mi->isImplicitDef() || mi->isDebugInstr())
       continue;
     if (!visited.insert(mi).second)
       continue;

@@ -29,7 +29,7 @@ std::string createQualifiedNameForReplacement(
   // No need to add missing qualifiers if SymbolIdentifier has a global scope
   // operator "::".
   if (RawSymbolName.startswith("::"))
-    return std::string(RawSymbolName);
+    return RawSymbolName;
 
   std::string QualifiedName = MatchedSymbol.getQualifiedName();
 

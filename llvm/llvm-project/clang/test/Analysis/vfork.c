@@ -6,7 +6,7 @@
 void foo();
 
 // Ensure that child process is properly checked.
-int f1(int x, int y) {
+int f1(int x) {
   pid_t pid = vfork(); // expected-warning{{Call to function 'vfork' is insecure}}
   if (pid != 0)
     return 0;
@@ -16,29 +16,7 @@ int f1(int x, int y) {
     // Ensure that modifying pid is ok.
     pid = 1; // no-warning
     // Ensure that calling whitelisted routines is ok.
-    switch (y) {
-    case 0:
-      execl("", "", 0); // no-warning
-      break;
-    case 1:
-      execle("", "", 0); // no-warning
-      break;
-    case 2:
-      execlp("", "", 0); // no-warning
-      break;
-    case 3:
-      execv("", NULL); // no-warning
-      break;
-    case 4:
-      execve("", NULL, NULL); // no-warning
-      break;
-    case 5:
-      execvp("", NULL); // no-warning
-      break;
-    case 6:
-      execvpe("", NULL, NULL); // no-warning
-      break;
-    }
+    execl("", "", 0); // no-warning
     _exit(1); // no-warning
     break;
   case 1:

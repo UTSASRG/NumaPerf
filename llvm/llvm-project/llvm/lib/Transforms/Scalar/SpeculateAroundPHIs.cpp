@@ -67,8 +67,8 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
       return false;
     }
 
-    if (const auto *CS = dyn_cast<CallBase>(UI)) {
-      if (CS->isConvergent() || CS->cannotDuplicate()) {
+    if (auto CS = ImmutableCallSite(UI)) {
+      if (CS.isConvergent() || CS.cannotDuplicate()) {
         LLVM_DEBUG(dbgs() << "  Unsafe: convergent "
                    "callsite cannot de duplicated: " << *UI << '\n');
         return false;
@@ -232,8 +232,7 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
       continue;
 
     int &MatCost = InsertResult.first->second.MatCost;
-    MatCost = TTI.getIntImmCost(IncomingC->getValue(), IncomingC->getType(),
-                                TargetTransformInfo::TCK_SizeAndLatency);
+    MatCost = TTI.getIntImmCost(IncomingC->getValue(), IncomingC->getType());
     NonFreeMat |= MatCost != TTI.TCC_Free;
   }
   if (!NonFreeMat) {
@@ -284,15 +283,12 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
       int MatCost = IncomingConstantAndCostsAndCount.second.MatCost;
       int &FoldedCost = IncomingConstantAndCostsAndCount.second.FoldedCost;
       if (IID)
-        FoldedCost +=
-          TTI.getIntImmCostIntrin(IID, Idx, IncomingC->getValue(),
-                                  IncomingC->getType(),
-                                  TargetTransformInfo::TCK_SizeAndLatency);
+        FoldedCost += TTI.getIntImmCostIntrin(IID, Idx, IncomingC->getValue(),
+                                              IncomingC->getType());
       else
         FoldedCost +=
             TTI.getIntImmCostInst(UserI->getOpcode(), Idx,
-                                  IncomingC->getValue(), IncomingC->getType(),
-                                  TargetTransformInfo::TCK_SizeAndLatency);
+                                  IncomingC->getValue(), IncomingC->getType());
 
       // If we accumulate more folded cost for this incoming constant than
       // materialized cost, then we'll regress any edge with this constant so
@@ -469,7 +465,7 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
             if (CostMapIt != SpecCostMap.end())
               Cost += CostMapIt->second;
           }
-        Cost += TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
+        Cost += TTI.getUserCost(I);
         bool Inserted = SpecCostMap.insert({I, Cost}).second;
         (void)Inserted;
         assert(Inserted && "Must not re-insert a cost during the DFS!");

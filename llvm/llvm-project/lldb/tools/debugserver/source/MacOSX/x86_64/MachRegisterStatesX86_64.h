@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_X86_64_MACHREGISTERSTATESX86_64_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_X86_64_MACHREGISTERSTATESX86_64_H
+#ifndef __MachRegisterStatesX86_64_h__
+#define __MachRegisterStatesX86_64_h__
 
 #include <inttypes.h>
 

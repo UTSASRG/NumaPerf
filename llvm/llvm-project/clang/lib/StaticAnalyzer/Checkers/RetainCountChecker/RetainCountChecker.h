@@ -251,20 +251,20 @@ class RetainCountChecker
                     eval::Assume,
                     eval::Call > {
 
-public:
-  std::unique_ptr<RefCountBug> UseAfterRelease;
-  std::unique_ptr<RefCountBug> ReleaseNotOwned;
-  std::unique_ptr<RefCountBug> DeallocNotOwned;
-  std::unique_ptr<RefCountBug> FreeNotOwned;
-  std::unique_ptr<RefCountBug> OverAutorelease;
-  std::unique_ptr<RefCountBug> ReturnNotOwnedForOwned;
-  std::unique_ptr<RefCountBug> LeakWithinFunction;
-  std::unique_ptr<RefCountBug> LeakAtReturn;
+  RefCountBug useAfterRelease{this, RefCountBug::UseAfterRelease};
+  RefCountBug releaseNotOwned{this, RefCountBug::ReleaseNotOwned};
+  RefCountBug deallocNotOwned{this, RefCountBug::DeallocNotOwned};
+  RefCountBug freeNotOwned{this, RefCountBug::FreeNotOwned};
+  RefCountBug overAutorelease{this, RefCountBug::OverAutorelease};
+  RefCountBug returnNotOwnedForOwned{this, RefCountBug::ReturnNotOwnedForOwned};
+  RefCountBug leakWithinFunction{this, RefCountBug::LeakWithinFunction};
+  RefCountBug leakAtReturn{this, RefCountBug::LeakAtReturn};
+
+  CheckerProgramPointTag DeallocSentTag{this, "DeallocSent"};
+  CheckerProgramPointTag CastFailTag{this, "DynamicCastFail"};
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
-
-  static std::unique_ptr<CheckerProgramPointTag> DeallocSentTag;
-  static std::unique_ptr<CheckerProgramPointTag> CastFailTag;
+public:
 
   /// Track Objective-C and CoreFoundation objects.
   bool TrackObjCAndCFObjects = false;
@@ -360,11 +360,13 @@ public:
                              CheckerContext &Ctx,
                              ExplodedNode *Pred = nullptr) const;
 
-  static const CheckerProgramPointTag &getDeallocSentTag() {
-    return *DeallocSentTag;
+  const CheckerProgramPointTag &getDeallocSentTag() const {
+    return DeallocSentTag;
   }
 
-  static const CheckerProgramPointTag &getCastFailTag() { return *CastFailTag; }
+  const CheckerProgramPointTag &getCastFailTag() const {
+    return CastFailTag;
+  }
 
 private:
   /// Perform the necessary checks and state adjustments at the end of the

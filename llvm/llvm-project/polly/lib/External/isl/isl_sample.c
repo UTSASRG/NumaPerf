@@ -39,12 +39,10 @@ static __isl_give isl_vec *empty_sample(__isl_take isl_basic_set *bset)
  */
 static __isl_give isl_vec *zero_sample(__isl_take isl_basic_set *bset)
 {
-	isl_size dim;
+	unsigned dim;
 	struct isl_vec *sample;
 
-	dim = isl_basic_set_dim(bset, isl_dim_all);
-	if (dim < 0)
-		goto error;
+	dim = isl_basic_set_total_dim(bset);
 	sample = isl_vec_alloc(bset->ctx, 1 + dim);
 	if (sample) {
 		isl_int_set_si(sample->el[0], 1);
@@ -52,9 +50,6 @@ static __isl_give isl_vec *zero_sample(__isl_take isl_basic_set *bset)
 	}
 	isl_basic_set_free(bset);
 	return sample;
-error:
-	isl_basic_set_free(bset);
-	return NULL;
 }
 
 static __isl_give isl_vec *interval_sample(__isl_take isl_basic_set *bset)
@@ -540,18 +535,17 @@ static __isl_give isl_vec *factored_sample(__isl_take isl_basic_set *bset,
 	int i, n;
 	isl_vec *sample = NULL;
 	isl_ctx *ctx;
-	isl_size nparam;
-	isl_size nvar;
-	isl_size total;
+	unsigned nparam;
+	unsigned nvar;
 
 	ctx = isl_basic_set_get_ctx(bset);
-	nparam = isl_basic_set_dim(bset, isl_dim_param);
-	nvar = isl_basic_set_dim(bset, isl_dim_set);
-	total = isl_basic_set_dim(bset, isl_dim_all);
-	if (!ctx || nparam < 0 || nvar < 0 || total < 0)
+	if (!ctx)
 		goto error;
 
-	sample = isl_vec_alloc(ctx, 1 + total);
+	nparam = isl_basic_set_dim(bset, isl_dim_param);
+	nvar = isl_basic_set_dim(bset, isl_dim_set);
+
+	sample = isl_vec_alloc(ctx, 1 + isl_basic_set_total_dim(bset));
 	if (!sample)
 		goto error;
 	isl_int_set_si(sample->el[0], 1);
@@ -609,7 +603,7 @@ error:
  */ 
 static __isl_give isl_vec *sample_bounded(__isl_take isl_basic_set *bset)
 {
-	isl_size dim;
+	unsigned dim;
 	struct isl_vec *sample;
 	struct isl_tab *tab = NULL;
 	isl_factorizer *f;
@@ -620,9 +614,7 @@ static __isl_give isl_vec *sample_bounded(__isl_take isl_basic_set *bset)
 	if (isl_basic_set_plain_is_empty(bset))
 		return empty_sample(bset);
 
-	dim = isl_basic_set_dim(bset, isl_dim_all);
-	if (dim < 0)
-		bset = isl_basic_set_free(bset);
+	dim = isl_basic_set_total_dim(bset);
 	if (dim == 0)
 		return zero_sample(bset);
 	if (dim == 1)
@@ -684,13 +676,13 @@ static __isl_give isl_basic_set *plug_in(__isl_take isl_basic_set *bset,
 	__isl_take isl_vec *sample)
 {
 	int i;
-	isl_size total;
+	unsigned total;
 	struct isl_mat *T;
 
-	total = isl_basic_set_dim(bset, isl_dim_all);
-	if (total < 0 || !sample)
+	if (!bset || !sample)
 		goto error;
 
+	total = isl_basic_set_total_dim(bset);
 	T = isl_mat_alloc(bset->ctx, 1 + total, 1 + total - (sample->size - 1));
 	if (!T)
 		goto error;
@@ -770,15 +762,16 @@ static __isl_give isl_basic_set *shift_cone(__isl_take isl_basic_set *cone,
 	__isl_take isl_vec *vec)
 {
 	int i, j, k;
-	isl_size total;
+	unsigned total;
 
 	struct isl_basic_set *shift = NULL;
 
-	total = isl_basic_set_dim(cone, isl_dim_all);
-	if (total < 0 || !vec)
+	if (!cone || !vec)
 		goto error;
 
 	isl_assert(cone->ctx, cone->n_eq == 0, goto error);
+
+	total = isl_basic_set_total_dim(cone);
 
 	shift = isl_basic_set_alloc_space(isl_basic_set_get_space(cone),
 					0, 0, cone->n_ineq);
@@ -826,7 +819,7 @@ error:
 static __isl_give isl_vec *round_up_in_cone(__isl_take isl_vec *vec,
 	__isl_take isl_basic_set *cone, __isl_take isl_mat *U)
 {
-	isl_size total;
+	unsigned total;
 
 	if (!vec || !cone || !U)
 		goto error;
@@ -838,9 +831,7 @@ static __isl_give isl_vec *round_up_in_cone(__isl_take isl_vec *vec,
 		return vec;
 	}
 
-	total = isl_basic_set_dim(cone, isl_dim_all);
-	if (total < 0)
-		goto error;
+	total = isl_basic_set_total_dim(cone);
 	cone = isl_basic_set_preimage(cone, U);
 	cone = isl_basic_set_remove_dims(cone, isl_dim_set,
 					 0, total - (vec->size - 1));
@@ -929,7 +920,7 @@ error:
 __isl_give isl_vec *isl_basic_set_sample_with_cone(
 	__isl_take isl_basic_set *bset, __isl_take isl_basic_set *cone)
 {
-	isl_size total;
+	unsigned total;
 	unsigned cone_dim;
 	struct isl_mat *M, *U;
 	struct isl_vec *sample;
@@ -937,11 +928,11 @@ __isl_give isl_vec *isl_basic_set_sample_with_cone(
 	struct isl_ctx *ctx;
 	struct isl_basic_set *bounded;
 
-	total = isl_basic_set_dim(cone, isl_dim_all);
-	if (!bset || total < 0)
+	if (!bset || !cone)
 		goto error;
 
 	ctx = isl_basic_set_get_ctx(bset);
+	total = isl_basic_set_total_dim(cone);
 	cone_dim = total - cone->n_eq;
 
 	M = isl_mat_sub_alloc6(ctx, cone->eq, 0, cone->n_eq, 1, total);
@@ -1112,12 +1103,10 @@ int isl_tab_set_initial_basis_with_cone(struct isl_tab *tab,
  */
 static __isl_give isl_vec *gbr_sample(__isl_take isl_basic_set *bset)
 {
-	isl_size dim;
+	unsigned dim;
 	struct isl_basic_set *cone;
 
-	dim = isl_basic_set_dim(bset, isl_dim_all);
-	if (dim < 0)
-		goto error;
+	dim = isl_basic_set_total_dim(bset);
 
 	cone = isl_basic_set_recession_cone(isl_basic_set_copy(bset));
 	if (!cone)
@@ -1137,7 +1126,7 @@ static __isl_give isl_vec *basic_set_sample(__isl_take isl_basic_set *bset,
 	int bounded)
 {
 	struct isl_ctx *ctx;
-	isl_size dim;
+	unsigned dim;
 	if (!bset)
 		return NULL;
 
@@ -1145,11 +1134,9 @@ static __isl_give isl_vec *basic_set_sample(__isl_take isl_basic_set *bset,
 	if (isl_basic_set_plain_is_empty(bset))
 		return empty_sample(bset);
 
-	dim = isl_basic_set_dim(bset, isl_dim_set);
-	if (dim < 0 ||
-	    isl_basic_set_check_no_params(bset) < 0 ||
-	    isl_basic_set_check_no_locals(bset) < 0)
-		goto error;
+	dim = isl_basic_set_n_dim(bset);
+	isl_assert(ctx, isl_basic_set_n_param(bset) == 0, goto error);
+	isl_assert(ctx, bset->n_div == 0, goto error);
 
 	if (bset->sample && bset->sample->size == 1 + dim) {
 		int contains = isl_basic_set_contains(bset, bset->sample);
@@ -1197,7 +1184,7 @@ __isl_give isl_basic_set *isl_basic_set_from_vec(__isl_take isl_vec *vec)
 	int k;
 	struct isl_basic_set *bset = NULL;
 	struct isl_ctx *ctx;
-	isl_size dim;
+	unsigned dim;
 
 	if (!vec)
 		return NULL;
@@ -1205,9 +1192,9 @@ __isl_give isl_basic_set *isl_basic_set_from_vec(__isl_take isl_vec *vec)
 	isl_assert(ctx, vec->size != 0, goto error);
 
 	bset = isl_basic_set_alloc(ctx, 0, vec->size - 1, 0, vec->size - 1, 0);
-	dim = isl_basic_set_dim(bset, isl_dim_set);
-	if (dim < 0)
+	if (!bset)
 		goto error;
+	dim = isl_basic_set_n_dim(bset);
 	for (i = dim - 1; i >= 0; --i) {
 		k = isl_basic_set_alloc_equality(bset);
 		if (k < 0)
@@ -1285,13 +1272,13 @@ __isl_give isl_basic_set *isl_set_sample(__isl_take isl_set *set)
 __isl_give isl_point *isl_basic_set_sample_point(__isl_take isl_basic_set *bset)
 {
 	isl_vec *vec;
-	isl_space *space;
+	isl_space *dim;
 
-	space = isl_basic_set_get_space(bset);
+	dim = isl_basic_set_get_space(bset);
 	bset = isl_basic_set_underlying_set(bset);
 	vec = isl_basic_set_sample_vec(bset);
 
-	return isl_point_alloc(space, vec);
+	return isl_point_alloc(dim, vec);
 }
 
 __isl_give isl_point *isl_set_sample_point(__isl_take isl_set *set)

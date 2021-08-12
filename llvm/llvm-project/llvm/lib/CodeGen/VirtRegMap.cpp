@@ -92,8 +92,8 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
 
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   unsigned Size = TRI->getSpillSize(*RC);
-  Align Alignment = TRI->getSpillAlign(*RC);
-  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment);
+  unsigned Align = TRI->getSpillAlignment(*RC);
+  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Align);
   ++NumSpillSlots;
   return SS;
 }

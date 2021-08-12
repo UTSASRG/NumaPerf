@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUEPATHMAPPINGS_H
-#define LLDB_INTERPRETER_OPTIONVALUEPATHMAPPINGS_H
+#ifndef liblldb_OptionValuePathMappings_h_
+#define liblldb_OptionValuePathMappings_h_
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Target/PathMappingList.h"
@@ -58,4 +58,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUEPATHMAPPINGS_H
+#endif // liblldb_OptionValuePathMappings_h_

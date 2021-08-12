@@ -1,4 +1,5 @@
-//===-- source/Host/freebsd/Host.cpp --------------------------------------===//
+//===-- source/Host/freebsd/Host.cpp ------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -149,8 +150,8 @@ error:
   return false;
 }
 
-uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
-                                 ProcessInstanceInfoList &process_infos) {
+uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                             ProcessInstanceInfoList &process_infos) {
   const ::pid_t our_pid = ::getpid();
   const ::uid_t our_uid = ::getuid();
   std::vector<struct kinfo_proc> kinfos;
@@ -195,10 +196,10 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     bool already_registered = false;
     for (uint32_t pi = 0;
          !already_registered && (const int)kinfo.ki_numthreads > 1 &&
-         pi < (const uint32_t)process_infos.size();
+         pi < (const uint32_t)process_infos.GetSize();
          pi++)
       already_registered =
-          (process_infos[pi].GetProcessID() == (uint32_t)kinfo.ki_pid);
+          (process_infos.GetProcessIDAtIndex(pi) == (uint32_t)kinfo.ki_pid);
 
     if (already_registered)
       continue;
@@ -216,11 +217,11 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
         GetFreeBSDProcessArgs(&match_info, process_info)) {
       GetFreeBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))
-        process_infos.push_back(process_info);
+        process_infos.Append(process_info);
     }
   }
 
-  return process_infos.size();
+  return process_infos.GetSize();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {

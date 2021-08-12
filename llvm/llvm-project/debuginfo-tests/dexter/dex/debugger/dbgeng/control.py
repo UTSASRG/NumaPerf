@@ -79,7 +79,6 @@ class IDebugControl7Vtbl(Structure):
   idc_getexecutionstatus = wrp(c_ulong_p)
   idc_getstacktraceex = wrp(c_ulonglong, c_ulonglong, c_ulonglong, PDEBUG_STACK_FRAME_EX, c_ulong, c_ulong_p)
   idc_evaluate = wrp(c_char_p, c_ulong, PDEBUG_VALUE, c_ulong_p)
-  idc_setengineoptions = wrp(c_ulong)
   _fields_ = [
       ("QueryInterface", c_void_p),
       ("AddRef", c_void_p),
@@ -137,7 +136,7 @@ class IDebugControl7Vtbl(Structure):
       ("GetEngineOptions", c_void_p),
       ("AddEngineOptions", c_void_p),
       ("RemoveEngineOptions", c_void_p),
-      ("SetEngineOptions", idc_setengineoptions),
+      ("SetEngineOptions", c_void_p),
       ("GetSystemErrorControl", c_void_p),
       ("SetSystemErrorControl", c_void_p),
       ("GetTextMacro", c_void_p),
@@ -404,8 +403,3 @@ class Control(object):
     # Also produce a type name...
 
     return getattr(ptr.U, extract_map[val_type][0]), extract_map[val_type][1]
-
-  def SetEngineOptions(self, opt):
-    res = self.vt.SetEngineOptions(self.control, opt)
-    aborter(res, "SetEngineOptions")
-    return

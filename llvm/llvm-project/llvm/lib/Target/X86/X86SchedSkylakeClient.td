@@ -255,8 +255,7 @@ defm : SKLWriteResPair<WriteFCmp64X,  [SKLPort01],  4, [1], 1, 6>;
 defm : SKLWriteResPair<WriteFCmp64Y,  [SKLPort01],  4, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 
-defm : SKLWriteResPair<WriteFCom,      [SKLPort0],  2>; // Floating point compare to flags (X87).
-defm : SKLWriteResPair<WriteFComX,     [SKLPort0],  2>; // Floating point compare to flags (SSE).
+defm : SKLWriteResPair<WriteFCom,      [SKLPort0],  2>; // Floating point compare to flags.
 
 defm : SKLWriteResPair<WriteFMul,     [SKLPort01],  4, [1], 1, 5>; // Floating point multiplication.
 defm : SKLWriteResPair<WriteFMulX,    [SKLPort01],  4, [1], 1, 6>;
@@ -343,10 +342,8 @@ defm : X86WriteRes<WriteVecStoreX,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SKLPort237,SKLPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [SKLPort237,SKLPort0], 2, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [SKLPort237,SKLPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStoreY, [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKLPort05],  1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SKLPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SKLPort015], 1, [1], 1>;
@@ -364,9 +361,9 @@ defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 defm : SKLWriteResPair<WriteVecTest,  [SKLPort0,SKLPort5], 3, [1,1], 2, 6>; // Vector integer TEST instructions.
 defm : SKLWriteResPair<WriteVecTestY, [SKLPort0,SKLPort5], 3, [1,1], 2, 7>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
-defm : SKLWriteResPair<WriteVecIMul,  [SKLPort0] ,  5, [1], 1, 5>; // Vector integer multiply.
-defm : SKLWriteResPair<WriteVecIMulX, [SKLPort01],  5, [1], 1, 6>;
-defm : SKLWriteResPair<WriteVecIMulY, [SKLPort01],  5, [1], 1, 7>;
+defm : SKLWriteResPair<WriteVecIMul,  [SKLPort0] ,  4, [1], 1, 5>; // Vector integer multiply.
+defm : SKLWriteResPair<WriteVecIMulX, [SKLPort01],  4, [1], 1, 6>;
+defm : SKLWriteResPair<WriteVecIMulY, [SKLPort01],  4, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
 defm : SKLWriteResPair<WritePMULLD,   [SKLPort01], 10, [2], 2, 6>; // Vector PMULLD.
 defm : SKLWriteResPair<WritePMULLDY,  [SKLPort01], 10, [2], 2, 7>;
@@ -1595,31 +1592,33 @@ def SKLWriteResGroup196 : SchedWriteRes<[SKLPort0,SKLPort23]> {
 }
 def: InstRW<[SKLWriteResGroup196], (instregex "DIV_F(32|64)m")>;
 
-def SKLWriteResGroupVEX2 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
-  let Latency = 18;
-  let NumMicroOps = 5; // 2 uops perform multiple loads
+def SKLWriteResGroup196_1 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
+  let Latency = 22;
+  let NumMicroOps = 5;
   let ResourceCycles = [1,2,1,1];
 }
-def: InstRW<[SKLWriteResGroupVEX2], (instrs VGATHERDPDrm, VPGATHERDQrm,
-                                            VGATHERQPDrm, VPGATHERQQrm,
-                                            VGATHERQPSrm, VPGATHERQDrm)>;
+def: InstRW<[SKLWriteResGroup196_1], (instrs VGATHERDPSrm,
+                                             VGATHERDPDrm,
+                                             VGATHERQPDrm,
+                                             VGATHERQPSrm,
+                                             VPGATHERDDrm,
+                                             VPGATHERDQrm,
+                                             VPGATHERQDrm,
+                                             VPGATHERQQrm)>;
 
-def SKLWriteResGroupVEX4 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
-  let Latency = 20;
-  let NumMicroOps = 5; // 2 uops peform multiple loads
-  let ResourceCycles = [1,4,1,1];
+def SKLWriteResGroup196_2 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
+  let Latency = 25;
+  let NumMicroOps = 5;
+  let ResourceCycles = [1,2,1,1];
 }
-def: InstRW<[SKLWriteResGroupVEX4], (instrs VGATHERDPDYrm, VPGATHERDQYrm,
-                                            VGATHERDPSrm,  VPGATHERDDrm,
-                                            VGATHERQPDYrm, VPGATHERQQYrm,
-                                            VGATHERQPSYrm,  VPGATHERQDYrm)>;
-
-def SKLWriteResGroupVEX8 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
-  let Latency = 22;
-  let NumMicroOps = 5; // 2 uops perform multiple loads
-  let ResourceCycles = [1,8,1,1];
-}
-def: InstRW<[SKLWriteResGroupVEX8], (instrs VGATHERDPSYrm,  VPGATHERDDYrm)>;
+def: InstRW<[SKLWriteResGroup196_2], (instrs VGATHERDPSYrm,
+                                             VGATHERQPDYrm,
+                                             VGATHERQPSYrm,
+                                             VPGATHERDDYrm,
+                                             VPGATHERDQYrm,
+                                             VPGATHERQDYrm,
+                                             VPGATHERQQYrm,
+                                             VGATHERDPDYrm)>;
 
 def SKLWriteResGroup198 : SchedWriteRes<[SKLPort0,SKLPort4,SKLPort5,SKLPort23,SKLPort237,SKLPort06,SKLPort0156]> {
   let Latency = 23;
@@ -1746,7 +1745,7 @@ def: InstRW<[SKLWriteResGroup223], (instrs FSTENVm)>;
 def: InstRW<[WriteZero], (instrs CLC)>;
 
 
-// Instruction variants handled by the renamer. These might not need execution
+// Intruction variants handled by the renamer. These might not need execution
 // ports in certain conditions.
 // See Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
 // section "Skylake Pipeline" > "Register allocation and renaming".

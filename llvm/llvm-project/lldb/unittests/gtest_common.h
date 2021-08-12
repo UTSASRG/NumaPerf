@@ -1,7 +1,3 @@
-#ifndef LLDB_UNITTESTS_GTEST_COMMON_H
-
-#define LLDB_UNITTESTS_GTEST_COMMON_H
-
 //===-- gtest_common.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -18,5 +14,3 @@
 
 // This header file is force included by all of LLDB's unittest compilation
 // units.  Be very leary about putting anything in this file.
-
-#endif

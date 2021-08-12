@@ -72,6 +72,27 @@ static cl::opt<bool>
 UseOldLatencyCalc("ppc-old-latency-calc", cl::Hidden,
   cl::desc("Use the old (incorrect) instruction latency calculation"));
 
+// Index into the OpcodesForSpill array.
+enum SpillOpcodeKey {
+  SOK_Int4Spill,
+  SOK_Int8Spill,
+  SOK_Float8Spill,
+  SOK_Float4Spill,
+  SOK_CRSpill,
+  SOK_CRBitSpill,
+  SOK_VRVectorSpill,
+  SOK_VSXVectorSpill,
+  SOK_VectorFloat8Spill,
+  SOK_VectorFloat4Spill,
+  SOK_VRSaveSpill,
+  SOK_QuadFloat8Spill,
+  SOK_QuadFloat4Spill,
+  SOK_QuadBitSpill,
+  SOK_SpillToVSR,
+  SOK_SPESpill,
+  SOK_LastOpcodeSpill  // This must be last on the enum.
+};
+
 // Pin the vtable to this file.
 void PPCInstrInfo::anchor() {}
 
@@ -204,42 +225,13 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return Latency;
 }
 
-/// This is an architecture-specific helper function of reassociateOps.
-/// Set special operand attributes for new instructions after reassociation.
-void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
-                                         MachineInstr &OldMI2,
-                                         MachineInstr &NewMI1,
-                                         MachineInstr &NewMI2) const {
-  // Propagate FP flags from the original instructions.
-  // But clear poison-generating flags because those may not be valid now.
-  uint16_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
-  NewMI1.setFlags(IntersectedFlags);
-  NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  NewMI1.clearFlag(MachineInstr::MIFlag::IsExact);
-
-  NewMI2.setFlags(IntersectedFlags);
-  NewMI2.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  NewMI2.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  NewMI2.clearFlag(MachineInstr::MIFlag::IsExact);
-}
-
-void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
-                                         uint16_t Flags) const {
-  MI.setFlags(Flags);
-  MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  MI.clearFlag(MachineInstr::MIFlag::IsExact);
-}
-
 // This function does not list all associative and commutative operations, but
 // only those worth feeding through the machine combiner in an attempt to
 // reduce the critical path. Mostly, this means floating-point operations,
-// because they have high latencies(>=5) (compared to other operations, such as
+// because they have high latencies (compared to other operations, such and
 // and/or, which are also associative and commutative, but have low latencies).
 bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   switch (Inst.getOpcode()) {
-  // Floating point:
   // FP Add:
   case PPC::FADD:
   case PPC::FADDS:
@@ -266,14 +258,6 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case PPC::QVFMUL:
   case PPC::QVFMULS:
   case PPC::QVFMULSs:
-    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
-           Inst.getFlag(MachineInstr::MIFlag::FmNsz);
-  // Fixed point:
-  // Multiply:
-  case PPC::MULHD:
-  case PPC::MULLD:
-  case PPC::MULHW:
-  case PPC::MULLW:
     return true;
   default:
     return false;
@@ -288,12 +272,16 @@ bool PPCInstrInfo::getMachineCombinerPatterns(
   if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOpt::Aggressive)
     return false;
 
+  // FP reassociation is only legal when we don't need strict IEEE semantics.
+  if (!Root.getParent()->getParent()->getTarget().Options.UnsafeFPMath)
+    return false;
+
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns);
 }
 
 // Detect 32 -> 64-bit extensions where we may reuse the low sub-register.
 bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
-                                         Register &SrcReg, Register &DstReg,
+                                         unsigned &SrcReg, unsigned &DstReg,
                                          unsigned &SubIdx) const {
   switch (MI.getOpcode()) {
   default: return false;
@@ -765,10 +753,9 @@ unsigned PPCInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 // Select analysis.
 bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
-                                   ArrayRef<MachineOperand> Cond,
-                                   Register DstReg, Register TrueReg,
-                                   Register FalseReg, int &CondCycles,
-                                   int &TrueCycles, int &FalseCycles) const {
+                ArrayRef<MachineOperand> Cond,
+                unsigned TrueReg, unsigned FalseReg,
+                int &CondCycles, int &TrueCycles, int &FalseCycles) const {
   if (Cond.size() != 2)
     return false;
 
@@ -804,9 +791,9 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
 void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
-                                const DebugLoc &dl, Register DestReg,
-                                ArrayRef<MachineOperand> Cond, Register TrueReg,
-                                Register FalseReg) const {
+                                const DebugLoc &dl, unsigned DestReg,
+                                ArrayRef<MachineOperand> Cond, unsigned TrueReg,
+                                unsigned FalseReg) const {
   assert(Cond.size() == 2 &&
          "PPC branch conditions have two components!");
 
@@ -865,7 +852,7 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
   case PPC::PRED_BIT_UNSET: SubIdx = 0; SwapOps = true; break;
   }
 
-  Register FirstReg =  SwapOps ? FalseReg : TrueReg,
+  unsigned FirstReg =  SwapOps ? FalseReg : TrueReg,
            SecondReg = SwapOps ? TrueReg  : FalseReg;
 
   // The first input register of isel cannot be r0. If it is a member
@@ -876,7 +863,7 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
     const TargetRegisterClass *FirstRC =
       MRI.getRegClass(FirstReg)->contains(PPC::X0) ?
         &PPC::G8RC_NOX0RegClass : &PPC::GPRC_NOR0RegClass;
-    Register OldFirstReg = FirstReg;
+    unsigned OldFirstReg = FirstReg;
     FirstReg = MRI.createVirtualRegister(FirstRC);
     BuildMI(MBB, MI, dl, get(TargetOpcode::COPY), FirstReg)
       .addReg(OldFirstReg);
@@ -1037,66 +1024,183 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, MCID, DestReg).addReg(SrcReg, getKillRegState(KillSrc));
 }
 
-static unsigned getSpillIndex(const TargetRegisterClass *RC) {
+unsigned PPCInstrInfo::getStoreOpcodeForSpill(unsigned Reg,
+                                              const TargetRegisterClass *RC)
+                                              const {
+  const unsigned *OpcodesForSpill = getStoreOpcodesForSpillArray();
   int OpcodeIndex = 0;
 
-  if (PPC::GPRCRegClass.hasSubClassEq(RC) ||
-      PPC::GPRC_NOR0RegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_Int4Spill;
-  } else if (PPC::G8RCRegClass.hasSubClassEq(RC) ||
-             PPC::G8RC_NOX0RegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_Int8Spill;
-  } else if (PPC::F8RCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_Float8Spill;
-  } else if (PPC::F4RCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_Float4Spill;
-  } else if (PPC::SPERCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_SPESpill;
-  } else if (PPC::CRRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_CRSpill;
-  } else if (PPC::CRBITRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_CRBitSpill;
-  } else if (PPC::VRRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_VRVectorSpill;
-  } else if (PPC::VSRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_VSXVectorSpill;
-  } else if (PPC::VSFRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_VectorFloat8Spill;
-  } else if (PPC::VSSRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_VectorFloat4Spill;
-  } else if (PPC::VRSAVERCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_VRSaveSpill;
-  } else if (PPC::QFRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_QuadFloat8Spill;
-  } else if (PPC::QSRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_QuadFloat4Spill;
-  } else if (PPC::QBRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_QuadBitSpill;
-  } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_SpillToVSR;
+  if (RC != nullptr) {
+    if (PPC::GPRCRegClass.hasSubClassEq(RC) ||
+        PPC::GPRC_NOR0RegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Int4Spill;
+    } else if (PPC::G8RCRegClass.hasSubClassEq(RC) ||
+               PPC::G8RC_NOX0RegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Int8Spill;
+    } else if (PPC::F8RCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Float8Spill;
+    } else if (PPC::F4RCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Float4Spill;
+    } else if (PPC::SPERCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_SPESpill;
+    } else if (PPC::CRRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_CRSpill;
+    } else if (PPC::CRBITRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_CRBitSpill;
+    } else if (PPC::VRRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VRVectorSpill;
+    } else if (PPC::VSRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VSXVectorSpill;
+    } else if (PPC::VSFRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VectorFloat8Spill;
+    } else if (PPC::VSSRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VectorFloat4Spill;
+    } else if (PPC::VRSAVERCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VRSaveSpill;
+    } else if (PPC::QFRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_QuadFloat8Spill;
+    } else if (PPC::QSRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_QuadFloat4Spill;
+    } else if (PPC::QBRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_QuadBitSpill;
+    } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_SpillToVSR;
+    } else {
+      llvm_unreachable("Unknown regclass!");
+    }
   } else {
-    llvm_unreachable("Unknown regclass!");
+    if (PPC::GPRCRegClass.contains(Reg) ||
+        PPC::GPRC_NOR0RegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Int4Spill;
+    } else if (PPC::G8RCRegClass.contains(Reg) ||
+               PPC::G8RC_NOX0RegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Int8Spill;
+    } else if (PPC::F8RCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Float8Spill;
+    } else if (PPC::F4RCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Float4Spill;
+    } else if (PPC::SPERCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SPESpill;
+    } else if (PPC::CRRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_CRSpill;
+    } else if (PPC::CRBITRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_CRBitSpill;
+    } else if (PPC::VRRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VRVectorSpill;
+    } else if (PPC::VSRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VSXVectorSpill;
+    } else if (PPC::VSFRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VectorFloat8Spill;
+    } else if (PPC::VSSRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VectorFloat4Spill;
+    } else if (PPC::VRSAVERCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VRSaveSpill;
+    } else if (PPC::QFRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_QuadFloat8Spill;
+    } else if (PPC::QSRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_QuadFloat4Spill;
+    } else if (PPC::QBRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_QuadBitSpill;
+    } else if (PPC::SPILLTOVSRRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SpillToVSR;
+    } else {
+      llvm_unreachable("Unknown regclass!");
+    }
   }
-  return OpcodeIndex;
+  return OpcodesForSpill[OpcodeIndex];
 }
 
 unsigned
-PPCInstrInfo::getStoreOpcodeForSpill(const TargetRegisterClass *RC) const {
-  const unsigned *OpcodesForSpill = getStoreOpcodesForSpillArray();
-  return OpcodesForSpill[getSpillIndex(RC)];
-}
-
-unsigned
-PPCInstrInfo::getLoadOpcodeForSpill(const TargetRegisterClass *RC) const {
+PPCInstrInfo::getLoadOpcodeForSpill(unsigned Reg,
+                                    const TargetRegisterClass *RC) const {
   const unsigned *OpcodesForSpill = getLoadOpcodesForSpillArray();
-  return OpcodesForSpill[getSpillIndex(RC)];
+  int OpcodeIndex = 0;
+
+  if (RC != nullptr) {
+    if (PPC::GPRCRegClass.hasSubClassEq(RC) ||
+        PPC::GPRC_NOR0RegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Int4Spill;
+    } else if (PPC::G8RCRegClass.hasSubClassEq(RC) ||
+               PPC::G8RC_NOX0RegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Int8Spill;
+    } else if (PPC::F8RCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Float8Spill;
+    } else if (PPC::F4RCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_Float4Spill;
+    } else if (PPC::SPERCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_SPESpill;
+    } else if (PPC::CRRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_CRSpill;
+    } else if (PPC::CRBITRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_CRBitSpill;
+    } else if (PPC::VRRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VRVectorSpill;
+    } else if (PPC::VSRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VSXVectorSpill;
+    } else if (PPC::VSFRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VectorFloat8Spill;
+    } else if (PPC::VSSRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VectorFloat4Spill;
+    } else if (PPC::VRSAVERCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_VRSaveSpill;
+    } else if (PPC::QFRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_QuadFloat8Spill;
+    } else if (PPC::QSRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_QuadFloat4Spill;
+    } else if (PPC::QBRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_QuadBitSpill;
+    } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
+      OpcodeIndex = SOK_SpillToVSR;
+    } else {
+      llvm_unreachable("Unknown regclass!");
+    }
+  } else {
+    if (PPC::GPRCRegClass.contains(Reg) ||
+        PPC::GPRC_NOR0RegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Int4Spill;
+    } else if (PPC::G8RCRegClass.contains(Reg) ||
+               PPC::G8RC_NOX0RegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Int8Spill;
+    } else if (PPC::F8RCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Float8Spill;
+    } else if (PPC::F4RCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_Float4Spill;
+    } else if (PPC::SPERCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SPESpill;
+    } else if (PPC::CRRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_CRSpill;
+    } else if (PPC::CRBITRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_CRBitSpill;
+    } else if (PPC::VRRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VRVectorSpill;
+    } else if (PPC::VSRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VSXVectorSpill;
+    } else if (PPC::VSFRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VectorFloat8Spill;
+    } else if (PPC::VSSRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VectorFloat4Spill;
+    } else if (PPC::VRSAVERCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_VRSaveSpill;
+    } else if (PPC::QFRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_QuadFloat8Spill;
+    } else if (PPC::QSRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_QuadFloat4Spill;
+    } else if (PPC::QBRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_QuadBitSpill;
+    } else if (PPC::SPILLTOVSRRCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SpillToVSR;
+    } else {
+      llvm_unreachable("Unknown regclass!");
+    }
+  }
+  return OpcodesForSpill[OpcodeIndex];
 }
 
 void PPCInstrInfo::StoreRegToStackSlot(
     MachineFunction &MF, unsigned SrcReg, bool isKill, int FrameIdx,
     const TargetRegisterClass *RC,
     SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  unsigned Opcode = getStoreOpcodeForSpill(RC);
+  unsigned Opcode = getStoreOpcodeForSpill(PPC::NoRegister, RC);
   DebugLoc DL;
 
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
@@ -1117,12 +1221,23 @@ void PPCInstrInfo::StoreRegToStackSlot(
     FuncInfo->setHasNonRISpills();
 }
 
-void PPCInstrInfo::storeRegToStackSlotNoUpd(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, unsigned SrcReg,
-    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void PPCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MI,
+                                       unsigned SrcReg, bool isKill,
+                                       int FrameIdx,
+                                       const TargetRegisterClass *RC,
+                                       const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   SmallVector<MachineInstr *, 4> NewMIs;
+
+  // We need to avoid a situation in which the value from a VRRC register is
+  // spilled using an Altivec instruction and reloaded into a VSRC register
+  // using a VSX instruction. The issue with this is that the VSX
+  // load/store instructions swap the doublewords in the vector and the Altivec
+  // ones don't. The register classes on the spill/reload may be different if
+  // the register is defined using an Altivec instruction and is then used by a
+  // VSX instruction.
+  RC = updatedRC(RC);
 
   StoreRegToStackSlot(MF, SrcReg, isKill, FrameIdx, RC, NewMIs);
 
@@ -1133,25 +1248,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOStore, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlign(FrameIdx));
+      MFI.getObjectAlignment(FrameIdx));
   NewMIs.back()->addMemOperand(MF, MMO);
-}
-
-void PPCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MI,
-                                       Register SrcReg, bool isKill,
-                                       int FrameIdx,
-                                       const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI) const {
-  // We need to avoid a situation in which the value from a VRRC register is
-  // spilled using an Altivec instruction and reloaded into a VSRC register
-  // using a VSX instruction. The issue with this is that the VSX
-  // load/store instructions swap the doublewords in the vector and the Altivec
-  // ones don't. The register classes on the spill/reload may be different if
-  // the register is defined using an Altivec instruction and is then used by a
-  // VSX instruction.
-  RC = updatedRC(RC);
-  storeRegToStackSlotNoUpd(MBB, MI, SrcReg, isKill, FrameIdx, RC, TRI);
 }
 
 void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
@@ -1159,7 +1257,7 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
                                         const TargetRegisterClass *RC,
                                         SmallVectorImpl<MachineInstr *> &NewMIs)
                                         const {
-  unsigned Opcode = getLoadOpcodeForSpill(RC);
+  unsigned Opcode = getLoadOpcodeForSpill(PPC::NoRegister, RC);
   NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(Opcode), DestReg),
                                      FrameIdx));
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
@@ -1175,10 +1273,12 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
     FuncInfo->setHasNonRISpills();
 }
 
-void PPCInstrInfo::loadRegFromStackSlotNoUpd(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, unsigned DestReg,
-    int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void
+PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MI,
+                                   unsigned DestReg, int FrameIdx,
+                                   const TargetRegisterClass *RC,
+                                   const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   SmallVector<MachineInstr*, 4> NewMIs;
   DebugLoc DL;
@@ -1186,6 +1286,16 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
 
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   FuncInfo->setHasSpills();
+
+  // We need to avoid a situation in which the value from a VRRC register is
+  // spilled using an Altivec instruction and reloaded into a VSRC register
+  // using a VSX instruction. The issue with this is that the VSX
+  // load/store instructions swap the doublewords in the vector and the Altivec
+  // ones don't. The register classes on the spill/reload may be different if
+  // the register is defined using an Altivec instruction and is then used by a
+  // VSX instruction.
+  if (Subtarget.hasVSX() && RC == &PPC::VRRCRegClass)
+    RC = &PPC::VSRCRegClass;
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
@@ -1196,25 +1306,8 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlign(FrameIdx));
+      MFI.getObjectAlignment(FrameIdx));
   NewMIs.back()->addMemOperand(MF, MMO);
-}
-
-void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
-  // We need to avoid a situation in which the value from a VRRC register is
-  // spilled using an Altivec instruction and reloaded into a VSRC register
-  // using a VSX instruction. The issue with this is that the VSX
-  // load/store instructions swap the doublewords in the vector and the Altivec
-  // ones don't. The register classes on the spill/reload may be different if
-  // the register is defined using an Altivec instruction and is then used by a
-  // VSX instruction.
-  RC = updatedRC(RC);
-
-  loadRegFromStackSlotNoUpd(MBB, MI, DestReg, FrameIdx, RC, TRI);
 }
 
 bool PPCInstrInfo::
@@ -1228,11 +1321,9 @@ reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   return false;
 }
 
-// For some instructions, it is legal to fold ZERO into the RA register field.
-// This function performs that fold by replacing the operand with PPC::ZERO,
-// it does not consider whether the load immediate zero is no longer in use.
-bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                     Register Reg) const {
+bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                 unsigned Reg, MachineRegisterInfo *MRI) const {
+  // For some instructions, it is legal to fold ZERO into the RA register field.
   // A zero immediate should always be loaded with a single li.
   unsigned DefOpc = DefMI.getOpcode();
   if (DefOpc != PPC::LI && DefOpc != PPC::LI8)
@@ -1252,8 +1343,6 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (UseMCID.isPseudo())
     return false;
 
-  // We need to find which of the User's operands is to be folded, that will be
-  // the operand that matches the given register ID.
   unsigned UseIdx;
   for (UseIdx = 0; UseIdx < UseMI.getNumOperands(); ++UseIdx)
     if (UseMI.getOperand(UseIdx).isReg() &&
@@ -1282,7 +1371,7 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (UseInfo->Constraints != 0)
     return false;
 
-  MCRegister ZeroReg;
+  unsigned ZeroReg;
   if (UseInfo->isLookupPtrRegClass()) {
     bool isPPC64 = Subtarget.isPPC64();
     ZeroReg = isPPC64 ? PPC::ZERO8 : PPC::ZERO;
@@ -1291,19 +1380,13 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               PPC::ZERO8 : PPC::ZERO;
   }
 
+  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
   UseMI.getOperand(UseIdx).setReg(ZeroReg);
-  return true;
-}
 
-// Folds zero into instructions which have a load immediate zero as an operand
-// but also recognize zero as immediate zero. If the definition of the load
-// has no more users it is deleted.
-bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                 Register Reg, MachineRegisterInfo *MRI) const {
-  bool Changed = onlyFoldImmediate(UseMI, DefMI, Reg);
-  if (MRI->use_nodbg_empty(Reg))
+  if (DeleteDef)
     DefMI.eraseFromParent();
-  return Changed;
+
+  return true;
 }
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {
@@ -1338,6 +1421,17 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
   // final word on whether not the instruction can be (further) predicated.
 
   return false;
+}
+
+bool PPCInstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
+  if (!MI.isTerminator())
+    return false;
+
+  // Conditional branch is a special case.
+  if (MI.isBranch() && !MI.isBarrier())
+    return true;
+
+  return !isPredicated(MI);
 }
 
 bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
@@ -1493,8 +1587,8 @@ bool PPCInstrInfo::DefinesPredicate(MachineInstr &MI,
   return Found;
 }
 
-bool PPCInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                  Register &SrcReg2, int &Mask,
+bool PPCInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
+                                  unsigned &SrcReg2, int &Mask,
                                   int &Value) const {
   unsigned Opc = MI.getOpcode();
 
@@ -1523,8 +1617,8 @@ bool PPCInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   }
 }
 
-bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                                        Register SrcReg2, int Mask, int Value,
+bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
+                                        unsigned SrcReg2, int Mask, int Value,
                                         const MachineRegisterInfo *MRI) const {
   if (DisableCmpOpt)
     return false;
@@ -1552,8 +1646,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool is64BitUnsignedCompare = OpC == PPC::CMPLDI || OpC == PPC::CMPLD;
 
   // Look through copies unless that gets us to a physical register.
-  Register ActualSrc = TRI->lookThruCopyLike(SrcReg, MRI);
-  if (ActualSrc.isVirtual())
+  unsigned ActualSrc = TRI->lookThruCopyLike(SrcReg, MRI);
+  if (Register::isVirtualRegister(ActualSrc))
     SrcReg = ActualSrc;
 
   // Get the unique definition of SrcReg.
@@ -1942,8 +2036,8 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_PLT, "ppc-plt"},
       {MO_PIC_FLAG, "ppc-pic"},
-      {MO_PCREL_FLAG, "ppc-pcrel"},
-      {MO_GOT_FLAG, "ppc-got"}};
+      {MO_NLP_FLAG, "ppc-nlp"},
+      {MO_NLP_HIDDEN_FLAG, "ppc-nlp-hidden"}};
   return makeArrayRef(TargetFlags);
 }
 
@@ -2306,16 +2400,36 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
   return OpNoForForwarding == ~0U ? nullptr : DefMI;
 }
 
-unsigned PPCInstrInfo::getSpillTarget() const {
-  return Subtarget.hasP9Vector() ? 1 : 0;
-}
-
 const unsigned *PPCInstrInfo::getStoreOpcodesForSpillArray() const {
-  return StoreSpillOpcodesArray[getSpillTarget()];
+  static const unsigned OpcodesForSpill[2][SOK_LastOpcodeSpill] = {
+      // Power 8
+      {PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR,
+       PPC::SPILL_CRBIT, PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX,
+       PPC::SPILL_VRSAVE, PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb,
+       PPC::SPILLTOVSR_ST, PPC::EVSTDD},
+      // Power 9
+      {PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR,
+       PPC::SPILL_CRBIT, PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,
+       PPC::SPILL_VRSAVE, PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb,
+       PPC::SPILLTOVSR_ST}};
+
+  return OpcodesForSpill[(Subtarget.hasP9Vector()) ? 1 : 0];
 }
 
 const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
-  return LoadSpillOpcodesArray[getSpillTarget()];
+  static const unsigned OpcodesForSpill[2][SOK_LastOpcodeSpill] = {
+      // Power 8
+      {PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,
+       PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,
+       PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs, PPC::QVLFDXb,
+       PPC::SPILLTOVSR_LD, PPC::EVLDD},
+      // Power 9
+      {PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,
+       PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64, PPC::DFLOADf32,
+       PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs, PPC::QVLFDXb,
+       PPC::SPILLTOVSR_LD}};
+
+  return OpcodesForSpill[(Subtarget.hasP9Vector()) ? 1 : 0];
 }
 
 void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
@@ -2474,13 +2588,6 @@ bool PPCInstrInfo::foldFrameOffset(MachineInstr &MI) const {
         return true;
     return false;
   };
-
-  // We are trying to replace the ImmOpNo with ScaleReg. Give up if it is
-  // treated as special zero when ScaleReg is R0/X0 register.
-  if (III.ZeroIsSpecialOrig == III.ImmOpNo &&
-      (ScaleReg == PPC::R0 || ScaleReg == PPC::X0))
-    return false;
-
   // Make sure no other def for ToBeChangedReg and ScaleReg between ADD Instr
   // and Imm Instr.
   if (NewDefFor(ToBeChangedReg, *ADDMI, MI) || NewDefFor(ScaleReg, *ADDMI, MI))
@@ -2763,7 +2870,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     APInt InVal((Opc == PPC::RLDICL || Opc == PPC::RLDICL_rec) ? 64 : 32,
                 SExtImm, true);
     InVal = InVal.rotl(SH);
-    uint64_t Mask = MB == 0 ? -1LLU : (1LLU << (63 - MB + 1)) - 1;
+    uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use

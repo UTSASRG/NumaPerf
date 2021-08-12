@@ -24,17 +24,9 @@ namespace readability {
 class QualifiedAutoCheck : public ClangTidyCheck {
 public:
   QualifiedAutoCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        AddConstToQualified(Options.get("AddConstToQualified", true)) {}
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11;
-  }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+      : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-private:
-  const bool AddConstToQualified;
 };
 
 } // namespace readability

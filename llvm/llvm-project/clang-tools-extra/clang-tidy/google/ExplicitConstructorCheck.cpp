@@ -19,6 +19,10 @@ namespace tidy {
 namespace google {
 
 void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
+  // Only register the matchers for C++; the functionality currently does not
+  // provide any benefit to other languages, despite being benign.
+  if (!getLangOpts().CPlusPlus)
+    return;
   Finder->addMatcher(
       cxxConstructorDecl(unless(anyOf(isImplicit(), // Compiler-generated.
                                       isDeleted(), isInstantiated())))

@@ -365,7 +365,6 @@ namespace clang {
     void VisitCXXConversionDecl(CXXConversionDecl *D);
     void VisitFieldDecl(FieldDecl *FD);
     void VisitMSPropertyDecl(MSPropertyDecl *FD);
-    void VisitMSGuidDecl(MSGuidDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *FD);
     RedeclarableResult VisitVarDeclImpl(VarDecl *D);
     void VisitVarDecl(VarDecl *VD) { VisitVarDeclImpl(VD); }
@@ -1280,9 +1279,10 @@ void ASTDeclReader::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
   QualType T = Record.readType();
   TypeSourceInfo *TSI = readTypeSourceInfo();
   D->setType(T, TSI);
-  D->setPropertyAttributes((ObjCPropertyAttribute::Kind)Record.readInt());
+  D->setPropertyAttributes(
+      (ObjCPropertyDecl::PropertyAttributeKind)Record.readInt());
   D->setPropertyAttributesAsWritten(
-      (ObjCPropertyAttribute::Kind)Record.readInt());
+      (ObjCPropertyDecl::PropertyAttributeKind)Record.readInt());
   D->setPropertyImplementation(
       (ObjCPropertyDecl::PropertyControl)Record.readInt());
   DeclarationName GetterName = Record.readDeclarationName();
@@ -1356,19 +1356,6 @@ void ASTDeclReader::VisitMSPropertyDecl(MSPropertyDecl *PD) {
   VisitDeclaratorDecl(PD);
   PD->GetterId = Record.readIdentifier();
   PD->SetterId = Record.readIdentifier();
-}
-
-void ASTDeclReader::VisitMSGuidDecl(MSGuidDecl *D) {
-  VisitValueDecl(D);
-  D->PartVal.Part1 = Record.readInt();
-  D->PartVal.Part2 = Record.readInt();
-  D->PartVal.Part3 = Record.readInt();
-  for (auto &C : D->PartVal.Part4And5)
-    C = Record.readInt();
-
-  // Add this GUID to the AST context's lookup structure, and merge if needed.
-  if (MSGuidDecl *Existing = Reader.getContext().MSGuidDecls.GetOrInsertNode(D))
-    Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
 void ASTDeclReader::VisitIndirectFieldDecl(IndirectFieldDecl *FD) {
@@ -1981,8 +1968,8 @@ void ASTDeclReader::VisitCXXConversionDecl(CXXConversionDecl *D) {
 
 void ASTDeclReader::VisitImportDecl(ImportDecl *D) {
   VisitDecl(D);
-  D->ImportedModule = readModule();
-  D->setImportComplete(Record.readInt());
+  D->ImportedAndComplete.setPointer(readModule());
+  D->ImportedAndComplete.setInt(Record.readInt());
   auto *StoredLocs = D->getTrailingObjects<SourceLocation>();
   for (unsigned I = 0, N = Record.back(); I != N; ++I)
     StoredLocs[I] = readSourceLocation();
@@ -2757,8 +2744,6 @@ public:
     return Reader.readVersionTuple();
   }
 
-  OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
-
   template <typename T> T *GetLocalDeclAs(uint32_t LocalID) {
     return Reader.GetLocalDeclAs<T>(LocalID);
   }
@@ -2843,8 +2828,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
       isa<PragmaDetectMismatchDecl>(D))
     return true;
   if (isa<OMPThreadPrivateDecl>(D) || isa<OMPDeclareReductionDecl>(D) ||
-      isa<OMPDeclareMapperDecl>(D) || isa<OMPAllocateDecl>(D) ||
-      isa<OMPRequiresDecl>(D))
+      isa<OMPDeclareMapperDecl>(D) || isa<OMPAllocateDecl>(D))
     return !D->getDeclContext()->isFunctionOrMethod();
   if (const auto *Var = dyn_cast<VarDecl>(D))
     return Var->isFileVarDecl() &&
@@ -2869,7 +2853,7 @@ ASTReader::DeclCursorForID(DeclID ID, SourceLocation &Loc) {
   const DeclOffset &DOffs =
       M->DeclOffsets[ID - M->BaseDeclID - NUM_PREDEF_DECL_IDS];
   Loc = TranslateSourceLocation(*M, DOffs.getLocation());
-  return RecordLocation(M, DOffs.getBitOffset());
+  return RecordLocation(M, DOffs.BitOffset);
 }
 
 ASTReader::RecordLocation ASTReader::getLocalBitOffset(uint64_t GlobalOffset) {
@@ -2879,7 +2863,7 @@ ASTReader::RecordLocation ASTReader::getLocalBitOffset(uint64_t GlobalOffset) {
   return RecordLocation(I->second, GlobalOffset - I->second->GlobalBitOffset);
 }
 
-uint64_t ASTReader::getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset) {
+uint64_t ASTReader::getGlobalBitOffset(ModuleFile &M, uint32_t LocalOffset) {
   return LocalOffset + M.GlobalBitOffset;
 }
 
@@ -3978,9 +3962,6 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_MS_PROPERTY:
     D = MSPropertyDecl::CreateDeserialized(Context, ID);
-    break;
-  case DECL_MS_GUID:
-    D = MSGuidDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_CAPTURED:
     D = CapturedDecl::CreateDeserialized(Context, ID, Record.readInt());

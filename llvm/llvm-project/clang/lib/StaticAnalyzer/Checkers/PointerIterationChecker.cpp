@@ -95,7 +95,6 @@ void ento::registerPointerIterationChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<PointerIterationChecker>();
 }
 
-bool ento::shouldRegisterPointerIterationChecker(const CheckerManager &mgr) {
-  const LangOptions &LO = mgr.getLangOpts();
+bool ento::shouldRegisterPointerIterationChecker(const LangOptions &LO) {
   return LO.CPlusPlus;
 }

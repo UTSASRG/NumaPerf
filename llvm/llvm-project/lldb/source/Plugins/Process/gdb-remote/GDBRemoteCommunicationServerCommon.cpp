@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunicationServerCommon.cpp ----------------------------===//
+//===-- GDBRemoteCommunicationServerCommon.cpp ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -334,7 +334,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
     StringExtractorGDBRemote &packet) {
   m_proc_infos_index = 0;
-  m_proc_infos.clear();
+  m_proc_infos.Clear();
 
   ProcessInstanceInfoMatch match_info;
   packet.SetFilePos(::strlen("qfProcessInfo"));
@@ -416,9 +416,10 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qsProcessInfo(
     StringExtractorGDBRemote &packet) {
-  if (m_proc_infos_index < m_proc_infos.size()) {
+  if (m_proc_infos_index < m_proc_infos.GetSize()) {
     StreamString response;
-    CreateProcessInfoResponse(m_proc_infos[m_proc_infos_index], response);
+    CreateProcessInfoResponse(
+        m_proc_infos.GetProcessInfoAtIndex(m_proc_infos_index), response);
     ++m_proc_infos_index;
     return SendPacketNoLock(response.GetString());
   }
@@ -842,7 +843,6 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";QThreadSuffixSupported+");
   response.PutCString(";QListThreadsInStopReply+");
   response.PutCString(";qEcho+");
-  response.PutCString(";qXfer:features:read+");
 #if defined(__linux__) || defined(__NetBSD__)
   response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");
@@ -1228,7 +1228,7 @@ void GDBRemoteCommunicationServerCommon::
     if (cpu_subtype != 0)
       response.Printf("cpusubtype:%" PRIx32 ";", cpu_subtype);
 
-    const std::string vendor = proc_triple.getVendorName().str();
+    const std::string vendor = proc_triple.getVendorName();
     if (!vendor.empty())
       response.Printf("vendor:%s;", vendor.c_str());
 #else
@@ -1237,7 +1237,7 @@ void GDBRemoteCommunicationServerCommon::
     response.PutStringAsRawHex8(proc_triple.getTriple());
     response.PutChar(';');
 #endif
-    std::string ostype = std::string(proc_triple.getOSName());
+    std::string ostype = proc_triple.getOSName();
     // Adjust so ostype reports ios for Apple/ARM and Apple/ARM64.
     if (proc_triple.getVendor() == llvm::Triple::Apple) {
       switch (proc_triple.getArch()) {

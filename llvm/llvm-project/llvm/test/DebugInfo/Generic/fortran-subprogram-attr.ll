@@ -1,3 +1,5 @@
+; REQUIRES: object-emission
+
 ; Test for DISPFlagPure, DISPFlagElement and DISPFlagRecursive.  These
 ; three DISPFlags are used to attach DW_AT_pure, DW_AT_element, and
 ; DW_AT_recursive attributes to DW_TAG_subprogram DIEs.

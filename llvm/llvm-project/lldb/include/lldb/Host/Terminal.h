@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_TERMINAL_H
-#define LLDB_HOST_TERMINAL_H
+#ifndef liblldb_Terminal_h_
+#define liblldb_Terminal_h_
 #if defined(__cplusplus)
 
 #include "lldb/Host/Config.h"
@@ -179,4 +179,4 @@ protected:
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)
-#endif // LLDB_HOST_TERMINAL_H
+#endif // #ifndef liblldb_Terminal_h_

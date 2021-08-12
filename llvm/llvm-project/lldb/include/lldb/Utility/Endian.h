@@ -30,4 +30,4 @@ inline lldb::ByteOrder InlHostByteOrder() {
 }
 }
 
-#endif // LLDB_UTILITY_ENDIAN_H
+#endif // liblldb_host_endian_h_

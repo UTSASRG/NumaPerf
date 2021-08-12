@@ -26,13 +26,13 @@ NVPTXTargetStreamer::~NVPTXTargetStreamer() = default;
 
 void NVPTXTargetStreamer::outputDwarfFileDirectives() {
   for (const std::string &S : DwarfFiles)
-    getStreamer().emitRawText(S.data());
+    getStreamer().EmitRawText(S.data());
   DwarfFiles.clear();
 }
 
 void NVPTXTargetStreamer::closeLastSection() {
   if (HasSections)
-    getStreamer().emitRawText("\t}");
+    getStreamer().EmitRawText("\t}");
 }
 
 void NVPTXTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
@@ -128,7 +128,7 @@ void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
       if (Label == Directive)
         Label = ",";
     }
-    Streamer.emitRawText(OS.str());
+    Streamer.EmitRawText(OS.str());
   }
 #endif
 }

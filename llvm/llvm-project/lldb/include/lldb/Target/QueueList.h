@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_QUEUELIST_H
-#define LLDB_TARGET_QUEUELIST_H
+#ifndef liblldb_QueueList_h_
+#define liblldb_QueueList_h_
 
 #include <mutex>
 #include <vector>
@@ -107,4 +107,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_QUEUELIST_H
+#endif // liblldb_QueueList_h_

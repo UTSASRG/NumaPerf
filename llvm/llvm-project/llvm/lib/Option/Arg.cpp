@@ -81,7 +81,7 @@ std::string Arg::getAsString(const ArgList &Args) const {
     OS << *it;
   }
 
-  return std::string(OS.str());
+  return OS.str();
 }
 
 void Arg::renderAsInput(const ArgList &Args, ArgStringList &Output) const {

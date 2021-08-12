@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTPLATFORM_H
-#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTPLATFORM_H
+#ifndef liblldb_CommandObjectPlatform_h_
+#define liblldb_CommandObjectPlatform_h_
 
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
@@ -22,11 +22,9 @@ public:
   ~CommandObjectPlatform() override;
 
 private:
-  CommandObjectPlatform(const CommandObjectPlatform &) = delete;
-  const CommandObjectPlatform &
-  operator=(const CommandObjectPlatform &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatform);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTPLATFORM_H
+#endif // liblldb_CommandObjectPlatform_h_

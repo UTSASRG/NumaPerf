@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_REGISTERCONTEXT_H
-#define LLDB_TARGET_REGISTERCONTEXT_H
+#ifndef liblldb_RegisterContext_h_
+#define liblldb_RegisterContext_h_
 
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/lldb-private.h"
@@ -201,10 +201,9 @@ protected:
   uint32_t m_stop_id; // The stop ID that any data in this context is valid for
 private:
   // For RegisterContext only
-  RegisterContext(const RegisterContext &) = delete;
-  const RegisterContext &operator=(const RegisterContext &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(RegisterContext);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_REGISTERCONTEXT_H
+#endif // liblldb_RegisterContext_h_

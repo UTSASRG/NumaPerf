@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBLISTENER_H
-#define LLDB_API_SBLISTENER_H
+#ifndef LLDB_SBListener_h_
+#define LLDB_SBListener_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -105,4 +105,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBLISTENER_H
+#endif // LLDB_SBListener_h_

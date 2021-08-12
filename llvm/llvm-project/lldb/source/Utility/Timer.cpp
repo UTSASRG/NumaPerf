@@ -1,4 +1,4 @@
-//===-- Timer.cpp ---------------------------------------------------------===//
+//===-- Timer.cpp -----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,6 @@
 #include <vector>
 
 #include <assert.h>
-#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 

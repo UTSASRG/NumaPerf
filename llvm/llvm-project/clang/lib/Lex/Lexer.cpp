@@ -29,7 +29,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
@@ -254,7 +253,7 @@ template <typename T> static void StringifyImpl(T &Str, char Quote) {
 }
 
 std::string Lexer::Stringify(StringRef Str, bool Charify) {
-  std::string Result = std::string(Str);
+  std::string Result = Str;
   char Quote = Charify ? '\'' : '"';
   StringifyImpl(Result, Quote);
   return Result;
@@ -2093,8 +2092,7 @@ void Lexer::codeCompleteIncludedFile(const char *PathStart,
                                      bool IsAngled) {
   // Completion only applies to the filename, after the last slash.
   StringRef PartialPath(PathStart, CompletionPoint - PathStart);
-  llvm::StringRef SlashChars = LangOpts.MSVCCompat ? "/\\" : "/";
-  auto Slash = PartialPath.find_last_of(SlashChars);
+  auto Slash = PartialPath.find_last_of(LangOpts.MSVCCompat ? "/\\" : "/");
   StringRef Dir =
       (Slash == StringRef::npos) ? "" : PartialPath.take_front(Slash);
   const char *StartOfFilename =
@@ -2102,8 +2100,7 @@ void Lexer::codeCompleteIncludedFile(const char *PathStart,
   // Code completion filter range is the filename only, up to completion point.
   PP->setCodeCompletionIdentifierInfo(&PP->getIdentifierTable().get(
       StringRef(StartOfFilename, CompletionPoint - StartOfFilename)));
-  // We should replace the characters up to the closing quote or closest slash,
-  // if any.
+  // We should replace the characters up to the closing quote, if any.
   while (CompletionPoint < BufferEnd) {
     char Next = *(CompletionPoint + 1);
     if (Next == 0 || Next == '\r' || Next == '\n')
@@ -2111,10 +2108,7 @@ void Lexer::codeCompleteIncludedFile(const char *PathStart,
     ++CompletionPoint;
     if (Next == (IsAngled ? '>' : '"'))
       break;
-    if (llvm::is_contained(SlashChars, Next))
-      break;
   }
-
   PP->setCodeCompletionTokenRange(
       FileLoc.getLocWithOffset(StartOfFilename - BufferStart),
       FileLoc.getLocWithOffset(CompletionPoint - BufferStart));
@@ -3700,7 +3694,7 @@ LexNextToken:
     } else if (Char == '=') {
       char After = getCharAndSize(CurPtr+SizeTmp, SizeTmp2);
       if (After == '>') {
-        if (getLangOpts().CPlusPlus20) {
+        if (getLangOpts().CPlusPlus2a) {
           if (!isLexingRawMode())
             Diag(BufferPtr, diag::warn_cxx17_compat_spaceship);
           CurPtr = ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
@@ -3711,7 +3705,7 @@ LexNextToken:
         // Suggest adding a space between the '<=' and the '>' to avoid a
         // change in semantics if this turns up in C++ <=17 mode.
         if (getLangOpts().CPlusPlus && !isLexingRawMode()) {
-          Diag(BufferPtr, diag::warn_cxx20_compat_spaceship)
+          Diag(BufferPtr, diag::warn_cxx2a_compat_spaceship)
             << FixItHint::CreateInsertion(
                    getSourceLocation(CurPtr + SizeTmp, SizeTmp2), " ");
         }

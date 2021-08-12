@@ -88,6 +88,6 @@ void ento::registerMmapWriteExecChecker(CheckerManager &mgr) {
       .getCheckerIntegerOption(Mwec, "MmapProtRead");
 }
 
-bool ento::shouldRegisterMmapWriteExecChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterMmapWriteExecChecker(const LangOptions &LO) {
   return true;
 }

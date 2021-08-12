@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_USEREXPRESSION_H
-#define LLDB_EXPRESSION_USEREXPRESSION_H
+#ifndef liblldb_UserExpression_h_
+#define liblldb_UserExpression_h_
 
 #include <memory>
 #include <string>
@@ -194,7 +194,7 @@ public:
 
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  lldb::LanguageType Language() const override { return m_language; }
+  lldb::LanguageType Language() override { return m_language; }
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
@@ -212,6 +212,8 @@ public:
   GetResultAfterDematerialization(ExecutionContextScope *exe_scope) {
     return lldb::ExpressionVariableSP();
   }
+
+  virtual lldb::ModuleSP GetJITModule() { return lldb::ModuleSP(); }
 
   /// Evaluate one expression in the scratch context of the target passed in
   /// the exe_ctx and return its result.
@@ -242,6 +244,9 @@ public:
   ///     If non-nullptr, the fixed expression is copied into the provided
   ///     string.
   ///
+  /// \param[out] jit_module_sp_ptr
+  ///     If non-nullptr, used to persist the generated IR module.
+  ///
   /// \param[in] ctx_obj
   ///     If specified, then the expression will be evaluated in the context of
   ///     this object. It means that the context object's address will be
@@ -260,6 +265,7 @@ public:
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
            lldb::ValueObjectSP &result_valobj_sp, Status &error,
            std::string *fixed_expression = nullptr,
+           lldb::ModuleSP *jit_module_sp_ptr = nullptr,
            ValueObject *ctx_obj = nullptr);
 
   static const Status::ValueType kNoResult =
@@ -308,4 +314,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_EXPRESSION_USEREXPRESSION_H
+#endif // liblldb_UserExpression_h_

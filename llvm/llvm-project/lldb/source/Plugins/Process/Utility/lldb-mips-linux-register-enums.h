@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_MIPS_LINUX_REGISTER_ENUMS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_MIPS_LINUX_REGISTER_ENUMS_H
+#ifndef lldb_mips_linux_register_enums_h
+#define lldb_mips_linux_register_enums_h
 
 namespace lldb_private {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
@@ -357,4 +357,4 @@ enum {
 };
 }
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_MIPS_LINUX_REGISTER_ENUMS_H
+#endif // #ifndef lldb_mips_linux_register_enums_h

@@ -39,6 +39,9 @@ void OwningMemoryCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 /// Match common cases, where the owner semantic is relevant, like function
 /// calls, delete expressions and others.
 void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
   const auto OwnerDecl = typeAliasTemplateDecl(hasName("::gsl::owner"));
   const auto IsOwnerType = hasType(OwnerDecl);
 
@@ -69,10 +72,10 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   // Find delete expressions that delete non-owners.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               cxxDeleteExpr(hasDescendant(declRefExpr(unless(ConsideredOwner))
-                                               .bind("deleted_variable")))
-                   .bind("delete_expr")),
+      cxxDeleteExpr(
+          hasDescendant(
+              declRefExpr(unless(ConsideredOwner)).bind("deleted_variable")))
+          .bind("delete_expr"),
       this);
 
   // Ignoring the implicit casts is vital because the legacy owners do not work
@@ -83,29 +86,24 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // resources. This check assumes that all pointer arguments of a legacy
   // functions shall be 'gsl::owner<>'.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               callExpr(callee(LegacyOwnerConsumers),
-                        hasAnyArgument(
-                            expr(unless(ignoringImpCasts(ConsideredOwner)),
-                                 hasType(pointerType()))))
-                   .bind("legacy_consumer")),
+      callExpr(callee(LegacyOwnerConsumers),
+               hasAnyArgument(expr(unless(ignoringImpCasts(ConsideredOwner)),
+                                   hasType(pointerType()))))
+          .bind("legacy_consumer"),
       this);
 
   // Matching assignment to owners, with the rhs not being an owner nor creating
   // one.
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               binaryOperator(isAssignmentOperator(), hasLHS(IsOwnerType),
-                              hasRHS(unless(ConsideredOwner)))
-                   .bind("owner_assignment")),
-      this);
+  Finder->addMatcher(binaryOperator(matchers::isAssignmentOperator(),
+                                    hasLHS(IsOwnerType),
+                                    hasRHS(unless(ConsideredOwner)))
+                         .bind("owner_assignment"),
+                     this);
 
   // Matching initialization of owners with non-owners, nor creating owners.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               namedDecl(
-                   varDecl(hasInitializer(unless(ConsideredOwner)), IsOwnerType)
-                       .bind("owner_initialization"))),
+      namedDecl(varDecl(hasInitializer(unless(ConsideredOwner)), IsOwnerType)
+                    .bind("owner_initialization")),
       this);
 
   const auto HasConstructorInitializerForOwner =
@@ -120,13 +118,11 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match class member initialization that expects owners, but does not get
   // them.
-  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs,
-                              cxxRecordDecl(HasConstructorInitializerForOwner)),
-                     this);
+  Finder->addMatcher(cxxRecordDecl(HasConstructorInitializerForOwner), this);
 
   // Matching on assignment operations where the RHS is a newly created owner,
   // but the LHS is not an owner.
-  Finder->addMatcher(binaryOperator(isAssignmentOperator(),
+  Finder->addMatcher(binaryOperator(matchers::isAssignmentOperator(),
                                     hasLHS(unless(IsOwnerType)),
                                     hasRHS(CreatesOwner))
                          .bind("bad_owner_creation_assignment"),
@@ -135,14 +131,11 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // Matching on initialization operations where the initial value is a newly
   // created owner, but the LHS is not an owner.
   Finder->addMatcher(
-      traverse(
-          ast_type_traits::TK_AsIs,
-          namedDecl(
-              varDecl(eachOf(allOf(hasInitializer(CreatesOwner),
-                                   unless(IsOwnerType)),
-                             allOf(hasInitializer(ConsideredOwner),
-                                   hasType(autoType().bind("deduced_type")))))
-                  .bind("bad_owner_creation_variable"))),
+      namedDecl(varDecl(eachOf(allOf(hasInitializer(CreatesOwner),
+                                     unless(IsOwnerType)),
+                               allOf(hasInitializer(ConsideredOwner),
+                                     hasType(autoType().bind("deduced_type")))))
+                    .bind("bad_owner_creation_variable")),
       this);
 
   // Match on all function calls that expect owners as arguments, but didn't
@@ -226,7 +219,7 @@ bool OwningMemoryCheck::handleLegacyConsumers(const BoundNodes &Nodes) {
   // Result of matching for legacy consumer-functions like `::free()`.
   const auto *LegacyConsumer = Nodes.getNodeAs<CallExpr>("legacy_consumer");
 
-  // FIXME: `freopen` should be handled separately because it takes the filename
+  // FIXME: `freopen` should be handled seperately because it takes the filename
   // as a pointer, which should not be an owner. The argument that is an owner
   // is known and the false positive coming from the filename can be avoided.
   if (LegacyConsumer) {

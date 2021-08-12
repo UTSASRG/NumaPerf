@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBEXPRESSIONOPTIONS_H
-#define LLDB_API_SBEXPRESSIONOPTIONS_H
+#ifndef LLDB_SBExpressionOptions_h_
+#define LLDB_SBExpressionOptions_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -86,10 +86,6 @@ public:
 
   bool GetAutoApplyFixIts();
 
-  void SetRetriesWithFixIts(uint64_t retries);
-
-  uint64_t GetRetriesWithFixIts();
-
   bool GetTopLevel();
 
   void SetTopLevel(bool b = true);
@@ -116,4 +112,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBEXPRESSIONOPTIONS_H
+#endif // LLDB_SBExpressionOptions_h_

@@ -974,14 +974,6 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
         << Use.getUser()->getSourceRange();
 }
 
-/// Diagnose uninitialized const reference usages.
-static bool DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
-                                             const UninitUse &Use) {
-  S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_const_reference)
-      << VD->getDeclName() << Use.getUser()->getSourceRange();
-  return true;
-}
-
 /// DiagnoseUninitializedUse -- Helper function for diagnosing uses of an
 /// uninitialized variable. This manages the different forms of diagnostic
 /// emitted for particular types of uses. Returns true if the use was diagnosed
@@ -1514,14 +1506,13 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   // order of diagnostics when calling flushDiagnostics().
   typedef llvm::MapVector<const VarDecl *, MappedType> UsesMap;
   UsesMap uses;
-  UsesMap constRefUses;
 
 public:
   UninitValsDiagReporter(Sema &S) : S(S) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
 
-  MappedType &getUses(UsesMap &um, const VarDecl *vd) {
-    MappedType &V = um[vd];
+  MappedType &getUses(const VarDecl *vd) {
+    MappedType &V = uses[vd];
     if (!V.getPointer())
       V.setPointer(new UsesVec());
     return V;
@@ -1529,17 +1520,11 @@ public:
 
   void handleUseOfUninitVariable(const VarDecl *vd,
                                  const UninitUse &use) override {
-    getUses(uses, vd).getPointer()->push_back(use);
-  }
-
-  void handleConstRefUseOfUninitVariable(const VarDecl *vd,
-                                         const UninitUse &use) override {
-    getUses(constRefUses, vd).getPointer()->push_back(use);
+    getUses(vd).getPointer()->push_back(use);
   }
 
   void handleSelfInit(const VarDecl *vd) override {
-    getUses(uses, vd).setInt(true);
-    getUses(constRefUses, vd).setInt(true);
+    getUses(vd).setInt(true);
   }
 
   void flushDiagnostics() {
@@ -1586,32 +1571,6 @@ public:
     }
 
     uses.clear();
-
-    // Flush all const reference uses diags.
-    for (const auto &P : constRefUses) {
-      const VarDecl *vd = P.first;
-      const MappedType &V = P.second;
-
-      UsesVec *vec = V.getPointer();
-      bool hasSelfInit = V.getInt();
-
-      if (!vec->empty() && hasSelfInit && hasAlwaysUninitializedUse(vec))
-        DiagnoseUninitializedUse(S, vd,
-                                 UninitUse(vd->getInit()->IgnoreParenCasts(),
-                                           /* isAlwaysUninit */ true),
-                                 /* alwaysReportSelfInit */ true);
-      else {
-        for (const auto &U : *vec) {
-          if (DiagnoseUninitializedConstRefUse(S, vd, U))
-            break;
-        }
-      }
-
-      // Release the uses vector.
-      delete vec;
-    }
-
-    constRefUses.clear();
   }
 
 private:
@@ -2225,8 +2184,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
 
   if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc())) {
+      !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc())) {
     if (CFG *cfg = AC.getCFG()) {
       UninitValsDiagReporter reporter(S);
       UninitVariablesAnalysisStats stats;

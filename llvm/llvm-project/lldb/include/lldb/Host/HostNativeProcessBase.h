@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_HOSTNATIVEPROCESSBASE_H
-#define LLDB_HOST_HOSTNATIVEPROCESSBASE_H
+#ifndef lldb_Host_HostNativeProcessBase_h_
+#define lldb_Host_HostNativeProcessBase_h_
 
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Utility/Status.h"
@@ -19,9 +19,7 @@ namespace lldb_private {
 class HostThread;
 
 class HostNativeProcessBase {
-  HostNativeProcessBase(const HostNativeProcessBase &) = delete;
-  const HostNativeProcessBase &
-  operator=(const HostNativeProcessBase &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(HostNativeProcessBase);
 
 public:
   HostNativeProcessBase() : m_process(LLDB_INVALID_PROCESS) {}

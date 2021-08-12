@@ -39,7 +39,6 @@ class MachOReader : public Reader {
   void readDataInCodeData(Object &O) const;
   void readFunctionStartsData(Object &O) const;
   void readIndirectSymbolTable(Object &O) const;
-  void readSwiftVersion(Object &O) const;
 
 public:
   explicit MachOReader(const object::MachOObjectFile &Obj) : MachOObj(Obj) {}

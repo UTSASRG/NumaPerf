@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANSTEPRANGE_H
-#define LLDB_TARGET_THREADPLANSTEPRANGE_H
+#ifndef liblldb_ThreadPlanStepRange_h_
+#define liblldb_ThreadPlanStepRange_h_
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
@@ -86,10 +86,9 @@ protected:
 private:
   std::vector<lldb::DisassemblerSP> m_instruction_ranges;
 
-  ThreadPlanStepRange(const ThreadPlanStepRange &) = delete;
-  const ThreadPlanStepRange &operator=(const ThreadPlanStepRange &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepRange);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANSTEPRANGE_H
+#endif // liblldb_ThreadPlanStepRange_h_

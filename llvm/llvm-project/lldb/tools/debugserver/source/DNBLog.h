@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBLOG_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBLOG_H
+#ifndef __DNBLog_h__
+#define __DNBLog_h__
 
 #include "DNBDefs.h"
 #include <stdint.h>
@@ -149,4 +149,4 @@ void DNBLogSetVerbose(int g);
 }
 #endif
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBLOG_H
+#endif // #ifndef __DNBLog_h__

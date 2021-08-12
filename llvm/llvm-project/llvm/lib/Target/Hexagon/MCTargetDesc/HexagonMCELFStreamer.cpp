@@ -58,7 +58,7 @@ HexagonMCELFStreamer::HexagonMCELFStreamer(
     : MCELFStreamer(Context, std::move(TAB), std::move(OW), std::move(Emitter)),
       MCII(createHexagonMCInstrInfo()) {}
 
-void HexagonMCELFStreamer::emitInstruction(const MCInst &MCB,
+void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
                                            const MCSubtargetInfo &STI) {
   assert(MCB.getOpcode() == Hexagon::BUNDLE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
@@ -71,7 +71,7 @@ void HexagonMCELFStreamer::emitInstruction(const MCInst &MCB,
     EmitSymbol(*MCI);
   }
 
-  MCObjectStreamer::emitInstruction(MCB, STI);
+  MCObjectStreamer::EmitInstruction(MCB, STI);
 }
 
 void HexagonMCELFStreamer::EmitSymbol(const MCInst &Inst) {
@@ -110,9 +110,9 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     SwitchSection(&Section);
 
     if (ELFSymbol->isUndefined()) {
-      emitValueToAlignment(ByteAlignment, 0, 1, 0);
-      emitLabel(Symbol);
-      emitZeros(Size);
+      EmitValueToAlignment(ByteAlignment, 0, 1, 0);
+      EmitLabel(Symbol);
+      EmitZeros(Size);
     }
 
     // Update the maximum alignment of the section if necessary.

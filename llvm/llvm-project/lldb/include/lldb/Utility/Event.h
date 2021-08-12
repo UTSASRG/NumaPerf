@@ -48,8 +48,7 @@ public:
 private:
   virtual void DoOnRemoval(Event *event_ptr) {}
 
-  EventData(const EventData &) = delete;
-  const EventData &operator=(const EventData &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(EventData);
 };
 
 // lldb::EventDataBytes
@@ -93,8 +92,7 @@ public:
 private:
   std::string m_bytes;
 
-  EventDataBytes(const EventDataBytes &) = delete;
-  const EventDataBytes &operator=(const EventDataBytes &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(EventDataBytes);
 };
 
 class EventDataReceipt : public EventData {
@@ -171,9 +169,7 @@ private:
   StructuredData::ObjectSP m_object_sp;
   lldb::StructuredDataPluginSP m_plugin_sp;
 
-  EventDataStructuredData(const EventDataStructuredData &) = delete;
-  const EventDataStructuredData &
-  operator=(const EventDataStructuredData &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(EventDataStructuredData);
 };
 
 // lldb::Event
@@ -246,8 +242,7 @@ private:
   uint32_t m_type;             // The bit describing this event
   lldb::EventDataSP m_data_sp; // User specific data for this event
 
-  Event(const Event &) = delete;
-  const Event &operator=(const Event &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Event);
   Event() = delete;
 };
 

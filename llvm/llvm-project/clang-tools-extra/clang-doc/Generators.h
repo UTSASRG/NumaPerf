@@ -42,6 +42,8 @@ typedef llvm::Registry<Generator> GeneratorRegistry;
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format);
 
+std::string getAccess(AccessSpecifier AS);
+
 std::string getTagType(TagTypeKind AS);
 
 } // namespace doc

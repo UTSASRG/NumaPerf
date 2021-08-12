@@ -130,7 +130,7 @@ std::error_code IndexError::convertToErrorCode() const {
 
 llvm::Expected<llvm::StringMap<std::string>>
 parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
-  std::ifstream ExternalMapFile{std::string(IndexPath)};
+  std::ifstream ExternalMapFile(IndexPath);
   if (!ExternalMapFile)
     return llvm::make_error<IndexError>(index_error_code::missing_index_file,
                                         IndexPath.str());
@@ -149,7 +149,7 @@ parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
       StringRef FileName = LineRef.substr(Pos + 1);
       SmallString<256> FilePath = CrossTUDir;
       llvm::sys::path::append(FilePath, FileName);
-      Result[LookupName] = std::string(FilePath);
+      Result[LookupName] = FilePath.str().str();
     } else
       return llvm::make_error<IndexError>(
           index_error_code::invalid_index_format, IndexPath.str(), LineNo);
@@ -258,8 +258,8 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
     // diagnostics.
     ++NumTripleMismatch;
     return llvm::make_error<IndexError>(index_error_code::triple_mismatch,
-                                        std::string(Unit->getMainFileName()),
-                                        TripleTo.str(), TripleFrom.str());
+                                        Unit->getMainFileName(), TripleTo.str(),
+                                        TripleFrom.str());
   }
 
   const auto &LangTo = Context.getLangOpts();
@@ -288,7 +288,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   if (LangTo.CPlusPlus11 != LangFrom.CPlusPlus11 ||
       LangTo.CPlusPlus14 != LangFrom.CPlusPlus14 ||
       LangTo.CPlusPlus17 != LangFrom.CPlusPlus17 ||
-      LangTo.CPlusPlus20 != LangFrom.CPlusPlus20) {
+      LangTo.CPlusPlus2a != LangFrom.CPlusPlus2a) {
     ++NumLangDialectMismatch;
     return llvm::make_error<IndexError>(
         index_error_code::lang_dialect_mismatch);
@@ -356,7 +356,7 @@ CrossTranslationUnitContext::ASTFileLoader::operator()(StringRef ASTFilePath) {
       new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
 
   return ASTUnit::LoadFromASTFile(
-      std::string(ASTFilePath), CI.getPCHContainerOperations()->getRawReader(),
+      ASTFilePath, CI.getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts());
 }
 

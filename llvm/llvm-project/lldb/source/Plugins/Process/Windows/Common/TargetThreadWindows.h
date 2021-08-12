@@ -34,6 +34,7 @@ public:
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
   bool CalculateStopInfo() override;
+  Unwind *GetUnwinder() override;
 
   Status DoResume();
 

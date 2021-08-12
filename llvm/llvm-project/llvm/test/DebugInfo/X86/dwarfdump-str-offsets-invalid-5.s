@@ -9,5 +9,6 @@
 # A degenerate section, not enough for a single entry.
         .byte 2
 
-# INVALIDSECTIONLENGTH: .debug_str_offsets contents:
-# INVALIDSECTIONLENGTH: 0x00000000: Gap, length = 1
+# INVALIDSECTIONLENGTH:      .debug_str_offsets contents:
+# INVALIDSECTIONLENGTH-NOT:  contents:
+# INVALIDSECTIONLENGTH:      error: size of .debug_str_offsets is not a multiple of 4.

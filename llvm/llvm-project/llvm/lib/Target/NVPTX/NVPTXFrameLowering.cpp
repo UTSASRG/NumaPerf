@@ -65,7 +65,7 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
 
 int NVPTXFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                int FI,
-                                               Register &FrameReg) const {
+                                               unsigned &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   FrameReg = NVPTX::VRDepot;
   return MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
@@ -82,9 +82,4 @@ MachineBasicBlock::iterator NVPTXFrameLowering::eliminateCallFramePseudoInstr(
   // Simply discard ADJCALLSTACKDOWN,
   // ADJCALLSTACKUP instructions.
   return MBB.erase(I);
-}
-
-TargetFrameLowering::DwarfFrameBase
-NVPTXFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
-  return {DwarfFrameBase::CFA, {0}};
 }

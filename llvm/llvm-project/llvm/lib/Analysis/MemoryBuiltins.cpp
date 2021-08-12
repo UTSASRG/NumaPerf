@@ -52,12 +52,11 @@ using namespace llvm;
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
   MallocLike         = 1<<1 | OpNewLike, // allocates; may return null
-  AlignedAllocLike   = 1<<2, // allocates with alignment; may return null
-  CallocLike         = 1<<3, // allocates + bzero
-  ReallocLike        = 1<<4, // reallocates
-  StrDupLike         = 1<<5,
-  MallocOrCallocLike = MallocLike | CallocLike | AlignedAllocLike,
-  AllocLike          = MallocOrCallocLike | StrDupLike,
+  CallocLike         = 1<<2, // allocates + bzero
+  ReallocLike        = 1<<3, // reallocates
+  StrDupLike         = 1<<4,
+  MallocOrCallocLike = MallocLike | CallocLike,
+  AllocLike          = MallocLike | CallocLike | StrDupLike,
   AnyAlloc           = AllocLike | ReallocLike
 };
 
@@ -101,7 +100,6 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_msvc_new_array_int_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned int, nothrow)
   {LibFunc_msvc_new_array_longlong,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned long long)
   {LibFunc_msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
-  {LibFunc_aligned_alloc,       {AlignedAllocLike, 2, 1,  -1}},
   {LibFunc_calloc,              {CallocLike,  2, 0,   1}},
   {LibFunc_realloc,             {ReallocLike, 2, 1,  -1}},
   {LibFunc_reallocf,            {ReallocLike, 2, 1,  -1}},
@@ -119,13 +117,13 @@ static const Function *getCalledFunction(const Value *V, bool LookThroughBitCast
   if (LookThroughBitCast)
     V = V->stripPointerCasts();
 
-  const auto *CB = dyn_cast<CallBase>(V);
-  if (!CB)
+  ImmutableCallSite CS(V);
+  if (!CS.getInstruction())
     return nullptr;
 
-  IsNoBuiltin = CB->isNoBuiltin();
+  IsNoBuiltin = CS.isNoBuiltin();
 
-  if (const Function *Callee = CB->getCalledFunction())
+  if (const Function *Callee = CS.getCalledFunction())
     return Callee;
   return nullptr;
 }
@@ -227,9 +225,8 @@ static Optional<AllocFnsTy> getAllocationSize(const Value *V,
 }
 
 static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
-  const auto *CB =
-      dyn_cast<CallBase>(LookThroughBitCast ? V->stripPointerCasts() : V);
-  return CB && CB->hasRetAttr(Attribute::NoAlias);
+  ImmutableCallSite CS(LookThroughBitCast ? V->stripPointerCasts() : V);
+  return CS && CS.hasRetAttr(Attribute::NoAlias);
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -265,20 +262,6 @@ bool llvm::isMallocLikeFn(
     const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     bool LookThroughBitCast) {
   return getAllocationData(V, MallocLike, GetTLI, LookThroughBitCast)
-      .hasValue();
-}
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates uninitialized memory with alignment (such as aligned_alloc).
-bool llvm::isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
-                                bool LookThroughBitCast) {
-  return getAllocationData(V, AlignedAllocLike, TLI, LookThroughBitCast)
-      .hasValue();
-}
-bool llvm::isAlignedAllocLikeFn(
-    const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
-    bool LookThroughBitCast) {
-  return getAllocationData(V, AlignedAllocLike, GetTLI, LookThroughBitCast)
       .hasValue();
 }
 
@@ -650,9 +633,6 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return unknown();
 
-  if (isa<ScalableVectorType>(I.getAllocatedType()))
-    return unknown();
-
   APInt Size(IntTyBits, DL.getTypeAllocSize(I.getAllocatedType()));
   if (!I.isArrayAllocation())
     return std::make_pair(align(Size, I.getAlignment()), Zero);
@@ -673,7 +653,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
   // No interprocedural analysis is done at the moment.
-  if (!A.hasPassPointeeByValueAttr()) {
+  if (!A.hasByValOrInAllocaAttr()) {
     ++ObjectVisitorArgument;
     return unknown();
   }
@@ -682,21 +662,21 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
   return std::make_pair(align(Size, A.getParamAlignment()), Zero);
 }
 
-SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  Optional<AllocFnsTy> FnData = getAllocationSize(&CB, TLI);
+SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
+  Optional<AllocFnsTy> FnData = getAllocationSize(CS.getInstruction(), TLI);
   if (!FnData)
     return unknown();
 
   // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
-    APInt Size(IntTyBits, GetStringLength(CB.getArgOperand(0)));
+    APInt Size(IntTyBits, GetStringLength(CS.getArgument(0)));
     if (!Size)
       return unknown();
 
     // Strndup limits strlen.
     if (FnData->FstParam > 0) {
       ConstantInt *Arg =
-          dyn_cast<ConstantInt>(CB.getArgOperand(FnData->FstParam));
+          dyn_cast<ConstantInt>(CS.getArgument(FnData->FstParam));
       if (!Arg)
         return unknown();
 
@@ -707,7 +687,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
     return std::make_pair(Size, Zero);
   }
 
-  ConstantInt *Arg = dyn_cast<ConstantInt>(CB.getArgOperand(FnData->FstParam));
+  ConstantInt *Arg = dyn_cast<ConstantInt>(CS.getArgument(FnData->FstParam));
   if (!Arg)
     return unknown();
 
@@ -719,7 +699,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
   if (FnData->SndParam < 0)
     return std::make_pair(Size, Zero);
 
-  Arg = dyn_cast<ConstantInt>(CB.getArgOperand(FnData->SndParam));
+  Arg = dyn_cast<ConstantInt>(CS.getArgument(FnData->SndParam));
   if (!Arg)
     return unknown();
 
@@ -947,8 +927,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   return std::make_pair(Size, Zero);
 }
 
-SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
-  Optional<AllocFnsTy> FnData = getAllocationSize(&CB, TLI);
+SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallSite(CallSite CS) {
+  Optional<AllocFnsTy> FnData = getAllocationSize(CS.getInstruction(), TLI);
   if (!FnData)
     return unknown();
 
@@ -958,12 +938,12 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
     return unknown();
   }
 
-  Value *FirstArg = CB.getArgOperand(FnData->FstParam);
+  Value *FirstArg = CS.getArgument(FnData->FstParam);
   FirstArg = Builder.CreateZExtOrTrunc(FirstArg, IntTy);
   if (FnData->SndParam < 0)
     return std::make_pair(FirstArg, Zero);
 
-  Value *SecondArg = CB.getArgOperand(FnData->SndParam);
+  Value *SecondArg = CS.getArgument(FnData->SndParam);
   SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return std::make_pair(Size, Zero);

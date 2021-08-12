@@ -21,7 +21,7 @@ class GCNSubtarget;
 class SIFrameLowering final : public AMDGPUFrameLowering {
 public:
   SIFrameLowering(StackDirection D, Align StackAl, int LAO,
-                  Align TransAl = Align(1))
+                  Align TransAl = Align::None())
       : AMDGPUFrameLowering(D, StackAl, LAO, TransAl) {}
   ~SIFrameLowering() override = default;
 
@@ -32,7 +32,7 @@ public:
   void emitEpilogue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override;
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+                             unsigned &FrameReg) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;
@@ -55,19 +55,26 @@ public:
                                 MachineBasicBlock::iterator MI) const override;
 
 private:
-  void emitEntryFunctionFlatScratchInit(MachineFunction &MF,
-                                        MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator I,
-                                        const DebugLoc &DL,
-                                        Register ScratchWaveOffsetReg) const;
+  void emitFlatScratchInit(const GCNSubtarget &ST,
+                           MachineFunction &MF,
+                           MachineBasicBlock &MBB) const;
 
-  Register getEntryFunctionReservedScratchRsrcReg(MachineFunction &MF) const;
+  unsigned getReservedPrivateSegmentBufferReg(
+    const GCNSubtarget &ST,
+    const SIInstrInfo *TII,
+    const SIRegisterInfo *TRI,
+    SIMachineFunctionInfo *MFI,
+    MachineFunction &MF) const;
 
-  void emitEntryFunctionScratchRsrcRegSetup(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator I, const DebugLoc &DL,
-      Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
-      Register ScratchWaveOffsetReg) const;
+  std::pair<unsigned, bool> getReservedPrivateSegmentWaveByteOffsetReg(
+      const GCNSubtarget &ST, const SIInstrInfo *TII, const SIRegisterInfo *TRI,
+      SIMachineFunctionInfo *MFI, MachineFunction &MF) const;
+
+  // Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
+  void emitEntryFunctionScratchSetup(const GCNSubtarget &ST, MachineFunction &MF,
+      MachineBasicBlock &MBB, SIMachineFunctionInfo *MFI,
+      MachineBasicBlock::iterator I, unsigned PreloadedPrivateBufferReg,
+      unsigned ScratchRsrcReg) const;
 
 public:
   bool hasFP(const MachineFunction &MF) const override;

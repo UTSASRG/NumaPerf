@@ -4,17 +4,16 @@
 // RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
 // RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
 
-// GNU:      Displaying notes found in: .note.foo
+// GNU:      Displaying notes found at file offset 0x00000040 with length 0x00000010:
 // GNU-NEXT:   Owner                 Data size       Description
 // GNU-NEXT:   XYZ                  0x00000000       Unknown note type: (0x00000003)
-// GNU-NEXT: Displaying notes found in: .note.bar
+// GNU-NEXT: Displaying notes found at file offset 0x00000050 with length 0x0000002c:
 // GNU-NEXT:   Owner                 Data size       Description
 // GNU-NEXT:   XYZ                  0x0000001c       Unknown note type: (0x00000003)
 // GNU-NEXT:     description data: 4c 6f 72 65 6d 20 69 70 73 75 6d 20 64 6f 6c 6f 72 20 73 69 74 20 61 6d 65 74 00 00
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
-// LLVM-NEXT:     Name: .note.foo
 // LLVM-NEXT:     Offset: 0x40
 // LLVM-NEXT:     Size: 0x10
 // LLVM-NEXT:     Note {
@@ -24,7 +23,6 @@
 // LLVM-NEXT:     }
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
-// LLVM-NEXT:     Name: .note.bar
 // LLVM-NEXT:     Offset: 0x50
 // LLVM-NEXT:     Size: 0x2C
 // LLVM-NEXT:     Note {

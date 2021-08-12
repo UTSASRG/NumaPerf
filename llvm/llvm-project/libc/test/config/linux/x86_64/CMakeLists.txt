@@ -3,5 +3,6 @@ add_libc_unittest(
   SUITE libc_linux_tests
   SRCS syscall_test.cpp
   DEPENDS
-   libc.config.linux.linux_syscall_h
+   syscall_impl_h
+   support_common_h
 )

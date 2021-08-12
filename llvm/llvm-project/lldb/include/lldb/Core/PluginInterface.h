@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_PLUGININTERFACE_H
-#define LLDB_CORE_PLUGININTERFACE_H
+#ifndef liblldb_PluginInterface_h_
+#define liblldb_PluginInterface_h_
 
 #include "lldb/lldb-private.h"
 
@@ -24,4 +24,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_PLUGININTERFACE_H
+#endif // liblldb_PluginInterface_h_

@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRFORTARGET_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRFORTARGET_H
+#ifndef liblldb_IRForTarget_h_
+#define liblldb_IRForTarget_h_
 
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -35,10 +36,6 @@ class Module;
 class StoreInst;
 class DataLayout;
 class Value;
-}
-
-namespace clang {
-class NamedDecl;
 }
 
 namespace lldb_private {
@@ -509,4 +506,4 @@ private:
   bool CompleteDataAllocation();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRFORTARGET_H
+#endif // liblldb_IRForTarget_h_

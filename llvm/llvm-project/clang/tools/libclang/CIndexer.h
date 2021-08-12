@@ -78,7 +78,7 @@ public:
   StringRef getClangToolchainPath();
 
   void setInvocationEmissionPath(StringRef Str) {
-    InvocationEmissionPath = std::string(Str);
+    InvocationEmissionPath = Str;
   }
 
   StringRef getInvocationEmissionPath() const { return InvocationEmissionPath; }

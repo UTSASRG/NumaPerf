@@ -5,7 +5,7 @@
 
 # CHECK: corrupted .eh_frame: unknown .eh_frame augmentation string:
 
-.section .eh_frame,"a",@unwind
+.section .eh_frame
   .byte 0x0E
   .byte 0x00
   .byte 0x00

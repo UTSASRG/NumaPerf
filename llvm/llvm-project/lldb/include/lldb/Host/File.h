@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_FILE_H
-#define LLDB_HOST_FILE_H
+#ifndef liblldb_File_h_
+#define liblldb_File_h_
 
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/IOObject.h"
@@ -367,8 +367,7 @@ protected:
   void CalculateInteractiveAndTerminal();
 
 private:
-  File(const File &) = delete;
-  const File &operator=(const File &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(File);
 };
 
 class NativeFile : public File {
@@ -429,10 +428,9 @@ protected:
   std::mutex offset_access_mutex;
 
 private:
-  NativeFile(const NativeFile &) = delete;
-  const NativeFile &operator=(const NativeFile &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(NativeFile);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_FILE_H
+#endif // liblldb_File_h_

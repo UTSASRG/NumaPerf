@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILS_TABLEGEN_LLDBTABLEGENUTILS_H
-#define LLDB_UTILS_TABLEGEN_LLDBTABLEGENUTILS_H
+#ifndef LLVM_LLDB_UTILS_TABLEGEN_TABLEGENUTILS_H
+#define LLVM_LLDB_UTILS_TABLEGEN_TABLEGENUTILS_H
 
 #include "llvm/ADT/StringRef.h"
 #include <map>

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
+#ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
+#define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 
-#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "lldb/Symbol/ClangASTImporter.h"
 
 #include "PdbIndex.h"
 #include "PdbSymUid.h"
@@ -51,7 +51,7 @@ struct DeclStatus {
 class PdbAstBuilder {
 public:
   // Constructors and Destructors
-  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, TypeSystemClang &clang);
+  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, ClangASTContext &clang);
 
   lldb_private::CompilerDeclContext GetTranslationUnitDecl();
 
@@ -80,7 +80,7 @@ public:
   clang::Decl *FromCompilerDecl(CompilerDecl decl);
   clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
 
-  TypeSystemClang &clang() { return m_clang; }
+  ClangASTContext &clang() { return m_clang; }
   ClangASTImporter &importer() { return m_importer; }
 
   void Dump(Stream &stream);
@@ -129,7 +129,7 @@ private:
   clang::QualType CreateSimpleType(TypeIndex ti);
 
   PdbIndex &m_index;
-  TypeSystemClang &m_clang;
+  ClangASTContext &m_clang;
 
   ClangASTImporter m_importer;
 
@@ -142,4 +142,4 @@ private:
 } // namespace npdb
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
+#endif // lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_

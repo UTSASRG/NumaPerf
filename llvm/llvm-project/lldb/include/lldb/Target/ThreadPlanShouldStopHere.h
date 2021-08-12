@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANSHOULDSTOPHERE_H
-#define LLDB_TARGET_THREADPLANSHOULDSTOPHERE_H
+#ifndef liblldb_ThreadPlanShouldStopHere_h_
+#define liblldb_ThreadPlanShouldStopHere_h_
 
 #include "lldb/Target/ThreadPlan.h"
 
@@ -130,11 +130,9 @@ protected:
   lldb_private::Flags m_flags;
 
 private:
-  ThreadPlanShouldStopHere(const ThreadPlanShouldStopHere &) = delete;
-  const ThreadPlanShouldStopHere &
-  operator=(const ThreadPlanShouldStopHere &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanShouldStopHere);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANSHOULDSTOPHERE_H
+#endif // liblldb_ThreadPlanShouldStopHere_h_

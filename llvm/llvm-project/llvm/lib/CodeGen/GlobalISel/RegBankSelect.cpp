@@ -693,15 +693,6 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       if (isTargetSpecificOpcode(MI.getOpcode()) && !MI.isPreISelOpcode())
         continue;
 
-      // Ignore inline asm instructions: they should use physical
-      // registers/regclasses
-      if (MI.isInlineAsm())
-        continue;
-
-      // Ignore debug info.
-      if (MI.isDebugInstr())
-        continue;
-
       if (!assignInstr(MI)) {
         reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);

@@ -40,8 +40,10 @@ struct MainFileMacros {
 ///  - collect macros after the preamble of the main file (in ParsedAST.cpp)
 class CollectMainFileMacros : public PPCallbacks {
 public:
-  explicit CollectMainFileMacros(const SourceManager &SM, MainFileMacros &Out)
-      : SM(SM), Out(Out) {}
+  explicit CollectMainFileMacros(const SourceManager &SM,
+                                 const LangOptions &LangOpts,
+                                 MainFileMacros &Out)
+      : SM(SM), LangOpts(LangOpts), Out(Out) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason,
                    SrcMgr::CharacteristicKind, FileID) override {
@@ -87,8 +89,24 @@ public:
   }
 
 private:
-  void add(const Token &MacroNameTok, const MacroInfo *MI);
+  void add(const Token &MacroNameTok, const MacroInfo *MI) {
+    if (!InMainFile)
+      return;
+    auto Loc = MacroNameTok.getLocation();
+    if (Loc.isMacroID())
+      return;
+
+    if (auto Range = getTokenRange(SM, LangOpts, Loc)) {
+      auto Name = MacroNameTok.getIdentifierInfo()->getName();
+      Out.Names.insert(Name);
+      if (auto SID = getSymbolID(Name, MI, SM))
+        Out.MacroRefs[*SID].push_back(*Range);
+      else
+        Out.UnknownMacros.push_back(*Range);
+    }
+  }
   const SourceManager &SM;
+  const LangOptions &LangOpts;
   bool InMainFile = true;
   MainFileMacros &Out;
 };

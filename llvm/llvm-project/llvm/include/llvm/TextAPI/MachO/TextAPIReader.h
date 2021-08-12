@@ -10,11 +10,9 @@
 #define LLVM_TEXTAPI_MACHO_READER_H
 
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
-
-class MemoryBufferRef;
-
 namespace MachO {
 
 class InterfaceFile;

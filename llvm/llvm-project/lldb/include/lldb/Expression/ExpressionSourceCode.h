@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_EXPRESSIONSOURCECODE_H
-#define LLDB_EXPRESSION_EXPRESSIONSOURCECODE_H
+#ifndef liblldb_ExpressionSourceCode_h
+#define liblldb_ExpressionSourceCode_h
 
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"

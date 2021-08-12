@@ -11,13 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "code-metrics"
 
@@ -170,7 +171,7 @@ void CodeMetrics::analyzeBasicBlock(const BasicBlock *BB,
       if (InvI->cannotDuplicate())
         notDuplicatable = true;
 
-    NumInsts += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
+    NumInsts += TTI.getUserCost(&I);
   }
 
   if (isa<ReturnInst>(BB->getTerminator()))

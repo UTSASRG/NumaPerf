@@ -105,7 +105,6 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, Attrs);
-  MaybeDestroyTemplateIds();
 
   assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
@@ -354,13 +353,13 @@ Retry:
 
   case tok::annot_pragma_fp_contract:
     ProhibitAttributes(Attrs);
-    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "fp_contract";
+    Diag(Tok, diag::err_pragma_fp_contract_scope);
     ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_fp:
     ProhibitAttributes(Attrs);
-    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "clang fp";
+    Diag(Tok, diag::err_pragma_fp_scope);
     ConsumeAnnotationToken();
     return StmtError();
 
@@ -368,12 +367,6 @@ Retry:
     ProhibitAttributes(Attrs);
     HandlePragmaFEnvAccess();
     return StmtEmpty();
-
-  case tok::annot_pragma_float_control:
-    ProhibitAttributes(Attrs);
-    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "float_control";
-    ConsumeAnnotationToken();
-    return StmtError();
 
   case tok::annot_pragma_opencl_extension:
     ProhibitAttributes(Attrs);
@@ -943,9 +936,6 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_fenv_access:
       HandlePragmaFEnvAccess();
       break;
-    case tok::annot_pragma_float_control:
-      HandlePragmaFloatControl();
-      break;
     case tok::annot_pragma_ms_pointers_to_members:
       HandlePragmaMSPointersToMembers();
       break;
@@ -1024,9 +1014,9 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                                 Tok.getLocation(),
                                 "in compound statement ('{}')");
 
-  // Record the state of the FPFeatures, restore on leaving the
+  // Record the state of the FP_CONTRACT pragma, restore on leaving the
   // compound statement.
-  Sema::FPFeaturesStateRAII SaveFPContractState(Actions);
+  Sema::FPContractStateRAII SaveFPContractState(Actions);
 
   InMessageExpressionRAIIObject InMessage(*this, false);
   BalancedDelimiterTracker T(*this, tok::l_brace);
@@ -1931,7 +1921,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
                                : ForRangeInfo.ColonLoc,
-               getLangOpts().CPlusPlus20
+               getLangOpts().CPlusPlus2a
                    ? diag::warn_cxx17_compat_for_range_init_stmt
                    : diag::ext_for_range_init_stmt)
               << (FirstPart.get() ? FirstPart.get()->getSourceRange()

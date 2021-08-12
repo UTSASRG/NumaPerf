@@ -38,11 +38,3 @@ RAIIDelegateInstaller::RAIIDelegateInstaller(MachineFunction &MF,
 }
 
 RAIIDelegateInstaller::~RAIIDelegateInstaller() { MF.resetDelegate(Delegate); }
-
-RAIIMFObserverInstaller::RAIIMFObserverInstaller(MachineFunction &MF,
-                                                 GISelChangeObserver &Observer)
-    : MF(MF) {
-  MF.setObserver(&Observer);
-}
-
-RAIIMFObserverInstaller::~RAIIMFObserverInstaller() { MF.setObserver(nullptr); }

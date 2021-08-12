@@ -80,13 +80,12 @@ static FixItHint getCallFixItHint(const ObjCMessageExpr *Expr,
     StringRef ClassName = FoundClassFactory->first;
     StringRef FactorySelector = FoundClassFactory->second;
     std::string NewCall =
-        std::string(llvm::formatv("[{0} {1}]", ClassName, FactorySelector));
+        llvm::formatv("[{0} {1}]", ClassName, FactorySelector);
     return FixItHint::CreateReplacement(Expr->getSourceRange(), NewCall);
   }
 
   if (isInitMethodAvailable(Expr->getReceiverInterface())) {
-    std::string NewCall =
-        std::string(llvm::formatv("[[{0} alloc] init]", Receiver));
+    std::string NewCall = llvm::formatv("[[{0} alloc] init]", Receiver);
     return FixItHint::CreateReplacement(Expr->getSourceRange(), NewCall);
   }
 
@@ -94,6 +93,9 @@ static FixItHint getCallFixItHint(const ObjCMessageExpr *Expr,
 }
 
 void AvoidNSObjectNewCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().ObjC)
+    return;
+
   // Add two matchers, to catch calls to +new and implementations of +new.
   Finder->addMatcher(
       objcMessageExpr(isClassMessage(), hasSelector("new")).bind("new_call"),

@@ -140,8 +140,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
     StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
     DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId,
     bool SplitDebugInlining, bool DebugInfoForProfiling,
-    DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
-    StringRef SysRoot, StringRef SDK) {
+    DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress) {
 
   assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
@@ -152,7 +151,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
       VMContext, Lang, File, Producer, isOptimized, Flags, RunTimeVer,
       SplitName, Kind, nullptr, nullptr, nullptr, nullptr, nullptr, DWOId,
       SplitDebugInlining, DebugInfoForProfiling, NameTableKind,
-      RangesBaseAddress, SysRoot, SDK);
+      RangesBaseAddress);
 
   // Create a named metadata so that it is easier to find cu in a module.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
@@ -246,8 +245,7 @@ DIMacroFile *DIBuilder::createTempMacroFile(DIMacroFile *Parent,
 DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val,
                                           bool IsUnsigned) {
   assert(!Name.empty() && "Unable to create enumerator without name");
-  return DIEnumerator::get(VMContext, APInt(64, Val, !IsUnsigned), IsUnsigned,
-                           Name);
+  return DIEnumerator::get(VMContext, Val, IsUnsigned, Name);
 }
 
 DIBasicType *DIBuilder::createUnspecifiedType(StringRef Name) {
@@ -407,26 +405,25 @@ DIBuilder::createObjCProperty(StringRef Name, DIFile *File, unsigned LineNumber,
 
 DITemplateTypeParameter *
 DIBuilder::createTemplateTypeParameter(DIScope *Context, StringRef Name,
-                                       DIType *Ty, bool isDefault) {
+                                       DIType *Ty) {
   assert((!Context || isa<DICompileUnit>(Context)) && "Expected compile unit");
-  return DITemplateTypeParameter::get(VMContext, Name, Ty, isDefault);
+  return DITemplateTypeParameter::get(VMContext, Name, Ty);
 }
 
 static DITemplateValueParameter *
 createTemplateValueParameterHelper(LLVMContext &VMContext, unsigned Tag,
                                    DIScope *Context, StringRef Name, DIType *Ty,
-                                   bool IsDefault, Metadata *MD) {
+                                   Metadata *MD) {
   assert((!Context || isa<DICompileUnit>(Context)) && "Expected compile unit");
-  return DITemplateValueParameter::get(VMContext, Tag, Name, Ty, IsDefault, MD);
+  return DITemplateValueParameter::get(VMContext, Tag, Name, Ty, MD);
 }
 
 DITemplateValueParameter *
 DIBuilder::createTemplateValueParameter(DIScope *Context, StringRef Name,
-                                        DIType *Ty, bool isDefault,
-                                        Constant *Val) {
+                                        DIType *Ty, Constant *Val) {
   return createTemplateValueParameterHelper(
       VMContext, dwarf::DW_TAG_template_value_parameter, Context, Name, Ty,
-      isDefault, getConstantOrNull(Val));
+      getConstantOrNull(Val));
 }
 
 DITemplateValueParameter *
@@ -434,7 +431,7 @@ DIBuilder::createTemplateTemplateParameter(DIScope *Context, StringRef Name,
                                            DIType *Ty, StringRef Val) {
   return createTemplateValueParameterHelper(
       VMContext, dwarf::DW_TAG_GNU_template_template_param, Context, Name, Ty,
-      false, MDString::get(VMContext, Val));
+      MDString::get(VMContext, Val));
 }
 
 DITemplateValueParameter *
@@ -442,7 +439,7 @@ DIBuilder::createTemplateParameterPack(DIScope *Context, StringRef Name,
                                        DIType *Ty, DINodeArray Val) {
   return createTemplateValueParameterHelper(
       VMContext, dwarf::DW_TAG_GNU_template_parameter_pack, Context, Name, Ty,
-      false, Val.get());
+      Val.get());
 }
 
 DICompositeType *DIBuilder::createClassType(
@@ -625,22 +622,11 @@ DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
 }
 
 DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, int64_t Count) {
-  auto *LB = ConstantAsMetadata::get(
-      ConstantInt::getSigned(Type::getInt64Ty(VMContext), Lo));
-  auto *CountNode = ConstantAsMetadata::get(
-      ConstantInt::getSigned(Type::getInt64Ty(VMContext), Count));
-  return DISubrange::get(VMContext, CountNode, LB, nullptr, nullptr);
+  return DISubrange::get(VMContext, Count, Lo);
 }
 
 DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, Metadata *CountNode) {
-  auto *LB = ConstantAsMetadata::get(
-      ConstantInt::getSigned(Type::getInt64Ty(VMContext), Lo));
-  return DISubrange::get(VMContext, CountNode, LB, nullptr, nullptr);
-}
-
-DISubrange *DIBuilder::getOrCreateSubrange(Metadata *CountNode, Metadata *LB,
-                                           Metadata *UB, Metadata *Stride) {
-  return DISubrange::get(VMContext, CountNode, LB, UB, Stride);
+  return DISubrange::get(VMContext, CountNode, Lo);
 }
 
 static void checkGlobalVariableScope(DIScope *Context) {
@@ -843,10 +829,10 @@ DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
 
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,
                                   StringRef ConfigurationMacros,
-                                  StringRef IncludePath, StringRef APINotesFile,
-                                  DIFile *File, unsigned LineNo) {
-  return DIModule::get(VMContext, File, getNonCompileUnitScope(Scope), Name,
-                       ConfigurationMacros, IncludePath, APINotesFile, LineNo);
+                                  StringRef IncludePath,
+                                  StringRef SysRoot) {
+ return DIModule::get(VMContext, getNonCompileUnitScope(Scope), Name,
+                      ConfigurationMacros, IncludePath, SysRoot);
 }
 
 DILexicalBlockFile *DIBuilder::createLexicalBlockFile(DIScope *Scope,
@@ -909,15 +895,18 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
   return insertDbgValueIntrinsic(V, VarInfo, Expr, DL, InsertAtEnd, nullptr);
 }
 
-/// Initialize IRBuilder for inserting dbg.declare and dbg.value intrinsics.
-/// This abstracts over the various ways to specify an insert position.
-static void initIRBuilder(IRBuilder<> &Builder, const DILocation *DL,
-                          BasicBlock *InsertBB, Instruction *InsertBefore) {
+/// Return an IRBuilder for inserting dbg.declare and dbg.value intrinsics. This
+/// abstracts over the various ways to specify an insert position.
+static IRBuilder<> getIRBForDbgInsertion(const DILocation *DL,
+                                         BasicBlock *InsertBB,
+                                         Instruction *InsertBefore) {
+  IRBuilder<> B(DL->getContext());
   if (InsertBefore)
-    Builder.SetInsertPoint(InsertBefore);
+    B.SetInsertPoint(InsertBefore);
   else if (InsertBB)
-    Builder.SetInsertPoint(InsertBB);
-  Builder.SetCurrentDebugLocation(DL);
+    B.SetInsertPoint(InsertBB);
+  B.SetCurrentDebugLocation(DL);
+  return B;
 }
 
 static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
@@ -947,8 +936,7 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                    MetadataAsValue::get(VMContext, VarInfo),
                    MetadataAsValue::get(VMContext, Expr)};
 
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertBB, InsertBefore);
+  IRBuilder<> B = getIRBForDbgInsertion(DL, InsertBB, InsertBefore);
   return B.CreateCall(DeclareFn, Args);
 }
 
@@ -970,8 +958,7 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(
                    MetadataAsValue::get(VMContext, VarInfo),
                    MetadataAsValue::get(VMContext, Expr)};
 
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertBB, InsertBefore);
+  IRBuilder<> B = getIRBForDbgInsertion(DL, InsertBB, InsertBefore);
   return B.CreateCall(ValueFn, Args);
 }
 
@@ -989,8 +976,7 @@ Instruction *DIBuilder::insertLabel(
   trackIfUnresolved(LabelInfo);
   Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
 
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertBB, InsertBefore);
+  IRBuilder<> B = getIRBForDbgInsertion(DL, InsertBB, InsertBefore);
   return B.CreateCall(LabelFn, Args);
 }
 

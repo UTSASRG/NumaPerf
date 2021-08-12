@@ -358,7 +358,7 @@ static std::string parseScalarString(yaml::Node *N) {
   SmallString<64> StringStorage;
   yaml::ScalarNode *S = dyn_cast<yaml::ScalarNode>(N);
   failIf(!S, "expected string");
-  return std::string(S->getValue(StringStorage));
+  return S->getValue(StringStorage);
 }
 
 std::unique_ptr<SymbolizedCoverage>
@@ -471,7 +471,7 @@ static std::unique_ptr<symbolize::LLVMSymbolizer> createSymbolizer() {
 static std::string normalizeFilename(const std::string &FileName) {
   SmallString<256> S(FileName);
   sys::path::remove_dots(S, /* remove_dot_dot */ true);
-  return stripPathPrefix(sys::path::convert_to_slash(std::string(S)));
+  return stripPathPrefix(S.str().str());
 }
 
 class Blacklists {
@@ -657,12 +657,7 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(NameOrErr);
     StringRef Name = NameOrErr.get();
 
-    Expected<uint32_t> FlagsOrErr = Symbol.getFlags();
-    // TODO: Test this error.
-    failIfError(FlagsOrErr);
-    uint32_t Flags = FlagsOrErr.get();
-
-    if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
+    if (!(Symbol.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
         isCoveragePointSymbol(Name)) {
       Result.insert(Address);
     }
@@ -1075,11 +1070,11 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
         CovFiles.insert(FileName);
       } else {
         auto ShortFileName = llvm::sys::path::filename(FileName);
-        if (ObjFiles.find(std::string(ShortFileName)) != ObjFiles.end()) {
+        if (ObjFiles.find(ShortFileName) != ObjFiles.end()) {
           fail("Duplicate binary file with a short name: " + ShortFileName);
         }
 
-        ObjFiles[std::string(ShortFileName)] = FileName;
+        ObjFiles[ShortFileName] = FileName;
         if (FirstObjFile.empty())
           FirstObjFile = FileName;
       }
@@ -1098,7 +1093,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
              FileName);
       }
 
-      auto Iter = ObjFiles.find(std::string(Components[1]));
+      auto Iter = ObjFiles.find(Components[1]);
       if (Iter == ObjFiles.end()) {
         fail("Object file for coverage not found: " + FileName);
       }

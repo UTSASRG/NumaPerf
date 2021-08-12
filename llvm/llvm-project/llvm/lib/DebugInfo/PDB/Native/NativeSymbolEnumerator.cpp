@@ -51,9 +51,7 @@ SymIndexId NativeSymbolEnumerator::getClassParentId() const {
 
 SymIndexId NativeSymbolEnumerator::getLexicalParentId() const { return 0; }
 
-std::string NativeSymbolEnumerator::getName() const {
-  return std::string(Record.Name);
-}
+std::string NativeSymbolEnumerator::getName() const { return Record.Name; }
 
 SymIndexId NativeSymbolEnumerator::getTypeId() const {
   return Parent.getTypeId();

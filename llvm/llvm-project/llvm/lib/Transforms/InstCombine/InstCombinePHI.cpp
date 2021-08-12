@@ -554,7 +554,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
   // visitLoadInst will propagate an alignment onto the load when TD is around,
   // and if TD isn't around, we can't handle the mixed case.
   bool isVolatile = FirstLI->isVolatile();
-  Align LoadAlignment = FirstLI->getAlign();
+  MaybeAlign LoadAlignment(FirstLI->getAlignment());
   unsigned LoadAddrSpace = FirstLI->getPointerAddressSpace();
 
   // We can't sink the load if the loaded value could be modified between the
@@ -584,7 +584,12 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
         !isSafeAndProfitableToSinkLoad(LI))
       return nullptr;
 
-    LoadAlignment = std::min(LoadAlignment, Align(LI->getAlign()));
+    // If some of the loads have an alignment specified but not all of them,
+    // we can't do the transformation.
+    if ((LoadAlignment.hasValue()) != (LI->getAlignment() != 0))
+      return nullptr;
+
+    LoadAlignment = std::min(LoadAlignment, MaybeAlign(LI->getAlignment()));
 
     // If the PHI is of volatile loads and the load block has multiple
     // successors, sinking it would remove a load of the volatile value from
@@ -1189,22 +1194,15 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
     if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
         match(CmpInst->getOperand(1), m_Zero())) {
       ConstantInt *NonZeroConst = nullptr;
-      bool MadeChange = false;
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
         Instruction *CtxI = PN.getIncomingBlock(i)->getTerminator();
         Value *VA = PN.getIncomingValue(i);
         if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
           if (!NonZeroConst)
             NonZeroConst = GetAnyNonZeroConstInt(PN);
-
-          if (NonZeroConst != VA) {
-            replaceOperand(PN, i, NonZeroConst);
-            MadeChange = true;
-          }
+          PN.setIncomingValue(i, NonZeroConst);
         }
       }
-      if (MadeChange)
-        return &PN;
     }
   }
 

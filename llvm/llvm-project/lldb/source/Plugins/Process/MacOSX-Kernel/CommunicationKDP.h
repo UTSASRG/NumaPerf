@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_COMMUNICATIONKDP_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_COMMUNICATIONKDP_H
+#ifndef liblldb_CommunicationKDP_h_
+#define liblldb_CommunicationKDP_h_
 
 #include <list>
 #include <mutex>
@@ -241,8 +241,7 @@ protected:
   lldb::addr_t m_last_read_memory_addr; // Last memory read address for logging
 private:
   // For CommunicationKDP only
-  CommunicationKDP(const CommunicationKDP &) = delete;
-  const CommunicationKDP &operator=(const CommunicationKDP &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(CommunicationKDP);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_COMMUNICATIONKDP_H
+#endif // liblldb_CommunicationKDP_h_

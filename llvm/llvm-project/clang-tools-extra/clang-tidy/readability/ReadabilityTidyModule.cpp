@@ -45,7 +45,6 @@
 #include "StringCompareCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
-#include "UseAnyOfAllOfCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -126,8 +125,6 @@ public:
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(
         "readability-uppercase-literal-suffix");
-    CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
-        "readability-use-anyofallof");
   }
 };
 

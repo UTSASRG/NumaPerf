@@ -1,4 +1,5 @@
-//===-- AppleGetThreadItemInfoHandler.cpp ---------------------------------===//
+//===-- AppleGetThreadItemInfoHandler.cpp -------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,13 +9,14 @@
 
 #include "AppleGetThreadItemInfoHandler.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -115,7 +117,7 @@ void AppleGetThreadItemInfoHandler::Detach() {
       m_get_thread_item_info_return_buffer_addr != LLDB_INVALID_ADDRESS) {
     std::unique_lock<std::mutex> lock(m_get_thread_item_info_retbuffer_mutex,
                                       std::defer_lock);
-    (void)lock.try_lock(); // Even if we don't get the lock, deallocate the buffer
+    lock.try_lock(); // Even if we don't get the lock, deallocate the buffer
     m_process->DeallocateMemory(m_get_thread_item_info_return_buffer_addr);
   }
 }
@@ -183,8 +185,8 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
 
       // Also make the FunctionCaller for this UtilityFunction:
 
-      TypeSystemClang *clang_ast_context =
-          TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
+      ClangASTContext *clang_ast_context =
+          ClangASTContext::GetScratch(thread.GetProcess()->GetTarget());
       CompilerType get_thread_item_info_return_type =
           clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
 
@@ -235,7 +237,7 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
+  ClangASTContext *clang_ast_context = ClangASTContext::GetScratch(*target_sp);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
   GetThreadItemInfoReturnInfo return_value;

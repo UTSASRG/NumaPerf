@@ -38,7 +38,6 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -62,7 +61,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return std::string(ExecutablePath.str());
+    return ExecutablePath.str();
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -73,7 +72,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
 static const char *GetStableCStr(std::set<std::string> &SavedStrings,
                                  StringRef S) {
-  return SavedStrings.insert(std::string(S)).first->c_str();
+  return SavedStrings.insert(S).first->c_str();
 }
 
 /// ApplyQAOverride - Apply a list of edits to the input argument lists.
@@ -267,7 +266,7 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   StringRef ExeBasename(llvm::sys::path::stem(Path));
   if (ExeBasename.equals_lower("cl"))
     ExeBasename = "clang-cl";
-  DiagClient->setPrefix(std::string(ExeBasename));
+  DiagClient->setPrefix(ExeBasename);
 }
 
 // This lets us create the DiagnosticsEngine with a properly-filled-out
@@ -343,9 +342,6 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
 int main(int argc_, const char **argv_) {
   noteBottomOfStack();
   llvm::InitLLVM X(argc_, argv_);
-  llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
-                        " and include the crash backtrace, preprocessed "
-                        "source, and associated run script.\n");
   SmallVector<const char *, 256> argv(argv_, argv_ + argc_);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())

@@ -21,21 +21,22 @@ static constexpr llvm::StringLiteral MutatingOperatorName = "MutatingOp";
 static constexpr llvm::StringLiteral MutatingCallName = "MutatingCall";
 
 void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   const auto MemberExprOrSourceObject = anyOf(
-      memberExpr(),
-      declRefExpr(to(decl(equalsBoundNode(std::string(SourceDeclName))))));
+      memberExpr(), declRefExpr(to(decl(equalsBoundNode(SourceDeclName)))));
 
   const auto IsPartOfSource =
       allOf(unless(hasDescendant(expr(unless(MemberExprOrSourceObject)))),
             MemberExprOrSourceObject);
 
-  const auto IsSourceMutatingAssignment = traverse(
-      ast_type_traits::TK_AsIs,
+  const auto IsSourceMutatingAssignment =
       expr(anyOf(binaryOperator(isAssignmentOperator(), hasLHS(IsPartOfSource))
                      .bind(MutatingOperatorName),
                  cxxOperatorCallExpr(isAssignmentOperator(),
                                      hasArgument(0, IsPartOfSource))
-                     .bind(MutatingOperatorName))));
+                     .bind(MutatingOperatorName)));
 
   const auto MemberExprOrSelf = anyOf(memberExpr(), cxxThisExpr());
 

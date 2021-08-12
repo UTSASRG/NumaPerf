@@ -43,15 +43,6 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "Set whether to bind the root matcher to \"root\".\n"
         "  set print-matcher (true|false)    "
         "Set whether to print the current matcher,\n"
-        "  set traversal <kind>              "
-        "Set traversal kind of clang-query session. Available kinds are:\n"
-        "    AsIs                            "
-        "Print and match the AST as clang sees it.\n"
-        "    IgnoreImplicitCastsAndParentheses  "
-        "Omit implicit casts and parens in matching and dumping.\n"
-        "    IgnoreUnlessSpelledInSource     "
-        "Omit AST nodes unless spelled in the source.  This mode is the "
-        "default.\n"
         "  set output <feature>              "
         "Set whether to output only <feature> content.\n"
         "  enable output <feature>           "
@@ -107,8 +98,6 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
       OS << "Not a valid top-level matcher.\n";
       return false;
     }
-
-    AST->getASTContext().getParentMapContext().setTraversalKind(QS.TK);
     Finder.matchAST(AST->getASTContext());
 
     if (QS.PrintMatcher) {
@@ -159,7 +148,6 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
           const SourceManager &SM = Ctx.getSourceManager();
           ASTDumper Dumper(OS, &Ctx.getCommentCommandTraits(), &SM,
                 SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
-          Dumper.SetTraversalKind(QS.TK);
           Dumper.Visit(BI->second);
           OS << "\n";
         }

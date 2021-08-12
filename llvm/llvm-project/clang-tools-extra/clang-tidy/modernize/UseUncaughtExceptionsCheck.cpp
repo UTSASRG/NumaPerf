@@ -17,6 +17,9 @@ namespace tidy {
 namespace modernize {
 
 void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus17)
+    return;
+
   std::string MatchText = "::std::uncaught_exception";
 
   // Using declaration: warning and fix-it.
@@ -31,18 +34,15 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
           .bind("decl_ref_expr"),
       this);
 
-  auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
-      declRefExpr(hasDeclaration(functionDecl(hasName(MatchText)))))));
-
   // CallExpr: warning, fix-it.
-  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
+  Finder->addMatcher(callExpr(hasDeclaration(functionDecl(hasName(MatchText))),
                               unless(hasAncestor(initListExpr())))
                          .bind("call_expr"),
                      this);
   // CallExpr in initialisation list: warning, fix-it with avoiding narrowing
   // conversions.
-  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
-                              hasAncestor(initListExpr()))
+  Finder->addMatcher(callExpr(hasAncestor(initListExpr()),
+                              hasDeclaration(functionDecl(hasName(MatchText))))
                          .bind("init_call_expr"),
                      this);
 }

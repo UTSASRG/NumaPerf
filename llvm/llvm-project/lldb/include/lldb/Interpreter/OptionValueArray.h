@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUEARRAY_H
-#define LLDB_INTERPRETER_OPTIONVALUEARRAY_H
+#ifndef liblldb_OptionValueArray_h_
+#define liblldb_OptionValueArray_h_
 
 #include <vector>
 
@@ -125,4 +125,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUEARRAY_H
+#endif // liblldb_OptionValueArray_h_

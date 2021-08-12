@@ -189,20 +189,18 @@ bool BPFAbstractMemberAccess::runOnModule(Module &M) {
   return doTransformation(M);
 }
 
-static bool SkipDIDerivedTag(unsigned Tag, bool skipTypedef) {
+static bool SkipDIDerivedTag(unsigned Tag) {
   if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
       Tag != dwarf::DW_TAG_volatile_type &&
       Tag != dwarf::DW_TAG_restrict_type &&
       Tag != dwarf::DW_TAG_member)
-    return false;
-  if (Tag == dwarf::DW_TAG_typedef && !skipTypedef)
-    return false;
+     return false;
   return true;
 }
 
-static DIType * stripQualifiers(DIType *Ty, bool skipTypedef = true) {
+static DIType * stripQualifiers(DIType *Ty) {
   while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    if (!SkipDIDerivedTag(DTy->getTag(), skipTypedef))
+    if (!SkipDIDerivedTag(DTy->getTag()))
       break;
     Ty = DTy->getBaseType();
   }
@@ -211,7 +209,7 @@ static DIType * stripQualifiers(DIType *Ty, bool skipTypedef = true) {
 
 static const DIType * stripQualifiers(const DIType *Ty) {
   while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    if (!SkipDIDerivedTag(DTy->getTag(), true))
+    if (!SkipDIDerivedTag(DTy->getTag()))
       break;
     Ty = DTy->getBaseType();
   }
@@ -239,7 +237,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   if (!Call)
     return false;
 
-  const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
+  const auto *GV = dyn_cast<GlobalValue>(Call->getCalledValue());
   if (!GV)
     return false;
   if (GV->getName().startswith("llvm.preserve.array.access.index")) {
@@ -712,7 +710,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // calculated here as all debuginfo types are available.
 
   // Get type name and calculate the first index.
-  // We only want to get type name from typedef, structure or union.
+  // We only want to get type name from structure or union.
   // If user wants a relocation like
   //    int *p; ... __builtin_preserve_access_index(&p[4]) ...
   // or
@@ -729,15 +727,12 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     if (!Base)
       Base = CInfo.Base;
 
-    DIType *PossibleTypeDef = stripQualifiers(cast<DIType>(CInfo.Metadata),
-                                              false);
-    DIType *Ty = stripQualifiers(PossibleTypeDef);
+    DIType *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata));
     if (CInfo.Kind == BPFPreserveUnionAI ||
         CInfo.Kind == BPFPreserveStructAI) {
-      // struct or union type. If the typedef is in the metadata, always
-      // use the typedef.
-      TypeName = std::string(PossibleTypeDef->getName());
-      TypeMeta = PossibleTypeDef;
+      // struct or union type
+      TypeName = Ty->getName();
+      TypeMeta = Ty;
       PatchImm += FirstIndex * (Ty->getSizeInBits() >> 3);
       break;
     }
@@ -787,7 +782,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
       unsigned CTag = CTy->getTag();
       if (CTag == dwarf::DW_TAG_structure_type || CTag == dwarf::DW_TAG_union_type) {
-        TypeName = std::string(CTy->getName());
+        TypeName = CTy->getName();
       } else {
         if (HasPreserveFieldInfoCall(CallStack))
           report_fatal_error("Invalid field access for llvm.preserve.field.info intrinsic");
@@ -878,8 +873,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
 
   if (CInfo.Kind == BPFPreserveFieldInfoAI) {
     // Load the global variable which represents the returned field info.
-    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
-                                Call);
+    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV);
+    BB->getInstList().insert(Call->getIterator(), LDInst);
     Call->replaceAllUsesWith(LDInst);
     Call->eraseFromParent();
     return true;
@@ -896,7 +891,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
   // The original Call inst is removed.
 
   // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV);
+  BB->getInstList().insert(Call->getIterator(), LDInst);
 
   // Generate a BitCast
   auto *BCInst = new BitCastInst(Base, Type::getInt8PtrTy(BB->getContext()));

@@ -101,40 +101,34 @@ public:
     return true;
   }
 
-  unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
-                                    bool Insert, bool Extract);
-  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF);
-  unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys,
-                            TTI::TargetCostKind CostKind);
-  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                 TTI::TargetCostKind CostKind);
+  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract);
+  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value*> Args,
+            unsigned VF);
+  unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys);
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+            ArrayRef<Value*> Args, FastMathFlags FMF, unsigned VF);
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+            ArrayRef<Type*> Tys, FastMathFlags FMF,
+            unsigned ScalarizationCostPassed = UINT_MAX);
   unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
             const SCEV *S);
   unsigned getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
                            unsigned AddressSpace,
-                           TTI::TargetCostKind CostKind,
                            const Instruction *I = nullptr);
   unsigned getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                                 unsigned AddressSpace,
-                           TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
+            unsigned AddressSpace);
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
             Type *SubTp);
   unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy, Value *Ptr,
-                                  bool VariableMask, unsigned Alignment,
-                                  TTI::TargetCostKind CostKind,
-                                  const Instruction *I);
+            bool VariableMask, unsigned Alignment);
   unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
             unsigned Factor, ArrayRef<unsigned> Indices, unsigned Alignment,
-            unsigned AddressSpace,
-            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-            bool UseMaskForCond = false, bool UseMaskForGaps = false);
+            unsigned AddressSpace, bool UseMaskForCond = false,
+            bool UseMaskForGaps = false);
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                              TTI::TargetCostKind CostKind,
-                              const Instruction *I = nullptr);
+            const Instruction *I);
   unsigned getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -142,18 +136,16 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-            TTI::TargetCostKind CostKind,
             const Instruction *I = nullptr);
   unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
+  unsigned getCFInstrCost(unsigned Opcode) {
     return 1;
   }
 
   /// @}
 
-  int getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                  TTI::TargetCostKind CostKind);
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands);
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const;

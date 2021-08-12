@@ -1,6 +1,5 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL --dump-input-on-failure
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEF --dump-input-on-failure
-// RUN: mlir-tblgen -print-records -I %S/../../include %s | FileCheck %s --check-prefix=RECORD --dump-input-on-failure
 
 include "mlir/IR/OpBase.td"
 
@@ -53,32 +52,22 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? Optional<some-return-type>(attr.some-convert-from-storage()) : (llvm::None);
 
-// Test setter methods
-// ---
-
-// DEF:      void AOp::aAttrAttr(some-attr-kind attr) {
-// DEF-NEXT:   this->getOperation()->setAttr("aAttr", attr);
-// DEF:      void AOp::bAttrAttr(some-attr-kind attr) {
-// DEF-NEXT:   this->getOperation()->setAttr("bAttr", attr);
-// DEF:      void AOp::cAttrAttr(some-attr-kind attr) {
-// DEF-NEXT:   this->getOperation()->setAttr("cAttr", attr);
-
 // Test build methods
 // ---
 
 // DEF:      void AOp::build(
-// DEF:        odsState.addAttribute("aAttr", aAttr);
-// DEF:        odsState.addAttribute("bAttr", bAttr);
+// DEF:        tblgen_state.addAttribute("aAttr", aAttr);
+// DEF:        tblgen_state.addAttribute("bAttr", bAttr);
 // DEF:        if (cAttr) {
-// DEF-NEXT:     odsState.addAttribute("cAttr", cAttr);
+// DEF-NEXT:     tblgen_state.addAttribute("cAttr", cAttr);
 
 // DEF:      void AOp::build(
 // DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
-// DEF:        odsState.addAttribute("aAttr", some-const-builder-call(odsBuilder, aAttr));
+// DEF:        tblgen_state.addAttribute("aAttr", some-const-builder-call((*tblgen_builder), aAttr));
 
 // DEF:      void AOp::build(
 // DEF:        ArrayRef<NamedAttribute> attributes
-// DEF:      odsState.addAttributes(attributes);
+// DEF:      tblgen_state.addAttributes(attributes);
 
 // Test verify method
 // ---
@@ -137,8 +126,8 @@ def BOp : NS_Op<"b_op", []> {
 // DEF-LABEL: BOp::verify
 // DEF: if (!((true)))
 // DEF: if (!((tblgen_bool_attr.isa<BoolAttr>())))
-// DEF: if (!(((tblgen_i32_attr.isa<IntegerAttr>())) && ((tblgen_i32_attr.cast<IntegerAttr>().getType().isSignlessInteger(32)))))
-// DEF: if (!(((tblgen_i64_attr.isa<IntegerAttr>())) && ((tblgen_i64_attr.cast<IntegerAttr>().getType().isSignlessInteger(64)))))
+// DEF: if (!(((tblgen_i32_attr.isa<IntegerAttr>())) && ((tblgen_i32_attr.cast<IntegerAttr>().getType().isInteger(32)))))
+// DEF: if (!(((tblgen_i64_attr.isa<IntegerAttr>())) && ((tblgen_i64_attr.cast<IntegerAttr>().getType().isInteger(64)))))
 // DEF: if (!(((tblgen_f32_attr.isa<FloatAttr>())) && ((tblgen_f32_attr.cast<FloatAttr>().getType().isF32()))))
 // DEF: if (!(((tblgen_f64_attr.isa<FloatAttr>())) && ((tblgen_f64_attr.cast<FloatAttr>().getType().isF64()))))
 // DEF: if (!((tblgen_str_attr.isa<StringAttr>())))
@@ -197,26 +186,6 @@ def DOp : NS_Op<"d_op", []> {
 // DECL-LABEL: DOp declarations
 // DECL: static void build({{.*}}, APInt i32_attr, APFloat f64_attr, StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, APInt dv_i32_attr, APFloat dv_f64_attr, StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
-// DEF-LABEL: DOp definitions
-// DEF: odsState.addAttribute("str_attr", odsBuilder.getStringAttr(str_attr));
-// DEF: odsState.addAttribute("dv_str_attr", odsBuilder.getStringAttr(dv_str_attr));
-
-// Test derived type attr.
-// ---
-def DerivedTypeAttrOp : NS_Op<"derived_type_attr_op", []> {
-  let results = (outs AnyTensor:$output);
-  DerivedTypeAttr element_dtype = DerivedTypeAttr<"return output().getType();">;
-}
-
-// DECL: class DerivedTypeAttrOp : public Op
-// DECL-SAME: DerivedAttributeOpInterface::Trait
-// DECL: static bool isDerivedAttribute
-// DEF: bool DerivedTypeAttrOp::isDerivedAttribute(StringRef name) {
-// DEF:   if (name == "element_dtype") return true;
-// DEF:   return false;
-// DEF: }
-// DEF: DerivedTypeAttrOp::materializeDerivedAttributes
-
 // Test that only default valued attributes at the end of the arguments
 // list get default values in the builder signature
 // ---
@@ -249,7 +218,7 @@ def MixOperandsAndAttrs : NS_Op<"mix_operands_and_attrs", []> {
 // DEF-LABEL: MixOperandsAndAttrs definitions
 // DEF-DAG: Value MixOperandsAndAttrs::operand()
 // DEF-DAG: Value MixOperandsAndAttrs::otherArg()
-// DEF-DAG: void MixOperandsAndAttrs::build(OpBuilder &odsBuilder, OperationState &odsState, FloatAttr attr, Value operand, FloatAttr otherAttr, Value otherArg)
+// DEF-DAG: void MixOperandsAndAttrs::build(Builder *tblgen_builder, OperationState &tblgen_state, FloatAttr attr, Value operand, FloatAttr otherAttr, Value otherArg)
 // DEF-DAG: APFloat MixOperandsAndAttrs::attr()
 // DEF-DAG: APFloat MixOperandsAndAttrs::otherAttr()
 
@@ -264,13 +233,4 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF: bool UnitAttrOp::attr() {
 // DEF:   return {{.*}} != nullptr
 
-// DEF: build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/UnitAttr attr)
-
-
-// Test elementAttr field of TypedArrayAttr.
-// ---
-
-def SomeTypedArrayAttr : TypedArrayAttrBase<SomeAttr, "SomeAttr array">;
-
-// RECORD-LABEL: def SomeTypedArrayAttr
-// RECORD: Attr elementAttr = SomeAttr;
+// DEF: build(Builder *tblgen_builder, OperationState &tblgen_state, /*optional*/UnitAttr attr)

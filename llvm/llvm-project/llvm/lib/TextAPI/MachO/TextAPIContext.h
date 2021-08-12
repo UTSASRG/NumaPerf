@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_MACHO_CONTEXT_H
 #define LLVM_TEXTAPI_MACHO_CONTEXT_H
 
+#include "llvm/Support/MemoryBuffer.h"
 #include <string>
 
 namespace llvm {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBDATA_H
-#define LLDB_API_SBDATA_H
+#ifndef LLDB_SBData_h_
+#define LLDB_SBData_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -152,4 +152,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBDATA_H
+#endif // LLDB_SBData_h_

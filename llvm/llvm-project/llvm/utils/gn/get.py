@@ -5,12 +5,7 @@ from __future__ import print_function
 
 import io
 import os
-try:
-    # In Python 3, we need the module urllib.reqest. In Python 2, this
-    # functionality was in the urllib2 module.
-    from urllib import request as urllib_request
-except ImportError:
-    import urllib2 as urllib_request
+import urllib2
 import sys
 import zipfile
 
@@ -19,7 +14,7 @@ def download_and_unpack(url, output_dir, gn):
     """Download an archive from url and extract gn from it into output_dir."""
     print('downloading %s ...' % url, end='')
     sys.stdout.flush()
-    data = urllib_request.urlopen(url).read()
+    data = urllib2.urlopen(url).read()
     print(' done')
     zipfile.ZipFile(io.BytesIO(data)).extract(gn, path=output_dir)
 

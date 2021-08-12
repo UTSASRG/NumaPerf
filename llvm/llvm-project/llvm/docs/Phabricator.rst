@@ -48,11 +48,7 @@ Requesting a review via the web interface
 The tool to create and review patches in Phabricator is called
 *Differential*.
 
-Note that you can upload patches created through git, but using `arc` on the
-command line (see previous section) is prefered: it adds more metadata to
-Phabricator which are useful for the pre-merge testing system and for
-propagating attribution on commits when someone else has to push it for you.
-
+Note that you can upload patches created through git.
 To make reviews easier, please always include **as much context as
 possible** with your diff! Don't worry, Phabricator
 will automatically send a diff with a smaller context in the review
@@ -63,8 +59,7 @@ To get a full diff, use one of the following commands (or just use Arcanist
 to upload your patch):
 
 * ``git show HEAD -U999999 > mypatch.patch``
-* ``git diff -U999999 @{u} > mypatch.patch``
-* ``git diff HEAD~1 -U999999 > mypatch.patch``
+* ``git format-patch -U999999 @{u}``
 
 Before uploading your patch, please make sure it is formatted properly, as
 described in :ref:`How to Submit a Patch <format patches>`.
@@ -174,7 +169,7 @@ yourself.
 Using the Arcanist tool can simplify the process of committing reviewed code as
 it will retrieve reviewers, the ``Differential Revision``, etc from the review
 and place it in the commit message. You may also commit an accepted change
-directly using ``git push``, per the section in the :ref:`getting started
+directly using ``git llvm push``, per the section in the :ref:`getting started
 guide <commit_from_git>`.
 
 Note that if you commit the change without using Arcanist and forget to add the
@@ -199,23 +194,16 @@ This will create a new branch called ``arcpatch-D<Revision>`` based on the
 current ``master`` and will create a commit corresponding to ``D<Revision>`` with a
 commit message derived from information in the Phabricator review.
 
-Check you are happy with the commit message and amend it if necessary.
-For example, ensure the 'Author' property of the commit is set to the original author.
-You can use a command to correct the author property if it is incorrect:
-
-::
-
-  git commit --amend --author="John Doe <jdoe@llvm.org>"
-
-Then, make sure the commit is up-to-date, and commit it. This can be done by running
+Check you are happy with the commit message and amend it if necessary. Then,
+make sure the commit is up-to-date, and commit it. This can be done by running
 the following:
 
 ::
 
-  git pull --rebase https://github.com/llvm/llvm-project.git master
+  git pull --rebase origin master
   git show # Ensure the patch looks correct.
   ninja check-$whatever # Rerun the appropriate tests if needed.
-  git push https://github.com/llvm/llvm-project.git HEAD:master
+  git llvm push
 
 Or
 

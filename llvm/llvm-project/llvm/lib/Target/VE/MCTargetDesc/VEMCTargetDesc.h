@@ -22,7 +22,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectTargetWriter;
+class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -32,12 +32,8 @@ class StringRef;
 class raw_pwrite_stream;
 class raw_ostream;
 
-MCCodeEmitter *createVEMCCodeEmitter(const MCInstrInfo &MCII,
-                                     const MCRegisterInfo &MRI, MCContext &Ctx);
-MCAsmBackend *createVEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                                 const MCRegisterInfo &MRI,
-                                 const MCTargetOptions &Options);
-std::unique_ptr<MCObjectTargetWriter> createVEELFObjectWriter(uint8_t OSABI);
+Target &getTheVETarget();
+
 } // namespace llvm
 
 // Defines symbolic names for VE registers.  This defines a mapping from

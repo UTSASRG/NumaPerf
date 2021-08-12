@@ -393,8 +393,6 @@ public:
   explicit SystemZTargetLowering(const TargetMachine &TM,
                                  const SystemZSubtarget &STI);
 
-  bool useSoftFloat() const override;
-
   // Override TargetLowering.
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
@@ -439,14 +437,6 @@ public:
                                       bool *Fast) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
-
-  bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
-                            bool MathUsed) const override {
-    // Form add and sub with overflow intrinsics regardless of any extra
-    // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64;
-  }
-
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
@@ -481,19 +471,16 @@ public:
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }
 
-  Register getRegisterByName(const char *RegName, LLT VT,
-                             const MachineFunction &MF) const override;
-
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
-  Register
+  unsigned
   getExceptionPointerRegister(const Constant *PersonalityFn) const override {
     return SystemZ::R6D;
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
-  Register
+  unsigned
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
     return SystemZ::R7D;
   }
@@ -642,13 +629,11 @@ private:
   SDValue combineJOIN_DWORDS(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue unwrapAddress(SDValue N) const override;
 
@@ -692,8 +677,7 @@ private:
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
 
-  MachineMemOperand::Flags
-  getTargetMMOFlags(const Instruction &I) const override;
+  MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 };
 

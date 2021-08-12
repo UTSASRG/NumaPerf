@@ -101,4 +101,4 @@ public:
 };
 }
 
-#endif // LLDB_TARGET_PROCESSSTRUCTREADER_H
+#endif // utility_ProcessStructReader_h_

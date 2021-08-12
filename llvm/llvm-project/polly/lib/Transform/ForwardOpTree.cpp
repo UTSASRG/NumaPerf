@@ -861,10 +861,8 @@ public:
       }
     }
 
-    if (Modified) {
+    if (Modified)
       ScopsModified++;
-      S->realignParams();
-    }
     return Modified;
   }
 

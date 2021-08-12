@@ -20,15 +20,14 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -62,10 +61,8 @@ Error Config::addSaveTemps(std::string OutputFileName,
   std::error_code EC;
   ResolutionFile = std::make_unique<raw_fd_ostream>(
       OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
-  if (EC) {
-    ResolutionFile.reset();
+  if (EC)
     return errorCodeToError(EC);
-  }
 
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
@@ -128,29 +125,6 @@ Error Config::addSaveTemps(std::string OutputFileName,
   return Error::success();
 }
 
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
-
-static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
-                                PassBuilder &PB) {
-#define HANDLE_EXTENSION(Ext)                                                  \
-  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-#include "llvm/Support/Extension.def"
-
-  // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
-    PassPlugin->registerPassBuilderCallbacks(PB);
-  }
-}
-
 namespace {
 
 std::unique_ptr<TargetMachine>
@@ -205,8 +179,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (auto Err = PB.parseAAPipeline(AA, "default"))
     report_fatal_error("Error parsing default AA pipeline");
 
-  RegisterPassPlugins(Conf.PassPlugins, PB);
-
   LoopAnalysisManager LAM(Conf.DebugPassManager);
   FunctionAnalysisManager FAM(Conf.DebugPassManager);
   CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
@@ -231,16 +203,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   default:
     llvm_unreachable("Invalid optimization level");
   case 0:
-    OL = PassBuilder::OptimizationLevel::O0;
+    OL = PassBuilder::O0;
     break;
   case 1:
-    OL = PassBuilder::OptimizationLevel::O1;
+    OL = PassBuilder::O1;
     break;
   case 2:
-    OL = PassBuilder::OptimizationLevel::O2;
+    OL = PassBuilder::O2;
     break;
   case 3:
-    OL = PassBuilder::OptimizationLevel::O3;
+    OL = PassBuilder::O3;
     break;
   }
 
@@ -254,8 +226,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // FIXME (davide): verify the output.
 }
 
-static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
-                                 TargetMachine *TM, std::string PipelineDesc,
+static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
+                                 std::string PipelineDesc,
                                  std::string AAPipelineDesc,
                                  bool DisableVerify) {
   PassBuilder PB(TM);
@@ -266,8 +238,6 @@ static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
     if (auto Err = PB.parseAAPipeline(AA, AAPipelineDesc))
       report_fatal_error("unable to parse AA pipeline description '" +
                          AAPipelineDesc + "': " + toString(std::move(Err)));
-
-  RegisterPassPlugins(Conf.PassPlugins, PB);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -335,7 +305,7 @@ bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          const ModuleSummaryIndex *ImportSummary) {
   // FIXME: Plumb the combined index into the new pass manager.
   if (!Conf.OptPipeline.empty())
-    runNewPMCustomPasses(Conf, Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
+    runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
   else if (Conf.UseNewPM)
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
@@ -379,7 +349,7 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
-    TM->Options.MCOptions.SplitDwarfFile = std::string(DwoFile);
+    TM->Options.MCOptions.SplitDwarfFile = DwoFile.str().str();
   } else
     TM->Options.MCOptions.SplitDwarfFile = Conf.SplitDwarfFile;
 
@@ -405,8 +375,7 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 void splitCodeGen(const Config &C, TargetMachine *TM, AddStreamFn AddStream,
                   unsigned ParallelCodeGenParallelismLevel,
                   std::unique_ptr<Module> Mod) {
-  ThreadPool CodegenThreadPool(
-      heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
+  ThreadPool CodegenThreadPool(ParallelCodeGenParallelismLevel);
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 
@@ -465,8 +434,8 @@ Expected<const Target *> initAndLookupTarget(const Config &C, Module &Mod) {
 }
 }
 
-Error lto::finalizeOptimizationRemarks(
-    std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+static Error
+finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
@@ -486,10 +455,18 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   std::unique_ptr<TargetMachine> TM = createTargetMachine(C, *TOrErr, *Mod);
 
+  // Setup optimization remarks.
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
+      Mod->getContext(), C.RemarksFilename, C.RemarksPasses, C.RemarksFormat,
+      C.RemarksWithHotness);
+  if (!DiagFileOrErr)
+    return DiagFileOrErr.takeError();
+  auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
+
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr))
-      return Error::success();
+      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
@@ -498,7 +475,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
                  std::move(Mod));
   }
-  return Error::success();
+  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
@@ -534,16 +511,12 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   std::unique_ptr<TargetMachine> TM = createTargetMachine(Conf, *TOrErr, Mod);
 
   // Setup optimization remarks.
-  auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
       Mod.getContext(), Conf.RemarksFilename, Conf.RemarksPasses,
       Conf.RemarksFormat, Conf.RemarksWithHotness, Task);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
   auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
-
-  // Set the partial sample profile ratio in the profile summary module flag of
-  // the module, if applicable.
-  Mod.setPartialSampleProfileRatio(CombinedIndex);
 
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod);
@@ -553,13 +526,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-  // When linking an ELF shared object, dso_local should be dropped. We
-  // conservatively do this for -fpic.
-  bool ClearDSOLocalOnDeclarations =
-      TM->getTargetTriple().isOSBinFormatELF() &&
-      TM->getRelocationModel() != Reloc::Static &&
-      Mod.getPIELevel() == PIELevel::Default;
-  renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);
+  renameModuleForThinLTO(Mod, CombinedIndex);
 
   dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
@@ -585,8 +552,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                                    /*IsImporting*/ true);
   };
 
-  FunctionImporter Importer(CombinedIndex, ModuleLoader,
-                            ClearDSOLocalOnDeclarations);
+  FunctionImporter Importer(CombinedIndex, ModuleLoader);
   if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
     return Err;
 

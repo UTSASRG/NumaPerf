@@ -95,23 +95,12 @@ public:
 };
 }
 
-static bool hasReservedReturnType(const FunctionDecl *D) {
-  if (isa<CXXConstructorDecl>(D))
-    return true;
-
-  // operators delete and delete[] are required to have 'void' return type
-  auto OperatorKind = D->getOverloadedOperator();
-  return OperatorKind == OO_Delete || OperatorKind == OO_Array_Delete;
-}
-
 void CFErrorFunctionChecker::checkASTDecl(const FunctionDecl *D,
                                         AnalysisManager &mgr,
                                         BugReporter &BR) const {
   if (!D->doesThisDeclarationHaveABody())
     return;
   if (!D->getReturnType()->isVoidType())
-    return;
-  if (hasReservedReturnType(D))
     return;
 
   if (!II)
@@ -144,14 +133,14 @@ namespace {
 
 class NSErrorDerefBug : public BugType {
 public:
-  NSErrorDerefBug(const CheckerNameRef Checker)
+  NSErrorDerefBug(const CheckerBase *Checker)
       : BugType(Checker, "NSError** null dereference",
                 "Coding conventions (Apple)") {}
 };
 
 class CFErrorDerefBug : public BugType {
 public:
-  CFErrorDerefBug(const CheckerNameRef Checker)
+  CFErrorDerefBug(const CheckerBase *Checker)
       : BugType(Checker, "CFErrorRef* null dereference",
                 "Coding conventions (Apple)") {}
 };
@@ -166,9 +155,9 @@ class NSOrCFErrorDerefChecker
   mutable std::unique_ptr<NSErrorDerefBug> NSBT;
   mutable std::unique_ptr<CFErrorDerefBug> CFBT;
 public:
-  DefaultBool ShouldCheckNSError, ShouldCheckCFError;
-  CheckerNameRef NSErrorName, CFErrorName;
-  NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr) {}
+  bool ShouldCheckNSError, ShouldCheckCFError;
+  NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr),
+                              ShouldCheckNSError(0), ShouldCheckCFError(0) { }
 
   void checkLocation(SVal loc, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
@@ -276,12 +265,12 @@ void NSOrCFErrorDerefChecker::checkEvent(ImplicitNullDerefEvent event) const {
   BugType *bug = nullptr;
   if (isNSError) {
     if (!NSBT)
-      NSBT.reset(new NSErrorDerefBug(NSErrorName));
+      NSBT.reset(new NSErrorDerefBug(this));
     bug = NSBT.get();
   }
   else {
     if (!CFBT)
-      CFBT.reset(new CFErrorDerefBug(CFErrorName));
+      CFBT.reset(new CFErrorDerefBug(this));
     bug = CFBT.get();
   }
   BR.emitReport(
@@ -323,7 +312,7 @@ void ento::registerNSOrCFErrorDerefChecker(CheckerManager &mgr) {
   mgr.registerChecker<NSOrCFErrorDerefChecker>();
 }
 
-bool ento::shouldRegisterNSOrCFErrorDerefChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterNSOrCFErrorDerefChecker(const LangOptions &LO) {
   return true;
 }
 
@@ -331,10 +320,9 @@ void ento::registerNSErrorChecker(CheckerManager &mgr) {
   mgr.registerChecker<NSErrorMethodChecker>();
   NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
   checker->ShouldCheckNSError = true;
-  checker->NSErrorName = mgr.getCurrentCheckerName();
 }
 
-bool ento::shouldRegisterNSErrorChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterNSErrorChecker(const LangOptions &LO) {
   return true;
 }
 
@@ -342,9 +330,8 @@ void ento::registerCFErrorChecker(CheckerManager &mgr) {
   mgr.registerChecker<CFErrorFunctionChecker>();
   NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
   checker->ShouldCheckCFError = true;
-  checker->CFErrorName = mgr.getCurrentCheckerName();
 }
 
-bool ento::shouldRegisterCFErrorChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterCFErrorChecker(const LangOptions &LO) {
   return true;
 }

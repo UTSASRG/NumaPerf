@@ -16,7 +16,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 
 using namespace clang;
@@ -52,14 +51,15 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
   // pointer casts.
   if (Idx.isZeroConstant())
     return;
-
   // FIXME: All of this out-of-bounds checking should eventually be refactored
   // into a common place.
-  DefinedOrUnknownSVal ElementCount = getDynamicElementCount(
-      state, ER->getSuperRegion(), C.getSValBuilder(), ER->getValueType());
 
-  ProgramStateRef StInBound = state->assumeInBound(Idx, ElementCount, true);
-  ProgramStateRef StOutBound = state->assumeInBound(Idx, ElementCount, false);
+  DefinedOrUnknownSVal NumElements
+    = C.getStoreManager().getSizeInElements(state, ER->getSuperRegion(),
+                                           ER->getValueType());
+
+  ProgramStateRef StInBound = state->assumeInBound(Idx, NumElements, true);
+  ProgramStateRef StOutBound = state->assumeInBound(Idx, NumElements, false);
   if (StOutBound && !StInBound) {
     ExplodedNode *N = C.generateErrorNode(StOutBound);
 
@@ -91,6 +91,6 @@ void ento::registerReturnPointerRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<ReturnPointerRangeChecker>();
 }
 
-bool ento::shouldRegisterReturnPointerRangeChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterReturnPointerRangeChecker(const LangOptions &LO) {
   return true;
 }

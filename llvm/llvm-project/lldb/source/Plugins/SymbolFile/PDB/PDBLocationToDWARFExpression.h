@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_PDBLOCATIONTODWARFEXPRESSION_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_PDBLOCATIONTODWARFEXPRESSION_H
+#ifndef lldb_Plugins_SymbolFile_PDB_PDBLocationToDWARFExpression_h_
+#define lldb_Plugins_SymbolFile_PDB_PDBLocationToDWARFExpression_h_
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Variable.h"

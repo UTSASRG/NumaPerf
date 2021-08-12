@@ -50,9 +50,9 @@ public:
   void lookup(const LookupMap &Symbols,
               std::unique_ptr<JITLinkAsyncLookupContinuation> LC) override {
 
-    JITDylibSearchOrder LinkOrder;
-    MR.getTargetJITDylib().withLinkOrderDo(
-        [&](const JITDylibSearchOrder &LO) { LinkOrder = LO; });
+    JITDylibSearchOrder SearchOrder;
+    MR.getTargetJITDylib().withSearchOrderDo(
+        [&](const JITDylibSearchOrder &O) { SearchOrder = O; });
 
     auto &ES = Layer.getExecutionSession();
 
@@ -84,13 +84,7 @@ public:
       }
     };
 
-    for (auto &KV : InternalNamedSymbolDeps) {
-      SymbolDependenceMap InternalDeps;
-      InternalDeps[&MR.getTargetJITDylib()] = std::move(KV.second);
-      MR.addDependencies(KV.first, InternalDeps);
-    }
-
-    ES.lookup(LookupKind::Static, LinkOrder, std::move(LookupSet),
+    ES.lookup(LookupKind::Static, SearchOrder, std::move(LookupSet),
               SymbolState::Resolved, std::move(OnResolve),
               [this](const SymbolDependenceMap &Deps) {
                 registerDependencies(Deps);
@@ -144,56 +138,6 @@ public:
     if (!ExtraSymbolsToClaim.empty())
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
-
-    {
-
-      // Check that InternedResult matches up with MR.getSymbols().
-      // This guards against faulty transformations / compilers / object caches.
-
-      // First check that there aren't any missing symbols.
-      size_t NumMaterializationSideEffectsOnlySymbols = 0;
-      SymbolNameVector ExtraSymbols;
-      SymbolNameVector MissingSymbols;
-      for (auto &KV : MR.getSymbols()) {
-
-        // If this is a materialization-side-effects only symbol then bump
-        // the counter and make sure it's *not* defined, otherwise make
-        // sure that it is defined.
-        if (KV.second.hasMaterializationSideEffectsOnly()) {
-          ++NumMaterializationSideEffectsOnlySymbols;
-          if (InternedResult.count(KV.first))
-            ExtraSymbols.push_back(KV.first);
-          continue;
-        } else if (!InternedResult.count(KV.first))
-          MissingSymbols.push_back(KV.first);
-      }
-
-      // If there were missing symbols then report the error.
-      if (!MissingSymbols.empty()) {
-        ES.reportError(make_error<MissingSymbolDefinitions>(
-            G.getName(), std::move(MissingSymbols)));
-        MR.failMaterialization();
-        return;
-      }
-
-      // If there are more definitions than expected, add them to the
-      // ExtraSymbols vector.
-      if (InternedResult.size() >
-          MR.getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
-        for (auto &KV : InternedResult)
-          if (!MR.getSymbols().count(KV.first))
-            ExtraSymbols.push_back(KV.first);
-      }
-
-      // If there were extra definitions then report the error.
-      if (!ExtraSymbols.empty()) {
-        ES.reportError(make_error<UnexpectedSymbolDefinitions>(
-            G.getName(), std::move(ExtraSymbols)));
-        MR.failMaterialization();
-        return;
-      }
-    }
-
     if (auto Err = MR.notifyResolved(InternedResult)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();
@@ -224,22 +168,16 @@ public:
     // link graph to build the symbol dependence graph.
     Config.PrePrunePasses.push_back(
         [this](LinkGraph &G) { return externalizeWeakAndCommonSymbols(G); });
-
-    Layer.modifyPassConfig(MR, TT, Config);
-
     Config.PostPrunePasses.push_back(
         [this](LinkGraph &G) { return computeNamedSymbolDependencies(G); });
+
+    Layer.modifyPassConfig(MR, TT, Config);
 
     return Error::success();
   }
 
 private:
-  struct LocalSymbolNamedDependencies {
-    SymbolNameSet Internal, External;
-  };
-
-  using LocalSymbolNamedDependenciesMap =
-      DenseMap<const Symbol *, LocalSymbolNamedDependencies>;
+  using AnonToNamedDependenciesMap = DenseMap<const Symbol *, SymbolNameSet>;
 
   Error externalizeWeakAndCommonSymbols(LinkGraph &G) {
     auto &ES = Layer.getExecutionSession();
@@ -268,69 +206,30 @@ private:
 
   Error computeNamedSymbolDependencies(LinkGraph &G) {
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
-    auto LocalDeps = computeLocalDeps(G);
+    auto AnonDeps = computeAnonDeps(G);
 
-    // Compute dependencies for symbols defined in the JITLink graph.
     for (auto *Sym : G.defined_symbols()) {
 
-      // Skip local symbols: we do not track dependencies for these.
+      // Skip anonymous and non-global atoms: we do not need dependencies for
+      // these.
       if (Sym->getScope() == Scope::Local)
-        continue;
-      assert(Sym->hasName() &&
-             "Defined non-local jitlink::Symbol should have a name");
-
-      SymbolNameSet ExternalSymDeps, InternalSymDeps;
-
-      // Find internal and external named symbol dependencies.
-      for (auto &E : Sym->getBlock().edges()) {
-        auto &TargetSym = E.getTarget();
-
-        if (TargetSym.getScope() != Scope::Local) {
-          if (TargetSym.isExternal())
-            ExternalSymDeps.insert(ES.intern(TargetSym.getName()));
-          else if (&TargetSym != Sym)
-            InternalSymDeps.insert(ES.intern(TargetSym.getName()));
-        } else {
-          assert(TargetSym.isDefined() &&
-                 "local symbols must be defined");
-          auto I = LocalDeps.find(&TargetSym);
-          if (I != LocalDeps.end()) {
-            for (auto &S : I->second.External)
-              ExternalSymDeps.insert(S);
-            for (auto &S : I->second.Internal)
-              InternalSymDeps.insert(S);
-          }
-        }
-      }
-
-      if (ExternalSymDeps.empty() && InternalSymDeps.empty())
         continue;
 
       auto SymName = ES.intern(Sym->getName());
-      if (!ExternalSymDeps.empty())
-        ExternalNamedSymbolDeps[SymName] = std::move(ExternalSymDeps);
-      if (!InternalSymDeps.empty())
-        InternalNamedSymbolDeps[SymName] = std::move(InternalSymDeps);
-    }
+      SymbolNameSet &SymDeps = NamedSymbolDeps[SymName];
 
-    for (auto &P : Layer.Plugins) {
-      auto SyntheticLocalDeps = P->getSyntheticSymbolLocalDependencies(MR);
-      if (SyntheticLocalDeps.empty())
-        continue;
+      for (auto &E : Sym->getBlock().edges()) {
+        auto &TargetSym = E.getTarget();
 
-      for (auto &KV : SyntheticLocalDeps) {
-        auto &Name = KV.first;
-        auto &LocalDepsForName = KV.second;
-        for (auto *Local : LocalDepsForName) {
-          assert(Local->getScope() == Scope::Local &&
-                 "Dependence on non-local symbol");
-          auto LocalNamedDepsItr = LocalDeps.find(Local);
-          if (LocalNamedDepsItr == LocalDeps.end())
-            continue;
-          for (auto &S : LocalNamedDepsItr->second.Internal)
-            InternalNamedSymbolDeps[Name].insert(S);
-          for (auto &S : LocalNamedDepsItr->second.External)
-            ExternalNamedSymbolDeps[Name].insert(S);
+        if (TargetSym.getScope() != Scope::Local)
+          SymDeps.insert(ES.intern(TargetSym.getName()));
+        else {
+          assert(TargetSym.isDefined() &&
+                 "Anonymous/local symbols must be defined");
+          auto I = AnonDeps.find(&TargetSym);
+          if (I != AnonDeps.end())
+            for (auto &S : I->second)
+              SymDeps.insert(S);
         }
       }
     }
@@ -338,85 +237,68 @@ private:
     return Error::success();
   }
 
-  LocalSymbolNamedDependenciesMap computeLocalDeps(LinkGraph &G) {
-    DenseMap<jitlink::Symbol *, DenseSet<jitlink::Symbol *>> DepMap;
+  AnonToNamedDependenciesMap computeAnonDeps(LinkGraph &G) {
 
-    // For all local symbols:
+    auto &ES = MR.getTargetJITDylib().getExecutionSession();
+    AnonToNamedDependenciesMap DepMap;
+
+    // For all anonymous symbols:
     // (1) Add their named dependencies.
     // (2) Add them to the worklist for further iteration if they have any
-    //     depend on any other local symbols.
+    //     depend on any other anonymous symbols.
     struct WorklistEntry {
-      WorklistEntry(Symbol *Sym, DenseSet<Symbol *> LocalDeps)
-          : Sym(Sym), LocalDeps(std::move(LocalDeps)) {}
+      WorklistEntry(Symbol *Sym, DenseSet<Symbol *> SymAnonDeps)
+          : Sym(Sym), SymAnonDeps(std::move(SymAnonDeps)) {}
 
       Symbol *Sym = nullptr;
-      DenseSet<Symbol *> LocalDeps;
+      DenseSet<Symbol *> SymAnonDeps;
     };
     std::vector<WorklistEntry> Worklist;
     for (auto *Sym : G.defined_symbols())
-      if (Sym->getScope() == Scope::Local) {
+      if (!Sym->hasName()) {
         auto &SymNamedDeps = DepMap[Sym];
-        DenseSet<Symbol *> LocalDeps;
+        DenseSet<Symbol *> SymAnonDeps;
 
         for (auto &E : Sym->getBlock().edges()) {
           auto &TargetSym = E.getTarget();
-          if (TargetSym.getScope() != Scope::Local)
-            SymNamedDeps.insert(&TargetSym);
+          if (TargetSym.hasName())
+            SymNamedDeps.insert(ES.intern(TargetSym.getName()));
           else {
             assert(TargetSym.isDefined() &&
-                   "local symbols must be defined");
-            LocalDeps.insert(&TargetSym);
+                   "Anonymous symbols must be defined");
+            SymAnonDeps.insert(&TargetSym);
           }
         }
 
-        if (!LocalDeps.empty())
-          Worklist.push_back(WorklistEntry(Sym, std::move(LocalDeps)));
+        if (!SymAnonDeps.empty())
+          Worklist.push_back(WorklistEntry(Sym, std::move(SymAnonDeps)));
       }
 
-    // Loop over all local symbols with local dependencies, propagating
-    // their respective non-local dependencies. Iterate until we hit a stable
+    // Loop over all anonymous symbols with anonymous dependencies, propagating
+    // their respective *named* dependencies. Iterate until we hit a stable
     // state.
     bool Changed;
     do {
       Changed = false;
       for (auto &WLEntry : Worklist) {
         auto *Sym = WLEntry.Sym;
-        auto &NamedDeps = DepMap[Sym];
-        auto &LocalDeps = WLEntry.LocalDeps;
+        auto &SymNamedDeps = DepMap[Sym];
+        auto &SymAnonDeps = WLEntry.SymAnonDeps;
 
-        for (auto *TargetSym : LocalDeps) {
+        for (auto *TargetSym : SymAnonDeps) {
           auto I = DepMap.find(TargetSym);
           if (I != DepMap.end())
             for (const auto &S : I->second)
-              Changed |= NamedDeps.insert(S).second;
+              Changed |= SymNamedDeps.insert(S).second;
         }
       }
     } while (Changed);
 
-    // Intern the results to produce a mapping of jitlink::Symbol* to internal
-    // and external symbol names.
-    auto &ES = Layer.getExecutionSession();
-    LocalSymbolNamedDependenciesMap Result;
-    for (auto &KV : DepMap) {
-      auto *Local = KV.first;
-      assert(Local->getScope() == Scope::Local &&
-             "DepMap keys should all be local symbols");
-      auto &LocalNamedDeps = Result[Local];
-      for (auto *Named : KV.second) {
-        assert(Named->getScope() != Scope::Local &&
-               "DepMap values should all be non-local symbol sets");
-        if (Named->isExternal())
-          LocalNamedDeps.External.insert(ES.intern(Named->getName()));
-        else
-          LocalNamedDeps.Internal.insert(ES.intern(Named->getName()));
-      }
-    }
-
-    return Result;
+    return DepMap;
   }
 
   void registerDependencies(const SymbolDependenceMap &QueryDeps) {
-    for (auto &NamedDepsEntry : ExternalNamedSymbolDeps) {
+    for (auto &NamedDepsEntry : NamedSymbolDeps) {
       auto &Name = NamedDepsEntry.first;
       auto &NameDeps = NamedDepsEntry.second;
       SymbolDependenceMap SymbolDeps;
@@ -441,8 +323,7 @@ private:
   ObjectLinkingLayer &Layer;
   MaterializationResponsibility MR;
   std::unique_ptr<MemoryBuffer> ObjBuffer;
-  DenseMap<SymbolStringPtr, SymbolNameSet> ExternalNamedSymbolDeps;
-  DenseMap<SymbolStringPtr, SymbolNameSet> InternalNamedSymbolDeps;
+  DenseMap<SymbolStringPtr, SymbolNameSet> NamedSymbolDeps;
 };
 
 ObjectLinkingLayer::Plugin::~Plugin() {}
@@ -545,21 +426,18 @@ EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
 void EHFrameRegistrationPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, const Triple &TT,
     PassConfiguration &PassConfig) {
+  assert(!InProcessLinks.count(&MR) && "Link for MR already being tracked?");
 
-  PassConfig.PostFixupPasses.push_back(createEHFrameRecorderPass(
-      TT, [this, &MR](JITTargetAddress Addr, size_t Size) {
-        if (Addr) {
-          std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
-          assert(!InProcessLinks.count(&MR) &&
-                 "Link for MR already being tracked?");
-          InProcessLinks[&MR] = {Addr, Size};
-        }
+  PassConfig.PostFixupPasses.push_back(
+      createEHFrameRecorderPass(TT, [this, &MR](JITTargetAddress Addr,
+                                                size_t Size) {
+        if (Addr)
+          InProcessLinks[&MR] = { Addr, Size };
       }));
 }
 
 Error EHFrameRegistrationPlugin::notifyEmitted(
     MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
 
   auto EHFrameRangeItr = InProcessLinks.find(&MR);
   if (EHFrameRangeItr == InProcessLinks.end())
@@ -579,8 +457,6 @@ Error EHFrameRegistrationPlugin::notifyEmitted(
 }
 
 Error EHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
-  std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
-
   auto EHFrameRangeItr = TrackedEHFrameRanges.find(K);
   if (EHFrameRangeItr == TrackedEHFrameRanges.end())
     return Error::success();
@@ -594,7 +470,6 @@ Error EHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
 }
 
 Error EHFrameRegistrationPlugin::notifyRemovingAllModules() {
-  std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
 
   std::vector<EHFrameRange> EHFrameRanges =
     std::move(UntrackedEHFrameRanges);

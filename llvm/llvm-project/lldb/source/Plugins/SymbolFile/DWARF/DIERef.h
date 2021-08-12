@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
+#ifndef SymbolFileDWARF_DIERef_h_
+#define SymbolFileDWARF_DIERef_h_
 
 #include "lldb/Core/dwarf.h"
 #include "llvm/ADT/Optional.h"
@@ -44,16 +44,6 @@ public:
 
   dw_offset_t die_offset() const { return m_die_offset; }
 
-  bool operator<(DIERef other) const {
-    if (m_dwo_num_valid != other.m_dwo_num_valid)
-      return m_dwo_num_valid < other.m_dwo_num_valid;
-    if (m_dwo_num_valid && (m_dwo_num != other.m_dwo_num))
-      return m_dwo_num < other.m_dwo_num;
-    if (m_section != other.m_section)
-      return m_section < other.m_section;
-    return m_die_offset < other.m_die_offset;
-  }
-
 private:
   uint32_t m_dwo_num : 30;
   uint32_t m_dwo_num_valid : 1;
@@ -70,4 +60,4 @@ template<> struct format_provider<DIERef> {
 };
 } // namespace llvm
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
+#endif // SymbolFileDWARF_DIERef_h_

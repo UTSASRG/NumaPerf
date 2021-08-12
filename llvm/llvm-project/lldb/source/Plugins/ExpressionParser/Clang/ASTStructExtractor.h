@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTSTRUCTEXTRACTOR_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTSTRUCTEXTRACTOR_H
+#ifndef liblldb_ASTStructExtractor_h_
+#define liblldb_ASTStructExtractor_h_
 
 #include "ClangExpressionVariable.h"
 #include "ClangFunctionCaller.h"
 
+#include "lldb/Core/ClangForward.h"
 #include "clang/Sema/SemaConsumer.h"
 
 namespace lldb_private {
@@ -128,4 +129,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTSTRUCTEXTRACTOR_H
+#endif // liblldb_ASTStructExtractor_h_

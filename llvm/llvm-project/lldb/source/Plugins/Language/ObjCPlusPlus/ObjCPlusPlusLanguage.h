@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJCPLUSPLUS_OBJCPLUSPLUSLANGUAGE_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJCPLUSPLUS_OBJCPLUSPLUSLANGUAGE_H
+#ifndef liblldb_ObjCPlusPlusLanguage_h_
+#define liblldb_ObjCPlusPlusLanguage_h_
 
 #include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
@@ -48,4 +48,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJCPLUSPLUS_OBJCPLUSPLUSLANGUAGE_H
+#endif // liblldb_CPlusPlusLanguage_h_

@@ -21,7 +21,7 @@ namespace clangd {
 llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
                                           PathMapping::Direction Dir,
                                           const PathMappings &Mappings) {
-  // Return early to optimize for the common case, wherein S is not a file URI
+  // Retrun early to optimize for the common case, wherein S is not a file URI
   if (!S.startswith("file://"))
     return llvm::None;
   auto Uri = URI::parse(S);
@@ -149,7 +149,7 @@ private:
 llvm::Expected<std::string> parsePath(llvm::StringRef Path) {
   namespace path = llvm::sys::path;
   if (path::is_absolute(Path, path::Style::posix)) {
-    return std::string(Path);
+    return Path;
   } else if (path::is_absolute(Path, path::Style::windows)) {
     std::string Converted = path::convert_to_slash(Path, path::Style::windows);
     if (Converted.front() != '/')

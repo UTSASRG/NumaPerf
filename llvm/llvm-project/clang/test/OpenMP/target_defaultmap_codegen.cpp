@@ -314,7 +314,7 @@ void implicit_maps_array (int a){
   // CK6-DAG: store [2 x double]* [[DECL]], [2 x double]** [[CP1]]
 
   // CK6: call void [[KERNEL:@.+]]([2 x double]* [[DECL]])
-#pragma omp target defaultmap(to)
+  #pragma omp target defaultmap(to: aggregate)
   {
     darr[0] += 1.0;
     darr[1] += 1.0;
@@ -416,7 +416,7 @@ void implicit_maps_array (int a){
   // CK8-DAG: store [2 x double]* [[DECL]], [2 x double]** [[CP1]]
 
   // CK8: call void [[KERNEL:@.+]]([2 x double]* [[DECL]])
-#pragma omp target defaultmap(tofrom)
+  #pragma omp target defaultmap(tofrom: aggregate)
   {
     darr[0] += 1.0;
     darr[1] += 1.0;

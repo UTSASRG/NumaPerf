@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBSERVICES_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBSERVICES_H
+#ifndef __RNBServices_h__
+#define __RNBServices_h__
 
 #include "RNBDefs.h"
 #include <string>
@@ -25,4 +25,4 @@
 int ListApplications(std::string &plist, bool opt_runningApps,
                      bool opt_debuggable);
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBSERVICES_H
+#endif // __RNBServices_h__

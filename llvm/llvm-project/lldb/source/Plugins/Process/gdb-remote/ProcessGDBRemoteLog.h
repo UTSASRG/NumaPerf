@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTELOG_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTELOG_H
+#ifndef liblldb_ProcessGDBRemoteLog_h_
+#define liblldb_ProcessGDBRemoteLog_h_
+
 
 #include "lldb/Utility/Log.h"
 
@@ -42,4 +43,4 @@ public:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTELOG_H
+#endif // liblldb_ProcessGDBRemoteLog_h_

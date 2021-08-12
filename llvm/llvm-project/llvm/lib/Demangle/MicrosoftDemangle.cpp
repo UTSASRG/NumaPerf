@@ -2334,16 +2334,14 @@ void Demangler::dumpBackReferences() {
     std::printf("\n");
 }
 
-char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
-                              char *Buf, size_t *N,
+char *llvm::microsoftDemangle(const char *MangledName, char *Buf, size_t *N,
                               int *Status, MSDemangleFlags Flags) {
+  int InternalStatus = demangle_success;
   Demangler D;
   OutputStream S;
 
   StringView Name{MangledName};
   SymbolNode *AST = D.parse(Name);
-  if (!D.Error && NMangled)
-    *NMangled = Name.begin() - MangledName;
 
   if (Flags & MSDF_DumpBackrefs)
     D.dumpBackReferences();
@@ -2358,7 +2356,6 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
   if (Flags & MSDF_NoMemberType)
     OF = OutputFlags(OF | OF_NoMemberType);
 
-  int InternalStatus = demangle_success;
   if (D.Error)
     InternalStatus = demangle_invalid_mangled_name;
   else if (!initializeOutputStream(Buf, N, S, 1024))

@@ -89,7 +89,7 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
   tooling::Replacement R(Context.getSourceManager(),
                          CharSourceRange::getTokenRange(Old), NewText,
                          Context.getLangOpts());
-  consumeError(Replacements[std::string(R.getFilePath())].add(R));
+  consumeError(Replacements[R.getFilePath()].add(R));
 }
 
 /// Find all member fields used in the given init-list initializer expr
@@ -104,11 +104,9 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   // for those accesses Sema::PerformObjectMemberConversion always inserts an
   // UncheckedDerivedToBase ImplicitCastExpr between the this expr and the
   // object expression
-  auto FoundExprs = match(
-      traverse(
-          TK_AsIs,
-          findAll(memberExpr(hasObjectExpression(cxxThisExpr())).bind("ME"))),
-      *Initializer->getInit(), Context);
+  auto FoundExprs =
+      match(findAll(memberExpr(hasObjectExpression(cxxThisExpr())).bind("ME")),
+            *Initializer->getInit(), Context);
   for (BoundNodes &BN : FoundExprs)
     if (auto *MemExpr = BN.getNodeAs<MemberExpr>("ME"))
       if (auto *FD = dyn_cast<FieldDecl>(MemExpr->getMemberDecl()))
@@ -118,7 +116,7 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
 
 /// Reorders fields in the definition of a struct/class.
 ///
-/// At the moment reordering of fields with
+/// At the moment reodering of fields with
 /// different accesses (public/protected/private) is not supported.
 /// \returns true on success.
 static bool reorderFieldsInDefinition(
@@ -135,7 +133,7 @@ static bool reorderFieldsInDefinition(
   for (const auto *Field : Definition->fields()) {
     const auto FieldIndex = Field->getFieldIndex();
     if (Field->getAccess() != Fields[NewFieldsOrder[FieldIndex]]->getAccess()) {
-      llvm::errs() << "Currently reordering of fields with different accesses "
+      llvm::errs() << "Currently reodering of fields with different accesses "
                       "is not supported\n";
       return false;
     }

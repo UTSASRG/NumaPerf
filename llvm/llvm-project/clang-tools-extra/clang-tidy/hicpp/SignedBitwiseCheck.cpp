@@ -48,7 +48,9 @@ void SignedBitwiseCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match binary bitwise operations on signed integer arguments.
   Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("^", "|", "&", "^=", "|=", "&="),
+      binaryOperator(anyOf(hasOperatorName("^"), hasOperatorName("|"),
+                           hasOperatorName("&"), hasOperatorName("^="),
+                           hasOperatorName("|="), hasOperatorName("&=")),
 
                      unless(allOf(hasLHS(IsStdBitmask), hasRHS(IsStdBitmask))),
 
@@ -60,7 +62,8 @@ void SignedBitwiseCheck::registerMatchers(MatchFinder *Finder) {
   // Shifting and complement is not allowed for any signed integer type because
   // the sign bit may corrupt the result.
   Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("<<", ">>", "<<=", ">>="),
+      binaryOperator(anyOf(hasOperatorName("<<"), hasOperatorName(">>"),
+                           hasOperatorName("<<="), hasOperatorName(">>=")),
                      hasEitherOperand(SignedIntegerOperand),
                      hasLHS(hasType(isInteger())), hasRHS(hasType(isInteger())))
           .bind("binary-sign-interference"),

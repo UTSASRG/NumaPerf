@@ -28,7 +28,8 @@ Sections:
     Link: .dynsym
     Info: .data
     Relocations:
-      - Type: R_X86_64_NONE
+      - Offset: 0
+        Type: R_X86_64_NONE
         Symbol: dynamic
       - Offset: 8
         Type: R_X86_64_NONE

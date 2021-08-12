@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -295,7 +296,8 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     DstReg = MCI.getOperand(1).getReg();
     SrcReg = MCI.getOperand(0).getReg();
     // [if ([!]p0[.new])] jumpr r31
-    if ((Hexagon::P0 == SrcReg) && (Hexagon::R31 == DstReg)) {
+    if ((HexagonMCInstrInfo::isPredReg(SrcReg) && (Hexagon::P0 == SrcReg)) &&
+        (Hexagon::R31 == DstReg)) {
       return HexagonII::HSIG_L2;
     }
     break;

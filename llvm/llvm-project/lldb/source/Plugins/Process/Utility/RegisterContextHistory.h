@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTHISTORY_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTHISTORY_H
+#ifndef lldb_RegisterContextHistory_h_
+#define lldb_RegisterContextHistory_h_
 
 #include <vector>
 
@@ -58,10 +58,8 @@ private:
 
   lldb::addr_t m_pc_value;
 
-  RegisterContextHistory(const RegisterContextHistory &) = delete;
-  const RegisterContextHistory &
-  operator=(const RegisterContextHistory &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(RegisterContextHistory);
 };
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTHISTORY_H
+#endif // lldb_RegisterContextHistory_h_

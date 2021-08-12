@@ -167,48 +167,48 @@ let Uses = [RM] in {
 
   // Multiply-add instructions
   def QVFMADD : AForm_1<4, 29,
-                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRC, qfrc:$FRB),
+                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRB, qfrc:$FRC),
                       "qvfmadd $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set v4f64:$FRT, (fma v4f64:$FRA, v4f64:$FRC, v4f64:$FRB))]>;
   let isCodeGenOnly = 1 in
     def QVFMADDS : QPXA1_Int<0, 29, "qvfmadds", int_ppc_qpx_qvfmadds>;
   def QVFMADDSs : AForm_1<0, 29,
-                        (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRC, qsrc:$FRB),
+                        (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRB, qsrc:$FRC),
                         "qvfmadds $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                         [(set v4f32:$FRT, (fma v4f32:$FRA, v4f32:$FRC, v4f32:$FRB))]>;
   def QVFNMADD : AForm_1<4, 31,
-                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRC, qfrc:$FRB),
+                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRB, qfrc:$FRC),
                       "qvfnmadd $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set v4f64:$FRT, (fneg (fma v4f64:$FRA, v4f64:$FRC,
                                                    v4f64:$FRB)))]>;
   let isCodeGenOnly = 1 in
     def QVFNMADDS : QPXA1_Int<0, 31, "qvfnmadds", int_ppc_qpx_qvfnmadds>;
   def QVFNMADDSs : AForm_1<0, 31,
-                        (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRC, qsrc:$FRB),
+                        (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRB, qsrc:$FRC),
                         "qvfnmadds $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                         [(set v4f32:$FRT, (fneg (fma v4f32:$FRA, v4f32:$FRC,
                                                      v4f32:$FRB)))]>;
   def QVFMSUB : AForm_1<4, 28,
-                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRC, qfrc:$FRB),
+                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRB, qfrc:$FRC),
                       "qvfmsub $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set v4f64:$FRT, (fma v4f64:$FRA, v4f64:$FRC,
                                              (fneg v4f64:$FRB)))]>;
   let isCodeGenOnly = 1 in
     def QVFMSUBS : QPXA1_Int<0, 28, "qvfmsubs", int_ppc_qpx_qvfmsubs>;
   def QVFMSUBSs : AForm_1<0, 28,
-                      (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRC, qsrc:$FRB),
+                      (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRB, qsrc:$FRC),
                       "qvfmsubs $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set v4f32:$FRT, (fma v4f32:$FRA, v4f32:$FRC,
                                              (fneg v4f32:$FRB)))]>;
   def QVFNMSUB : AForm_1<4, 30,
-                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRC, qfrc:$FRB),
+                      (outs qfrc:$FRT), (ins qfrc:$FRA, qfrc:$FRB, qfrc:$FRC),
                       "qvfnmsub $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set v4f64:$FRT, (fneg (fma v4f64:$FRA, v4f64:$FRC,
                                               (fneg v4f64:$FRB))))]>;
   let isCodeGenOnly = 1 in
     def QVFNMSUBS : QPXA1_Int<0, 30, "qvfnmsubs", int_ppc_qpx_qvfnmsubs>;
   def QVFNMSUBSs : AForm_1<0, 30,
-                      (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRC, qsrc:$FRB),
+                      (outs qsrc:$FRT), (ins qsrc:$FRA, qsrc:$FRB, qsrc:$FRC),
                       "qvfnmsubs $FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set v4f32:$FRT, (fneg (fma v4f32:$FRA, v4f32:$FRC,
                                               (fneg v4f32:$FRB))))]>;
@@ -899,13 +899,13 @@ def : Pat<(int_ppc_qpx_qvfmul v4f64:$A, v4f64:$B),
 
 // Additional QVFNMSUB patterns: -a*c + b == -(a*c - b)
 def : Pat<(fma (fneg v4f64:$A), v4f64:$C, v4f64:$B),
-          (QVFNMSUB $A, $C, $B)>;
+          (QVFNMSUB $A, $B, $C)>;
 def : Pat<(fma v4f64:$A, (fneg v4f64:$C), v4f64:$B),
-          (QVFNMSUB $A, $C, $B)>;
+          (QVFNMSUB $A, $B, $C)>;
 def : Pat<(fma (fneg v4f32:$A), v4f32:$C, v4f32:$B),
-          (QVFNMSUBSs $A, $C, $B)>;
+          (QVFNMSUBSs $A, $B, $C)>;
 def : Pat<(fma v4f32:$A, (fneg v4f32:$C), v4f32:$B),
-          (QVFNMSUBSs $A, $C, $B)>;
+          (QVFNMSUBSs $A, $B, $C)>;
 
 def : Pat<(int_ppc_qpx_qvfmadd v4f64:$A, v4f64:$B, v4f64:$C),
           (QVFMADD $A, $B, $C)>;

@@ -252,8 +252,8 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
   // There should be one error correcting to 'moo' and a note attached to it.
   EXPECT_EQ("use of undeclared identifier 'foo'; did you mean 'moo'?",
-            std::string(TDC->Error));
-  EXPECT_EQ("This is a note", std::string(TDC->Note));
+            TDC->Error.str().str());
+  EXPECT_EQ("This is a note", TDC->Note.str().str());
 }
 
 TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
@@ -272,8 +272,7 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
         MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
     Invocation->getFrontendOpts().Inputs.push_back(
         FrontendInputFile("test.h", Language::C));
-    Invocation->getFrontendOpts().OutputFile =
-        std::string(StringRef(PCHFilename));
+    Invocation->getFrontendOpts().OutputFile = StringRef(PCHFilename);
     Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
     CompilerInstance Compiler;

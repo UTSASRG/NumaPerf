@@ -25,7 +25,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -40,8 +40,6 @@
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -319,7 +317,7 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  const MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  const MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   setDwarfDebugFlags(argc, argv);
 
   setDwarfDebugProducer();
@@ -401,7 +399,7 @@ int main(int argc, char **argv) {
   }
   for (const auto &Arg : DebugPrefixMap) {
     const auto &KV = StringRef(Arg).split('=');
-    Ctx.addDebugPrefixMapEntry(std::string(KV.first), std::string(KV.second));
+    Ctx.addDebugPrefixMapEntry(KV.first, KV.second);
   }
   if (!MainFileName.empty())
     Ctx.setMainFileName(MainFileName);
@@ -475,6 +473,9 @@ int main(int argc, char **argv) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");
+
+    // Don't waste memory on names of temp labels.
+    Ctx.setUseNamesOnTempLabels(false);
 
     if (!Out->os().supportsSeeking()) {
       BOS = std::make_unique<buffer_ostream>(Out->os());

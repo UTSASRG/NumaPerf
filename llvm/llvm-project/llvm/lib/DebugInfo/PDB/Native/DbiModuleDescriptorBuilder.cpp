@@ -39,7 +39,7 @@ static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize,
 DbiModuleDescriptorBuilder::DbiModuleDescriptorBuilder(StringRef ModuleName,
                                                        uint32_t ModIndex,
                                                        msf::MSFBuilder &Msf)
-    : MSF(Msf), ModuleName(std::string(ModuleName)) {
+    : MSF(Msf), ModuleName(ModuleName) {
   ::memset(&Layout, 0, sizeof(Layout));
   Layout.Mod = ModIndex;
 }
@@ -51,7 +51,7 @@ uint16_t DbiModuleDescriptorBuilder::getStreamIndex() const {
 }
 
 void DbiModuleDescriptorBuilder::setObjFileName(StringRef Name) {
-  ObjFileName = std::string(Name);
+  ObjFileName = Name;
 }
 
 void DbiModuleDescriptorBuilder::setPdbFilePathNI(uint32_t NI) {
@@ -83,13 +83,14 @@ void DbiModuleDescriptorBuilder::addSymbolsInBulk(
 }
 
 void DbiModuleDescriptorBuilder::addSourceFile(StringRef Path) {
-  SourceFiles.push_back(std::string(Path));
+  SourceFiles.push_back(Path);
 }
 
 uint32_t DbiModuleDescriptorBuilder::calculateC13DebugInfoSize() const {
   uint32_t Result = 0;
   for (const auto &Builder : C13Builders) {
-    Result += Builder.calculateSerializedLength();
+    assert(Builder && "Empty C13 Fragment Builder!");
+    Result += Builder->calculateSerializedLength();
   }
   return Result;
 }
@@ -162,7 +163,8 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
            "Invalid debug section alignment!");
     // TODO: Write C11 Line data
     for (const auto &Builder : C13Builders) {
-      if (auto EC = Builder.commit(SymbolWriter, CodeViewContainer::Pdb))
+      assert(Builder && "Empty C13 Fragment Builder!");
+      if (auto EC = Builder->commit(SymbolWriter))
         return EC;
     }
 
@@ -178,10 +180,12 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
 void DbiModuleDescriptorBuilder::addDebugSubsection(
     std::shared_ptr<DebugSubsection> Subsection) {
   assert(Subsection);
-  C13Builders.push_back(DebugSubsectionRecordBuilder(std::move(Subsection)));
+  C13Builders.push_back(std::make_unique<DebugSubsectionRecordBuilder>(
+      std::move(Subsection), CodeViewContainer::Pdb));
 }
 
 void DbiModuleDescriptorBuilder::addDebugSubsection(
     const DebugSubsectionRecord &SubsectionContents) {
-  C13Builders.push_back(DebugSubsectionRecordBuilder(SubsectionContents));
+  C13Builders.push_back(std::make_unique<DebugSubsectionRecordBuilder>(
+      SubsectionContents, CodeViewContainer::Pdb));
 }

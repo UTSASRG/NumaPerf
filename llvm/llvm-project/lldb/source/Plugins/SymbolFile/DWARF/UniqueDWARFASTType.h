@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_UNIQUEDWARFASTTYPE_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_UNIQUEDWARFASTTYPE_H
+#ifndef lldb_UniqueDWARFASTType_h_
+#define lldb_UniqueDWARFASTType_h_
 
 #include <vector>
 
@@ -100,4 +100,4 @@ protected:
   collection m_collection;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_UNIQUEDWARFASTTYPE_H
+#endif // lldb_UniqueDWARFASTType_h_

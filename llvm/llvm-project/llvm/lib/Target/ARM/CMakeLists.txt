@@ -54,7 +54,6 @@ add_llvm_target(ARMCodeGen
   MVEGatherScatterLowering.cpp
   MVETailPredication.cpp
   MVEVPTBlockPass.cpp
-  MVEVPTOptimisationsPass.cpp
   Thumb1FrameLowering.cpp
   Thumb1InstrInfo.cpp
   ThumbRegisterInfo.cpp

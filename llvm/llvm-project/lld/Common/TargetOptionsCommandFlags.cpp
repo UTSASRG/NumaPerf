@@ -5,26 +5,35 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file exists as a place for global variables defined in LLVM's
+// CodeGen/CommandFlags.inc. By putting the resulting object file in
+// an archive and linking with it, the definitions will automatically be
+// included when needed and skipped when already present.
+//
+//===----------------------------------------------------------------------===//
 
 #include "lld/Common/TargetOptionsCommandFlags.h"
 
-#include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/CommandFlags.inc"
 #include "llvm/Target/TargetOptions.h"
 
-static llvm::codegen::RegisterCodeGenFlags CGF;
-
+// Define an externally visible version of
+// initTargetOptionsFromCodeGenFlags, so that its functionality can be
+// used without having to include llvm/CodeGen/CommandFlags.inc, which
+// would lead to multiple definitions of the command line flags.
 llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
-  return llvm::codegen::InitTargetOptionsFromCodeGenFlags();
+  return ::InitTargetOptionsFromCodeGenFlags();
 }
 
 llvm::Optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
-  return llvm::codegen::getExplicitRelocModel();
+  return getRelocModel();
 }
 
 llvm::Optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel() {
-  return llvm::codegen::getExplicitCodeModel();
+  return getCodeModel();
 }
 
-std::string lld::getCPUStr() { return llvm::codegen::getCPUStr(); }
+std::string lld::getCPUStr() { return ::getCPUStr(); }
 
-std::vector<std::string> lld::getMAttrs() { return llvm::codegen::getMAttrs(); }
+std::vector<std::string> lld::getMAttrs() { return ::MAttrs; }

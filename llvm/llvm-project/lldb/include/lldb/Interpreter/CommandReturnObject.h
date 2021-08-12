@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
-#define LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
+#ifndef liblldb_CommandReturnObject_h_
+#define liblldb_CommandReturnObject_h_
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/StreamString.h"
@@ -30,14 +30,14 @@ public:
   llvm::StringRef GetOutputData() {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
-      return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
+      return static_pointer_cast<StreamString>(stream_sp)->GetString();
     return llvm::StringRef();
   }
 
   llvm::StringRef GetErrorData() {
     lldb::StreamSP stream_sp(m_err_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
-      return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
+      return static_pointer_cast<StreamString>(stream_sp)->GetString();
     return llvm::StringRef();
   }
 
@@ -157,4 +157,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
+#endif // liblldb_CommandReturnObject_h_

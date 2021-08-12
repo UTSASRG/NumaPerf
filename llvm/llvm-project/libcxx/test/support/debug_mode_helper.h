@@ -287,7 +287,6 @@ inline bool ExpectDeath(const char* stmt, Func&& func, DebugInfoMatcher Matcher)
   case DeathTest::RK_MatchFailure:
       return OnFailure("matcher failed");
   }
-  assert(false && "unreachable");
 }
 
 template <class Func>

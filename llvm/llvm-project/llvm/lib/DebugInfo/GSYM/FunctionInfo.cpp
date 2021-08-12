@@ -25,11 +25,8 @@ enum InfoType : uint32_t {
 };
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
-  OS << FI.Range << ": " << "Name=" << HEX32(FI.Name) << '\n';
-  if (FI.OptLineTable)
-    OS << FI.OptLineTable << '\n';
-  if (FI.Inline)
-    OS << FI.Inline << '\n';
+  OS << '[' << HEX64(FI.Range.Start) << '-' << HEX64(FI.Range.End) << "): "
+     << "Name=" << HEX32(FI.Name) << '\n' << FI.OptLineTable << FI.Inline;
   return OS;
 }
 
@@ -170,7 +167,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
   // This function will be called with the result of a binary search of the
   // address table, we must still make sure the address does not fall into a
   // gap between functions are after the last function.
-  if (LR.FuncRange.size() > 0 && !LR.FuncRange.contains(Addr))
+  if (Addr >= LR.FuncRange.End)
     return createStringError(std::errc::io_error,
         "address 0x%" PRIx64 " is not in GSYM", Addr);
 
@@ -223,7 +220,6 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     // location as best we can and return.
     SourceLocation SrcLoc;
     SrcLoc.Name = LR.FuncName;
-    SrcLoc.Offset = Addr - FuncAddr;
     LR.Locations.push_back(SrcLoc);
     return LR;
   }
@@ -236,7 +232,6 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
 
   SourceLocation SrcLoc;
   SrcLoc.Name = LR.FuncName;
-  SrcLoc.Offset = Addr - FuncAddr;
   SrcLoc.Dir = GR.getString(LineEntryFile->Dir);
   SrcLoc.Base = GR.getString(LineEntryFile->Base);
   SrcLoc.Line = LineEntry->Line;

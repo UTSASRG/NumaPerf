@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+//
 // UNSUPPORTED: libcpp-has-no-threads
-// ALLOW_RETRIES: 2
+
+// FLAKY_TEST.
 
 // <mutex>
 

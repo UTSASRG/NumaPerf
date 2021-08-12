@@ -1,4 +1,4 @@
-//===-- CppModuleConfigurationTest.cpp ------------------------------------===//
+//===-- CppModuleConfigurationTest.cpp ---------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@ static std::string ResourceInc() {
   llvm::SmallString<256> resource_dir;
   llvm::sys::path::append(resource_dir, GetClangResourceDir().GetPath(),
                           "include");
-  return std::string(resource_dir);
+  return resource_dir.str().str();
 }
 
 /// Utility function turningn a list of paths into a FileSpecList.

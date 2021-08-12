@@ -19,11 +19,11 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Testing/CommandLineArgs.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "DeclMatcher.h"
+#include "Language.h"
 
 #include <sstream>
 
@@ -52,14 +52,13 @@ void createVirtualFileIfNeeded(ASTUnit *ToAST, StringRef FileName,
 class CompilerOptionSpecificTest : public ::testing::Test {
 protected:
   // Return the extra arguments appended to runtime options at compilation.
-  virtual std::vector<std::string> getExtraArgs() const { return {}; }
+  virtual ArgVector getExtraArgs() const { return ArgVector(); }
 
   // Returns the argument vector used for a specific language option, this set
   // can be tweaked by the test parameters.
-  std::vector<std::string>
-  getCommandLineArgsForLanguage(TestLanguage Lang) const {
-    std::vector<std::string> Args = getCommandLineArgsForTesting(Lang);
-    std::vector<std::string> ExtraArgs = getExtraArgs();
+  ArgVector getArgVectorForLanguage(Language Lang) const {
+    ArgVector Args = getBasicRunOptionsForLanguage(Lang);
+    ArgVector ExtraArgs = getExtraArgs();
     for (const auto &Arg : ExtraArgs) {
       Args.push_back(Arg);
     }
@@ -67,16 +66,10 @@ protected:
   }
 };
 
-const auto DefaultTestArrayForRunOptions =
-    std::array<std::vector<std::string>, 4>{
-        {std::vector<std::string>(),
-         std::vector<std::string>{"-fdelayed-template-parsing"},
-         std::vector<std::string>{"-fms-compatibility"},
-         std::vector<std::string>{"-fdelayed-template-parsing",
-                                  "-fms-compatibility"}}};
-
-const auto DefaultTestValuesForRunOptions =
-    ::testing::ValuesIn(DefaultTestArrayForRunOptions);
+const auto DefaultTestValuesForRunOptions = ::testing::Values(
+    ArgVector(), ArgVector{"-fdelayed-template-parsing"},
+    ArgVector{"-fms-compatibility"},
+    ArgVector{"-fdelayed-template-parsing", "-fms-compatibility"});
 
 // This class provides generic methods to write tests which can check internal
 // attributes of AST nodes like getPreviousDecl(), isVirtual(), etc. Also,
@@ -115,7 +108,7 @@ private:
     ImporterConstructor Creator;
     ASTImporter::ODRHandlingType ODRHandling;
 
-    TU(StringRef Code, StringRef FileName, std::vector<std::string> Args,
+    TU(StringRef Code, StringRef FileName, ArgVector Args,
        ImporterConstructor C = ImporterConstructor(),
        ASTImporter::ODRHandlingType ODRHandling =
            ASTImporter::ODRHandlingType::Conservative);
@@ -145,8 +138,7 @@ private:
   // Initialize the shared state if not initialized already.
   void lazyInitSharedState(TranslationUnitDecl *ToTU);
 
-  void lazyInitToAST(TestLanguage ToLang, StringRef ToSrcCode,
-                     StringRef FileName);
+  void lazyInitToAST(Language ToLang, StringRef ToSrcCode, StringRef FileName);
 
 protected:
   std::shared_ptr<ASTImporterSharedState> SharedStatePtr;
@@ -162,33 +154,32 @@ public:
   // of the identifier into the To context.
   // Must not be called more than once within the same test.
   std::tuple<Decl *, Decl *>
-  getImportedDecl(StringRef FromSrcCode, TestLanguage FromLang,
-                  StringRef ToSrcCode, TestLanguage ToLang,
-                  StringRef Identifier = DeclToImportID);
+  getImportedDecl(StringRef FromSrcCode, Language FromLang, StringRef ToSrcCode,
+                  Language ToLang, StringRef Identifier = DeclToImportID);
 
   // Creates a TU decl for the given source code which can be used as a From
   // context.  May be called several times in a given test (with different file
   // name).
-  TranslationUnitDecl *getTuDecl(StringRef SrcCode, TestLanguage Lang,
+  TranslationUnitDecl *getTuDecl(StringRef SrcCode, Language Lang,
                                  StringRef FileName = "input.cc");
 
   // Creates the To context with the given source code and returns the TU decl.
-  TranslationUnitDecl *getToTuDecl(StringRef ToSrcCode, TestLanguage ToLang);
+  TranslationUnitDecl *getToTuDecl(StringRef ToSrcCode, Language ToLang);
 
   // Import the given Decl into the ToCtx.
   // May be called several times in a given test.
   // The different instances of the param From may have different ASTContext.
-  Decl *Import(Decl *From, TestLanguage ToLang);
+  Decl *Import(Decl *From, Language ToLang);
 
-  template <class DeclT> DeclT *Import(DeclT *From, TestLanguage Lang) {
+  template <class DeclT> DeclT *Import(DeclT *From, Language Lang) {
     return cast_or_null<DeclT>(Import(cast<Decl>(From), Lang));
   }
 
   // Import the given Decl into the ToCtx.
   // Same as Import but returns the result of the import which can be an error.
-  llvm::Expected<Decl *> importOrError(Decl *From, TestLanguage ToLang);
+  llvm::Expected<Decl *> importOrError(Decl *From, Language ToLang);
 
-  QualType ImportType(QualType FromType, Decl *TUDecl, TestLanguage ToLang);
+  QualType ImportType(QualType FromType, Decl *TUDecl, Language ToLang);
 
   ASTImporterTestBase()
       : ODRHandling(ASTImporter::ODRHandlingType::Conservative) {}
@@ -197,9 +188,9 @@ public:
 
 class ASTImporterOptionSpecificTestBase
     : public ASTImporterTestBase,
-      public ::testing::WithParamInterface<std::vector<std::string>> {
+      public ::testing::WithParamInterface<ArgVector> {
 protected:
-  std::vector<std::string> getExtraArgs() const override { return GetParam(); }
+  ArgVector getExtraArgs() const override { return GetParam(); }
 };
 
 template <class T>

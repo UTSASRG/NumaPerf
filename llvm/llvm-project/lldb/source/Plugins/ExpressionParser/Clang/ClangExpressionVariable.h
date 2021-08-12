@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONVARIABLE_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONVARIABLE_H
+#ifndef liblldb_ClangExpressionVariable_h_
+#define liblldb_ClangExpressionVariable_h_
 
 #include <signal.h>
 #include <stdint.h>
@@ -19,6 +19,7 @@
 
 #include "llvm/Support/Casting.h"
 
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/TaggedASTType.h"
@@ -27,10 +28,6 @@
 
 namespace llvm {
 class Value;
-}
-
-namespace clang {
-class NamedDecl;
 }
 
 namespace lldb_private {
@@ -117,9 +114,11 @@ public:
   class ParserVars {
   public:
     ParserVars()
-        : m_named_decl(nullptr), m_llvm_value(nullptr),
+        : m_parser_type(), m_named_decl(nullptr), m_llvm_value(nullptr),
           m_lldb_value(), m_lldb_var(), m_lldb_sym(nullptr) {}
 
+    TypeFromParser
+        m_parser_type; ///< The type of the variable according to the parser
     const clang::NamedDecl
         *m_named_decl;         ///< The Decl corresponding to this variable
     llvm::Value *m_llvm_value; ///< The IR value corresponding to this variable;
@@ -197,11 +196,9 @@ public:
   }
 
   /// Members
-  ClangExpressionVariable(const ClangExpressionVariable &) = delete;
-  const ClangExpressionVariable &
-  operator=(const ClangExpressionVariable &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ClangExpressionVariable);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONVARIABLE_H
+#endif // liblldb_ClangExpressionVariable_h_

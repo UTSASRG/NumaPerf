@@ -26,7 +26,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
+#include "llvm/PassAnalysisSupport.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -118,8 +118,8 @@ bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
         continue;
       LLVM_DEBUG(
           dbgs()
-          << "Call Instruction Before Register Usage Info Propagation : \n"
-          << MI << "\n");
+          << "Call Instruction Before Register Usage Info Propagation : \n");
+      LLVM_DEBUG(dbgs() << MI << "\n");
 
       auto UpdateRegMask = [&](const Function &F) {
         const ArrayRef<uint32_t> RegMask = PRUI->getRegUsageInfo(F);
@@ -140,9 +140,8 @@ bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
       }
 
       LLVM_DEBUG(
-          dbgs()
-          << "Call Instruction After Register Usage Info Propagation : \n"
-          << MI << '\n');
+          dbgs() << "Call Instruction After Register Usage Info Propagation : "
+                 << MI << '\n');
     }
   }
 

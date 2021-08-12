@@ -126,8 +126,6 @@ private:
   // FactoryImpl sets CanModify flag.
   friend class FactoryImpl;
 
-  void setRole(NodeRole NR);
-
   Tree *Parent;
   Node *NextSibling;
   unsigned Kind : 16;
@@ -173,11 +171,8 @@ private:
   /// Prepend \p Child to the list of children and and sets the parent pointer.
   /// A very low-level operation that does not check any invariants, only used
   /// by TreeBuilder and FactoryImpl.
-  /// EXPECTS: Role != Detached.
+  /// EXPECTS: Role != NodeRoleDetached.
   void prependChildLowLevel(Node *Child, NodeRole Role);
-  /// Like the previous overload, but does not set role for \p Child.
-  /// EXPECTS: Child->Role != Detached
-  void prependChildLowLevel(Node *Child);
   friend class TreeBuilder;
   friend class FactoryImpl;
 

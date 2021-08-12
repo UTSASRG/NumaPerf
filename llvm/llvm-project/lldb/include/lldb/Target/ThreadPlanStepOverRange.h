@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANSTEPOVERRANGE_H
-#define LLDB_TARGET_THREADPLANSTEPOVERRANGE_H
+#ifndef liblldb_ThreadPlanStepOverRange_h_
+#define liblldb_ThreadPlanStepOverRange_h_
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
@@ -45,11 +45,9 @@ private:
 
   bool m_first_resume;
 
-  ThreadPlanStepOverRange(const ThreadPlanStepOverRange &) = delete;
-  const ThreadPlanStepOverRange &
-  operator=(const ThreadPlanStepOverRange &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepOverRange);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANSTEPOVERRANGE_H
+#endif // liblldb_ThreadPlanStepOverRange_h_

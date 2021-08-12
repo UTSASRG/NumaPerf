@@ -28,7 +28,6 @@ class IPDBDataStream;
 class IPDBInjectedSource;
 class IPDBLineNumber;
 class IPDBSectionContrib;
-class IPDBSession;
 class IPDBSourceFile;
 class IPDBTable;
 class PDBSymDumper;

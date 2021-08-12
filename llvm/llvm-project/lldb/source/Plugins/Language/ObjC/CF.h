@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_CF_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_CF_H
+#ifndef liblldb_CF_h_
+#define liblldb_CF_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -29,4 +29,4 @@ bool CFAbsoluteTimeSummaryProvider(ValueObject &valobj, Stream &stream,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_CF_H
+#endif // liblldb_CF_h_

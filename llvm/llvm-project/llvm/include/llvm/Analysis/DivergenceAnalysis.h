@@ -147,7 +147,7 @@ private:
 private:
   const Function &F;
   // If regionLoop != nullptr, analysis is only performed within \p RegionLoop.
-  // Otherwise, analyze the whole function
+  // Otw, analyze the whole function
   const Loop *RegionLoop;
 
   const DominatorTree &DT;

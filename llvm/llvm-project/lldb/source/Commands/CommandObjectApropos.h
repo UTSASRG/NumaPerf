@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTAPROPOS_H
-#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTAPROPOS_H
+#ifndef liblldb_CommandObjectApropos_h_
+#define liblldb_CommandObjectApropos_h_
 
 #include "lldb/Interpreter/CommandObject.h"
 
@@ -28,4 +28,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTAPROPOS_H
+#endif // liblldb_CommandObjectApropos_h_

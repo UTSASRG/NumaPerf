@@ -1,4 +1,4 @@
-//===-- IRForTarget.cpp ---------------------------------------------------===//
+//===-- IRForTarget.cpp -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,9 +9,7 @@
 #include "IRForTarget.h"
 
 #include "ClangExpressionDeclMap.h"
-#include "ClangUtil.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
@@ -29,6 +27,8 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -283,13 +283,17 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
       clang::QualType element_qual_type = pointer_pointertype->getPointeeType();
 
       m_result_type = lldb_private::TypeFromParser(
-          m_decl_map->GetTypeSystem()->GetType(element_qual_type));
+          element_qual_type.getAsOpaquePtr(),
+          lldb_private::ClangASTContext::GetASTContext(
+              &result_decl->getASTContext()));
     } else if (pointer_objcobjpointertype) {
       clang::QualType element_qual_type =
           clang::QualType(pointer_objcobjpointertype->getObjectType(), 0);
 
       m_result_type = lldb_private::TypeFromParser(
-          m_decl_map->GetTypeSystem()->GetType(element_qual_type));
+          element_qual_type.getAsOpaquePtr(),
+          lldb_private::ClangASTContext::GetASTContext(
+              &result_decl->getASTContext()));
     } else {
       LLDB_LOG(log, "Expected result to have pointer type, but it did not");
 
@@ -301,7 +305,9 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     }
   } else {
     m_result_type = lldb_private::TypeFromParser(
-        m_decl_map->GetTypeSystem()->GetType(result_var->getType()));
+        result_var->getType().getAsOpaquePtr(),
+        lldb_private::ClangASTContext::GetASTContext(
+            &result_decl->getASTContext()));
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
@@ -427,7 +433,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
                                     missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
-      LLDB_LOG(log, "Couldn't find CFStringCreateWithBytes in the target");
+        log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
 
       m_error_stream.Printf("Error [IRForTarget]: Rewriting an Objective-C "
                             "constant string requires "
@@ -817,8 +823,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   if (!omvn_initializer_array->isString())
     return false;
 
-  std::string omvn_initializer_string =
-      std::string(omvn_initializer_array->getAsString());
+  std::string omvn_initializer_string = omvn_initializer_array->getAsString();
 
   LLDB_LOG(log, "Found Objective-C selector reference \"{0}\"",
            omvn_initializer_string);
@@ -976,8 +981,7 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
   if (!ocn_initializer_array->isString())
     return false;
 
-  std::string ocn_initializer_string =
-      std::string(ocn_initializer_array->getAsString());
+  std::string ocn_initializer_string = ocn_initializer_array->getAsString();
 
   LLDB_LOG(log, "Found Objective-C class reference \"{0}\"",
            ocn_initializer_string);
@@ -1088,7 +1092,8 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   clang::VarDecl *decl = reinterpret_cast<clang::VarDecl *>(ptr);
 
   lldb_private::TypeFromParser result_decl_type(
-      m_decl_map->GetTypeSystem()->GetType(decl->getType()));
+      decl->getType().getAsOpaquePtr(),
+      lldb_private::ClangASTContext::GetASTContext(&decl->getASTContext()));
 
   StringRef decl_name(decl->getName());
   lldb_private::ConstString persistent_variable_name(decl_name.data(),
@@ -1120,9 +1125,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   // Now, since the variable is a pointer variable, we will drop in a load of
   // that pointer variable.
 
-  LoadInst *persistent_load =
-      new LoadInst(persistent_global->getType()->getPointerElementType(),
-                   persistent_global, "", alloc);
+  LoadInst *persistent_load = new LoadInst(persistent_global, "", alloc);
 
   LLDB_LOG(log, "Replacing \"{0}\" with \"{1}\"", PrintValue(alloc),
            PrintValue(persistent_load));
@@ -1220,8 +1223,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     if (value_decl == nullptr)
       return false;
 
-    lldb_private::CompilerType compiler_type =
-        m_decl_map->GetTypeSystem()->GetType(value_decl->getType());
+    lldb_private::CompilerType compiler_type(
+        lldb_private::ClangASTContext::GetASTContext(
+            &value_decl->getASTContext()),
+        value_decl->getType().getAsOpaquePtr());
 
     const Type *value_type = nullptr;
 
@@ -1395,7 +1400,7 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
     if (func && func->getName() == "__cxa_atexit")
       remove = true;
 
-    llvm::Value *val = call->getCalledOperand();
+    llvm::Value *val = call->getCalledValue();
 
     if (val && val->getName() == "__cxa_atexit")
       remove = true;
@@ -1794,9 +1799,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
                   get_element_ptr, value->getType()->getPointerTo(), "",
                   entry_instruction);
 
-              LoadInst *load =
-                  new LoadInst(bit_cast->getType()->getPointerElementType(),
-                               bit_cast, "", entry_instruction);
+              LoadInst *load = new LoadInst(bit_cast, "", entry_instruction);
 
               return load;
             } else {

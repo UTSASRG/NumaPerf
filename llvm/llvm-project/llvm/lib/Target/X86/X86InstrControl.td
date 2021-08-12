@@ -237,13 +237,13 @@ let isCall = 1 in
                         Sched<[WriteJumpLd]>;
     def CALL32r     : I<0xFF, MRM2r, (outs), (ins GR32:$dst),
                         "call{l}\t{*}$dst", [(X86call GR32:$dst)]>, OpSize32,
-                        Requires<[Not64BitMode,NotUseIndirectThunkCalls]>,
+                        Requires<[Not64BitMode,NotUseRetpolineIndirectCalls]>,
                         Sched<[WriteJump]>;
     def CALL32m     : I<0xFF, MRM2m, (outs), (ins i32mem:$dst),
                         "call{l}\t{*}$dst", [(X86call (loadi32 addr:$dst))]>,
                         OpSize32,
                         Requires<[Not64BitMode,FavorMemIndirectCall,
-                                  NotUseIndirectThunkCalls]>,
+                                  NotUseRetpolineIndirectCalls]>,
                         Sched<[WriteJumpLd]>;
 
     // Non-tracking calls for IBT, use with caution.
@@ -334,11 +334,11 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                       Requires<[In64BitMode]>;
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
                         "call{q}\t{*}$dst", [(X86call GR64:$dst)]>,
-                      Requires<[In64BitMode,NotUseIndirectThunkCalls]>;
+                      Requires<[In64BitMode,NotUseRetpolineIndirectCalls]>;
   def CALL64m       : I<0xFF, MRM2m, (outs), (ins i64mem:$dst),
                         "call{q}\t{*}$dst", [(X86call (loadi64 addr:$dst))]>,
                       Requires<[In64BitMode,FavorMemIndirectCall,
-                                NotUseIndirectThunkCalls]>;
+                                NotUseRetpolineIndirectCalls]>;
 
   // Non-tracking calls for IBT, use with caution.
   let isCodeGenOnly = 1 in {
@@ -393,19 +393,19 @@ let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
     Uses = [RSP, SSP],
     usesCustomInserter = 1,
     SchedRW = [WriteJump] in {
-  def INDIRECT_THUNK_CALL32 :
+  def RETPOLINE_CALL32 :
     PseudoI<(outs), (ins GR32:$dst), [(X86call GR32:$dst)]>,
-            Requires<[Not64BitMode,UseIndirectThunkCalls]>;
+            Requires<[Not64BitMode,UseRetpolineIndirectCalls]>;
 
-  def INDIRECT_THUNK_CALL64 :
+  def RETPOLINE_CALL64 :
     PseudoI<(outs), (ins GR64:$dst), [(X86call GR64:$dst)]>,
-            Requires<[In64BitMode,UseIndirectThunkCalls]>;
+            Requires<[In64BitMode,UseRetpolineIndirectCalls]>;
 
-  // Indirect thunk variant of indirect tail calls.
+  // Retpoline variant of indirect tail calls.
   let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
-    def INDIRECT_THUNK_TCRETURN64 :
+    def RETPOLINE_TCRETURN64 :
       PseudoI<(outs), (ins GR64:$dst, i32imm:$offset), []>;
-    def INDIRECT_THUNK_TCRETURN32 :
+    def RETPOLINE_TCRETURN32 :
       PseudoI<(outs), (ins GR32:$dst, i32imm:$offset), []>;
   }
 }

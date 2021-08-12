@@ -1,6 +1,6 @@
 //===- LegalizeStandardForSPIRV.cpp - Legalize ops for SPIR-V lowering ----===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -26,8 +26,8 @@ class LoadOpOfSubViewFolder final : public OpRewritePattern<LoadOp> {
 public:
   using OpRewritePattern<LoadOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(LoadOp loadOp,
-                                PatternRewriter &rewriter) const override;
+  PatternMatchResult matchAndRewrite(LoadOp loadOp,
+                                     PatternRewriter &rewriter) const override;
 };
 
 /// Merges subview operation with store operation.
@@ -35,8 +35,8 @@ class StoreOpOfSubViewFolder final : public OpRewritePattern<StoreOp> {
 public:
   using OpRewritePattern<StoreOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(StoreOp storeOp,
-                                PatternRewriter &rewriter) const override;
+  PatternMatchResult matchAndRewrite(StoreOp storeOp,
+                                     PatternRewriter &rewriter) const override;
 };
 } // namespace
 
@@ -64,15 +64,34 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
   // TODO: Aborting when the offsets are static. There might be a way to fold
   // the subview op with load even if the offsets have been canonicalized
   // away.
-  SmallVector<Value, 4> opOffsets = subViewOp.getOrCreateOffsets(rewriter, loc);
-  SmallVector<Value, 4> opStrides = subViewOp.getOrCreateStrides(rewriter, loc);
-  assert(opOffsets.size() == indices.size() &&
-         "expected as many indices as rank of subview op result type");
-  assert(opStrides.size() == indices.size() &&
-         "expected as many indices as rank of subview op result type");
+  if (subViewOp.getNumOffsets() == 0)
+    return failure();
+
+  ValueRange opOffsets = subViewOp.offsets();
+  SmallVector<Value, 2> opStrides;
+  if (subViewOp.getNumStrides()) {
+    // If the strides are dynamic, get the stride operands.
+    opStrides = llvm::to_vector<2>(subViewOp.strides());
+  } else {
+    // When static, the stride operands can be retrieved by taking the strides
+    // of the result of the subview op, and dividing the strides of the base
+    // memref.
+    SmallVector<int64_t, 2> staticStrides;
+    if (failed(subViewOp.getStaticStrides(staticStrides))) {
+      return failure();
+    }
+    opStrides.reserve(opOffsets.size());
+    for (auto stride : staticStrides) {
+      auto constValAttr = rewriter.getIntegerAttr(
+          IndexType::get(rewriter.getContext()), stride);
+      opStrides.emplace_back(rewriter.create<ConstantOp>(loc, constValAttr));
+    }
+  }
+  assert(opOffsets.size() == opStrides.size());
 
   // New indices for the load are the current indices * subview_stride +
   // subview_offset.
+  assert(indices.size() == opStrides.size());
   sourceIndices.resize(indices.size());
   for (auto index : llvm::enumerate(indices)) {
     auto offset = opOffsets[index.index()];
@@ -88,42 +107,43 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
 // Folding SubViewOp and LoadOp.
 //===----------------------------------------------------------------------===//
 
-LogicalResult
+PatternMatchResult
 LoadOpOfSubViewFolder::matchAndRewrite(LoadOp loadOp,
                                        PatternRewriter &rewriter) const {
-  auto subViewOp = loadOp.memref().getDefiningOp<SubViewOp>();
+  auto subViewOp = dyn_cast_or_null<SubViewOp>(loadOp.memref().getDefiningOp());
   if (!subViewOp) {
-    return failure();
+    return matchFailure();
   }
   SmallVector<Value, 4> sourceIndices;
   if (failed(resolveSourceIndices(loadOp.getLoc(), rewriter, subViewOp,
                                   loadOp.indices(), sourceIndices)))
-    return failure();
+    return matchFailure();
 
   rewriter.replaceOpWithNewOp<LoadOp>(loadOp, subViewOp.source(),
                                       sourceIndices);
-  return success();
+  return matchSuccess();
 }
 
 //===----------------------------------------------------------------------===//
 // Folding SubViewOp and StoreOp.
 //===----------------------------------------------------------------------===//
 
-LogicalResult
+PatternMatchResult
 StoreOpOfSubViewFolder::matchAndRewrite(StoreOp storeOp,
                                         PatternRewriter &rewriter) const {
-  auto subViewOp = storeOp.memref().getDefiningOp<SubViewOp>();
+  auto subViewOp =
+      dyn_cast_or_null<SubViewOp>(storeOp.memref().getDefiningOp());
   if (!subViewOp) {
-    return failure();
+    return matchFailure();
   }
   SmallVector<Value, 4> sourceIndices;
   if (failed(resolveSourceIndices(storeOp.getLoc(), rewriter, subViewOp,
                                   storeOp.indices(), sourceIndices)))
-    return failure();
+    return matchFailure();
 
   rewriter.replaceOpWithNewOp<StoreOp>(storeOp, storeOp.value(),
                                        subViewOp.source(), sourceIndices);
-  return success();
+  return matchSuccess();
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,8 +160,7 @@ void mlir::populateStdLegalizationPatternsForSPIRVLowering(
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct SPIRVLegalization final
-    : public LegalizeStandardForSPIRVBase<SPIRVLegalization> {
+struct SPIRVLegalization final : public OperationPass<SPIRVLegalization> {
   void runOnOperation() override;
 };
 } // namespace
@@ -150,9 +169,12 @@ void SPIRVLegalization::runOnOperation() {
   OwningRewritePatternList patterns;
   auto *context = &getContext();
   populateStdLegalizationPatternsForSPIRVLowering(context, patterns);
-  applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
+  applyPatternsGreedily(getOperation()->getRegions(), patterns);
 }
 
 std::unique_ptr<Pass> mlir::createLegalizeStdOpsForSPIRVLoweringPass() {
   return std::make_unique<SPIRVLegalization>();
 }
+
+static PassRegistration<SPIRVLegalization>
+    pass("legalize-std-for-spirv", "Legalize standard ops for SPIR-V lowering");

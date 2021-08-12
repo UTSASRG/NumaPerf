@@ -1,5 +1,0 @@
-include Makefile.rules
-
-a.out: globals.ll
-	$(CC) $(CFLAGS) -g -c $^ -o globals.o
-	$(LD) $(LDFLAGS) -g globals.o -o $@

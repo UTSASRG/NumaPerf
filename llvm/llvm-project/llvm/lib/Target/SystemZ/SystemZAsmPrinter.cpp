@@ -92,9 +92,9 @@ static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
     return;
   const MachineMemOperand *MMO = *MI->memoperands_begin();
   unsigned AlignmentHint = 0;
-  if (MMO->getAlign() >= Align(16))
+  if (MMO->getAlignment() >= 16)
     AlignmentHint = 4;
-  else if (MMO->getAlign() >= Align(8))
+  else if (MMO->getAlignment() >= 8)
     AlignmentHint = 3;
   if (AlignmentHint == 0)
     return;
@@ -124,7 +124,7 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
     .addImm(0);
 }
 
-void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
+void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
@@ -479,7 +479,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // that instead.
   case SystemZ::Trap: {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->emitLabel(DotSym);
+    OutStreamer->EmitLabel(DotSym);
 
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
     const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
@@ -492,7 +492,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // to the relative immediate field of the jump instruction. (eg. "jo .+2")
   case SystemZ::CondTrap: {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->emitLabel(DotSym);
+    OutStreamer->EmitLabel(DotSym);
 
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
     const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
@@ -522,6 +522,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, LoweredMI);
 }
 
+
 // Emit the largest nop instruction smaller than or equal to NumBytes
 // bytes.  Return the size of nop emitted.
 static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
@@ -531,22 +532,22 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
     return 0;
   }
   else if (NumBytes < 4) {
-    OutStreamer.emitInstruction(
-        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D), STI);
+    OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BCRAsm)
+                                  .addImm(0).addReg(SystemZ::R0D), STI);
     return 2;
   }
   else if (NumBytes < 6) {
-    OutStreamer.emitInstruction(
-        MCInstBuilder(SystemZ::BCAsm).addImm(0).addReg(0).addImm(0).addReg(0),
-        STI);
+    OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BCAsm)
+                                  .addImm(0).addReg(0).addImm(0).addReg(0),
+                                STI);
     return 4;
   }
   else {
     MCSymbol *DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
-    OutStreamer.emitLabel(DotSym);
-    OutStreamer.emitInstruction(
-        MCInstBuilder(SystemZ::BRCLAsm).addImm(0).addExpr(Dot), STI);
+    OutStreamer.EmitLabel(DotSym);
+    OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BRCLAsm)
+                                  .addImm(0).addExpr(Dot), STI);
     return 6;
   }
 }
@@ -559,9 +560,9 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
     OutStreamer->PushSection();
     OutStreamer->SwitchSection(
         Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
-    OutStreamer->emitSymbolValue(DotSym, 8);
+    OutStreamer->EmitSymbolValue(DotSym, 8);
     OutStreamer->PopSection();
-    OutStreamer->emitLabel(DotSym);
+    OutStreamer->EmitLabel(DotSym);
   }
 
   if (MF->getFunction().hasFnAttribute("mnop-mcount")) {
@@ -572,9 +573,8 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op =
       MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_PLT, Ctx);
-  OutStreamer->emitInstruction(
-      MCInstBuilder(SystemZ::BRASL).addReg(SystemZ::R0D).addExpr(Op),
-      getSubtargetInfo());
+  OutStreamer->EmitInstruction(MCInstBuilder(SystemZ::BRASL)
+                       .addReg(SystemZ::R0D).addExpr(Op), getSubtargetInfo());
 }
 
 void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
@@ -585,7 +585,7 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->emitLabel(MILabel);
+  OutStreamer->EmitLabel(MILabel);
   
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 2 == 0 && "Invalid number of NOP bytes requested!");
@@ -618,7 +618,7 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                                         SystemZMCInstLower &Lower) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->emitLabel(MILabel);
+  OutStreamer->EmitLabel(MILabel);
 
   SM.recordPatchPoint(*MILabel, MI);
   PatchPointOpers Opers(&MI);
@@ -685,8 +685,8 @@ getModifierVariantKind(SystemZCP::SystemZCPModifier Modifier) {
   llvm_unreachable("Invalid SystemCPModifier!");
 }
 
-void SystemZAsmPrinter::emitMachineConstantPoolValue(
-    MachineConstantPoolValue *MCPV) {
+void SystemZAsmPrinter::
+EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
   auto *ZCPV = static_cast<SystemZConstantPoolValue*>(MCPV);
 
   const MCExpr *Expr =
@@ -695,7 +695,7 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
                             OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(ZCPV->getType());
 
-  OutStreamer->emitValue(Expr, Size);
+  OutStreamer->EmitValue(Expr, Size);
 }
 
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -719,7 +719,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
+void SystemZAsmPrinter::EmitEndOfAsmFile(Module &M) {
   emitStackMaps(SM);
 }
 

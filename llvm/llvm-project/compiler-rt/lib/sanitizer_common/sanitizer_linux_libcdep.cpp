@@ -35,10 +35,6 @@
 #include <sys/resource.h>
 #include <syslog.h>
 
-#if !defined(ElfW)
-#define ElfW(type) Elf_##type
-#endif
-
 #if SANITIZER_FREEBSD
 #include <pthread_np.h>
 #include <osreldate.h>

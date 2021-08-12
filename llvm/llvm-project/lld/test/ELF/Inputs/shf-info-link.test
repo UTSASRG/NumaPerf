@@ -13,8 +13,9 @@ Sections:
     Link:            .symtab
     Info:            .text
     Relocations:
-      - Symbol:      foo
-        Type:        R_X86_64_64
+      - Offset:          0x0000000000000000
+        Symbol:          foo
+        Type:            R_X86_64_64
 Symbols:
   - Name:            foo
     Binding:         STB_GLOBAL

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM_H
+#ifndef liblldb_RegisterInfoPOSIX_arm_h_
+#define liblldb_RegisterInfoPOSIX_arm_h_
 
 #include "RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
@@ -58,4 +58,4 @@ private:
   uint32_t m_register_info_count;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM_H
+#endif // liblldb_RegisterInfoPOSIX_arm_h_

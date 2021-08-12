@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COCOA_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COCOA_H
+#ifndef liblldb_Cocoa_h_
+#define liblldb_Cocoa_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -113,4 +113,4 @@ public:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COCOA_H
+#endif // liblldb_Cocoa_h_

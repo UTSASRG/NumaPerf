@@ -142,6 +142,6 @@ void ento::registerEnumCastOutOfRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<EnumCastOutOfRangeChecker>();
 }
 
-bool ento::shouldRegisterEnumCastOutOfRangeChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterEnumCastOutOfRangeChecker(const LangOptions &LO) {
   return true;
 }

@@ -67,7 +67,7 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
         if (MI.isDebugValue()) {
           assert(i == 0 && "Frame indices can only appear as the first "
                            "operand of a DBG_VALUE machine instruction");
-          Register Reg;
+          unsigned Reg;
           int64_t Offset =
               TFI.getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
           MI.getOperand(0).ChangeToRegister(Reg, /*isDef=*/false);
@@ -97,21 +97,22 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
 }
 
 /// AdjustStackOffset - Helper function used to adjust the stack frame offset.
-static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
-                                     bool StackGrowsDown, int64_t &Offset,
-                                     Align &MaxAlign) {
+static inline void
+AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
+                  bool StackGrowsDown, int64_t &Offset,
+                  unsigned &MaxAlign) {
   // If the stack grows down, add the object size to find the lowest address.
   if (StackGrowsDown)
     Offset += MFI.getObjectSize(FrameIdx);
 
-  Align Alignment = MFI.getObjectAlign(FrameIdx);
+  unsigned Align = MFI.getObjectAlignment(FrameIdx);
 
   // If the alignment of this object is greater than that of the stack, then
   // increase the stack alignment to match.
-  MaxAlign = std::max(MaxAlign, Alignment);
+  MaxAlign = std::max(MaxAlign, Align);
 
   // Adjust to alignment boundary.
-  Offset = alignTo(Offset, Alignment);
+  Offset = (Offset + Align - 1) / Align * Align;
 
   if (StackGrowsDown) {
     LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset
@@ -168,7 +169,7 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   // NOTE: We do not have a call stack
 
-  Align MaxAlign = MFI.getMaxAlign();
+  unsigned MaxAlign = MFI.getMaxAlignment();
 
   // No scavenger
 
@@ -177,10 +178,10 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // frame index registers. Functions which don't want/need this optimization
   // will continue to use the existing code path.
   if (MFI.getUseLocalStackAllocationBlock()) {
-    Align Alignment = MFI.getLocalFrameMaxAlign();
+    unsigned Align = MFI.getLocalFrameMaxAlign().value();
 
     // Adjust to alignment boundary.
-    Offset = alignTo(Offset, Alignment);
+    Offset = (Offset + Align - 1) / Align * Align;
 
     LLVM_DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
 
@@ -195,7 +196,7 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
     // Allocate the local block
     Offset += MFI.getLocalFrameSize();
 
-    MaxAlign = std::max(Alignment, MaxAlign);
+    MaxAlign = std::max(Align, MaxAlign);
   }
 
   // No stack protector
@@ -226,16 +227,18 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
     // ensure that the callee's frame or the alloca data is suitably aligned;
     // otherwise, for leaf functions, align to the TransientStackAlignment
     // value.
-    Align StackAlign;
+    unsigned StackAlign;
     if (MFI.adjustsStack() || MFI.hasVarSizedObjects() ||
         (RegInfo->needsStackRealignment(Fn) && MFI.getObjectIndexEnd() != 0))
-      StackAlign = TFI.getStackAlign();
+      StackAlign = TFI.getStackAlignment();
     else
-      StackAlign = TFI.getTransientStackAlign();
+      StackAlign = TFI.getTransientStackAlignment();
 
     // If the frame pointer is eliminated, all frame offsets will be relative to
     // SP not FP. Align to MaxAlign so this works.
-    Offset = alignTo(Offset, std::max(StackAlign, MaxAlign));
+    StackAlign = std::max(StackAlign, MaxAlign);
+    unsigned AlignMask = StackAlign - 1;
+    Offset = (Offset + AlignMask) & ~uint64_t(AlignMask);
   }
 
   // Update frame info to pretend that this is part of the stack...

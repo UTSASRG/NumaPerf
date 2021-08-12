@@ -21,7 +21,6 @@
 #include "RawStringLiteralCheck.h"
 #include "RedundantVoidArgCheck.h"
 #include "ReplaceAutoPtrCheck.h"
-#include "ReplaceDisallowCopyAndAssignMacroCheck.h"
 #include "ReplaceRandomShuffleCheck.h"
 #include "ReturnBracedInitListCheck.h"
 #include "ShrinkToFitCheck.h"
@@ -68,8 +67,6 @@ public:
         "modernize-redundant-void-arg");
     CheckFactories.registerCheck<ReplaceAutoPtrCheck>(
         "modernize-replace-auto-ptr");
-    CheckFactories.registerCheck<ReplaceDisallowCopyAndAssignMacroCheck>(
-        "modernize-replace-disallow-copy-and-assign-macro");
     CheckFactories.registerCheck<ReplaceRandomShuffleCheck>(
         "modernize-replace-random-shuffle");
     CheckFactories.registerCheck<ReturnBracedInitListCheck>(

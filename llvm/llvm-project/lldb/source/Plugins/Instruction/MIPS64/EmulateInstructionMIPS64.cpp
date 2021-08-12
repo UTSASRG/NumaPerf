@@ -1,4 +1,4 @@
-//===-- EmulateInstructionMIPS64.cpp --------------------------------------===//
+//===-- EmulateInstructionMIPS64.cpp -----------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,8 +39,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionMIPS64, InstructionMIPS64)
 
 #define UInt(x) ((uint64_t)x)
 #define integer int64_t

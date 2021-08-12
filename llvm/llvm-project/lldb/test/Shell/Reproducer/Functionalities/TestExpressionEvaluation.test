@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-freebsd
+# UNSUPPORTED: system-windows, system-freebsd
 # XFAIL: system-netbsd
 
 # Flaky

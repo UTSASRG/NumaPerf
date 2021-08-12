@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_MAPPEDHASH_H
-#define LLDB_CORE_MAPPEDHASH_H
+#ifndef liblldb_MappedHash_h_
+#define liblldb_MappedHash_h_
 
 #include <assert.h>
 #include <stdint.h>
@@ -307,4 +307,4 @@ public:
   };
 };
 
-#endif // LLDB_CORE_MAPPEDHASH_H
+#endif // liblldb_MappedHash_h_

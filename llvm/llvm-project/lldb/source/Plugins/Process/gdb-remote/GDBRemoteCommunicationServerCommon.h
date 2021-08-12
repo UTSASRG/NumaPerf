@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERCOMMON_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERCOMMON_H
+#ifndef liblldb_GDBRemoteCommunicationServerCommon_h_
+#define liblldb_GDBRemoteCommunicationServerCommon_h_
 
 #include <string>
 
@@ -152,4 +152,4 @@ private:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERCOMMON_H
+#endif // liblldb_GDBRemoteCommunicationServerCommon_h_

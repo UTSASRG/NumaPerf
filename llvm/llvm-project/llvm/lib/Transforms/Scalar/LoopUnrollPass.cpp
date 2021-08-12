@@ -154,10 +154,6 @@ static cl::opt<bool>
                        cl::desc("Allows loops to be peeled when the dynamic "
                                 "trip count is known to be low."));
 
-static cl::opt<bool> UnrollAllowLoopNestsPeeling(
-    "unroll-allow-loop-nests-peeling", cl::init(false), cl::Hidden,
-    cl::desc("Allows loop nests to be peeled."));
-
 static cl::opt<bool> UnrollUnrollRemainder(
   "unroll-remainder", cl::Hidden,
   cl::desc("Allow the loop remainder to be unrolled."));
@@ -170,16 +166,6 @@ static cl::opt<bool> UnrollRevisitChildLoops(
     cl::desc("Enqueue and re-visit child loops in the loop PM after unrolling. "
              "This shouldn't typically be needed as child loops (or their "
              "clones) were already visited."));
-
-static cl::opt<unsigned> UnrollThresholdAggressive(
-    "unroll-threshold-aggressive", cl::init(300), cl::Hidden,
-    cl::desc("Threshold (max size of unrolled loop) to use in aggressive (O3) "
-             "optimizations"));
-static cl::opt<unsigned>
-    UnrollThresholdDefault("unroll-threshold-default", cl::init(150),
-                           cl::Hidden,
-                           cl::desc("Default threshold (max size of unrolled "
-                                    "loop), used in all but O3 optimizations"));
 
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
@@ -199,8 +185,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
-  UP.Threshold =
-      OptLevel > 2 ? UnrollThresholdAggressive : UnrollThresholdDefault;
+  UP.Threshold = OptLevel > 2 ? 300 : 150;
   UP.MaxPercentThresholdBoost = 400;
   UP.OptSizeThreshold = 0;
   UP.PartialThreshold = 150;
@@ -219,7 +204,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.Force = false;
   UP.UpperBound = false;
   UP.AllowPeeling = true;
-  UP.AllowLoopNestsPeeling = false;
   UP.UnrollAndJam = false;
   UP.PeelProfiledIterations = true;
   UP.UnrollAndJamInnerLoopThreshold = 60;
@@ -260,8 +244,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.UpperBound = false;
   if (UnrollAllowPeeling.getNumOccurrences() > 0)
     UP.AllowPeeling = UnrollAllowPeeling;
-  if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
-    UP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
   if (UnrollUnrollRemainder.getNumOccurrences() > 0)
     UP.UnrollRemainder = UnrollUnrollRemainder;
 
@@ -446,7 +428,7 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
         // First accumulate the cost of this instruction.
         if (!Cost.IsFree) {
-          UnrolledCost += TTI.getUserCost(I, TargetTransformInfo::TCK_CodeSize);
+          UnrolledCost += TTI.getUserCost(I);
           LLVM_DEBUG(dbgs() << "Adding cost of instruction (iteration "
                             << Iteration << "): ");
           LLVM_DEBUG(I->dump());
@@ -539,7 +521,7 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
         // Track this instruction's expected baseline cost when executing the
         // rolled loop form.
-        RolledDynamicCost += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
+        RolledDynamicCost += TTI.getUserCost(&I);
 
         // Visit the instruction to analyze its loop cost after unrolling,
         // and if the visitor returns true, mark the instruction as free after
@@ -683,32 +665,32 @@ unsigned llvm::ApproximateLoopSize(
 // Returns the loop hint metadata node with the given name (for example,
 // "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
 // returned.
-static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+static MDNode *GetUnrollMetadataForLoop(const Loop *L, StringRef Name) {
   if (MDNode *LoopID = L->getLoopID())
     return GetUnrollMetadata(LoopID, Name);
   return nullptr;
 }
 
 // Returns true if the loop has an unroll(full) pragma.
-static bool hasUnrollFullPragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.full");
+static bool HasUnrollFullPragma(const Loop *L) {
+  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll.full");
 }
 
 // Returns true if the loop has an unroll(enable) pragma. This metadata is used
 // for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
-static bool hasUnrollEnablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
+static bool HasUnrollEnablePragma(const Loop *L) {
+  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
 }
 
 // Returns true if the loop has an runtime unroll(disable) pragma.
-static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
+static bool HasRuntimeUnrollDisablePragma(const Loop *L) {
+  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
 }
 
 // If loop has an unroll_count pragma return the (necessarily
 // positive) value from the pragma.  Otherwise return 0.
-static unsigned unrollCountPragmaValue(const Loop *L) {
-  MDNode *MD = getUnrollMetadataForLoop(L, "llvm.loop.unroll.count");
+static unsigned UnrollCountPragmaValue(const Loop *L) {
+  MDNode *MD = GetUnrollMetadataForLoop(L, "llvm.loop.unroll.count");
   if (MD) {
     assert(MD->getNumOperands() == 2 &&
            "Unroll count hint metadata should have two operands.");
@@ -772,7 +754,7 @@ bool llvm::computeUnrollCount(
   }
 
   // 2nd priority is unroll count set by pragma.
-  unsigned PragmaCount = unrollCountPragmaValue(L);
+  unsigned PragmaCount = UnrollCountPragmaValue(L);
   if (PragmaCount > 0) {
     UP.Count = PragmaCount;
     UP.Runtime = true;
@@ -782,14 +764,14 @@ bool llvm::computeUnrollCount(
         getUnrolledLoopSize(LoopSize, UP) < PragmaUnrollThreshold)
       return true;
   }
-  bool PragmaFullUnroll = hasUnrollFullPragma(L);
+  bool PragmaFullUnroll = HasUnrollFullPragma(L);
   if (PragmaFullUnroll && TripCount != 0) {
     UP.Count = TripCount;
     if (getUnrolledLoopSize(LoopSize, UP) < PragmaUnrollThreshold)
       return false;
   }
 
-  bool PragmaEnableUnroll = hasUnrollEnablePragma(L);
+  bool PragmaEnableUnroll = HasUnrollEnablePragma(L);
   bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
                         PragmaEnableUnroll || UserUnrollCount;
 
@@ -943,7 +925,7 @@ bool llvm::computeUnrollCount(
 
   // 6th priority is runtime unrolling.
   // Don't unroll a runtime trip count loop when it is disabled.
-  if (hasRuntimeUnrollDisablePragma(L)) {
+  if (HasRuntimeUnrollDisablePragma(L)) {
     UP.Count = 0;
     return false;
   }
@@ -1155,7 +1137,7 @@ static LoopUnrollResult tryToUnrollLoop(
       {UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
        UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
        ForgetAllSCEV},
-      LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop);
+      LI, &SE, &DT, &AC, &ORE, PreserveLCSSA, &RemainderLoop);
   if (UnrollResult == LoopUnrollResult::Unmodified)
     return LoopUnrollResult::Unmodified;
 
@@ -1314,10 +1296,16 @@ Pass *llvm::createSimpleLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
 PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &Updater) {
-  // For the new PM, we can't use OptimizationRemarkEmitter as an analysis
-  // pass. Function analyses need to be preserved across loop transformations
-  // but ORE cannot be preserved (see comment before the pass definition).
-  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  const auto &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
+  Function *F = L.getHeader()->getParent();
+
+  auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
+  // FIXME: This should probably be optional rather than required.
+  if (!ORE)
+    report_fatal_error(
+        "LoopFullUnrollPass: OptimizationRemarkEmitterAnalysis not "
+        "cached at a higher level");
 
   // Keep track of the previous loop structure so we can identify new loops
   // created by unrolling.
@@ -1328,9 +1316,9 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   else
     OldLoops.insert(AR.LI.begin(), AR.LI.end());
 
-  std::string LoopName = std::string(L.getName());
+  std::string LoopName = L.getName();
 
-  bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, ORE,
+  bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
                                  /*BFI*/ nullptr, /*PSI*/ nullptr,
                                  /*PreserveLCSSA*/ true, OptLevel,
                                  OnlyWhenForced, ForgetSCEV, /*Count*/ None,
@@ -1396,6 +1384,30 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   return getLoopPassPreservedAnalyses();
 }
 
+template <typename RangeT>
+static SmallVector<Loop *, 8> appendLoopsToWorklist(RangeT &&Loops) {
+  SmallVector<Loop *, 8> Worklist;
+  // We use an internal worklist to build up the preorder traversal without
+  // recursion.
+  SmallVector<Loop *, 4> PreOrderLoops, PreOrderWorklist;
+
+  for (Loop *RootL : Loops) {
+    assert(PreOrderLoops.empty() && "Must start with an empty preorder walk.");
+    assert(PreOrderWorklist.empty() &&
+           "Must start with an empty preorder walk worklist.");
+    PreOrderWorklist.push_back(RootL);
+    do {
+      Loop *L = PreOrderWorklist.pop_back_val();
+      PreOrderWorklist.append(L->begin(), L->end());
+      PreOrderLoops.push_back(L);
+    } while (!PreOrderWorklist.empty());
+
+    Worklist.append(PreOrderLoops.begin(), PreOrderLoops.end());
+    PreOrderLoops.clear();
+  }
+  return Worklist;
+}
+
 PreservedAnalyses LoopUnrollPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
@@ -1409,9 +1421,10 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   if (auto *LAMProxy = AM.getCachedResult<LoopAnalysisManagerFunctionProxy>(F))
     LAM = &LAMProxy->getManager();
 
-  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  const ModuleAnalysisManager &MAM =
+      AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
   ProfileSummaryInfo *PSI =
-      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+      MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
@@ -1428,10 +1441,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
-  // Add the loop nests in the reverse order of LoopInfo. See method
-  // declaration.
-  SmallPriorityWorklist<Loop *, 4> Worklist;
-  appendLoopsToWorklist(LI, Worklist);
+  SmallVector<Loop *, 8> Worklist = appendLoopsToWorklist(LI);
 
   while (!Worklist.empty()) {
     // Because the LoopInfo stores the loops in RPO, we walk the worklist
@@ -1449,7 +1459,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     Optional<bool> LocalAllowPeeling = UnrollOpts.AllowPeeling;
     if (PSI && PSI->hasHugeWorkingSetSize())
       LocalAllowPeeling = false;
-    std::string LoopName = std::string(L.getName());
+    std::string LoopName = L.getName();
     // The API here is quite complex to call and we allow to select some
     // flavors of unrolling during construction time (by setting UnrollOpts).
     LoopUnrollResult Result = tryToUnrollLoop(

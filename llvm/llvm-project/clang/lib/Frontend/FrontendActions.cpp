@@ -9,7 +9,6 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -116,7 +115,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
       FrontendOpts.IncludeTimestamps, +CI.getLangOpts().CacheGeneratedPCH));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
-      CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
+      CI, InFile, OutputFile, std::move(OS), Buffer));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -182,7 +181,7 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
       /*ShouldCacheASTInMemory=*/
       +CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
-      CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
+      CI, InFile, OutputFile, std::move(OS), Buffer));
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -267,7 +266,7 @@ bool GenerateHeaderModuleAction::PrepareToExecuteAction(
     HeaderContents += "#include \"";
     HeaderContents += FIF.getFile();
     HeaderContents += "\"\n";
-    ModuleHeaders.push_back(std::string(FIF.getFile()));
+    ModuleHeaders.push_back(FIF.getFile());
   }
   Buffer = llvm::MemoryBuffer::getMemBufferCopy(
       HeaderContents, Module::getModuleInputBufferName());
@@ -296,7 +295,7 @@ bool GenerateHeaderModuleAction::BeginSourceFileAction(
         << Name;
       continue;
     }
-    Headers.push_back({std::string(Name), &FE->getFileEntry()});
+    Headers.push_back({Name, &FE->getFileEntry()});
   }
   HS.getModuleMap().createHeaderModule(CI.getLangOpts().CurrentModule, Headers);
 

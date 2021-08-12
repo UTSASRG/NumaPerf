@@ -17,6 +17,9 @@ namespace tidy {
 namespace cert {
 
 void VariadicFunctionDefCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   // We only care about function *definitions* that are variadic, and do not
   // have extern "C" language linkage.
   Finder->addMatcher(

@@ -64,8 +64,6 @@ public:
     }
     if (static_cast<int>(Indent) + Offset >= 0)
       Indent += Offset;
-    if (Line.First->is(TT_CSharpGenericTypeConstraint))
-      Indent = Line.Level * Style.IndentWidth + Style.ContinuationIndentWidth;
   }
 
   /// Update the indent state given that \p Line indent should be
@@ -406,7 +404,7 @@ private:
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
     }
-    if (TheLine->First->isOneOf(tok::kw_for, tok::kw_while, tok::kw_do)) {
+    if (TheLine->First->isOneOf(tok::kw_for, tok::kw_while)) {
       return Style.AllowShortLoopsOnASingleLine
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
@@ -451,10 +449,7 @@ private:
       return 0;
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (!Line.First->is(tok::kw_do) && Line.Last->isNot(tok::r_paren))
-      return 0;
-    // Only merge do while if do is the only statement on the line.
-    if (Line.First->is(tok::kw_do) && !Line.Last->is(tok::kw_do))
+    if (Line.Last->isNot(tok::r_paren))
       return 0;
     if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
@@ -598,10 +593,9 @@ private:
         FormatToken *RecordTok = Line.First;
         // Skip record modifiers.
         while (RecordTok->Next &&
-               RecordTok->isOneOf(
-                   tok::kw_typedef, tok::kw_export, Keywords.kw_declare,
-                   Keywords.kw_abstract, tok::kw_default, tok::kw_public,
-                   tok::kw_private, tok::kw_protected, Keywords.kw_internal))
+               RecordTok->isOneOf(tok::kw_typedef, tok::kw_export,
+                                  Keywords.kw_declare, Keywords.kw_abstract,
+                                  tok::kw_default))
           RecordTok = RecordTok->Next;
         if (RecordTok &&
             RecordTok->isOneOf(tok::kw_class, tok::kw_union, tok::kw_struct,
@@ -823,8 +817,7 @@ protected:
     if (!DryRun) {
       Whitespaces->replaceWhitespace(
           *Child->First, /*Newlines=*/0, /*Spaces=*/1,
-          /*StartOfTokenColumn=*/State.Column, /*IsAligned=*/false,
-          State.Line->InPPDirective);
+          /*StartOfTokenColumn=*/State.Column, State.Line->InPPDirective);
     }
     Penalty +=
         formatLine(*Child, State.Column + 1, /*FirstStartColumn=*/0, DryRun);
@@ -1256,7 +1249,6 @@ void UnwrappedLineFormatter::formatFirstToken(
     Indent = 0;
 
   Whitespaces->replaceWhitespace(RootToken, Newlines, Indent, Indent,
-                                 /*IsAligned=*/false,
                                  Line.InPPDirective &&
                                      !RootToken.HasUnescapedNewline);
 }

@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextLinux_mips64.cpp -----------------------------===//
+//===-- NativeRegisterContextLinux_mips64.cpp ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -679,7 +679,7 @@ static int GetVacantWatchIndex(struct pt_watch_regs *regs, lldb::addr_t addr,
     }
 
     if (vacant_watches > 1) {
-      // Split this watchpoint across several registers
+      // Split this watchpoint accross several registers
       struct pt_watch_regs regs_copy;
       regs_copy = *regs;
       lldb::addr_t break_addr;

@@ -15,7 +15,6 @@
 #include "../modernize/UseOverrideCheck.h"
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidGotoCheck.h"
-#include "AvoidNonConstGlobalVariablesCheck.h"
 #include "InitVariablesCheck.h"
 #include "InterfacesGlobalInitCheck.h"
 #include "MacroUsageCheck.h"
@@ -49,8 +48,6 @@ public:
         "cppcoreguidelines-avoid-goto");
     CheckFactories.registerCheck<readability::MagicNumbersCheck>(
         "cppcoreguidelines-avoid-magic-numbers");
-    CheckFactories.registerCheck<AvoidNonConstGlobalVariablesCheck>(
-        "cppcoreguidelines-avoid-non-const-global-variables");
     CheckFactories.registerCheck<modernize::UseOverrideCheck>(
         "cppcoreguidelines-explicit-virtual-functions");
     CheckFactories.registerCheck<InitVariablesCheck>(

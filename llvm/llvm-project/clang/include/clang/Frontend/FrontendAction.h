@@ -312,7 +312,6 @@ protected:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
   void ExecuteAction() override;
   void EndSourceFileAction() override;
-  bool shouldEraseOutputFiles() override;
 
 public:
   /// Construct a WrapperFrontendAction from an existing action, taking

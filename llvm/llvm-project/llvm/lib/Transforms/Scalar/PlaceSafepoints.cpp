@@ -189,8 +189,7 @@ static bool needsStatepoint(CallBase *Call, const TargetLibraryInfo &TLI) {
       return false;
   }
 
-  return !(isa<GCStatepointInst>(Call) || isa<GCRelocateInst>(Call) ||
-           isa<GCResultInst>(Call));
+  return !(isStatepoint(Call) || isGCRelocate(Call) || isGCResult(Call));
 }
 
 /// Returns true if this loop is known to contain a call safepoint which
@@ -651,7 +650,7 @@ InsertSafepointPoll(Instruction *InsertBefore,
 
   // Do the actual inlining
   InlineFunctionInfo IFI;
-  bool InlineStatus = InlineFunction(*PollCall, IFI).isSuccess();
+  bool InlineStatus = InlineFunction(PollCall, IFI);
   assert(InlineStatus && "inline must succeed");
   (void)InlineStatus; // suppress warning in release-asserts
 

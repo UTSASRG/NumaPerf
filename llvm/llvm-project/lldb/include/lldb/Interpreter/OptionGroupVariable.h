@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONGROUPVARIABLE_H
-#define LLDB_INTERPRETER_OPTIONGROUPVARIABLE_H
+#ifndef liblldb_OptionGroupVariable_h_
+#define liblldb_OptionGroupVariable_h_
 
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
@@ -41,10 +41,9 @@ public:
   OptionValueString summary_string; // a summary string
 
 private:
-  OptionGroupVariable(const OptionGroupVariable &) = delete;
-  const OptionGroupVariable &operator=(const OptionGroupVariable &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(OptionGroupVariable);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONGROUPVARIABLE_H
+#endif // liblldb_OptionGroupVariable_h_

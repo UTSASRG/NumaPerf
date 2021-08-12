@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANSTEPOUT_H
-#define LLDB_TARGET_THREADPLANSTEPOUT_H
+#ifndef liblldb_ThreadPlanStepOut_h_
+#define liblldb_ThreadPlanStepOut_h_
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -85,10 +85,9 @@ private:
 
   void CalculateReturnValue();
 
-  ThreadPlanStepOut(const ThreadPlanStepOut &) = delete;
-  const ThreadPlanStepOut &operator=(const ThreadPlanStepOut &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepOut);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANSTEPOUT_H
+#endif // liblldb_ThreadPlanStepOut_h_

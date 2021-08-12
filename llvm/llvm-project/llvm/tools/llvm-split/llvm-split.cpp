@@ -61,11 +61,7 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
-    if (verifyModule(*MPart, &errs())) {
-      errs() << "Broken module!\n";
-      exit(1);
-    }
-
+    verifyModule(*MPart);
     WriteBitcodeToFile(*MPart, Out->os());
 
     // Declare success.

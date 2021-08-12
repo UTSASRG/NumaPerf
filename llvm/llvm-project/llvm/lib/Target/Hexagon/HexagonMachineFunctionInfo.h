@@ -30,9 +30,6 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
   unsigned StackAlignBaseVReg = 0;    // Aligned-stack base register (virtual)
   unsigned StackAlignBasePhysReg = 0; //                             (physical)
   int VarArgsFrameIndex;
-  int RegSavedAreaStartFrameIndex;
-  int FirstNamedArgFrameIndex;
-  int LastNamedArgFrameIndex;
   bool HasClobberLR = false;
   bool HasEHReturn = false;
   std::map<const MachineInstr*, unsigned> PacketInfo;
@@ -48,15 +45,6 @@ public:
 
   void setVarArgsFrameIndex(int v) { VarArgsFrameIndex = v; }
   int getVarArgsFrameIndex() { return VarArgsFrameIndex; }
-
-  void setRegSavedAreaStartFrameIndex(int v) { RegSavedAreaStartFrameIndex = v;}
-  int getRegSavedAreaStartFrameIndex() { return RegSavedAreaStartFrameIndex; }
-
-  void setFirstNamedArgFrameIndex(int v) { FirstNamedArgFrameIndex = v; }
-  int getFirstNamedArgFrameIndex() { return FirstNamedArgFrameIndex; }
-
-  void setLastNamedArgFrameIndex(int v) { LastNamedArgFrameIndex = v; }
-  int getLastNamedArgFrameIndex() { return LastNamedArgFrameIndex; }
 
   void setStartPacket(MachineInstr* MI) {
     PacketInfo[MI] |= Hexagon::StartPacket;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
+#ifndef liblldb_PlatformRemoteAppleTV_h_
+#define liblldb_PlatformRemoteAppleTV_h_
 
 #include <string>
 
@@ -58,9 +58,7 @@ protected:
   std::string GetPlatformName () override;
 
 private:
-  PlatformRemoteAppleTV(const PlatformRemoteAppleTV &) = delete;
-  const PlatformRemoteAppleTV &
-  operator=(const PlatformRemoteAppleTV &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteAppleTV);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
+#endif // liblldb_PlatformRemoteAppleTV_h_

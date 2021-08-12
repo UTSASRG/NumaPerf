@@ -1,6 +1,6 @@
 //===-- SPIRVAtomicOps.td - MLIR SPIR-V Atomic Ops ---------*- tablegen -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -25,7 +25,6 @@ class SPV_AtomicUpdateOp<string mnemonic, list<OpTrait> traits = []> :
     SPV_ScopeAttr:$memory_scope,
     SPV_MemorySemanticsAttr:$semantics
   );
-
   let results = (outs
     SPV_Integer:$result
   );
@@ -43,19 +42,9 @@ class SPV_AtomicUpdateWithValueOp<string mnemonic, list<OpTrait> traits = []> :
     SPV_MemorySemanticsAttr:$semantics,
     SPV_Integer:$value
   );
-
   let results = (outs
     SPV_Integer:$result
   );
-
-  let builders = [
-    OpBuilder<
-      [{OpBuilder &builder, OperationState &state, Value pointer,
-        ::mlir::spirv::Scope scope, ::mlir::spirv::MemorySemantics memory,
-        Value value}],
-      [{build(builder, state, value.getType(), pointer, scope, memory, value);}]
-    >
-  ];
 }
 
 // -----
@@ -82,7 +71,7 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
@@ -94,9 +83,9 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
                         ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicAnd "Device" "None" %pointer, %value :
                        !spv.ptr<i32, StorageBuffer>
     ```
@@ -113,7 +102,7 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-compare-exchange-weak-op ::=
@@ -122,9 +111,9 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
                                         `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicCompareExchangeWeak "Workgroup" "Acquire" "None"
                                        %pointer, %value, %comparator
                                        : !spv.ptr<i32, WorkGroup>
@@ -176,7 +165,7 @@ def SPV_AtomicIAddOp : SPV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-iadd-op ::=
@@ -184,9 +173,9 @@ def SPV_AtomicIAddOp : SPV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicIAdd "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -216,7 +205,7 @@ def SPV_AtomicIDecrementOp : SPV_AtomicUpdateOp<"AtomicIDecrement", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-idecrement-op ::=
@@ -224,9 +213,9 @@ def SPV_AtomicIDecrementOp : SPV_AtomicUpdateOp<"AtomicIDecrement", []> {
                                `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicIDecrement "Device" "None" %pointer :
                               !spv.ptr<i32, StorageBuffer>
     ```
@@ -255,7 +244,7 @@ def SPV_AtomicIIncrementOp : SPV_AtomicUpdateOp<"AtomicIIncrement", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-iincrement-op ::=
@@ -263,9 +252,9 @@ def SPV_AtomicIIncrementOp : SPV_AtomicUpdateOp<"AtomicIIncrement", []> {
                                `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicIncrement "Device" "None" %pointer :
                              !spv.ptr<i32, StorageBuffer>
     ```
@@ -297,7 +286,7 @@ def SPV_AtomicISubOp : SPV_AtomicUpdateWithValueOp<"AtomicISub", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-isub-op ::=
@@ -305,9 +294,9 @@ def SPV_AtomicISubOp : SPV_AtomicUpdateWithValueOp<"AtomicISub", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicISub "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -338,7 +327,7 @@ def SPV_AtomicOrOp : SPV_AtomicUpdateWithValueOp<"AtomicOr", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-or-op ::=
@@ -346,9 +335,9 @@ def SPV_AtomicOrOp : SPV_AtomicUpdateWithValueOp<"AtomicOr", []> {
                        ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicOr "Device" "None" %pointer, %value :
                       !spv.ptr<i32, StorageBuffer>
     ```
@@ -380,7 +369,7 @@ def SPV_AtomicSMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-smax-op ::=
@@ -388,9 +377,9 @@ def SPV_AtomicSMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicSMax "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -422,7 +411,7 @@ def SPV_AtomicSMinOp : SPV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-smin-op ::=
@@ -430,9 +419,9 @@ def SPV_AtomicSMinOp : SPV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicSMin "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -464,7 +453,7 @@ def SPV_AtomicUMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicUMax", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-umax-op ::=
@@ -472,9 +461,9 @@ def SPV_AtomicUMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicUMax", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicUMax "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -506,7 +495,7 @@ def SPV_AtomicUMinOp : SPV_AtomicUpdateWithValueOp<"AtomicUMin", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-umin-op ::=
@@ -514,9 +503,9 @@ def SPV_AtomicUMinOp : SPV_AtomicUpdateWithValueOp<"AtomicUMin", []> {
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicUMin "Device" "None" %pointer, %value :
                         !spv.ptr<i32, StorageBuffer>
     ```
@@ -548,7 +537,7 @@ def SPV_AtomicXorOp : SPV_AtomicUpdateWithValueOp<"AtomicXor", []> {
 
     Memory must be a valid memory Scope.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     atomic-xor-op ::=
@@ -556,9 +545,9 @@ def SPV_AtomicXorOp : SPV_AtomicUpdateWithValueOp<"AtomicXor", []> {
                         ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.AtomicXor "Device" "None" %pointer, %value :
                        !spv.ptr<i32, StorageBuffer>
     ```

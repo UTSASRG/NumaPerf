@@ -9,15 +9,14 @@
 #ifndef LLVM_SUPPORT_WITHCOLOR_H
 #define LLVM_SUPPORT_WITHCOLOR_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
-class Error;
-class raw_ostream;
-class StringRef;
-
 extern cl::OptionCategory ColorCategory;
+
+class raw_ostream;
 
 // Symbolic names for various syntax elements.
 enum class HighlightColor {
@@ -109,14 +108,6 @@ public:
   /// Reset the colors to terminal defaults. Call this when you are done
   /// outputting colored text, or before program exit.
   WithColor &resetColor();
-
-  /// Implement default handling for Error.
-  /// Print "error: " to stderr.
-  static void defaultErrorHandler(Error Err);
-
-  /// Implement default handling for Warning.
-  /// Print "warning: " to stderr.
-  static void defaultWarningHandler(Error Warning);
 };
 
 } // end namespace llvm

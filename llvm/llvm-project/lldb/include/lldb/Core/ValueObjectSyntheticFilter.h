@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTSYNTHETICFILTER_H
-#define LLDB_CORE_VALUEOBJECTSYNTHETICFILTER_H
+#ifndef liblldb_ValueObjectSyntheticFilter_h_
+#define liblldb_ValueObjectSyntheticFilter_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -66,7 +66,7 @@ public:
 
   bool IsSynthetic() override { return true; }
 
-  void CalculateSyntheticValue() override {}
+  void CalculateSyntheticValue(bool use_synthetic) override {}
 
   bool IsDynamic() override {
     return ((m_parent != nullptr) ? m_parent->IsDynamic() : false);
@@ -164,10 +164,9 @@ private:
 
   void CopyValueData(ValueObject *source);
 
-  ValueObjectSynthetic(const ValueObjectSynthetic &) = delete;
-  const ValueObjectSynthetic &operator=(const ValueObjectSynthetic &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ValueObjectSynthetic);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTSYNTHETICFILTER_H
+#endif // liblldb_ValueObjectSyntheticFilter_h_

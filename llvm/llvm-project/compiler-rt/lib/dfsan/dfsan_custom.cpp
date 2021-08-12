@@ -84,13 +84,7 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strchr(const char *s, int c,
         *ret_label = dfsan_union(dfsan_read_label(s, i + 1),
                                  dfsan_union(s_label, c_label));
       }
-
-      // If s[i] is the \0 at the end of the string, and \0 is not the
-      // character we are searching for, then return null.
-      if (s[i] == 0 && c != 0) {
-        return nullptr;
-      }
-      return const_cast<char *>(s + i);
+      return s[i] == 0 ? nullptr : const_cast<char *>(s+i);
     }
   }
 }
@@ -157,17 +151,14 @@ SANITIZER_INTERFACE_ATTRIBUTE int
 __dfsw_strcasecmp(const char *s1, const char *s2, dfsan_label s1_label,
                   dfsan_label s2_label, dfsan_label *ret_label) {
   for (size_t i = 0;; ++i) {
-    char s1_lower = tolower(s1[i]);
-    char s2_lower = tolower(s2[i]);
-
-    if (s1_lower != s2_lower || s1[i] == 0 || s2[i] == 0) {
+    if (tolower(s1[i]) != tolower(s2[i]) || s1[i] == 0 || s2[i] == 0) {
       if (flags().strict_data_dependencies) {
         *ret_label = 0;
       } else {
         *ret_label = dfsan_union(dfsan_read_label(s1, i + 1),
                                  dfsan_read_label(s2, i + 1));
       }
-      return s1_lower - s2_lower;
+      return s1[i] - s2[i];
     }
   }
   return 0;
@@ -215,17 +206,15 @@ __dfsw_strncasecmp(const char *s1, const char *s2, size_t n,
   }
 
   for (size_t i = 0;; ++i) {
-    char s1_lower = tolower(s1[i]);
-    char s2_lower = tolower(s2[i]);
-
-    if (s1_lower != s2_lower || s1[i] == 0 || s2[i] == 0 || i == n - 1) {
+    if (tolower(s1[i]) != tolower(s2[i]) || s1[i] == 0 || s2[i] == 0 ||
+        i == n - 1) {
       if (flags().strict_data_dependencies) {
         *ret_label = 0;
       } else {
         *ret_label = dfsan_union(dfsan_read_label(s1, i + 1),
                                  dfsan_read_label(s2, i + 1));
       }
-      return s1_lower - s2_lower;
+      return s1[i] - s2[i];
     }
   }
   return 0;

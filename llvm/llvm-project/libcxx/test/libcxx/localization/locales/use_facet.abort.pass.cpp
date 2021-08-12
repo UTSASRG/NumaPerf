@@ -10,7 +10,7 @@
 
 // template <class Facet> const Facet& use_facet(const locale& loc);
 
-// REQUIRES: no-exceptions
+// REQUIRES: libcpp-no-exceptions
 
 // Make sure we abort() when we pass a facet not associated to the locale to
 // use_facet() and exceptions are disabled.

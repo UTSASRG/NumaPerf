@@ -16,7 +16,6 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -245,10 +244,9 @@ static inline bool canFreelyInvertAllUsersOf(Value *V, Value *IgnoredUser) {
 /// If no identity constant exists, replace undef with some other safe constant.
 static inline Constant *getSafeVectorConstantForBinop(
       BinaryOperator::BinaryOps Opcode, Constant *In, bool IsRHSConstant) {
-  auto *InVTy = dyn_cast<VectorType>(In->getType());
-  assert(InVTy && "Not expecting scalars here");
+  assert(In->getType()->isVectorTy() && "Not expecting scalars here");
 
-  Type *EltTy = InVTy->getElementType();
+  Type *EltTy = In->getType()->getVectorElementType();
   auto *SafeC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, IsRHSConstant);
   if (!SafeC) {
     // TODO: Should this be available as a constant utility function? It is
@@ -286,7 +284,7 @@ static inline Constant *getSafeVectorConstantForBinop(
     }
   }
   assert(SafeC && "Must have safe constant for binop");
-  unsigned NumElts = InVTy->getNumElements();
+  unsigned NumElts = In->getType()->getVectorNumElements();
   SmallVector<Constant *, 16> Out(NumElts);
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *C = In->getAggregateElement(i);
@@ -315,6 +313,9 @@ private:
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
 
+  /// Enable combines that trigger rarely but are costly in compiletime.
+  const bool ExpensiveCombines;
+
   AliasAnalysis *AA;
 
   // Required analyses.
@@ -335,12 +336,12 @@ private:
 
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy &Builder,
-               bool MinimizeSize, AliasAnalysis *AA,
+               bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
                AssumptionCache &AC, TargetLibraryInfo &TLI, DominatorTree &DT,
                OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
-        AA(AA), AC(AC), TLI(TLI), DT(DT),
+        ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
         DL(DL), SQ(DL, &TLI, &DT, &AC), ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
 
   /// Run the combiner over the entire worklist until it is empty.
@@ -419,7 +420,7 @@ public:
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
-  Instruction *foldItoFPtoI(CastInst &FI);
+  Instruction *FoldItoFPtoI(Instruction &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *visitCallInst(CallInst &CI);
   Instruction *visitInvokeInst(InvokeInst &II);
@@ -444,7 +445,8 @@ public:
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
-  Instruction *visitVAEndInst(VAEndInst &I);
+  Instruction *visitVAStartInst(VAStartInst &I);
+  Instruction *visitVACopyInst(VACopyInst &I);
   Instruction *visitFreeze(FreezeInst &I);
 
   /// Specify what to return for unhandled instructions.
@@ -513,7 +515,7 @@ private:
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
   Instruction *simplifyMaskedGather(IntrinsicInst &II);
   Instruction *simplifyMaskedScatter(IntrinsicInst &II);
-
+  
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.
   ///
@@ -619,9 +621,9 @@ private:
   Instruction::CastOps isEliminableCastPair(const CastInst *CI1,
                                             const CastInst *CI2);
 
-  Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &And);
-  Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Or);
-  Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Xor);
+  Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction &CxtI);
+  Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction &CxtI);
+  Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &I);
 
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should
@@ -629,7 +631,7 @@ private:
   Value *foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd);
 
   Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
-                                       BinaryOperator &Logic);
+                                       bool JoinedByAnd, Instruction &CxtI);
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D);
   Value *getSelectCondition(Value *A, Value *B);
 
@@ -645,7 +647,7 @@ public:
            "New instruction already inserted into a basic block!");
     BasicBlock *BB = Old.getParent();
     BB->getInstList().insert(Old.getIterator(), New); // Insert inst
-    Worklist.push(New);
+    Worklist.Add(New);
     return New;
   }
 
@@ -666,7 +668,7 @@ public:
     // no changes were made to the program.
     if (I.use_empty()) return nullptr;
 
-    Worklist.pushUsersToWorkList(I); // Add all modified instrs to worklist.
+    Worklist.AddUsersToWorkList(I); // Add all modified instrs to worklist.
 
     // If we are replacing the instruction with itself, this must be in a
     // segment of unreachable code, so just clobber the instruction.
@@ -678,19 +680,6 @@ public:
 
     I.replaceAllUsesWith(V);
     return &I;
-  }
-
-  /// Replace operand of instruction and add old operand to the worklist.
-  Instruction *replaceOperand(Instruction &I, unsigned OpNum, Value *V) {
-    Worklist.addValue(I.getOperand(OpNum));
-    I.setOperand(OpNum, V);
-    return &I;
-  }
-
-  /// Replace use and add the previously used value to the worklist.
-  void replaceUse(Use &U, Value *NewValue) {
-    Worklist.addValue(U);
-    U = NewValue;
   }
 
   /// Creates a result tuple for an overflow intrinsic \p II with a given
@@ -725,11 +714,12 @@ public:
 
     // Make sure that we reprocess all operands now that we reduced their
     // use counts.
-    for (Use &Operand : I.operands())
-      if (auto *Inst = dyn_cast<Instruction>(Operand))
-        Worklist.add(Inst);
-
-    Worklist.remove(&I);
+    if (I.getNumOperands() < 8) {
+      for (Use &Operand : I.operands())
+        if (auto *Inst = dyn_cast<Instruction>(Operand))
+          Worklist.Add(Inst);
+    }
+    Worklist.Remove(&I);
     I.eraseFromParent();
     MadeIRChange = true;
     return nullptr; // Don't do anything with FI
@@ -879,7 +869,6 @@ private:
 
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
-  Instruction *foldVectorSelect(SelectInst &Sel);
 
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
@@ -1013,60 +1002,6 @@ private:
   ///
   /// If the multiplication is known not to overflow then NoSignedWrap is set.
   Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);
-};
-
-namespace {
-
-// As a default, let's assume that we want to be aggressive,
-// and attempt to traverse with no limits in attempt to sink negation.
-static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
-
-// Let's guesstimate that most often we will end up visiting/producing
-// fairly small number of new instructions.
-static constexpr unsigned NegatorMaxNodesSSO = 16;
-
-} // namespace
-
-class Negator final {
-  /// Top-to-bottom, def-to-use negated instruction tree we produced.
-  SmallVector<Instruction *, NegatorMaxNodesSSO> NewInstructions;
-
-  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  BuilderTy Builder;
-
-  const DataLayout &DL;
-  AssumptionCache &AC;
-  const DominatorTree &DT;
-
-  const bool IsTrulyNegation;
-
-  Negator(LLVMContext &C, const DataLayout &DL, AssumptionCache &AC,
-          const DominatorTree &DT, bool IsTrulyNegation);
-
-#if LLVM_ENABLE_STATS
-  unsigned NumValuesVisitedInThisNegator = 0;
-  ~Negator();
-#endif
-
-  using Result = std::pair<ArrayRef<Instruction *> /*NewInstructions*/,
-                           Value * /*NegatedRoot*/>;
-
-  LLVM_NODISCARD Value *visit(Value *V, unsigned Depth);
-
-  /// Recurse depth-first and attempt to sink the negation.
-  /// FIXME: use worklist?
-  LLVM_NODISCARD Optional<Result> run(Value *Root);
-
-  Negator(const Negator &) = delete;
-  Negator(Negator &&) = delete;
-  Negator &operator=(const Negator &) = delete;
-  Negator &operator=(Negator &&) = delete;
-
-public:
-  /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
-  /// otherwise returns negated value.
-  LLVM_NODISCARD static Value *Negate(bool LHSIsZero, Value *Root,
-                                      InstCombiner &IC);
 };
 
 } // end namespace llvm

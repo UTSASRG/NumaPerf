@@ -350,7 +350,6 @@ using ModelledPHISet = DenseSet<ModelledPHI, DenseMapInfo<ModelledPHI>>;
 class InstructionUseExpr : public GVNExpression::BasicExpression {
   unsigned MemoryUseOrder = -1;
   bool Volatile = false;
-  ArrayRef<int> ShuffleMask;
 
 public:
   InstructionUseExpr(Instruction *I, ArrayRecycler<Value *> &R,
@@ -359,9 +358,6 @@ public:
     allocateOperands(R, A);
     setOpcode(I->getOpcode());
     setType(I->getType());
-
-    if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I))
-      ShuffleMask = SVI->getShuffleMask().copy(A);
 
     for (auto &U : I->uses())
       op_push_back(U.getUser());
@@ -373,12 +369,12 @@ public:
 
   hash_code getHashValue() const override {
     return hash_combine(GVNExpression::BasicExpression::getHashValue(),
-                        MemoryUseOrder, Volatile, ShuffleMask);
+                        MemoryUseOrder, Volatile);
   }
 
   template <typename Function> hash_code getHashValue(Function MapFn) {
-    hash_code H = hash_combine(getOpcode(), getType(), MemoryUseOrder, Volatile,
-                               ShuffleMask);
+    hash_code H =
+        hash_combine(getOpcode(), getType(), MemoryUseOrder, Volatile);
     for (auto *V : operands())
       H = hash_combine(H, MapFn(V));
     return H;
@@ -479,7 +475,6 @@ public:
     case Instruction::PtrToInt:
     case Instruction::IntToPtr:
     case Instruction::BitCast:
-    case Instruction::AddrSpaceCast:
     case Instruction::Select:
     case Instruction::ExtractElement:
     case Instruction::InsertElement:

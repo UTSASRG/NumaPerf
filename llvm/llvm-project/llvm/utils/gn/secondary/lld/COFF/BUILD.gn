@@ -34,7 +34,6 @@ static_library("COFF") {
     "DriverUtils.cpp",
     "ICF.cpp",
     "InputFiles.cpp",
-    "LLDMapFile.cpp",
     "LTO.cpp",
     "MapFile.cpp",
     "MarkLive.cpp",

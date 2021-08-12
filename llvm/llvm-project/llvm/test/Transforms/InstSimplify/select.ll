@@ -59,26 +59,11 @@ define <2 x i32> @equal_arms_vec(<2 x i1> %cond, <2 x i32> %x) {
 
 define <2 x i32> @equal_arms_vec_undef(<2 x i1> %cond) {
 ; CHECK-LABEL: @equal_arms_vec_undef(
-; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    [[V:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 42, i32 undef>, <2 x i32> <i32 undef, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 undef>, <2 x i32> <i32 undef, i32 42>
   ret <2 x i32> %V
-}
-
-define <3 x float> @equal_arms_vec_less_undef(<3 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_less_undef(
-; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float 4.200000e+01, float 4.300000e+01>
-;
-  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float 43.0>, <3 x float> <float 42.0, float 42.0, float 43.0>
-  ret <3 x float> %V
-}
-
-define <3 x float> @equal_arms_vec_more_undef(<3 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_more_undef(
-; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float undef, float 4.300000e+01>
-;
-  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float undef>, <3 x float> <float undef, float undef, float 43.0>
-  ret <3 x float> %V
 }
 
 define <2 x i8> @vsel_tvec(<2 x i8> %x, <2 x i8> %y) {
@@ -645,108 +630,4 @@ define i32* @select_icmp_ne_0_gep_operand(i32* %base, i64 %n) {
   %gep = getelementptr i32, i32* %base, i64 %n
   %r = select i1 %cond, i32* %gep, i32* %base
   ret i32* %r
-}
-
-define i1 @and_cmps(i32 %x) {
-; CHECK-LABEL: @and_cmps(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 92
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], 11
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %cmp1 = icmp slt i32 %x, 92
-  %cmp2 = icmp slt i32 %x, 11
-  %r = select i1 %cmp1, i1 %cmp2, i1 false
-  ret i1 %r
-}
-
-define <2 x i1> @and_cmps_vector(<2 x i32> %x) {
-; CHECK-LABEL: @and_cmps_vector(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 92, i32 92>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], <i32 11, i32 11>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
-;
-  %cmp1 = icmp slt <2 x i32> %x, <i32 92, i32 92>
-  %cmp2 = icmp slt <2 x i32> %x, <i32 11, i32 11>
-  %r = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> <i1 false, i1 false>
-  ret <2 x i1> %r
-}
-
-define i1 @or_cmps(float %x) {
-; CHECK-LABEL: @or_cmps(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno float [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno float [[X]], 5.200000e+01
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %cmp1 = fcmp uno float %x, 42.0
-  %cmp2 = fcmp uno float %x, 52.0
-  %r = select i1 %cmp1, i1 true, i1 %cmp2
-  ret i1 %r
-}
-
-define <2 x i1> @or_logic_vector(<2 x i1> %x, <2 x i1> %y) {
-; CHECK-LABEL: @or_logic_vector(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
-;
-  %a = and <2 x i1> %x, %y
-  %r = select <2 x i1> %x, <2 x i1> <i1 true, i1 true>, <2 x i1> %a
-  ret <2 x i1> %r
-}
-
-define i1 @and_not_cmps(i32 %x) {
-; CHECK-LABEL: @and_not_cmps(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 92
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], 11
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i1 false, i1 [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %cmp1 = icmp slt i32 %x, 92
-  %cmp2 = icmp slt i32 %x, 11
-  %r = select i1 %cmp1, i1 false, i1 %cmp2
-  ret i1 %r
-}
-
-define i1 @or_not_cmps(i32 %x) {
-; CHECK-LABEL: @or_not_cmps(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 92
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], 11
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 true
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %cmp1 = icmp slt i32 %x, 92
-  %cmp2 = icmp slt i32 %x, 11
-  %r = select i1 %cmp1, i1 %cmp2, i1 true
-  ret i1 %r
-}
-
-define i8 @and_cmps_wrong_type(i32 %x) {
-; CHECK-LABEL: @and_cmps_wrong_type(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 92
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], 11
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[CMP2]] to i8
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[S]], i8 0
-; CHECK-NEXT:    ret i8 [[R]]
-;
-  %cmp1 = icmp slt i32 %x, 92
-  %cmp2 = icmp slt i32 %x, 11
-  %s = sext i1 %cmp2 to i8
-  %r = select i1 %cmp1, i8 %s, i8 0
-  ret i8 %r
-}
-
-define i1 @y_might_be_poison(float %x, float %y) {
-; CHECK-LABEL: @y_might_be_poison(
-; CHECK-NEXT:    [[C1:%.*]] = fcmp ord float 0.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    [[C2:%.*]] = fcmp ord float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[C3:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[C3]]
-;
-  %c1 = fcmp ord float 0.0, %x
-  %c2 = fcmp ord float %x, %y
-  %c3 = select i1 %c1, i1 %c2, i1 false
-  ret i1 %c3
 }

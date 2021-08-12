@@ -8,5 +8,5 @@
 sym:
 	.localentry sym, remote_sym
 
-# CHECK: error: .localentry expression must be absolute.
+# CHECK: LLVM ERROR: .localentry expression must be absolute.
 

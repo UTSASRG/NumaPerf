@@ -1,4 +1,4 @@
-//===-- BreakpointResolverFileLine.cpp ------------------------------------===//
+//===-- BreakpointResolverFileLine.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ using namespace lldb_private;
 
 // BreakpointResolverFileLine:
 BreakpointResolverFileLine::BreakpointResolverFileLine(
-    const BreakpointSP &bkpt, const FileSpec &file_spec, uint32_t line_no,
+    Breakpoint *bkpt, const FileSpec &file_spec, uint32_t line_no,
     uint32_t column, lldb::addr_t offset, bool check_inlines,
     bool skip_prologue, bool exact_match)
     : BreakpointResolver(bkpt, BreakpointResolver::FileLineResolver, offset),
@@ -28,8 +28,10 @@ BreakpointResolverFileLine::BreakpointResolverFileLine(
       m_inlines(check_inlines), m_skip_prologue(skip_prologue),
       m_exact_match(exact_match) {}
 
+BreakpointResolverFileLine::~BreakpointResolverFileLine() {}
+
 BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
+    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
     Status &error) {
   llvm::StringRef filename;
   uint32_t line_no;
@@ -200,6 +202,8 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
     SearchFilter &filter, SymbolContext &context, Address *addr) {
   SymbolContextList sc_list;
 
+  assert(m_breakpoint != nullptr);
+
   // There is a tricky bit here.  You can have two compilation units that
   // #include the same file, and in one of them the function at m_line_number
   // is used (and so code and a line entry for it is generated) but in the
@@ -259,9 +263,9 @@ void BreakpointResolverFileLine::GetDescription(Stream *s) {
 void BreakpointResolverFileLine::Dump(Stream *s) const {}
 
 lldb::BreakpointResolverSP
-BreakpointResolverFileLine::CopyForBreakpoint(BreakpointSP &breakpoint) {
+BreakpointResolverFileLine::CopyForBreakpoint(Breakpoint &breakpoint) {
   lldb::BreakpointResolverSP ret_sp(new BreakpointResolverFileLine(
-      breakpoint, m_file_spec, m_line_number, m_column, GetOffset(), m_inlines,
+      &breakpoint, m_file_spec, m_line_number, m_column, m_offset, m_inlines,
       m_skip_prologue, m_exact_match));
 
   return ret_sp;

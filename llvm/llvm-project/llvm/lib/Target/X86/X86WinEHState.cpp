@@ -19,6 +19,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -66,13 +67,13 @@ private:
 
   Function *generateLSDAInEAXThunk(Function *ParentFunc);
 
-  bool isStateStoreNeeded(EHPersonality Personality, CallBase &Call);
-  void rewriteSetJmpCall(IRBuilder<> &Builder, Function &F, CallBase &Call,
-                         Value *State);
+  bool isStateStoreNeeded(EHPersonality Personality, CallSite CS);
+  void rewriteSetJmpCallSite(IRBuilder<> &Builder, Function &F, CallSite CS,
+                             Value *State);
   int getBaseStateForBB(DenseMap<BasicBlock *, ColorVector> &BlockColors,
                         WinEHFuncInfo &FuncInfo, BasicBlock *BB);
-  int getStateForCall(DenseMap<BasicBlock *, ColorVector> &BlockColors,
-                      WinEHFuncInfo &FuncInfo, CallBase &Call);
+  int getStateForCallSite(DenseMap<BasicBlock *, ColorVector> &BlockColors,
+                          WinEHFuncInfo &FuncInfo, CallSite CS);
 
   // Module-level type getters.
   Type *getEHLinkRegistrationType();
@@ -454,14 +455,16 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
 // The idea behind _setjmp3 is that it takes an optional number of personality
 // specific parameters to indicate how to restore the personality-specific frame
 // state when longjmp is initiated.  Typically, the current TryLevel is saved.
-void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
-                                       CallBase &Call, Value *State) {
+void WinEHStatePass::rewriteSetJmpCallSite(IRBuilder<> &Builder, Function &F,
+                                           CallSite CS, Value *State) {
   // Don't rewrite calls with a weird number of arguments.
-  if (Call.getNumArgOperands() != 2)
+  if (CS.getNumArgOperands() != 2)
     return;
 
+  Instruction *Inst = CS.getInstruction();
+
   SmallVector<OperandBundleDef, 1> OpBundles;
-  Call.getOperandBundlesAsDefs(OpBundles);
+  CS.getOperandBundlesAsDefs(OpBundles);
 
   SmallVector<Value *, 3> OptionalArgs;
   if (Personality == EHPersonality::MSVC_CXX) {
@@ -479,27 +482,29 @@ void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
 
   SmallVector<Value *, 5> Args;
   Args.push_back(
-      Builder.CreateBitCast(Call.getArgOperand(0), Builder.getInt8PtrTy()));
+      Builder.CreateBitCast(CS.getArgOperand(0), Builder.getInt8PtrTy()));
   Args.push_back(Builder.getInt32(OptionalArgs.size()));
   Args.append(OptionalArgs.begin(), OptionalArgs.end());
 
-  CallBase *NewCall;
-  if (auto *CI = dyn_cast<CallInst>(&Call)) {
+  CallSite NewCS;
+  if (CS.isCall()) {
+    auto *CI = cast<CallInst>(Inst);
     CallInst *NewCI = Builder.CreateCall(SetJmp3, Args, OpBundles);
     NewCI->setTailCallKind(CI->getTailCallKind());
-    NewCall = NewCI;
+    NewCS = NewCI;
   } else {
-    auto *II = cast<InvokeInst>(&Call);
-    NewCall = Builder.CreateInvoke(
+    auto *II = cast<InvokeInst>(Inst);
+    NewCS = Builder.CreateInvoke(
         SetJmp3, II->getNormalDest(), II->getUnwindDest(), Args, OpBundles);
   }
-  NewCall->setCallingConv(Call.getCallingConv());
-  NewCall->setAttributes(Call.getAttributes());
-  NewCall->setDebugLoc(Call.getDebugLoc());
+  NewCS.setCallingConv(CS.getCallingConv());
+  NewCS.setAttributes(CS.getAttributes());
+  NewCS->setDebugLoc(CS->getDebugLoc());
 
-  NewCall->takeName(&Call);
-  Call.replaceAllUsesWith(NewCall);
-  Call.eraseFromParent();
+  Instruction *NewInst = NewCS.getInstruction();
+  NewInst->takeName(Inst);
+  Inst->replaceAllUsesWith(NewInst);
+  Inst->eraseFromParent();
 }
 
 // Figure out what state we should assign calls in this block.
@@ -522,17 +527,17 @@ int WinEHStatePass::getBaseStateForBB(
 }
 
 // Calculate the state a call-site is in.
-int WinEHStatePass::getStateForCall(
+int WinEHStatePass::getStateForCallSite(
     DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
-    CallBase &Call) {
-  if (auto *II = dyn_cast<InvokeInst>(&Call)) {
+    CallSite CS) {
+  if (auto *II = dyn_cast<InvokeInst>(CS.getInstruction())) {
     // Look up the state number of the EH pad this unwinds to.
     assert(FuncInfo.InvokeStateMap.count(II) && "invoke has no state!");
     return FuncInfo.InvokeStateMap[II];
   }
   // Possibly throwing call instructions have no actions to take after
   // an unwind. Ensure they are in the -1 state.
-  return getBaseStateForBB(BlockColors, FuncInfo, Call.getParent());
+  return getBaseStateForBB(BlockColors, FuncInfo, CS.getParent());
 }
 
 // Calculate the intersection of all the FinalStates for a BasicBlock's
@@ -613,13 +618,16 @@ static int getSuccState(DenseMap<BasicBlock *, int> &InitialStates, Function &F,
 }
 
 bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
-                                        CallBase &Call) {
+                                        CallSite CS) {
+  if (!CS)
+    return false;
+
   // If the function touches memory, it needs a state store.
   if (isAsynchronousEHPersonality(Personality))
-    return !Call.doesNotAccessMemory();
+    return !CS.doesNotAccessMemory();
 
   // If the function throws, it needs a state store.
-  return !Call.doesNotThrow();
+  return !CS.doesNotThrow();
 }
 
 void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
@@ -664,11 +672,11 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     if (&F.getEntryBlock() == BB)
       InitialState = FinalState = ParentBaseState;
     for (Instruction &I : *BB) {
-      auto *Call = dyn_cast<CallBase>(&I);
-      if (!Call || !isStateStoreNeeded(Personality, *Call))
+      CallSite CS(&I);
+      if (!isStateStoreNeeded(Personality, CS))
         continue;
 
-      int State = getStateForCall(BlockColors, FuncInfo, *Call);
+      int State = getStateForCallSite(BlockColors, FuncInfo, CS);
       if (InitialState == OverdefinedState)
         InitialState = State;
       FinalState = State;
@@ -731,11 +739,11 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
                       << " PrevState=" << PrevState << '\n');
 
     for (Instruction &I : *BB) {
-      auto *Call = dyn_cast<CallBase>(&I);
-      if (!Call || !isStateStoreNeeded(Personality, *Call))
+      CallSite CS(&I);
+      if (!isStateStoreNeeded(Personality, CS))
         continue;
 
-      int State = getStateForCall(BlockColors, FuncInfo, *Call);
+      int State = getStateForCallSite(BlockColors, FuncInfo, CS);
       if (State != PrevState)
         insertStateNumberStore(&I, State);
       PrevState = State;
@@ -748,35 +756,35 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
         insertStateNumberStore(BB->getTerminator(), EndState->second);
   }
 
-  SmallVector<CallBase *, 1> SetJmp3Calls;
+  SmallVector<CallSite, 1> SetJmp3CallSites;
   for (BasicBlock *BB : RPOT) {
     for (Instruction &I : *BB) {
-      auto *Call = dyn_cast<CallBase>(&I);
-      if (!Call)
+      CallSite CS(&I);
+      if (!CS)
         continue;
-      if (Call->getCalledOperand()->stripPointerCasts() !=
+      if (CS.getCalledValue()->stripPointerCasts() !=
           SetJmp3.getCallee()->stripPointerCasts())
         continue;
 
-      SetJmp3Calls.push_back(Call);
+      SetJmp3CallSites.push_back(CS);
     }
   }
 
-  for (CallBase *Call : SetJmp3Calls) {
-    auto &BBColors = BlockColors[Call->getParent()];
+  for (CallSite CS : SetJmp3CallSites) {
+    auto &BBColors = BlockColors[CS->getParent()];
     BasicBlock *FuncletEntryBB = BBColors.front();
     bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHI());
 
-    IRBuilder<> Builder(Call);
+    IRBuilder<> Builder(CS.getInstruction());
     Value *State;
     if (InCleanup) {
       Value *StateField = Builder.CreateStructGEP(RegNode->getAllocatedType(),
                                                   RegNode, StateFieldIndex);
       State = Builder.CreateLoad(Builder.getInt32Ty(), StateField);
     } else {
-      State = Builder.getInt32(getStateForCall(BlockColors, FuncInfo, *Call));
+      State = Builder.getInt32(getStateForCallSite(BlockColors, FuncInfo, CS));
     }
-    rewriteSetJmpCall(Builder, F, *Call, State);
+    rewriteSetJmpCallSite(Builder, F, CS, State);
   }
 }
 

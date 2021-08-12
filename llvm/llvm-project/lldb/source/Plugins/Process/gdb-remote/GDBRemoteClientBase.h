@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECLIENTBASE_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECLIENTBASE_H
+#ifndef liblldb_GDBRemoteClientBase_h_
+#define liblldb_GDBRemoteClientBase_h_
 
 #include "GDBRemoteCommunication.h"
 
@@ -149,4 +149,4 @@ private:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECLIENTBASE_H
+#endif // liblldb_GDBRemoteCommunicationClient_h_

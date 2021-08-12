@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_HOSTNATIVEPROCESS_H
-#define LLDB_HOST_HOSTNATIVEPROCESS_H
+#ifndef lldb_Host_HostNativeProcess_h_
+#define lldb_Host_HostNativeProcess_h_
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/HostProcessWindows.h"

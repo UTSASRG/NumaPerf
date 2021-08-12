@@ -3,21 +3,19 @@ import os
 import shlex
 import sys
 
-import lit.reports
 import lit.util
 
-
 def parse_args():
-    parser = argparse.ArgumentParser(prog='lit')
+    parser = argparse.ArgumentParser()
     parser.add_argument('test_paths',
             nargs='+',
             metavar="TEST_PATH",
             help='File or path to include in the test suite')
 
-    parser.add_argument('--version',
-            action='version',
-            version='%(prog)s ' + lit.__version__)
-
+    parser.add_argument("--version",
+            dest="show_version",
+            help="Show version and exit",
+            action="store_true")
     parser.add_argument("-j", "--threads", "--workers",
             dest="workers",
             metavar="N",
@@ -58,7 +56,7 @@ def parse_args():
             help="Display all commandlines and output",
             action="store_true")
     format_group.add_argument("-o", "--output",
-            type=lit.reports.JsonReport,
+            dest="output_path",
             help="Write test results to the provided path",
             metavar="PATH")
     format_group.add_argument("--no-progress-bar",
@@ -92,6 +90,7 @@ def parse_args():
             action="append",
             default=[])
     execution_group.add_argument("--time-tests",
+            dest="timeTests",
             help="Track elapsed wall time for each test",
             action="store_true")
     execution_group.add_argument("--no-execute",
@@ -99,7 +98,7 @@ def parse_args():
             help="Don't execute any tests (assume PASS)",
             action="store_true")
     execution_group.add_argument("--xunit-xml-output",
-            type=lit.reports.XunitReport,
+            dest="xunit_output_file",
             help="Write XUnit-compatible XML test reports to the specified file")
     execution_group.add_argument("--timeout",
             dest="maxIndividualTestTime",
@@ -133,7 +132,7 @@ def parse_args():
             metavar="REGEX",
             type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
-            default=os.environ.get("LIT_FILTER", ".*"))
+            default=os.environ.get("LIT_FILTER"))
     selection_group.add_argument("--num-shards", # TODO(yln): --shards N/M
             dest="numShards",
             metavar="M",
@@ -152,13 +151,12 @@ def parse_args():
             help="Enable debugging (for 'lit' development)",
             action="store_true")
     debug_group.add_argument("--show-suites",
-            help="Show discovered test suites and exit",
+            dest="showSuites",
+            help="Show discovered test suites",
             action="store_true")
     debug_group.add_argument("--show-tests",
-            help="Show all discovered tests and exit",
-            action="store_true")
-    debug_group.add_argument("--show-used-features",
-            help="Show all features used in the test suite (in XFAIL, UNSUPPORTED and REQUIRES) and exit",
+            dest="showTests",
+            help="Show all discovered tests",
             action="store_true")
 
     # LIT is special: environment variables override command line arguments.
@@ -187,18 +185,13 @@ def parse_args():
     else:
         opts.shard = None
 
-    opts.reports = filter(None, [opts.output, opts.xunit_xml_output])
-
     return opts
-
 
 def _positive_int(arg):
     return _int(arg, 'positive', lambda i: i > 0)
 
-
 def _non_negative_int(arg):
     return _int(arg, 'non-negative', lambda i: i >= 0)
-
 
 def _int(arg, kind, pred):
     desc = "requires {} integer, but found '{}'"
@@ -210,14 +203,12 @@ def _int(arg, kind, pred):
         raise _error(desc, kind, arg)
     return i
 
-
 def _case_insensitive_regex(arg):
     import re
     try:
         return re.compile(arg, re.IGNORECASE)
     except re.error as reason:
         raise _error("invalid regular expression: '{}', {}", arg, reason)
-
 
 def _error(desc, *args):
     msg = desc.format(*args)

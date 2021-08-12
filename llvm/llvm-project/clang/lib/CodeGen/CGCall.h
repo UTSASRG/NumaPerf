@@ -16,7 +16,6 @@
 
 #include "CGValue.h"
 #include "EHScopeStack.h"
-#include "clang/AST/ASTFwd.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
@@ -358,26 +357,27 @@ class FunctionArgList : public SmallVector<const VarDecl *, 16> {};
 /// ReturnValueSlot - Contains the address where the return value of a
 /// function can be stored, and whether the address is volatile or not.
 class ReturnValueSlot {
-  Address Addr = Address::invalid();
+  llvm::PointerIntPair<llvm::Value *, 2, unsigned int> Value;
+  CharUnits Alignment;
 
   // Return value slot flags
-  unsigned IsVolatile : 1;
-  unsigned IsUnused : 1;
-  unsigned IsExternallyDestructed : 1;
+  enum Flags {
+    IS_VOLATILE = 0x1,
+    IS_UNUSED = 0x2,
+  };
 
 public:
-  ReturnValueSlot()
-      : IsVolatile(false), IsUnused(false), IsExternallyDestructed(false) {}
-  ReturnValueSlot(Address Addr, bool IsVolatile, bool IsUnused = false,
-                  bool IsExternallyDestructed = false)
-      : Addr(Addr), IsVolatile(IsVolatile), IsUnused(IsUnused),
-        IsExternallyDestructed(IsExternallyDestructed) {}
+  ReturnValueSlot() {}
+  ReturnValueSlot(Address Addr, bool IsVolatile, bool IsUnused = false)
+      : Value(Addr.isValid() ? Addr.getPointer() : nullptr,
+              (IsVolatile ? IS_VOLATILE : 0) | (IsUnused ? IS_UNUSED : 0)),
+        Alignment(Addr.isValid() ? Addr.getAlignment() : CharUnits::Zero()) {}
 
-  bool isNull() const { return !Addr.isValid(); }
-  bool isVolatile() const { return IsVolatile; }
-  Address getValue() const { return Addr; }
-  bool isUnused() const { return IsUnused; }
-  bool isExternallyDestructed() const { return IsExternallyDestructed; }
+  bool isNull() const { return !getValue().isValid(); }
+
+  bool isVolatile() const { return Value.getInt() & IS_VOLATILE; }
+  Address getValue() const { return Address(Value.getPointer(), Alignment); }
+  bool isUnused() const { return Value.getInt() & IS_UNUSED; }
 };
 
 } // end namespace CodeGen

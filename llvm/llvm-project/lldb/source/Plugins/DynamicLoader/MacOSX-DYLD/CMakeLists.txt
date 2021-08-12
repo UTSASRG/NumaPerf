@@ -11,7 +11,6 @@ add_lldb_library(lldbPluginDynamicLoaderMacOSXDYLD PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginTypeSystemClang
   LINK_COMPONENTS
     Support
   )

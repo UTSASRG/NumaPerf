@@ -155,8 +155,10 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
   if (ProcDesc.empty() || ProcFeatures.empty())
     return FeatureBitset();
 
-  assert(llvm::is_sorted(ProcDesc) && "CPU table is not sorted");
-  assert(llvm::is_sorted(ProcFeatures) && "CPU features table is not sorted");
+  assert(std::is_sorted(std::begin(ProcDesc), std::end(ProcDesc)) &&
+         "CPU table is not sorted");
+  assert(std::is_sorted(std::begin(ProcFeatures), std::end(ProcFeatures)) &&
+         "CPU features table is not sorted");
   // Resulting bits
   FeatureBitset Bits;
 
@@ -183,7 +185,7 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
     // Check for help
     if (Feature == "+help")
       Help(ProcDesc, ProcFeatures);
-    else if (Feature == "+cpuhelp")
+    else if (Feature == "+cpuHelp")
       cpuHelp(ProcDesc);
     else
       ApplyFeatureFlag(Bits, Feature, ProcFeatures);
@@ -204,17 +206,15 @@ void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef FS) {
   FeatureBits = getFeatures(CPU, FS, ProcDesc, ProcFeatures);
 }
 
-MCSubtargetInfo::MCSubtargetInfo(const Triple &TT, StringRef C, StringRef FS,
-                                 ArrayRef<SubtargetFeatureKV> PF,
-                                 ArrayRef<SubtargetSubTypeKV> PD,
-                                 const MCWriteProcResEntry *WPR,
-                                 const MCWriteLatencyEntry *WL,
-                                 const MCReadAdvanceEntry *RA,
-                                 const InstrStage *IS, const unsigned *OC,
-                                 const unsigned *FP)
-    : TargetTriple(TT), CPU(std::string(C)), ProcFeatures(PF), ProcDesc(PD),
-      WriteProcResTable(WPR), WriteLatencyTable(WL), ReadAdvanceTable(RA),
-      Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
+MCSubtargetInfo::MCSubtargetInfo(
+    const Triple &TT, StringRef C, StringRef FS,
+    ArrayRef<SubtargetFeatureKV> PF, ArrayRef<SubtargetSubTypeKV> PD,
+    const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
+    : TargetTriple(TT), CPU(C), ProcFeatures(PF), ProcDesc(PD),
+      WriteProcResTable(WPR), WriteLatencyTable(WL),
+      ReadAdvanceTable(RA), Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, FS);
 }
 
@@ -288,7 +288,7 @@ bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
 }
 
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
-  assert(llvm::is_sorted(ProcDesc) &&
+  assert(std::is_sorted(ProcDesc.begin(), ProcDesc.end()) &&
          "Processor machine model table is not sorted");
 
   // Find entry
@@ -337,13 +337,6 @@ unsigned MCSubtargetInfo::getMaxPrefetchIterationsAhead() const {
   return UINT_MAX;
 }
 
-bool MCSubtargetInfo::enableWritePrefetching() const {
-  return false;
-}
-
-unsigned MCSubtargetInfo::getMinPrefetchStride(unsigned NumMemAccesses,
-                                               unsigned NumStridedMemAccesses,
-                                               unsigned NumPrefetches,
-                                               bool HasCall) const {
+unsigned MCSubtargetInfo::getMinPrefetchStride() const {
   return 1;
 }

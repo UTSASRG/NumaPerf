@@ -98,13 +98,12 @@ bool VforkChecker::isCallWhitelisted(const IdentifierInfo *II,
   if (VforkWhitelist.empty()) {
     // According to manpage.
     const char *ids[] = {
-      "_Exit",
       "_exit",
+      "_Exit",
       "execl",
-      "execle",
       "execlp",
+      "execle",
       "execv",
-      "execve",
       "execvp",
       "execvpe",
       nullptr
@@ -217,6 +216,6 @@ void ento::registerVforkChecker(CheckerManager &mgr) {
   mgr.registerChecker<VforkChecker>();
 }
 
-bool ento::shouldRegisterVforkChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterVforkChecker(const LangOptions &LO) {
   return true;
 }

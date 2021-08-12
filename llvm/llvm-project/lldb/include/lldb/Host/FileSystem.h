@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_FILESYSTEM_H
-#define LLDB_HOST_FILESYSTEM_H
+#ifndef liblldb_Host_FileSystem_h
+#define liblldb_Host_FileSystem_h
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/DataBufferLLVM.h"
@@ -185,9 +185,6 @@ public:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> GetVirtualFileSystem() {
     return m_fs;
   }
-
-  void Collect(const FileSpec &file_spec);
-  void Collect(const llvm::Twine &file);
 
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();

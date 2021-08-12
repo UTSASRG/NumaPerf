@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_STOPPOINTCALLBACKCONTEXT_H
-#define LLDB_BREAKPOINT_STOPPOINTCALLBACKCONTEXT_H
+#ifndef liblldb_StoppointCallbackContext_h_
+#define liblldb_StoppointCallbackContext_h_
 
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/lldb-private.h"
@@ -48,4 +48,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_STOPPOINTCALLBACKCONTEXT_H
+#endif // liblldb_StoppointCallbackContext_h_

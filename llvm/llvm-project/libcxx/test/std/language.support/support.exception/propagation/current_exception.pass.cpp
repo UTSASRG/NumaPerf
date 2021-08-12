@@ -10,7 +10,7 @@
 // which copy the exception each time the exception_ptr is copied.
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // <exception>
 
 // exception_ptr current_exception();

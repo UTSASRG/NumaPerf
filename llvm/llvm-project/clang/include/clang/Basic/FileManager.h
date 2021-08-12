@@ -18,7 +18,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -379,19 +378,15 @@ public:
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
-                   bool RequiresNullTerminator = true);
+  getBufferForFile(const FileEntry *Entry, bool isVolatile = false);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true) {
-    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
-                                RequiresNullTerminator);
+  getBufferForFile(StringRef Filename, bool isVolatile = false) {
+    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile);
   }
 
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
-                       bool RequiresNullTerminator);
+  getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile);
 
 public:
   /// Get the 'stat' information for the given \p Path.

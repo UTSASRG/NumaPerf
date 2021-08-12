@@ -26,7 +26,7 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
     CommandLineArguments AdjustedArgs;
     bool HasSyntaxOnly = false;
-    constexpr llvm::StringRef OutputCommands[] = {
+    const std::vector<llvm::StringRef> OutputCommands = {
         // FIXME: Add other options that generate output.
         "-save-temps",
         "--save-temps",
@@ -98,8 +98,7 @@ ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
       StringRef Arg = Args[i];
       // All dependency-file options begin with -M. These include -MM,
       // -MF, -MG, -MP, -MT, -MQ, -MD, and -MMD.
-      if (!Arg.startswith("-M") && !Arg.startswith("/showIncludes") &&
-          !Arg.startswith("-showIncludes")) {
+      if (!Arg.startswith("-M")) {
         AdjustedArgs.push_back(Args[i]);
         continue;
       }

@@ -16,7 +16,6 @@
 ; CHECK-NOT: DW_AT_macro_info
 
 ; CHECK-LABEL:     .debug_macinfo contents:
-; CHECK-NEXT: 0x00000000:
 ; CHECK-NEXT: DW_MACINFO_define - lineno: 0 macro: NameCMD ValueCMD
 ; CHECK-NEXT: DW_MACINFO_start_file - lineno: 0 filenum: 1
 ; CHECK-NEXT:   DW_MACINFO_start_file - lineno: 9 filenum: 2
@@ -25,9 +24,8 @@
 ; CHECK-NEXT:   DW_MACINFO_end_file
 ; CHECK-NEXT:   DW_MACINFO_undef - lineno: 10 macro: NameUndef2
 ; CHECK-NEXT: DW_MACINFO_end_file
-; CHECK-EMPTY:
-; CHECK-NEXT: 0x00000045:
-; CHECK-NEXT: DW_MACINFO_start_file - lineno: 0 filenum: 1
+
+; CHECK: DW_MACINFO_start_file - lineno: 0 filenum: 1
 ; CHECK-NEXT: DW_MACINFO_end_file
 
 ; CHECK-LABEL: .debug_line contents:

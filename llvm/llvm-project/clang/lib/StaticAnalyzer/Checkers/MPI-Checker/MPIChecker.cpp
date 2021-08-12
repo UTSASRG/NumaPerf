@@ -16,7 +16,6 @@
 
 #include "MPIChecker.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 
 namespace clang {
 namespace ento {
@@ -147,7 +146,7 @@ void MPIChecker::allRegionsUsedByWait(
     llvm::SmallVector<const MemRegion *, 2> &ReqRegions,
     const MemRegion *const MR, const CallEvent &CE, CheckerContext &Ctx) const {
 
-  MemRegionManager &RegionManager = MR->getMemRegionManager();
+  MemRegionManager *const RegionManager = MR->getMemRegionManager();
 
   if (FuncClassifier->isMPI_Waitall(CE.getCalleeIdentifier())) {
     const SubRegion *SuperRegion{nullptr};
@@ -161,16 +160,15 @@ void MPIChecker::allRegionsUsedByWait(
       return;
     }
 
-    DefinedOrUnknownSVal ElementCount = getDynamicElementCount(
-        Ctx.getState(), SuperRegion, Ctx.getSValBuilder(),
+    const auto &Size = Ctx.getStoreManager().getSizeInElements(
+        Ctx.getState(), SuperRegion,
         CE.getArgExpr(1)->getType()->getPointeeType());
-    const llvm::APSInt &ArrSize =
-        ElementCount.getAs<nonloc::ConcreteInt>()->getValue();
+    const llvm::APSInt &ArrSize = Size.getAs<nonloc::ConcreteInt>()->getValue();
 
     for (size_t i = 0; i < ArrSize; ++i) {
       const NonLoc Idx = Ctx.getSValBuilder().makeArrayIndex(i);
 
-      const ElementRegion *const ER = RegionManager.getElementRegion(
+      const ElementRegion *const ER = RegionManager->getElementRegion(
           CE.getArgExpr(1)->getType()->getPointeeType(), Idx, SuperRegion,
           Ctx.getASTContext());
 
@@ -190,6 +188,6 @@ void clang::ento::registerMPIChecker(CheckerManager &MGR) {
   MGR.registerChecker<clang::ento::mpi::MPIChecker>();
 }
 
-bool clang::ento::shouldRegisterMPIChecker(const CheckerManager &mgr) {
+bool clang::ento::shouldRegisterMPIChecker(const LangOptions &LO) {
   return true;
 }

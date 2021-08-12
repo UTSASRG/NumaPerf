@@ -14,7 +14,11 @@
 #ifndef LLVM_LIB_TARGET_X86_UTILS_X86INSTRFMA3INFO_H
 #define LLVM_LIB_TARGET_X86_UTILS_X86INSTRFMA3INFO_H
 
+#include "X86.h"
+#include "llvm/ADT/DenseMap.h"
+#include <cassert>
 #include <cstdint>
+#include <set>
 
 namespace llvm {
 

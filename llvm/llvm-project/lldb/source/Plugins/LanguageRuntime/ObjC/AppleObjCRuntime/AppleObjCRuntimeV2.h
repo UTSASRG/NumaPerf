@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIMEV2_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIMEV2_H
+#ifndef liblldb_AppleObjCRuntimeV2_h_
+#define liblldb_AppleObjCRuntimeV2_h_
 
 #include <map>
 #include <memory>
@@ -103,9 +103,9 @@ public:
   static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSDate = 6;
 
 protected:
-  lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+                                                     bool catch_bp,
+                                                     bool throw_bp) override;
 
 private:
   class HashTableSignature {
@@ -162,8 +162,7 @@ private:
 
     friend class AppleObjCRuntimeV2;
 
-    NonPointerISACache(const NonPointerISACache &) = delete;
-    const NonPointerISACache &operator=(const NonPointerISACache &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(NonPointerISACache);
   };
 
   class TaggedPointerVendorV2
@@ -182,9 +181,7 @@ private:
         : TaggedPointerVendor(), m_runtime(runtime) {}
 
   private:
-    TaggedPointerVendorV2(const TaggedPointerVendorV2 &) = delete;
-    const TaggedPointerVendorV2 &
-    operator=(const TaggedPointerVendorV2 &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorV2);
   };
 
   class TaggedPointerVendorRuntimeAssisted : public TaggedPointerVendorV2 {
@@ -215,10 +212,7 @@ private:
 
     friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
 
-    TaggedPointerVendorRuntimeAssisted(
-        const TaggedPointerVendorRuntimeAssisted &) = delete;
-    const TaggedPointerVendorRuntimeAssisted &
-    operator=(const TaggedPointerVendorRuntimeAssisted &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorRuntimeAssisted);
   };
 
   class TaggedPointerVendorExtended
@@ -256,9 +250,7 @@ private:
 
     friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
 
-    TaggedPointerVendorExtended(const TaggedPointerVendorExtended &) = delete;
-    const TaggedPointerVendorExtended &
-    operator=(const TaggedPointerVendorExtended &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorExtended);
   };
 
   class TaggedPointerVendorLegacy : public TaggedPointerVendorV2 {
@@ -274,9 +266,7 @@ private:
 
     friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
 
-    TaggedPointerVendorLegacy(const TaggedPointerVendorLegacy &) = delete;
-    const TaggedPointerVendorLegacy &
-    operator=(const TaggedPointerVendorLegacy &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorLegacy);
   };
 
   struct DescriptorMapUpdateResult {
@@ -347,4 +337,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIMEV2_H
+#endif // liblldb_AppleObjCRuntimeV2_h_

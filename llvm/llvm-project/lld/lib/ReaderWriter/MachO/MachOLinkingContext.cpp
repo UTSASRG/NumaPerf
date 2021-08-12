@@ -863,11 +863,11 @@ bool MachOLinkingContext::exportSymbolNamed(StringRef sym) const {
 std::string MachOLinkingContext::demangle(StringRef symbolName) const {
   // Only try to demangle symbols if -demangle on command line
   if (!demangleSymbols())
-    return std::string(symbolName);
+    return symbolName;
 
   // Only try to demangle symbols that look like C++ symbols
   if (!symbolName.startswith("__Z"))
-    return std::string(symbolName);
+    return symbolName;
 
   SmallString<256> symBuff;
   StringRef nullTermSym = Twine(symbolName).toNullTerminatedStringRef(symBuff);
@@ -882,7 +882,7 @@ std::string MachOLinkingContext::demangle(StringRef symbolName) const {
     return result;
   }
 
-  return std::string(symbolName);
+  return symbolName;
 }
 
 static void addDependencyInfoHelper(llvm::raw_fd_ostream *DepInfo,

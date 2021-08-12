@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_THREADGDBREMOTE_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_THREADGDBREMOTE_H
+#ifndef liblldb_ThreadGDBRemote_h_
+#define liblldb_ThreadGDBRemote_h_
 
 #include <string>
 
@@ -116,4 +116,4 @@ protected:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_THREADGDBREMOTE_H
+#endif // liblldb_ThreadGDBRemote_h_

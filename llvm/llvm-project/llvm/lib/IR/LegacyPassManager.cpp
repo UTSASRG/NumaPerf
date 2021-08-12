@@ -132,8 +132,7 @@ bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
                                                         PrintFuncsList.end());
-  return PrintFuncNames.empty() ||
-         PrintFuncNames.count(std::string(FunctionName));
+  return PrintFuncNames.empty() || PrintFuncNames.count(FunctionName);
 }
 /// isPassDebuggingExecutionsOrMore - Return true if -debug-pass=Executions
 /// or higher is specified.
@@ -240,7 +239,7 @@ void PMDataManager::emitInstrCountChangedRemark(
 
   // Helper lambda that emits a remark when the size of a function has changed.
   auto EmitFunctionSizeChangedRemark = [&FunctionToInstrCount, &F, &BB,
-                                        &PassName](StringRef Fname) {
+                                        &PassName](const std::string &Fname) {
     unsigned FnCountBefore, FnCountAfter;
     std::pair<unsigned, unsigned> &Change = FunctionToInstrCount[Fname];
     std::tie(FnCountBefore, FnCountAfter) = Change;

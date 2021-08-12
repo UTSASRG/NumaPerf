@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_X86_64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_X86_64_H
+#ifndef liblldb_RegisterContextKDP_x86_64_h_
+#define liblldb_RegisterContextKDP_x86_64_h_
 
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
 
@@ -35,4 +35,4 @@ protected:
   ThreadKDP &m_kdp_thread;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_X86_64_H
+#endif // liblldb_RegisterContextKDP_x86_64_h_

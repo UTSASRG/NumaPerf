@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_NSSTRING_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_NSSTRING_H
+#ifndef liblldb_NSString_h_
+#define liblldb_NSString_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -39,4 +39,4 @@ public:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_NSSTRING_H
+#endif // liblldb_CF_h_

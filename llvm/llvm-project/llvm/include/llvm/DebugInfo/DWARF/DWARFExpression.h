@@ -12,8 +12,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -44,7 +42,6 @@ public:
       SizeRefAddr = 6,
       SizeBlock = 7, ///< Preceding operand contains block size
       BaseTypeRef = 8,
-      WasmLocationArg = 30,
       SignBit = 0x80,
       SignedSize1 = SignBit | Size1,
       SignedSize2 = SignBit | Size2,
@@ -90,8 +87,8 @@ public:
     uint64_t getRawOperand(unsigned Idx) { return Operands[Idx]; }
     uint64_t getOperandEndOffset(unsigned Idx) { return OperandEndOffsets[Idx]; }
     uint64_t getEndOffset() { return EndOffset; }
-    bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
-                 Optional<dwarf::DwarfFormat> Format);
+    bool extract(DataExtractor Data, uint16_t Version, uint8_t AddressSize,
+                 uint64_t Offset);
     bool isError() { return Error; }
     bool print(raw_ostream &OS, const DWARFExpression *Expr,
                const MCRegisterInfo *RegInfo, DWARFUnit *U, bool isEH);
@@ -110,7 +107,7 @@ public:
         : Expr(Expr), Offset(Offset) {
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+          !Op.extract(Expr->Data, Expr->Version, Expr->AddressSize, Offset);
     }
 
   public:
@@ -118,7 +115,7 @@ public:
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+          !Op.extract(Expr->Data, Expr->Version, Expr->AddressSize, Offset);
       return Op;
     }
 
@@ -130,9 +127,8 @@ public:
     friend bool operator==(const iterator &, const iterator &);
   };
 
-  DWARFExpression(DataExtractor Data, uint8_t AddressSize,
-                  Optional<dwarf::DwarfFormat> Format = None)
-      : Data(Data), AddressSize(AddressSize), Format(Format) {
+  DWARFExpression(DataExtractor Data, uint16_t Version, uint8_t AddressSize)
+      : Data(Data), Version(Version), AddressSize(AddressSize) {
     assert(AddressSize == 8 || AddressSize == 4 || AddressSize == 2);
   }
 
@@ -146,8 +142,8 @@ public:
 
 private:
   DataExtractor Data;
+  uint16_t Version;
   uint8_t AddressSize;
-  Optional<dwarf::DwarfFormat> Format;
 };
 
 inline bool operator==(const DWARFExpression::iterator &LHS,

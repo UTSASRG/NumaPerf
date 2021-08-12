@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONGROUPVALUEOBJECTDISPLAY_H
-#define LLDB_INTERPRETER_OPTIONGROUPVALUEOBJECTDISPLAY_H
+#ifndef liblldb_OptionGroupValueObjectDisplay_h_
+#define liblldb_OptionGroupValueObjectDisplay_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/Options.h"
@@ -55,4 +55,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONGROUPVALUEOBJECTDISPLAY_H
+#endif // liblldb_OptionGroupValueObjectDisplay_h_

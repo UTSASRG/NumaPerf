@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLVMContextImpl.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/Type.h"
@@ -26,7 +25,6 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
     VoidTy(C, Type::VoidTyID),
     LabelTy(C, Type::LabelTyID),
     HalfTy(C, Type::HalfTyID),
-    BFloatTy(C, Type::BFloatTyID),
     FloatTy(C, Type::FloatTyID),
     DoubleTy(C, Type::DoubleTyID),
     MetadataTy(C, Type::MetadataTyID),
@@ -105,6 +103,21 @@ LLVMContextImpl::~LLVMContextImpl() {
     delete CDSConstant.second;
   CDSConstants.clear();
 
+  // Destroy attributes.
+  for (FoldingSetIterator<AttributeImpl> I = AttrsSet.begin(),
+         E = AttrsSet.end(); I != E; ) {
+    FoldingSetIterator<AttributeImpl> Elem = I++;
+    delete &*Elem;
+  }
+
+  // Destroy attribute lists.
+  for (FoldingSetIterator<AttributeListImpl> I = AttrsLists.begin(),
+                                             E = AttrsLists.end();
+       I != E;) {
+    FoldingSetIterator<AttributeListImpl> Elem = I++;
+    delete &*Elem;
+  }
+
   // Destroy attribute node lists.
   for (FoldingSetIterator<AttributeSetNode> I = AttrsSetNodes.begin(),
          E = AttrsSetNodes.end(); I != E; ) {
@@ -129,19 +142,18 @@ LLVMContextImpl::~LLVMContextImpl() {
 }
 
 void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
-  SmallSetVector<ConstantArray *, 4> WorkList(ArrayConstants.begin(),
-                                              ArrayConstants.end());
+  bool Changed;
+  do {
+    Changed = false;
 
-  while (!WorkList.empty()) {
-    ConstantArray *C = WorkList.pop_back_val();
-    if (C->use_empty()) {
-      for (const Use &Op : C->operands()) {
-        if (auto *COp = dyn_cast<ConstantArray>(Op))
-          WorkList.insert(COp);
+    for (auto I = ArrayConstants.begin(), E = ArrayConstants.end(); I != E;) {
+      auto *C = *I++;
+      if (C->use_empty()) {
+        Changed = true;
+        C->destroyConstant();
       }
-      C->destroyConstant();
     }
-  }
+  } while (Changed);
 }
 
 void Module::dropTriviallyDeadConstantArrays() {

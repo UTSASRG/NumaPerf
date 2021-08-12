@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "index/Background.h"
-#include "support/Logger.h"
 
 namespace clang {
 namespace clangd {
@@ -29,11 +28,10 @@ void BackgroundQueue::work(std::function<void()> OnIdle) {
         CV.notify_all();
         return;
       }
-      ++Stat.Active;
+      ++NumActiveTasks;
       std::pop_heap(Queue.begin(), Queue.end());
       Task = std::move(Queue.back());
       Queue.pop_back();
-      notifyProgress();
     }
 
     if (Task->ThreadPri != llvm::ThreadPriority::Default &&
@@ -45,20 +43,14 @@ void BackgroundQueue::work(std::function<void()> OnIdle) {
 
     {
       std::unique_lock<std::mutex> Lock(Mu);
-      ++Stat.Completed;
-      if (Stat.Active == 1 && Queue.empty()) {
+      if (NumActiveTasks == 1 && Queue.empty() && OnIdle) {
         // We just finished the last item, the queue is going idle.
-        assert(ShouldStop || Stat.Completed == Stat.Enqueued);
-        Stat.LastIdle = Stat.Completed;
-        if (OnIdle) {
-          Lock.unlock();
-          OnIdle();
-          Lock.lock();
-        }
+        Lock.unlock();
+        OnIdle();
+        Lock.lock();
       }
-      assert(Stat.Active > 0 && "before decrementing");
-      --Stat.Active;
-      notifyProgress();
+      assert(NumActiveTasks > 0 && "before decrementing");
+      --NumActiveTasks;
     }
     CV.notify_all();
   }
@@ -78,8 +70,6 @@ void BackgroundQueue::push(Task T) {
     T.QueuePri = std::max(T.QueuePri, Boosts.lookup(T.Tag));
     Queue.push_back(std::move(T));
     std::push_heap(Queue.begin(), Queue.end());
-    ++Stat.Enqueued;
-    notifyProgress();
   }
   CV.notify_all();
 }
@@ -91,8 +81,6 @@ void BackgroundQueue::append(std::vector<Task> Tasks) {
       T.QueuePri = std::max(T.QueuePri, Boosts.lookup(T.Tag));
     std::move(Tasks.begin(), Tasks.end(), std::back_inserter(Queue));
     std::make_heap(Queue.begin(), Queue.end());
-    Stat.Enqueued += Tasks.size();
-    notifyProgress();
   }
   CV.notify_all();
 }
@@ -120,14 +108,7 @@ bool BackgroundQueue::blockUntilIdleForTest(
     llvm::Optional<double> TimeoutSeconds) {
   std::unique_lock<std::mutex> Lock(Mu);
   return wait(Lock, CV, timeoutSeconds(TimeoutSeconds),
-              [&] { return Queue.empty() && Stat.Active == 0; });
-}
-
-void BackgroundQueue::notifyProgress() const {
-  dlog("Queue: {0}/{1} ({2} active). Last idle at {3}", Stat.Completed,
-       Stat.Enqueued, Stat.Active, Stat.LastIdle);
-  if (OnProgress)
-    OnProgress(Stat);
+              [&] { return Queue.empty() && NumActiveTasks == 0; });
 }
 
 } // namespace clangd

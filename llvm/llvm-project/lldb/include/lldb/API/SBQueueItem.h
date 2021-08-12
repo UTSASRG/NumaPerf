@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBQUEUEITEM_H
-#define LLDB_API_SBQUEUEITEM_H
+#ifndef LLDB_SBQueueItem_h_
+#define LLDB_SBQueueItem_h_
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDefines.h"
@@ -46,4 +46,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBQUEUEITEM_H
+#endif // LLDB_SBQueueItem_h_

@@ -1,6 +1,6 @@
 //===- DialectInterface.h - IR Dialect Interfaces ---------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -9,7 +9,7 @@
 #ifndef MLIR_IR_DIALECTINTERFACE_H
 #define MLIR_IR_DIALECTINTERFACE_H
 
-#include "mlir/Support/TypeID.h"
+#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace mlir {
@@ -29,7 +29,7 @@ public:
   using Base = DialectInterfaceBase<ConcreteType, BaseT>;
 
   /// Get a unique id for the derived interface type.
-  static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
+  static ClassID *getInterfaceID() { return ClassID::getID<ConcreteType>(); }
 
 protected:
   DialectInterfaceBase(Dialect *dialect) : BaseT(dialect, getInterfaceID()) {}
@@ -50,10 +50,10 @@ public:
   Dialect *getDialect() const { return dialect; }
 
   /// Return the derived interface id.
-  TypeID getID() const { return interfaceID; }
+  ClassID *getID() const { return interfaceID; }
 
 protected:
-  DialectInterface(Dialect *dialect, TypeID id)
+  DialectInterface(Dialect *dialect, ClassID *id)
       : dialect(dialect), interfaceID(id) {}
 
 private:
@@ -61,7 +61,7 @@ private:
   Dialect *dialect;
 
   /// The unique identifier for the derived interface type.
-  TypeID interfaceID;
+  ClassID *interfaceID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -93,7 +93,7 @@ class DialectInterfaceCollectionBase {
   using InterfaceVectorT = std::vector<const DialectInterface *>;
 
 public:
-  DialectInterfaceCollectionBase(MLIRContext *ctx, TypeID interfaceKind);
+  DialectInterfaceCollectionBase(MLIRContext *ctx, ClassID *interfaceKind);
   virtual ~DialectInterfaceCollectionBase();
 
 protected:

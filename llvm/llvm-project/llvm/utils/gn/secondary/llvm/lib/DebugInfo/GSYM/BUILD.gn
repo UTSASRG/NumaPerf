@@ -5,7 +5,6 @@ static_library("GSYM") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "DwarfTransformer.cpp",
     "FileWriter.cpp",
     "FunctionInfo.cpp",
     "GsymCreator.cpp",
@@ -14,7 +13,6 @@ static_library("GSYM") {
     "InlineInfo.cpp",
     "LineTable.cpp",
     "LookupResult.cpp",
-    "ObjectFileTransformer.cpp",
     "Range.cpp",
   ]
 }

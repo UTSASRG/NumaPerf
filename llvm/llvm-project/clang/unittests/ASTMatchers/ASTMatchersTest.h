@@ -70,10 +70,10 @@ enum class LanguageMode {
 
 template <typename T>
 testing::AssertionResult matchesConditionally(
-    const Twine &Code, const T &AMatcher, bool ExpectMatch,
+    const std::string &Code, const T &AMatcher, bool ExpectMatch,
     llvm::ArrayRef<llvm::StringRef> CompileArgs,
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
-    StringRef Filename = "input.cc") {
+    const std::string &Filename = "input.cc") {
   bool Found = false, DynamicFound = false;
   MatchFinder Finder;
   VerifyMatch VerifyFound(nullptr, &Found);
@@ -117,10 +117,10 @@ testing::AssertionResult matchesConditionally(
 
 template <typename T>
 testing::AssertionResult matchesConditionally(
-    const Twine &Code, const T &AMatcher, bool ExpectMatch,
+    const std::string &Code, const T &AMatcher, bool ExpectMatch,
     llvm::StringRef CompileArg,
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
-    StringRef Filename = "input.cc") {
+    const std::string &Filename = "input.cc") {
   return matchesConditionally(Code, AMatcher, ExpectMatch,
                               llvm::makeArrayRef(CompileArg),
                               VirtualMappedFiles, Filename);
@@ -128,8 +128,8 @@ testing::AssertionResult matchesConditionally(
 
 template <typename T>
 testing::AssertionResult
-matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
-                     const LanguageMode &Mode) {
+matchesConditionally(const std::string &Code, const T &AMatcher,
+                     bool ExpectMatch, const LanguageMode &Mode) {
   std::vector<LanguageMode> LangModes;
   switch (Mode) {
   case LanguageMode::Cxx11:
@@ -153,7 +153,7 @@ matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
   }
 
   for (auto Mode : LangModes) {
-    StringRef LangModeArg;
+    std::string LangModeArg;
     switch (Mode) {
     case LanguageMode::Cxx11:
       LangModeArg = "-std=c++11";
@@ -171,10 +171,8 @@ matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
       llvm_unreachable("Invalid language mode");
     }
 
-    auto Result = matchesConditionally(Code, AMatcher, ExpectMatch,
-                                       {LangModeArg, "-Werror=c++14-extensions",
-                                        "-Werror=c++17-extensions",
-                                        "-Werror=c++20-extensions"});
+    auto Result =
+        matchesConditionally(Code, AMatcher, ExpectMatch, LangModeArg);
     if (!Result)
       return Result;
   }
@@ -184,20 +182,20 @@ matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
 
 template <typename T>
 testing::AssertionResult
-matches(const Twine &Code, const T &AMatcher,
+matches(const std::string &Code, const T &AMatcher,
         const LanguageMode &Mode = LanguageMode::Cxx11) {
   return matchesConditionally(Code, AMatcher, true, Mode);
 }
 
 template <typename T>
 testing::AssertionResult
-notMatches(const Twine &Code, const T &AMatcher,
+notMatches(const std::string &Code, const T &AMatcher,
            const LanguageMode &Mode = LanguageMode::Cxx11) {
   return matchesConditionally(Code, AMatcher, false, Mode);
 }
 
 template <typename T>
-testing::AssertionResult matchesObjC(const Twine &Code, const T &AMatcher,
+testing::AssertionResult matchesObjC(const std::string &Code, const T &AMatcher,
                                      bool ExpectMatch = true) {
   return matchesConditionally(Code, AMatcher, ExpectMatch,
                               {"-fobjc-nonfragile-abi", "-Wno-objc-root-class",
@@ -206,34 +204,38 @@ testing::AssertionResult matchesObjC(const Twine &Code, const T &AMatcher,
 }
 
 template <typename T>
-testing::AssertionResult matchesC(const Twine &Code, const T &AMatcher) {
+testing::AssertionResult matchesC(const std::string &Code, const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true, "", FileContentMappings(),
                               "input.c");
 }
 
 template <typename T>
-testing::AssertionResult matchesC99(const Twine &Code, const T &AMatcher) {
+testing::AssertionResult matchesC99(const std::string &Code,
+                                    const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true, "-std=c99",
                               FileContentMappings(), "input.c");
 }
 
 template <typename T>
-testing::AssertionResult notMatchesC(const Twine &Code, const T &AMatcher) {
+testing::AssertionResult notMatchesC(const std::string &Code,
+                                     const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, false, "", FileContentMappings(),
                               "input.c");
 }
 
 template <typename T>
-testing::AssertionResult notMatchesObjC(const Twine &Code, const T &AMatcher) {
+testing::AssertionResult notMatchesObjC(const std::string &Code,
+                                        const T &AMatcher) {
   return matchesObjC(Code, AMatcher, false);
 }
+
 
 // Function based on matchesConditionally with "-x cuda" argument added and
 // small CUDA header prepended to the code string.
 template <typename T>
-testing::AssertionResult
-matchesConditionallyWithCuda(const Twine &Code, const T &AMatcher,
-                             bool ExpectMatch, llvm::StringRef CompileArg) {
+testing::AssertionResult matchesConditionallyWithCuda(
+    const std::string &Code, const T &AMatcher, bool ExpectMatch,
+    llvm::StringRef CompileArg) {
   const std::string CudaHeader =
       "typedef unsigned int size_t;\n"
       "#define __constant__ __attribute__((constant))\n"
@@ -266,8 +268,8 @@ matchesConditionallyWithCuda(const Twine &Code, const T &AMatcher,
   // unknown-unknown triple is good for a large speedup, because it lets us
   // avoid constructing a full system triple.
   std::vector<std::string> Args = {
-      "-xcuda",  "-fno-ms-extensions",     "--cuda-host-only",     "-nocudainc",
-      "-target", "x86_64-unknown-unknown", std::string(CompileArg)};
+      "-xcuda",  "-fno-ms-extensions",      "--cuda-host-only", "-nocudainc",
+      "-target", "x86_64-unknown-unknown", CompileArg};
   if (!runToolOnCodeWithArgs(Factory->create(),
                              CudaHeader + Code, Args)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";
@@ -289,32 +291,34 @@ matchesConditionallyWithCuda(const Twine &Code, const T &AMatcher,
 }
 
 template <typename T>
-testing::AssertionResult matchesWithCuda(const Twine &Code, const T &AMatcher) {
+testing::AssertionResult matchesWithCuda(const std::string &Code,
+                                         const T &AMatcher) {
   return matchesConditionallyWithCuda(Code, AMatcher, true, "-std=c++11");
 }
 
 template <typename T>
-testing::AssertionResult notMatchesWithCuda(const Twine &Code,
-                                            const T &AMatcher) {
+testing::AssertionResult notMatchesWithCuda(const std::string &Code,
+                                    const T &AMatcher) {
   return matchesConditionallyWithCuda(Code, AMatcher, false, "-std=c++11");
 }
 
 template <typename T>
-testing::AssertionResult matchesWithOpenMP(const Twine &Code,
+testing::AssertionResult matchesWithOpenMP(const std::string &Code,
                                            const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true, "-fopenmp=libomp");
 }
 
 template <typename T>
-testing::AssertionResult notMatchesWithOpenMP(const Twine &Code,
+testing::AssertionResult notMatchesWithOpenMP(const std::string &Code,
                                               const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, false, "-fopenmp=libomp");
 }
 
 template <typename T>
-testing::AssertionResult matchAndVerifyResultConditionally(
-    const Twine &Code, const T &AMatcher,
-    std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult) {
+testing::AssertionResult
+matchAndVerifyResultConditionally(const std::string &Code, const T &AMatcher,
+                                  std::unique_ptr<BoundNodesCallback> FindResultVerifier,
+                                  bool ExpectResult) {
   bool VerifiedResult = false;
   MatchFinder Finder;
   VerifyMatch VerifyVerifiedResult(std::move(FindResultVerifier), &VerifiedResult);
@@ -338,9 +342,7 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   }
 
   VerifiedResult = false;
-  SmallString<256> Buffer;
-  std::unique_ptr<ASTUnit> AST(
-      buildASTFromCodeWithArgs(Code.toStringRef(Buffer), Args));
+  std::unique_ptr<ASTUnit> AST(buildASTFromCodeWithArgs(Code, Args));
   if (!AST.get())
     return testing::AssertionFailure() << "Parsing error in \"" << Code
                                        << "\" while building AST";
@@ -359,17 +361,17 @@ testing::AssertionResult matchAndVerifyResultConditionally(
 // FIXME: Find better names for these functions (or document what they
 // do more precisely).
 template <typename T>
-testing::AssertionResult matchAndVerifyResultTrue(
-    const Twine &Code, const T &AMatcher,
-    std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
+testing::AssertionResult
+matchAndVerifyResultTrue(const std::string &Code, const T &AMatcher,
+                         std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
   return matchAndVerifyResultConditionally(
       Code, AMatcher, std::move(FindResultVerifier), true);
 }
 
 template <typename T>
-testing::AssertionResult matchAndVerifyResultFalse(
-    const Twine &Code, const T &AMatcher,
-    std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
+testing::AssertionResult
+matchAndVerifyResultFalse(const std::string &Code, const T &AMatcher,
+                          std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
   return matchAndVerifyResultConditionally(
       Code, AMatcher, std::move(FindResultVerifier), false);
 }
@@ -383,20 +385,20 @@ public:
   // Create an object that checks that a node of type \c T was bound to \c Id.
   // Does not check for a certain number of matches.
   explicit VerifyIdIsBoundTo(llvm::StringRef Id)
-      : Id(std::string(Id)), ExpectedCount(-1), Count(0) {}
+    : Id(Id), ExpectedCount(-1), Count(0) {}
 
   // Create an object that checks that a node of type \c T was bound to \c Id.
   // Checks that there were exactly \c ExpectedCount matches.
   VerifyIdIsBoundTo(llvm::StringRef Id, int ExpectedCount)
-      : Id(std::string(Id)), ExpectedCount(ExpectedCount), Count(0) {}
+    : Id(Id), ExpectedCount(ExpectedCount), Count(0) {}
 
   // Create an object that checks that a node of type \c T was bound to \c Id.
   // Checks that there was exactly one match with the name \c ExpectedName.
   // Note that \c T must be a NamedDecl for this to work.
   VerifyIdIsBoundTo(llvm::StringRef Id, llvm::StringRef ExpectedName,
                     int ExpectedCount = 1)
-      : Id(std::string(Id)), ExpectedCount(ExpectedCount), Count(0),
-        ExpectedName(std::string(ExpectedName)) {}
+    : Id(Id), ExpectedCount(ExpectedCount), Count(0),
+      ExpectedName(ExpectedName) {}
 
   void onEndOfTranslationUnit() override {
     if (ExpectedCount != -1) {

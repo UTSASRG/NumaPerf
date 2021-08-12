@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LexerUtils.h"
-#include "clang/Basic/SourceManager.h"
 
 namespace clang {
 namespace tidy {

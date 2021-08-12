@@ -38,14 +38,13 @@ SnippetGenerator::SnippetGenerator(const LLVMState &State, const Options &Opts)
 
 SnippetGenerator::~SnippetGenerator() = default;
 
-Error SnippetGenerator::generateConfigurations(
-    const InstructionTemplate &Variant, std::vector<BenchmarkCode> &Benchmarks,
-    const BitVector &ExtraForbiddenRegs) const {
+Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
+    const Instruction &Instr, const BitVector &ExtraForbiddenRegs) const {
   BitVector ForbiddenRegs = State.getRATC().reservedRegisters();
   ForbiddenRegs |= ExtraForbiddenRegs;
   // If the instruction has memory registers, prevent the generator from
   // using the scratch register and its aliasing registers.
-  if (Variant.getInstr().hasMemoryOperands()) {
+  if (Instr.hasMemoryOperands()) {
     const auto &ET = State.getExegesisTarget();
     unsigned ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
@@ -56,7 +55,7 @@ Error SnippetGenerator::generateConfigurations(
         State.getRATC().getRegister(ScratchSpacePointerInReg).aliasedBits();
     // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
     // FIXME: We could make a copy of the scratch register.
-    for (const auto &Op : Variant.getInstr().Operands) {
+    for (const auto &Op : Instr.Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
           ScratchRegAliases.test(Op.getImplicitReg()))
         return make_error<Failure>(
@@ -65,19 +64,15 @@ Error SnippetGenerator::generateConfigurations(
     ForbiddenRegs |= ScratchRegAliases;
   }
 
-  if (auto E = generateCodeTemplates(Variant, ForbiddenRegs)) {
-    MutableArrayRef<CodeTemplate> Templates = E.get();
-
-    // Avoid reallocations in the loop.
-    Benchmarks.reserve(Benchmarks.size() + Templates.size());
-    for (CodeTemplate &CT : Templates) {
+  if (auto E = generateCodeTemplates(Instr, ForbiddenRegs)) {
+    std::vector<BenchmarkCode> Output;
+    for (CodeTemplate &CT : E.get()) {
       // TODO: Generate as many BenchmarkCode as needed.
       {
         BenchmarkCode BC;
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
-          if (auto error = randomizeUnsetVariables(State, ForbiddenRegs, IT))
-            return error;
+          randomizeUnsetVariables(State.getExegesisTarget(), ForbiddenRegs, IT);
           BC.Key.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
@@ -85,14 +80,13 @@ Error SnippetGenerator::generateConfigurations(
         BC.Key.RegisterInitialValues =
             computeRegisterInitialValues(CT.Instructions);
         BC.Key.Config = CT.Config;
-        Benchmarks.emplace_back(std::move(BC));
-        if (Benchmarks.size() >= Opts.MaxConfigsPerOpcode) {
-          // We reached the number of  allowed configs and return early.
-          return Error::success();
-        }
+        Output.push_back(std::move(BC));
+        if (Output.size() >= Opts.MaxConfigsPerOpcode)
+          return Output; // Early exit if we exceeded the number of allowed
+                         // configs.
       }
     }
-    return Error::success();
+    return Output;
   } else
     return E.takeError();
 }
@@ -140,35 +134,33 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
 }
 
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(InstructionTemplate Variant) {
-  const AliasingConfigurations SelfAliasing(Variant.getInstr(),
-                                            Variant.getInstr());
+generateSelfAliasingCodeTemplates(const Instruction &Instr) {
+  const AliasingConfigurations SelfAliasing(Instr, Instr);
   if (SelfAliasing.empty())
     return make_error<SnippetGeneratorFailure>("empty self aliasing");
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
+  InstructionTemplate IT(&Instr);
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "implicit Self cycles, picking random values.";
   } else {
     CT.Info = "explicit self cycles, selecting one aliasing Conf.";
     // This is a self aliasing instruction so defs and uses are from the same
-    // instance, hence twice Variant in the following call.
-    setRandomAliasing(SelfAliasing, Variant, Variant);
+    // instance, hence twice IT in the following call.
+    setRandomAliasing(SelfAliasing, IT, IT);
   }
-  CT.Instructions.push_back(std::move(Variant));
+  CT.Instructions.push_back(std::move(IT));
   return std::move(Result);
 }
 
 Expected<std::vector<CodeTemplate>>
-generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
-                                   StringRef Msg) {
+generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg) {
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
-  CT.Info =
-      std::string(formatv("{0}, repeating an unconstrained assignment", Msg));
-  CT.Instructions.push_back(std::move(Variant));
+  CT.Info = formatv("{0}, repeating an unconstrained assignment", Msg);
+  CT.Instructions.emplace_back(&Instr);
   return std::move(Result);
 }
 
@@ -183,7 +175,8 @@ size_t randomIndex(size_t Max) {
   return Distribution(randomGenerator());
 }
 
-template <typename C> static decltype(auto) randomElement(const C &Container) {
+template <typename C>
+static auto randomElement(const C &Container) -> decltype(Container[0]) {
   assert(!Container.empty() &&
          "Can't pick a random element from an empty container)");
   return Container[randomIndex(Container.size() - 1)];
@@ -222,53 +215,15 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
   setRegisterOperandValue(randomElement(RandomConf.Uses), UseIB);
 }
 
-static Error randomizeMCOperand(const LLVMState &State,
-                                const Instruction &Instr, const Variable &Var,
-                                MCOperand &AssignedValue,
-                                const BitVector &ForbiddenRegs) {
-  const Operand &Op = Instr.getPrimaryOperand(Var);
-  if (Op.getExplicitOperandInfo().OperandType >=
-      MCOI::OperandType::OPERAND_FIRST_TARGET)
-    return State.getExegesisTarget().randomizeTargetMCOperand(
-        Instr, Var, AssignedValue, ForbiddenRegs);
-  switch (Op.getExplicitOperandInfo().OperandType) {
-  case MCOI::OperandType::OPERAND_IMMEDIATE:
-    // FIXME: explore immediate values too.
-    AssignedValue = MCOperand::createImm(1);
-    break;
-  case MCOI::OperandType::OPERAND_REGISTER: {
-    assert(Op.isReg());
-    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
-    assert(AllowedRegs.size() == ForbiddenRegs.size());
-    for (auto I : ForbiddenRegs.set_bits())
-      AllowedRegs.reset(I);
-    if (!AllowedRegs.any())
-      return make_error<Failure>(
-          Twine("no available registers:\ncandidates:\n")
-              .concat(debugString(State.getRegInfo(),
-                                  Op.getRegisterAliasing().sourceBits()))
-              .concat("\nforbidden:\n")
-              .concat(debugString(State.getRegInfo(), ForbiddenRegs)));
-    AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
-    break;
-  }
-  default:
-    break;
-  }
-  return Error::success();
-}
-
-Error randomizeUnsetVariables(const LLVMState &State,
-                              const BitVector &ForbiddenRegs,
-                              InstructionTemplate &IT) {
+void randomizeUnsetVariables(const ExegesisTarget &Target,
+                             const BitVector &ForbiddenRegs,
+                             InstructionTemplate &IT) {
   for (const Variable &Var : IT.getInstr().Variables) {
     MCOperand &AssignedValue = IT.getValueFor(Var);
     if (!AssignedValue.isValid())
-      if (auto Err = randomizeMCOperand(State, IT.getInstr(), Var,
-                                        AssignedValue, ForbiddenRegs))
-        return Err;
+      Target.randomizeMCOperand(IT.getInstr(), Var, AssignedValue,
+                                ForbiddenRegs);
   }
-  return Error::success();
 }
 
 } // namespace exegesis

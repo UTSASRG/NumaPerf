@@ -105,8 +105,10 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
-  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(M, *DVI);
+  if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
+    processDeclare(M, DDI);
+  else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
+    processValue(M, DVI);
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
@@ -192,9 +194,24 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   }
 }
 
-void DebugInfoFinder::processVariable(const Module &M,
-                                      const DbgVariableIntrinsic &DVI) {
-  auto *N = dyn_cast<MDNode>(DVI.getVariable());
+void DebugInfoFinder::processDeclare(const Module &M,
+                                     const DbgDeclareInst *DDI) {
+  auto *N = dyn_cast<MDNode>(DDI->getVariable());
+  if (!N)
+    return;
+
+  auto *DV = dyn_cast<DILocalVariable>(N);
+  if (!DV)
+    return;
+
+  if (!NodesSeen.insert(DV).second)
+    return;
+  processScope(DV->getScope());
+  processType(DV->getType());
+}
+
+void DebugInfoFinder::processValue(const Module &M, const DbgValueInst *DVI) {
+  auto *N = dyn_cast<MDNode>(DVI->getVariable());
   if (!N)
     return;
 
@@ -261,41 +278,6 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   return true;
 }
 
-static MDNode *updateLoopMetadataDebugLocationsImpl(
-    MDNode *OrigLoopID,
-    function_ref<DILocation *(const DILocation &)> Updater) {
-  assert(OrigLoopID && OrigLoopID->getNumOperands() > 0 &&
-         "Loop ID needs at least one operand");
-  assert(OrigLoopID && OrigLoopID->getOperand(0).get() == OrigLoopID &&
-         "Loop ID should refer to itself");
-
-  // Save space for the self-referential LoopID.
-  SmallVector<Metadata *, 4> MDs = {nullptr};
-
-  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
-    Metadata *MD = OrigLoopID->getOperand(i);
-    if (DILocation *DL = dyn_cast<DILocation>(MD)) {
-      if (DILocation *NewDL = Updater(*DL))
-        MDs.push_back(NewDL);
-    } else
-      MDs.push_back(MD);
-  }
-
-  MDNode *NewLoopID = MDNode::getDistinct(OrigLoopID->getContext(), MDs);
-  // Insert the self-referential LoopID.
-  NewLoopID->replaceOperandWith(0, NewLoopID);
-  return NewLoopID;
-}
-
-void llvm::updateLoopMetadataDebugLocations(
-    Instruction &I, function_ref<DILocation *(const DILocation &)> Updater) {
-  MDNode *OrigLoopID = I.getMetadata(LLVMContext::MD_loop);
-  if (!OrigLoopID)
-    return;
-  MDNode *NewLoopID = updateLoopMetadataDebugLocationsImpl(OrigLoopID, Updater);
-  I.setMetadata(LLVMContext::MD_loop, NewLoopID);
-}
-
 static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   assert(!N->operands().empty() && "Missing self reference?");
 
@@ -312,10 +294,20 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
       }))
     return nullptr;
 
-  auto dropDebugLoc = [](const DILocation &) -> DILocation * {
-    return nullptr;
-  };
-  return updateLoopMetadataDebugLocationsImpl(N, dropDebugLoc);
+  SmallVector<Metadata *, 4> Args;
+  // Reserve operand 0 for loop id self reference.
+  auto TempNode = MDNode::getTemporary(N->getContext(), None);
+  Args.push_back(TempNode.get());
+  // Add all non-debug location operands back.
+  for (auto Op = N->op_begin() + 1; Op != N->op_end(); Op++) {
+    if (!isa<DILocation>(*Op))
+      Args.push_back(*Op);
+  }
+
+  // Set the first operand to itself.
+  MDNode *LoopID = MDNode::get(N->getContext(), Args);
+  LoopID->replaceOperandWith(0, LoopID);
+  return LoopID;
 }
 
 bool llvm::stripDebugInfo(Function &F) {
@@ -497,7 +489,7 @@ private:
         RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
         CU->getDWOId(), CU->getSplitDebugInlining(),
         CU->getDebugInfoForProfiling(), CU->getNameTableKind(),
-        CU->getRangesBaseAddress(), CU->getSysRoot(), CU->getSDK());
+        CU->getRangesBaseAddress());
   }
 
   DILocation *getReplacementMDLocation(DILocation *MLD) {
@@ -606,9 +598,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
       Changed = true;
     }
   };
-  RemoveUses("llvm.dbg.addr");
   RemoveUses("llvm.dbg.declare");
-  RemoveUses("llvm.dbg.label");
   RemoveUses("llvm.dbg.value");
 
   // Delete non-CU debug info named metadata nodes.
@@ -658,10 +648,15 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
         if (I.getDebugLoc() != DebugLoc())
           I.setDebugLoc(remapDebugLoc(I.getDebugLoc()));
 
-        // Remap DILocations in llvm.loop attachments.
-        updateLoopMetadataDebugLocations(I, [&](const DILocation &Loc) {
-          return remapDebugLoc(&Loc).get();
-        });
+        // Remap DILocations in untyped MDNodes (e.g., llvm.loop).
+        SmallVector<std::pair<unsigned, MDNode *>, 2> MDs;
+        I.getAllMetadata(MDs);
+        for (auto Attachment : MDs)
+          if (auto *T = dyn_cast_or_null<MDTuple>(Attachment.second))
+            for (unsigned N = 0; N < T->getNumOperands(); ++N)
+              if (auto *Loc = dyn_cast_or_null<DILocation>(T->getOperand(N)))
+                if (Loc != DebugLoc())
+                  T->replaceOperandWith(N, remapDebugLoc(Loc));
       }
     }
   }
@@ -762,18 +757,16 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
     unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
     LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
-    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen,
-    const char *SDK, size_t SDKLen) {
+    LLVMBool DebugInfoForProfiling) {
   auto File = unwrapDI<DIFile>(FileRef);
 
   return wrap(unwrap(Builder)->createCompileUnit(
-      map_from_llvmDWARFsourcelanguage(Lang), File,
-      StringRef(Producer, ProducerLen), isOptimized, StringRef(Flags, FlagsLen),
-      RuntimeVer, StringRef(SplitName, SplitNameLen),
-      static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
-      SplitDebugInlining, DebugInfoForProfiling,
-      DICompileUnit::DebugNameTableKind::Default, false,
-      StringRef(SysRoot, SysRootLen), StringRef(SDK, SDKLen)));
+                 map_from_llvmDWARFsourcelanguage(Lang), File,
+                 StringRef(Producer, ProducerLen), isOptimized,
+                 StringRef(Flags, FlagsLen), RuntimeVer,
+                 StringRef(SplitName, SplitNameLen),
+                 static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
+                 SplitDebugInlining, DebugInfoForProfiling));
 }
 
 LLVMMetadataRef
@@ -789,12 +782,12 @@ LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
                           const char *IncludePath, size_t IncludePathLen,
-                          const char *APINotesFile, size_t APINotesFileLen) {
+                          const char *SysRoot, size_t SysRootLen) {
   return wrap(unwrap(Builder)->createModule(
       unwrapDI<DIScope>(ParentScope), StringRef(Name, NameLen),
       StringRef(ConfigMacros, ConfigMacrosLen),
       StringRef(IncludePath, IncludePathLen),
-      StringRef(APINotesFile, APINotesFileLen)));
+      StringRef(SysRoot, SysRootLen)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateNameSpace(LLVMDIBuilderRef Builder,

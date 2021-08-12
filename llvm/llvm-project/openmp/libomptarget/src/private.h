@@ -18,13 +18,10 @@
 #include <cstdint>
 
 extern int target_data_begin(DeviceTy &Device, int32_t arg_num,
-                             void **args_base, void **args, int64_t *arg_sizes,
-                             int64_t *arg_types,
-                             __tgt_async_info *async_info_ptr);
+    void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types);
 
 extern int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
-                           void **args, int64_t *arg_sizes, int64_t *arg_types,
-                           __tgt_async_info *async_info_ptr);
+    void **args, int64_t *arg_sizes, int64_t *arg_types);
 
 extern int target_data_update(DeviceTy &Device, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types);

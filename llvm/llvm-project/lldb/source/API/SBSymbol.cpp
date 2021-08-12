@@ -1,4 +1,4 @@
-//===-- SBSymbol.cpp ------------------------------------------------------===//
+//===-- SBSymbol.cpp --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,7 +68,9 @@ const char *SBSymbol::GetDisplayName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
+    name = m_opaque_ptr->GetMangled()
+               .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
+               .AsCString();
 
   return name;
 }
@@ -124,17 +126,22 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target,
 
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
+    ExecutionContext exe_ctx;
     TargetSP target_sp(target.GetSP());
     std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp && m_opaque_ptr->ValueIsAddress()) {
+    if (target_sp) {
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+      target_sp->CalculateExecutionContext(exe_ctx);
+    }
+    if (m_opaque_ptr->ValueIsAddress()) {
       const Address &symbol_addr = m_opaque_ptr->GetAddressRef();
       ModuleSP module_sp = symbol_addr.GetModule();
       if (module_sp) {
         AddressRange symbol_range(symbol_addr, m_opaque_ptr->GetByteSize());
         const bool prefer_file_cache = false;
         sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-            module_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
+            module_sp->GetArchitecture(), nullptr, flavor_string, exe_ctx,
             symbol_range, prefer_file_cache));
       }
     }

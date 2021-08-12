@@ -144,26 +144,24 @@ namespace problem_cases {
   bool cmp_base_derived = D() == D(); // expected-warning {{ambiguous}}
 
   template<typename T> struct CRTPBase {
-    bool operator==(const T&) const; // expected-note {{operator}} expected-note {{reversed}}
-    bool operator!=(const T&) const; // expected-note {{non-reversed}}
+    bool operator==(const T&) const; // expected-note {{operator}}
   };
   struct CRTP : CRTPBase<CRTP> {};
-  bool cmp_crtp = CRTP() == CRTP(); // expected-warning-re {{ambiguous despite there being a unique best viable function{{$}}}}}}
-  bool cmp_crtp2 = CRTP() != CRTP(); // expected-warning {{ambiguous despite there being a unique best viable function with non-reversed arguments}}
+  bool cmp_crtp = CRTP() == CRTP(); // expected-warning {{ambiguous}}
 
-  // Given a choice between a rewritten and non-rewritten function with the
-  // same parameter types, where the rewritten function is reversed and each
-  // has a better conversion for one of the two arguments, prefer the
-  // non-rewritten one.
+  // We can select a non-rewriteable operator== for a != comparison, when there
+  // was a viable operator!= candidate we could have used instead.
+  //
+  // Rejecting this seems OK on balance.
   using UBool = signed char; // ICU uses this.
   struct ICUBase {
     virtual UBool operator==(const ICUBase&) const;
     UBool operator!=(const ICUBase &arg) const { return !operator==(arg); }
   };
   struct ICUDerived : ICUBase {
-    UBool operator==(const ICUBase&) const override; // expected-note {{declared here}} expected-note {{ambiguity is between}}
+    UBool operator==(const ICUBase&) const override; // expected-note {{declared here}}
   };
-  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-warning {{ambiguous}} expected-warning {{'bool', not 'problem_cases::UBool'}}
+  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-error {{not 'bool'}}
 }
 
 #else // NO_ERRORS

@@ -1,6 +1,5 @@
 group("lib") {
   deps = [
-    "//compiler-rt/lib/asan",
     "//compiler-rt/lib/builtins",
     "//compiler-rt/lib/profile",
   ]

@@ -1,7 +1,7 @@
 ## Show that llvm-readelf + llvm-readobj demangle symbol names in symbol tables
 ## (including dynamic symbols), relocations (including dynamic relocations), and groups.
 
-# RUN: yaml2obj %s -o %t.so
+# RUN: yaml2obj %s > %t.so
 
 ## Check LLVM output style.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
@@ -212,14 +212,16 @@ ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R, PF_X ]
     VAddr: 0x0
+    PAddr: 0x0
     Sections:
-      - Section: .dynstr
       - Section: .dynsym
+      - Section: .dynstr
       - Section: .rela.dyn
       - Section: .dynamic
       - Section: .text.foo
   - Type:  PT_DYNAMIC
     Flags: [ PF_R ]
     VAddr: 0x1000
+    PAddr: 0x1000
     Sections:
       - Section: .dynamic

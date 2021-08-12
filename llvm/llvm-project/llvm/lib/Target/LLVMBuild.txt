@@ -18,25 +18,25 @@
 ; will typically require only insertion of a line.
 [common]
 subdirectories =
- AArch64
  AMDGPU
  ARC
  ARM
+ AArch64
  AVR
  BPF
- Hexagon
  Lanai
+ Hexagon
  MSP430
- Mips
  NVPTX
+ Mips
  PowerPC
  RISCV
  Sparc
  SystemZ
- VE
  WebAssembly
  X86
  XCore
+ VE
 
 ; This is a special group whose required libraries are extended (by llvm-build)
 ; with the best execution engine (the native JIT, if available, or the

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_FILELINERESOLVER_H
-#define LLDB_CORE_FILELINERESOLVER_H
+#ifndef liblldb_FileLineResolver_h_
+#define liblldb_FileLineResolver_h_
 
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -58,10 +58,9 @@ protected:
                   // functions or not.
 
 private:
-  FileLineResolver(const FileLineResolver &) = delete;
-  const FileLineResolver &operator=(const FileLineResolver &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(FileLineResolver);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_FILELINERESOLVER_H
+#endif // liblldb_FileLineResolver_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIMEV1_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIMEV1_H
+#ifndef liblldb_AppleObjCRuntimeV1_h_
+#define liblldb_AppleObjCRuntimeV1_h_
 
 #include "AppleObjCRuntime.h"
 #include "lldb/lldb-private.h"
@@ -113,9 +113,9 @@ public:
   DeclVendor *GetDeclVendor() override;
 
 protected:
-  lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+                                                     bool catch_bp,
+                                                     bool throw_bp) override;
 
   class HashTableSignature {
   public:
@@ -153,4 +153,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIMEV1_H
+#endif // liblldb_AppleObjCRuntimeV1_h_

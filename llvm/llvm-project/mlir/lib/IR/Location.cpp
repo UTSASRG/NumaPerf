@@ -1,6 +1,6 @@
 //===- Location.cpp - MLIR Location Classes -------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -119,18 +119,18 @@ Location NameLoc::getChildLoc() const { return getImpl()->child; }
 // OpaqueLoc
 //===----------------------------------------------------------------------===//
 
-Location OpaqueLoc::get(uintptr_t underlyingLocation, TypeID typeID,
+Location OpaqueLoc::get(uintptr_t underlyingLocation, ClassID *classID,
                         Location fallbackLocation) {
   return Base::get(fallbackLocation->getContext(),
                    StandardAttributes::OpaqueLocation, underlyingLocation,
-                   typeID, fallbackLocation);
+                   classID, fallbackLocation);
 }
 
 uintptr_t OpaqueLoc::getUnderlyingLocation() const {
   return Base::getImpl()->underlyingLocation;
 }
 
-TypeID OpaqueLoc::getUnderlyingTypeID() const { return getImpl()->typeID; }
+ClassID *OpaqueLoc::getClassId() const { return getImpl()->classId; }
 
 Location OpaqueLoc::getFallbackLocation() const {
   return Base::getImpl()->fallbackLocation;

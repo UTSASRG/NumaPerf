@@ -10,7 +10,7 @@
 ;
 ; For more information on the LLVMBuild system, please see:
 ;
-;   https://llvm.org/docs/LLVMBuild.html
+;   http://llvm.org/docs/LLVMBuild.html
 ;
 ;===------------------------------------------------------------------------===;
 

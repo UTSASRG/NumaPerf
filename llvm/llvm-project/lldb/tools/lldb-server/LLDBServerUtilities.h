@@ -1,7 +1,3 @@
-#ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERUTILITIES_H
-
-#define LLDB_TOOLS_LLDB_SERVER_LLDBSERVERUTILITIES_H
-
 //===-- LLDBServerUtilities.h -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -25,5 +21,3 @@ public:
 };
 }
 }
-
-#endif

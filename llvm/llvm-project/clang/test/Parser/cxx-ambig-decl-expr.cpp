@@ -38,7 +38,4 @@ void arr() {
   // These are array declarations.
   int(x[(1,1)]); // expected-error {{redefinition}}
   int(x[true ? 1,1 : 1]); // expected-error {{redefinition}}
-
-  int (*_Atomic atomic_ptr_to_int);
-  *atomic_ptr_to_int = 42;
 }

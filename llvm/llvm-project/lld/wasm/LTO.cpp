@@ -63,8 +63,10 @@ static std::unique_ptr<lto::LTO> createLTO() {
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath*/ true));
-  lto::ThinBackend backend = lto::createInProcessThinBackend(
-      llvm::heavyweight_hardware_concurrency(config->thinLTOJobs));
+
+  lto::ThinBackend backend;
+  if (config->thinLTOJobs != -1U)
+    backend = lto::createInProcessThinBackend(config->thinLTOJobs);
   return std::make_unique<lto::LTO>(std::move(c), backend,
                                      config->ltoPartitions);
 }
@@ -75,8 +77,8 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *s) {
   if (auto f = dyn_cast<DefinedFunction>(s))
-    replaceSymbol<UndefinedFunction>(f, f->getName(), None, None, 0,
-                                     f->getFile(), f->signature);
+    replaceSymbol<UndefinedFunction>(f, f->getName(), "", "", 0, f->getFile(),
+                                     f->signature);
   else if (isa<DefinedData>(s))
     replaceSymbol<UndefinedData>(s, s->getName(), 0, s->getFile());
   else

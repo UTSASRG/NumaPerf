@@ -1,7 +1,12 @@
-; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello.o
+; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.o
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -r -o %t.wasm %t.hello.o %t.o
-; RUN: obj2yaml %t.wasm | FileCheck %s
+; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes CHECK,NORMAL
+
+; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.bm.o -mattr=+bulk-memory,+atomics
+; RUN: llc -filetype=obj %s -o %t.bm.o -mattr=+bulk-memory
+; RUN: wasm-ld -r -o %t.mt.wasm %t.hello.bm.o %t.bm.o --shared-memory --max-memory=131072
+; RUN: obj2yaml %t.mt.wasm | FileCheck %s --check-prefixes CHECK,SHARED
 
 target triple = "wasm32-unknown-unknown"
 
@@ -74,7 +79,10 @@ entry:
 ; CHECK-NEXT:           Maximum:         0x00000004
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:      - Initial:         0x00000001
+; NORMAL-NEXT:      - Initial:         0x00000001
+; SHARED-NEXT:      - Flags:           [ HAS_MAX, IS_SHARED ]
+; SHARED-NEXT:        Initial:         0x00000001
+; SHARED-NEXT:        Maximum:         0x00000002
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:

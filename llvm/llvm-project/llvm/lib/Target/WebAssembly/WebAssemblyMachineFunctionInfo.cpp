@@ -16,7 +16,6 @@
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 WebAssemblyFunctionInfo::~WebAssemblyFunctionInfo() = default; // anchor.
@@ -43,17 +42,15 @@ void llvm::computeLegalValueVTs(const Function &F, const TargetMachine &TM,
   }
 }
 
-void llvm::computeSignatureVTs(const FunctionType *Ty,
-                               const Function *TargetFunc,
-                               const Function &ContextFunc,
+void llvm::computeSignatureVTs(const FunctionType *Ty, const Function &F,
                                const TargetMachine &TM,
                                SmallVectorImpl<MVT> &Params,
                                SmallVectorImpl<MVT> &Results) {
-  computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
+  computeLegalValueVTs(F, TM, Ty->getReturnType(), Results);
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
   if (Results.size() > 1 &&
-      !TM.getSubtarget<WebAssemblySubtarget>(ContextFunc).hasMultivalue()) {
+      !TM.getSubtarget<WebAssemblySubtarget>(F).hasMultivalue()) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return
@@ -63,28 +60,9 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   }
 
   for (auto *Param : Ty->params())
-    computeLegalValueVTs(ContextFunc, TM, Param, Params);
+    computeLegalValueVTs(F, TM, Param, Params);
   if (Ty->isVarArg())
     Params.push_back(PtrVT);
-
-  // For swiftcc, emit additional swiftself and swifterror parameters
-  // if there aren't. These additional parameters are also passed for caller.
-  // They are necessary to match callee and caller signature for indirect
-  // call.
-
-  if (TargetFunc && TargetFunc->getCallingConv() == CallingConv::Swift) {
-    MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
-    bool HasSwiftErrorArg = false;
-    bool HasSwiftSelfArg = false;
-    for (const auto &Arg : TargetFunc->args()) {
-      HasSwiftErrorArg |= Arg.hasAttribute(Attribute::SwiftError);
-      HasSwiftSelfArg |= Arg.hasAttribute(Attribute::SwiftSelf);
-    }
-    if (!HasSwiftErrorArg)
-      Params.push_back(PtrVT);
-    if (!HasSwiftSelfArg)
-      Params.push_back(PtrVT);
-  }
 }
 
 void llvm::valTypesFromMVTs(const ArrayRef<MVT> &In,

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERDARWIN_H
-#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERDARWIN_H
+#ifndef liblldb_DynamicLoaderDarwin_h_
+#define liblldb_DynamicLoaderDarwin_h_
 
 #include <map>
 #include <mutex>
@@ -238,10 +238,9 @@ protected:
   mutable std::recursive_mutex m_mutex;
 
 private:
-  DynamicLoaderDarwin(const DynamicLoaderDarwin &) = delete;
-  const DynamicLoaderDarwin &operator=(const DynamicLoaderDarwin &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderDarwin);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERDARWIN_H
+#endif // liblldb_DynamicLoaderDarwin_h_

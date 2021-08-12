@@ -39,7 +39,6 @@ protected:
 public:
   static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
-  static bool EnableFixedFunctionABI;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,
@@ -57,9 +56,8 @@ public:
   void adjustPassManager(PassManagerBuilder &) override;
 
   /// Get the integer value of a null pointer in the given address space.
-  static int64_t getNullPointerValue(unsigned AddrSpace) {
+  uint64_t getNullPointerValue(unsigned AddrSpace) const {
     return (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-            AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
             AddrSpace == AMDGPUAS::REGION_ADDRESS) ? -1 : 0;
   }
 };

@@ -46,12 +46,12 @@ void ARMException::beginFunction(const MachineFunction *MF) {
   if (MoveType == AsmPrinter::CFI_M_Debug) {
     if (!hasEmittedCFISections) {
       if (Asm->needsOnlyDebugCFIMoves())
-        Asm->OutStreamer->emitCFISections(false, true);
+        Asm->OutStreamer->EmitCFISections(false, true);
       hasEmittedCFISections = true;
     }
 
     shouldEmitCFI = true;
-    Asm->OutStreamer->emitCFIStartProc(false);
+    Asm->OutStreamer->EmitCFIStartProc(false);
   }
 }
 
@@ -75,7 +75,7 @@ void ARMException::endFunction(const MachineFunction *MF) {
     // Emit references to personality.
     if (Per) {
       MCSymbol *PerSym = Asm->getSymbol(Per);
-      Asm->OutStreamer->emitSymbolAttribute(PerSym, MCSA_Global);
+      Asm->OutStreamer->EmitSymbolAttribute(PerSym, MCSA_Global);
       ATS.emitPersonality(PerSym);
     }
 
@@ -109,10 +109,10 @@ void ARMException::emitTypeInfos(unsigned TTypeEncoding,
   for (const GlobalValue *GV : reverse(TypeInfos)) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
-    Asm->emitTTypeReference(GV, TTypeEncoding);
+    Asm->EmitTTypeReference(GV, TTypeEncoding);
   }
 
-  Asm->OutStreamer->emitLabel(TTBaseLabel);
+  Asm->OutStreamer->EmitLabel(TTBaseLabel);
 
   // Emit the Exception Specifications.
   if (VerboseAsm && !FilterIds.empty()) {
@@ -129,7 +129,7 @@ void ARMException::emitTypeInfos(unsigned TTypeEncoding,
         Asm->OutStreamer->AddComment("FilterInfo " + Twine(Entry));
     }
 
-    Asm->emitTTypeReference((TypeID == 0 ? nullptr : TypeInfos[TypeID - 1]),
+    Asm->EmitTTypeReference((TypeID == 0 ? nullptr : TypeInfos[TypeID - 1]),
                             TTypeEncoding);
   }
 }

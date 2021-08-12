@@ -7,7 +7,7 @@
 // This resembles what gold -r produces when it discards the section
 // the fde points to.
 
-        .section .eh_frame,"a",@unwind
+        .section .eh_frame
         .long 0x14
         .long 0x0
         .byte 0x01

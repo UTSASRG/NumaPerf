@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRDYNAMICCHECKS_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRDYNAMICCHECKS_H
+#ifndef liblldb_IRDynamicChecks_h_
+#define liblldb_IRDynamicChecks_h_
 
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/lldb-types.h"
@@ -124,4 +124,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRDYNAMICCHECKS_H
+#endif // liblldb_IRDynamicChecks_h_

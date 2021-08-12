@@ -103,7 +103,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
 
   NumBlocksUnreachable += unreachable;
   NumBlocks += total;
-  std::string NameOfRootFunction = std::string(output.str());
+  std::string NameOfRootFunction = output.str();
 
   output << " -> Total CFGBlocks: " << total << " | Unreachable CFGBlocks: "
       << unreachable << " | Exhausted Block: "
@@ -140,6 +140,6 @@ void ento::registerAnalyzerStatsChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalyzerStatsChecker>();
 }
 
-bool ento::shouldRegisterAnalyzerStatsChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterAnalyzerStatsChecker(const LangOptions &LO) {
   return true;
 }

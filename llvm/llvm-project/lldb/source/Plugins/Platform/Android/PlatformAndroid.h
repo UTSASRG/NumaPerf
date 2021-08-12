@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H
+#ifndef liblldb_PlatformAndroid_h_
+#define liblldb_PlatformAndroid_h_
 
 #include <memory>
 #include <string>
@@ -77,11 +77,10 @@ private:
   std::string m_device_id;
   uint32_t m_sdk_version;
 
-  PlatformAndroid(const PlatformAndroid &) = delete;
-  const PlatformAndroid &operator=(const PlatformAndroid &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformAndroid);
 };
 
 } // namespace platofor_android
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H
+#endif // liblldb_PlatformAndroid_h_

@@ -781,24 +781,24 @@ void MemorySSAUpdater::updateExitBlocksForClonedLoop(
 
 void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
                                     DominatorTree &DT) {
-  SmallVector<CFGUpdate, 4> DeleteUpdates;
+  SmallVector<CFGUpdate, 4> RevDeleteUpdates;
   SmallVector<CFGUpdate, 4> InsertUpdates;
   for (auto &Update : Updates) {
     if (Update.getKind() == DT.Insert)
       InsertUpdates.push_back({DT.Insert, Update.getFrom(), Update.getTo()});
     else
-      DeleteUpdates.push_back({DT.Delete, Update.getFrom(), Update.getTo()});
+      RevDeleteUpdates.push_back({DT.Insert, Update.getFrom(), Update.getTo()});
   }
 
-  if (!DeleteUpdates.empty()) {
+  if (!RevDeleteUpdates.empty()) {
     // Update for inserted edges: use newDT and snapshot CFG as if deletes had
     // not occurred.
     // FIXME: This creates a new DT, so it's more expensive to do mix
     // delete/inserts vs just inserts. We can do an incremental update on the DT
     // to revert deletes, than re-delete the edges. Teaching DT to do this, is
     // part of a pending cleanup.
-    DominatorTree NewDT(DT, DeleteUpdates);
-    GraphDiff<BasicBlock *> GD(DeleteUpdates, /*ReverseApplyUpdates=*/true);
+    DominatorTree NewDT(DT, RevDeleteUpdates);
+    GraphDiff<BasicBlock *> GD(RevDeleteUpdates);
     applyInsertUpdates(InsertUpdates, NewDT, &GD);
   } else {
     GraphDiff<BasicBlock *> GD;
@@ -806,7 +806,7 @@ void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
   }
 
   // Update for deleted edges
-  for (auto &Update : DeleteUpdates)
+  for (auto &Update : RevDeleteUpdates)
     removeEdge(Update.getFrom(), Update.getTo());
 }
 

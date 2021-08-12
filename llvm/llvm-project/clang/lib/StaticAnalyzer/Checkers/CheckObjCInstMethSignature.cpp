@@ -138,6 +138,6 @@ void ento::registerObjCMethSigsChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCMethSigsChecker>();
 }
 
-bool ento::shouldRegisterObjCMethSigsChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterObjCMethSigsChecker(const LangOptions &LO) {
   return true;
 }

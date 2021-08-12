@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_JITLOADER_H
-#define LLDB_TARGET_JITLOADER_H
+#ifndef liblldb_JITLoader_h_
+#define liblldb_JITLoader_h_
 
 #include <vector>
 
@@ -65,4 +65,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_JITLOADER_H
+#endif // liblldb_JITLoader_h_

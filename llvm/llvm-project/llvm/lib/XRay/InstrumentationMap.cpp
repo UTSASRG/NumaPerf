@@ -52,31 +52,26 @@ using RelocMap = DenseMap<uint64_t, uint64_t>;
 
 static Error
 loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
-        InstrumentationMap::SledContainer &Sleds,
-        InstrumentationMap::FunctionAddressMap &FunctionAddresses,
-        InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
+          InstrumentationMap::SledContainer &Sleds,
+          InstrumentationMap::FunctionAddressMap &FunctionAddresses,
+          InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
   InstrumentationMap Map;
 
   // Find the section named "xray_instr_map".
   if ((!ObjFile.getBinary()->isELF() && !ObjFile.getBinary()->isMachO()) ||
       !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||
         ObjFile.getBinary()->getArch() == Triple::ppc64le ||
-        ObjFile.getBinary()->getArch() == Triple::arm ||
         ObjFile.getBinary()->getArch() == Triple::aarch64))
     return make_error<StringError>(
-        "File format not supported (only does ELF and Mach-O little endian "
-        "64-bit).",
+        "File format not supported (only does ELF and Mach-O little endian 64-bit).",
         std::make_error_code(std::errc::not_supported));
 
   StringRef Contents = "";
   const auto &Sections = ObjFile.getBinary()->sections();
-  uint64_t Address = 0;
   auto I = llvm::find_if(Sections, [&](object::SectionRef Section) {
     Expected<StringRef> NameOrErr = Section.getName();
-    if (NameOrErr) {
-      Address = Section.getAddress();
+    if (NameOrErr)
       return *NameOrErr == "xray_instr_map";
-    }
     consumeError(NameOrErr.takeError());
     return false;
   });
@@ -96,14 +91,11 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     uint32_t RelativeRelocation = [](object::ObjectFile *ObjFile) {
       if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
-      else if (const auto *ELFObj =
-                   dyn_cast<object::ELF32BEObjectFile>(ObjFile))
+      else if (const auto *ELFObj = dyn_cast<object::ELF32BEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
-      else if (const auto *ELFObj =
-                   dyn_cast<object::ELF64LEObjectFile>(ObjFile))
+      else if (const auto *ELFObj = dyn_cast<object::ELF64LEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
-      else if (const auto *ELFObj =
-                   dyn_cast<object::ELF64BEObjectFile>(ObjFile))
+      else if (const auto *ELFObj = dyn_cast<object::ELF64BEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
       else
         return static_cast<uint32_t>(0);
@@ -116,21 +108,11 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
 
     for (const object::SectionRef &Section : Sections) {
       for (const object::RelocationRef &Reloc : Section.relocations()) {
-        if (ObjFile.getBinary()->getArch() == Triple::arm) {
-          if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
-            Expected<uint64_t> ValueOrErr = Reloc.getSymbol()->getValue();
-            if (!ValueOrErr)
-              return ValueOrErr.takeError();
-            Relocs.insert({Reloc.getOffset(), Resolver(Reloc, *ValueOrErr, 0)});
-          }
-        } else if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
+        if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
           auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend();
           auto A = AddendOrErr ? *AddendOrErr : 0;
-          Expected<uint64_t> ValueOrErr = Reloc.getSymbol()->getValue();
-          if (!ValueOrErr)
-            // TODO: Test this error.
-            return ValueOrErr.takeError();
-          Relocs.insert({Reloc.getOffset(), Resolver(Reloc, *ValueOrErr, A)});
+          uint64_t resolved = Resolver(Reloc, Reloc.getSymbol()->getValue(), A);
+          Relocs.insert({Reloc.getOffset(), resolved});
         } else if (Reloc.getType() == RelativeRelocation) {
           if (auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend())
             Relocs.insert({Reloc.getOffset(), *AddendOrErr});
@@ -141,13 +123,12 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
 
   // Copy the instrumentation map data into the Sleds data structure.
   auto C = Contents.bytes_begin();
-  bool Is32Bit = ObjFile.getBinary()->makeTriple().isArch32Bit();
-  size_t ELFSledEntrySize = Is32Bit ? 16 : 32;
+  static constexpr size_t ELF64SledEntrySize = 32;
 
-  if ((C - Contents.bytes_end()) % ELFSledEntrySize != 0)
+  if ((C - Contents.bytes_end()) % ELF64SledEntrySize != 0)
     return make_error<StringError>(
         Twine("Instrumentation map entries not evenly divisible by size of "
-              "an XRay sled entry."),
+              "an XRay sled entry in ELF64."),
         std::make_error_code(std::errc::executable_format_error));
 
   auto RelocateOrElse = [&](uint64_t Offset, uint64_t Address) {
@@ -160,26 +141,19 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     return Address;
   };
 
-  const int WordSize = Is32Bit ? 4 : 8;
   int32_t FuncId = 1;
   uint64_t CurFn = 0;
-  for (; C != Contents.bytes_end(); C += ELFSledEntrySize) {
+  for (; C != Contents.bytes_end(); C += ELF64SledEntrySize) {
     DataExtractor Extractor(
-        StringRef(reinterpret_cast<const char *>(C), ELFSledEntrySize), true,
+        StringRef(reinterpret_cast<const char *>(C), ELF64SledEntrySize), true,
         8);
     Sleds.push_back({});
     auto &Entry = Sleds.back();
     uint64_t OffsetPtr = 0;
     uint64_t AddrOff = OffsetPtr;
-    if (Is32Bit)
-      Entry.Address = RelocateOrElse(AddrOff, Extractor.getU32(&OffsetPtr));
-    else
-      Entry.Address = RelocateOrElse(AddrOff, Extractor.getU64(&OffsetPtr));
+    Entry.Address = RelocateOrElse(AddrOff, Extractor.getU64(&OffsetPtr));
     uint64_t FuncOff = OffsetPtr;
-    if (Is32Bit)
-      Entry.Function = RelocateOrElse(FuncOff, Extractor.getU32(&OffsetPtr));
-    else
-      Entry.Function = RelocateOrElse(FuncOff, Extractor.getU64(&OffsetPtr));
+    Entry.Function = RelocateOrElse(FuncOff, Extractor.getU64(&OffsetPtr));
     auto Kind = Extractor.getU8(&OffsetPtr);
     static constexpr SledEntry::FunctionKinds Kinds[] = {
         SledEntry::FunctionKinds::ENTRY, SledEntry::FunctionKinds::EXIT,
@@ -191,11 +165,6 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
           std::make_error_code(std::errc::executable_format_error));
     Entry.Kind = Kinds[Kind];
     Entry.AlwaysInstrument = Extractor.getU8(&OffsetPtr) != 0;
-    Entry.Version = Extractor.getU8(&OffsetPtr);
-    if (Entry.Version >= 2) {
-      Entry.Address += C - Contents.bytes_begin() + Address;
-      Entry.Function += C - Contents.bytes_begin() + WordSize + Address;
-    }
 
     // We do replicate the function id generation scheme implemented in the
     // XRay runtime.
@@ -240,8 +209,8 @@ loadYAML(sys::fs::file_t Fd, size_t FileSize, StringRef Filename,
   for (const auto &Y : YAMLSleds) {
     FunctionAddresses[Y.FuncId] = Y.Function;
     FunctionIds[Y.Function] = Y.FuncId;
-    Sleds.push_back(SledEntry{Y.Address, Y.Function, Y.Kind, Y.AlwaysInstrument,
-                              Y.Version});
+    Sleds.push_back(
+        SledEntry{Y.Address, Y.Function, Y.Kind, Y.AlwaysInstrument});
   }
   return Error::success();
 }
@@ -259,8 +228,7 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
   if (!ObjectFileOrError) {
     auto E = ObjectFileOrError.takeError();
     // We try to load it as YAML if the ELF load didn't work.
-    Expected<sys::fs::file_t> FdOrErr =
-        sys::fs::openNativeFileForRead(Filename);
+    Expected<sys::fs::file_t> FdOrErr = sys::fs::openNativeFileForRead(Filename);
     if (!FdOrErr) {
       // Report the ELF load error if YAML failed.
       consumeError(FdOrErr.takeError());
@@ -282,7 +250,7 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
                           Map.FunctionAddresses, Map.FunctionIds))
       return std::move(E);
   } else if (auto E = loadObj(Filename, *ObjectFileOrError, Map.Sleds,
-                              Map.FunctionAddresses, Map.FunctionIds)) {
+                                Map.FunctionAddresses, Map.FunctionIds)) {
     return std::move(E);
   }
   return Map;

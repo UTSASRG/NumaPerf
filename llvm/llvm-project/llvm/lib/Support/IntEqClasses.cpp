@@ -18,7 +18,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/IntEqClasses.h"
-#include <cassert>
 
 using namespace llvm;
 

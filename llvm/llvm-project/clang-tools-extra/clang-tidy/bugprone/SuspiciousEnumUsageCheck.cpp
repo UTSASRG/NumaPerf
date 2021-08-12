@@ -110,7 +110,7 @@ static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
 SuspiciousEnumUsageCheck::SuspiciousEnumUsageCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+      StrictMode(Options.getLocalOrGlobal("StrictMode", 0)) {}
 
 void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
@@ -131,7 +131,7 @@ void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("+", "|"),
+      binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("|")),
                      hasLHS(enumExpr("lhsExpr", "enumDecl")),
                      hasRHS(expr(enumExpr("rhsExpr", ""),
                                  ignoringImpCasts(hasType(
@@ -139,15 +139,16 @@ void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      binaryOperator(
-          hasAnyOperatorName("+", "|"),
-          hasOperands(expr(hasType(isInteger()), unless(enumExpr("", ""))),
-                      enumExpr("enumExpr", "enumDecl"))),
+      binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("|")),
+                     hasEitherOperand(
+                         expr(hasType(isInteger()), unless(enumExpr("", "")))),
+                     hasEitherOperand(enumExpr("enumExpr", "enumDecl"))),
       this);
 
-  Finder->addMatcher(binaryOperator(hasAnyOperatorName("|=", "+="),
-                                    hasRHS(enumExpr("enumExpr", "enumDecl"))),
-                     this);
+  Finder->addMatcher(
+      binaryOperator(anyOf(hasOperatorName("|="), hasOperatorName("+=")),
+                     hasRHS(enumExpr("enumExpr", "enumDecl"))),
+      this);
 }
 
 void SuspiciousEnumUsageCheck::checkSuspiciousBitmaskUsage(
@@ -156,7 +157,7 @@ void SuspiciousEnumUsageCheck::checkSuspiciousBitmaskUsage(
   const auto *EnumConst =
       EnumExpr ? dyn_cast<EnumConstantDecl>(EnumExpr->getDecl()) : nullptr;
 
-  // Report the parameter if necessary.
+  // Report the parameter if neccessary.
   if (!EnumConst) {
     diag(EnumDec->getInnerLocStart(), BitmaskVarErrorMessage)
         << countNonPowOfTwoLiteralNum(EnumDec);

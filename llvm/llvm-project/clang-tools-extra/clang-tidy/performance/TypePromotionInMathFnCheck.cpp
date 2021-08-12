@@ -31,9 +31,8 @@ AST_MATCHER_P(Type, isBuiltinType, BuiltinType::Kind, Kind) {
 TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            utils::IncludeSorter::getMapping(),
-                                            utils::IncludeSorter::IS_LLVM)) {}
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
+          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void TypePromotionInMathFnCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
@@ -44,8 +43,8 @@ void TypePromotionInMathFnCheck::registerPPCallbacks(
 
 void TypePromotionInMathFnCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle,
-                utils::IncludeSorter::getMapping());
+  Options.store(Opts, "IncludeStyle",
+                utils::IncludeSorter::toString(IncludeStyle));
 }
 
 void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {

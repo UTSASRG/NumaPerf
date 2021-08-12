@@ -9,7 +9,7 @@
 
 # CHECK-NOT: selected
 
-.section ".eh_frame", "a", @unwind
+.section ".eh_frame", "a", @progbits
 .globl foo
 foo:
   .quad 0

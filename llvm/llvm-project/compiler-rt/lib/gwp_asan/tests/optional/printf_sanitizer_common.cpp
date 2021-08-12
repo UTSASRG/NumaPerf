@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gwp_asan/optional/segv_handler.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "gwp_asan/options.h"
 
 namespace gwp_asan {
 namespace test {
@@ -15,6 +15,8 @@ namespace test {
 // their own signal-safe Printf function. In LLVM, we use
 // `optional/printf_sanitizer_common.cpp` which supplies the __sanitizer::Printf
 // for this purpose.
-crash_handler::Printf_t getPrintfFunction() { return __sanitizer::Printf; }
+options::Printf_t getPrintfFunction() {
+  return __sanitizer::Printf;
+}
 }; // namespace test
 }; // namespace gwp_asan

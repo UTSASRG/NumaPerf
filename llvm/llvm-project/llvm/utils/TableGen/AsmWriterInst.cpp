@@ -36,8 +36,6 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
     return Str;
 
   std::string Result = Str + "(MI";
-  if (PCRel)
-    Result += ", Address";
   if (MIOpNo != ~0U)
     Result += ", " + utostr(MIOpNo);
   if (PassSubtarget)
@@ -181,9 +179,7 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
         CGIOperandList::OperandInfo OpInfo = CGI.Operands[OpNo];
 
         unsigned MIOp = OpInfo.MIOperandNo;
-        Operands.emplace_back(OpInfo.PrinterMethodName, MIOp, Modifier,
-                              AsmWriterOperand::isMachineInstrOperand,
-                              OpInfo.OperandType == "MCOI::OPERAND_PCREL");
+        Operands.emplace_back(OpInfo.PrinterMethodName, MIOp, Modifier);
       }
       LastEmitted = VarEnd;
     }

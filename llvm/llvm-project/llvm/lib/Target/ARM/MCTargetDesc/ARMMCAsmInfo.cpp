@@ -37,6 +37,8 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
   ExceptionsType = (TheTriple.isOSDarwin() && !TheTriple.isWatchABI())
                        ? ExceptionHandling::SjLj
                        : ExceptionHandling::DwarfCFI;
+
+  UseIntegratedAssembler = true;
 }
 
 void ARMELFMCAsmInfo::anchor() { }
@@ -71,6 +73,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   // foo(plt) instead of foo@plt
   UseParensForSymbolVariant = true;
+
+  UseIntegratedAssembler = true;
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -112,6 +116,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   ExceptionsType = ExceptionHandling::DwarfCFI;
   UseParensForSymbolVariant = true;
 
+  UseIntegratedAssembler = true;
   DwarfRegNumForCFI = false;
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.

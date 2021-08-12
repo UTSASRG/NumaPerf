@@ -284,7 +284,7 @@ bool COFFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-      getStreamer().emitSymbolAttribute(Sym, Attr);
+      getStreamer().EmitSymbolAttribute(Sym, Attr);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -591,8 +591,8 @@ bool COFFAsmParser::ParseDirectiveLinkOnce(StringRef, SMLoc Loc) {
     return Error(Loc, "cannot make section associative with .linkonce");
 
   if (Current->getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT)
-    return Error(Loc, Twine("section '") + Current->getName() +
-                          "' is already linkonce");
+    return Error(Loc, Twine("section '") + Current->getSectionName() +
+                                                       "' is already linkonce");
 
   Current->setSelection(Type);
 

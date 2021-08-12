@@ -35,9 +35,6 @@
 /* Default architecture for OpenMP offloading to Nvidia GPUs. */
 #define CLANG_OPENMP_NVPTX_DEFAULT_ARCH "${CLANG_OPENMP_NVPTX_DEFAULT_ARCH}"
 
-/* Default architecture for SystemZ. */
-#define CLANG_SYSTEMZ_DEFAULT_ARCH "${CLANG_SYSTEMZ_DEFAULT_ARCH}"
-
 /* Multilib suffix for libdir. */
 #define CLANG_LIBDIR_SUFFIX "${CLANG_LIBDIR_SUFFIX}"
 

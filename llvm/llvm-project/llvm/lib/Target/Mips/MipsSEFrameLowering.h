@@ -28,11 +28,11 @@ public:
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+                             unsigned &FrameReg) const override;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
-                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const std::vector<CalleeSavedInfo> &CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;

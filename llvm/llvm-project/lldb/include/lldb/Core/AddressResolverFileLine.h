@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_ADDRESSRESOLVERFILELINE_H
-#define LLDB_CORE_ADDRESSRESOLVERFILELINE_H
+#ifndef liblldb_AddressResolverFileLine_h_
+#define liblldb_AddressResolverFileLine_h_
 
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/SearchFilter.h"
@@ -48,11 +48,9 @@ protected:
                   // functions or not.
 
 private:
-  AddressResolverFileLine(const AddressResolverFileLine &) = delete;
-  const AddressResolverFileLine &
-  operator=(const AddressResolverFileLine &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(AddressResolverFileLine);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_ADDRESSRESOLVERFILELINE_H
+#endif // liblldb_AddressResolverFileLine_h_

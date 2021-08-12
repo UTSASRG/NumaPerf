@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H
+#ifndef SymbolFileDWARF_DWARFASTParserClang_h_
+#define SymbolFileDWARF_DWARFASTParserClang_h_
 
 #include "clang/AST/CharUnits.h"
 #include "llvm/ADT/DenseMap.h"
@@ -19,10 +19,10 @@
 #include "DWARFDefines.h"
 #include "DWARFFormValue.h"
 #include "LogChannelDWARF.h"
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
-
-#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangASTImporter.h"
 
 #include <vector>
 
@@ -36,7 +36,7 @@ struct ParsedDWARFTypeAttributes;
 
 class DWARFASTParserClang : public DWARFASTParser {
 public:
-  DWARFASTParserClang(lldb_private::TypeSystemClang &ast);
+  DWARFASTParserClang(lldb_private::ClangASTContext &ast);
 
   ~DWARFASTParserClang() override;
 
@@ -78,19 +78,15 @@ protected:
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *, const DWARFDIE>
       DeclContextToDIEMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
-                         lldb_private::OptionalClangModuleID>
-      DIEToModuleMap;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
-  lldb_private::TypeSystemClang &m_ast;
+  lldb_private::ClangASTContext &m_ast;
   DIEToDeclMap m_die_to_decl;
   DeclToDIEMap m_decl_to_die;
   DIEToDeclContextMap m_die_to_decl_ctx;
   DeclContextToDIEMap m_decl_ctx_to_die;
-  DIEToModuleMap m_die_to_module;
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
   /// @}
 
@@ -101,11 +97,11 @@ protected:
   clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);
 
   bool ParseTemplateDIE(const DWARFDIE &die,
-                        lldb_private::TypeSystemClang::TemplateParameterInfos
+                        lldb_private::ClangASTContext::TemplateParameterInfos
                             &template_param_infos);
   bool ParseTemplateParameterInfos(
       const DWARFDIE &parent_die,
-      lldb_private::TypeSystemClang::TemplateParameterInfos
+      lldb_private::ClangASTContext::TemplateParameterInfos
           &template_param_infos);
 
   bool ParseChildMembers(
@@ -144,7 +140,6 @@ protected:
 
   clang::DeclContext *GetClangDeclContextContainingDIE(const DWARFDIE &die,
                                                        DWARFDIE *decl_ctx_die);
-  lldb_private::OptionalClangModuleID GetOwningClangModule(const DWARFDIE &die);
 
   bool CopyUniqueClassMethodTypes(const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,
@@ -194,10 +189,10 @@ private:
 
   void
   ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
-                    const lldb_private::CompilerType &class_clang_type,
+                    lldb_private::CompilerType &class_clang_type,
                     const lldb::LanguageType class_language,
                     std::vector<int> &member_accessibilities,
-                    lldb::AccessType default_accessibility,
+                    lldb::AccessType &default_accessibility,
                     DelayedPropertyList &delayed_properties,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
@@ -256,4 +251,4 @@ struct ParsedDWARFTypeAttributes {
   uint32_t encoding = 0;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H
+#endif // SymbolFileDWARF_DWARFASTParserClang_h_

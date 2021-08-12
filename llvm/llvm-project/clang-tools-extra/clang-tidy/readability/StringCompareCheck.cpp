@@ -23,6 +23,9 @@ static const StringRef CompareMessage = "do not use 'compare' to test equality "
                                         "operator instead";
 
 void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   const auto StrCompare = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasName("compare"),
                            ofClass(classTemplateSpecializationDecl(
@@ -31,18 +34,16 @@ void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
       callee(memberExpr().bind("str1")));
 
   // First and second case: cast str.compare(str) to boolean.
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               implicitCastExpr(hasImplicitDestinationType(booleanType()),
-                                has(StrCompare))
-                   .bind("match1")),
-      this);
+  Finder->addMatcher(implicitCastExpr(hasImplicitDestinationType(booleanType()),
+                                      has(StrCompare))
+                         .bind("match1"),
+                     this);
 
   // Third and fourth case: str.compare(str) == 0 and str.compare(str) != 0.
   Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("==", "!="),
-                     hasOperands(StrCompare.bind("compare"),
-                                 integerLiteral(equals(0)).bind("zero")))
+      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+                     hasEitherOperand(StrCompare.bind("compare")),
+                     hasEitherOperand(integerLiteral(equals(0)).bind("zero")))
           .bind("match2"),
       this);
 }

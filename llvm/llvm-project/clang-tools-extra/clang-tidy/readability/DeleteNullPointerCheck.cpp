@@ -35,19 +35,18 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto PointerCondition = castExpr(hasCastKind(CK_PointerToBoolean),
                                          hasSourceExpression(PointerExpr));
-  const auto BinaryPointerCheckCondition = binaryOperator(
-      hasOperands(castExpr(hasCastKind(CK_NullToPointer)), PointerExpr));
+  const auto BinaryPointerCheckCondition =
+      binaryOperator(hasEitherOperand(castExpr(hasCastKind(CK_NullToPointer))),
+                     hasEitherOperand(PointerExpr));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               ifStmt(hasCondition(
-                          anyOf(PointerCondition, BinaryPointerCheckCondition)),
-                      hasThen(anyOf(DeleteExpr, DeleteMemberExpr,
-                                    compoundStmt(anyOf(has(DeleteExpr),
-                                                       has(DeleteMemberExpr)),
-                                                 statementCountIs(1))
-                                        .bind("compound"))))
-                   .bind("ifWithDelete")),
+      ifStmt(hasCondition(anyOf(PointerCondition, BinaryPointerCheckCondition)),
+             hasThen(anyOf(
+                 DeleteExpr, DeleteMemberExpr,
+                 compoundStmt(anyOf(has(DeleteExpr), has(DeleteMemberExpr)),
+                              statementCountIs(1))
+                     .bind("compound"))))
+          .bind("ifWithDelete"),
       this);
 }
 

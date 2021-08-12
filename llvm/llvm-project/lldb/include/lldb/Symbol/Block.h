@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_BLOCK_H
-#define LLDB_SYMBOL_BLOCK_H
+#ifndef liblldb_Block_h_
+#define liblldb_Block_h_
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -40,7 +40,7 @@ namespace lldb_private {
 /// blocks.
 class Block : public UserID, public SymbolContextScope {
 public:
-  typedef RangeVector<uint32_t, uint32_t, 1> RangeList;
+  typedef RangeArray<uint32_t, uint32_t, 1> RangeList;
   typedef RangeList::Entry Range;
 
   /// Construct with a User ID \a uid, \a depth.
@@ -376,10 +376,9 @@ protected:
   Block *GetSiblingForChild(const Block *child_block) const;
 
 private:
-  Block(const Block &) = delete;
-  const Block &operator=(const Block &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Block);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_BLOCK_H
+#endif // liblldb_Block_h_

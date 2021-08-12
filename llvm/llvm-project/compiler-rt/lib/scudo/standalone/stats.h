@@ -58,9 +58,7 @@ class GlobalStats : public LocalStats {
 public:
   void initLinkerInitialized() {}
   void init() {
-    LocalStats::init();
-    Mutex.init();
-    StatsList = {};
+    memset(this, 0, sizeof(*this));
     initLinkerInitialized();
   }
 

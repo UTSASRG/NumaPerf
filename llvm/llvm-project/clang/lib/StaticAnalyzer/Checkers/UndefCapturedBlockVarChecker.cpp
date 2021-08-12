@@ -101,6 +101,6 @@ void ento::registerUndefCapturedBlockVarChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefCapturedBlockVarChecker>();
 }
 
-bool ento::shouldRegisterUndefCapturedBlockVarChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterUndefCapturedBlockVarChecker(const LangOptions &LO) {
   return true;
 }

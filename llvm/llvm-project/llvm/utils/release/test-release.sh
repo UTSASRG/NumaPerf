@@ -470,9 +470,9 @@ function package_release() {
     cd $BuildDir/Phase3/Release
     mv llvmCore-$Release-$RC.install/usr/local $Package
     if [ "$use_gzip" = "yes" ]; then
-      tar cf - $Package | gzip -9c > $BuildDir/$Package.tar.gz
+      tar cfz $BuildDir/$Package.tar.gz $Package
     else
-      tar cf - $Package | xz -9ce > $BuildDir/$Package.tar.xz
+      tar cfJ $BuildDir/$Package.tar.xz $Package
     fi
     mv $Package llvmCore-$Release-$RC.install/usr/local
     cd $cwd
@@ -483,10 +483,6 @@ function package_release() {
 # a pipe (i.e. it changes the output of ``false | tee /dev/null ; echo $?``)
 set -e
 set -o pipefail
-
-# Turn off core dumps, as some test cases can easily fill up even the largest
-# file systems.
-ulimit -c 0
 
 if [ "$do_checkout" = "yes" ]; then
     export_sources

@@ -482,10 +482,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::Half:
   case BuiltinType::PseudoObject:
   case BuiltinType::BuiltinFn:
-  case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::OMPArraySection:
-  case BuiltinType::OMPArrayShaping:
-  case BuiltinType::OMPIterator:
     break;
   }
 

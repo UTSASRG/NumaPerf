@@ -26,7 +26,7 @@ RelationSlab::lookup(const SymbolID &Subject, RelationKind Predicate) const {
 
 RelationSlab RelationSlab::Builder::build() && {
   // Sort in SPO order.
-  llvm::sort(Relations);
+  std::sort(Relations.begin(), Relations.end());
 
   // Remove duplicates.
   Relations.erase(std::unique(Relations.begin(), Relations.end()),

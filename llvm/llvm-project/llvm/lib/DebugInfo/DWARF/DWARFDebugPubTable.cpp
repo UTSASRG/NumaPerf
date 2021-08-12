@@ -28,16 +28,13 @@ DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
     Sets.push_back({});
     Set &SetData = Sets.back();
 
-    std::tie(SetData.Length, SetData.Format) =
-        PubNames.getInitialLength(&Offset);
-    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(SetData.Format);
-
+    SetData.Length = PubNames.getU32(&Offset);
     SetData.Version = PubNames.getU16(&Offset);
-    SetData.Offset = PubNames.getRelocatedValue(OffsetSize, &Offset);
-    SetData.Size = PubNames.getUnsigned(&Offset, OffsetSize);
+    SetData.Offset = PubNames.getRelocatedValue(4, &Offset);
+    SetData.Size = PubNames.getU32(&Offset);
 
     while (Offset < Sec.Data.size()) {
-      uint64_t DieRef = PubNames.getUnsigned(&Offset, OffsetSize);
+      uint32_t DieRef = PubNames.getU32(&Offset);
       if (DieRef == 0)
         break;
       uint8_t IndexEntryValue = GnuStyle ? PubNames.getU8(&Offset) : 0;
@@ -50,19 +47,15 @@ DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
 
 void DWARFDebugPubTable::dump(raw_ostream &OS) const {
   for (const Set &S : Sets) {
-    int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(S.Format);
-    OS << "length = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Length);
-    OS << ", format = " << dwarf::FormatString(S.Format);
-    OS << ", version = " << format("0x%04x", S.Version);
-    OS << ", unit_offset = "
-       << format("0x%0*" PRIx64, OffsetDumpWidth, S.Offset);
-    OS << ", unit_size = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Size)
-       << '\n';
+    OS << "length = " << format("0x%08x", S.Length);
+    OS << " version = " << format("0x%04x", S.Version);
+    OS << " unit_offset = " << format("0x%08" PRIx64, S.Offset);
+    OS << " unit_size = " << format("0x%08x", S.Size) << '\n';
     OS << (GnuStyle ? "Offset     Linkage  Kind     Name\n"
                     : "Offset     Name\n");
 
     for (const Entry &E : S.Entries) {
-      OS << format("0x%0*" PRIx64 " ", OffsetDumpWidth, E.SecOffset);
+      OS << format("0x%8.8" PRIx64 " ", E.SecOffset);
       if (GnuStyle) {
         StringRef EntryLinkage =
             GDBIndexEntryLinkageString(E.Descriptor.Linkage);

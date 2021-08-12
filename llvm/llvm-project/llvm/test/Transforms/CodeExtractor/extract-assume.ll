@@ -3,9 +3,9 @@
 ; Make sure this compiles. Check that function assumption cache is refreshed
 ; after extracting blocks with assume calls from the function.
 
-; CHECK: Cached assumptions for function: fun
+; CHECK:      Cached assumptions for function: fun
 ; CHECK-NEXT: Cached assumptions for function: fun.cold
-; CHECK-NOT: icmp uge
+; CHECK-NEXT:   %cmp = icmp uge i32 %x, 64
 
 declare void @fun2(i32) #0
 

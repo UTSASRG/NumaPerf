@@ -27,7 +27,7 @@ void HelperDeclRefGraph::print(raw_ostream &OS) const {
     OS << " (" << N << ") ";
     OS << " calls: ";
     for (auto CI = N->begin(), CE = N->end(); CI != CE; ++CI) {
-      CI->Callee->print(OS);
+      (*CI)->print(OS);
       OS << " (" << CI << ") ";
     }
     OS << '\n';
@@ -48,7 +48,7 @@ void HelperDeclRefGraph::addEdge(const Decl *Caller, const Decl *Callee) {
   // Allocate a new node, mark it as root, and process it's calls.
   CallGraphNode *CallerNode = getOrInsertNode(const_cast<Decl *>(Caller));
   CallGraphNode *CalleeNode = getOrInsertNode(const_cast<Decl *>(Callee));
-  CallerNode->addCallee({CalleeNode, /*CallExpr=*/nullptr});
+  CallerNode->addCallee(CalleeNode);
 }
 
 void HelperDeclRefGraph::dump() const { print(llvm::errs()); }

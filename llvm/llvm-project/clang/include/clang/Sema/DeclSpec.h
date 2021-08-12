@@ -23,7 +23,6 @@
 #define LLVM_CLANG_SEMA_DECLSPEC_H
 
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclObjCCommon.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/Lambda.h"
@@ -187,14 +186,14 @@ public:
   SourceLocation getLastQualifierNameLoc() const;
 
   /// No scope specifier.
-  bool isEmpty() const { return Range.isInvalid() && getScopeRep() == nullptr; }
+  bool isEmpty() const { return !Range.isValid(); }
   /// A scope specifier is present, but may be valid or invalid.
   bool isNotEmpty() const { return !isEmpty(); }
 
   /// An error occurred during parsing of the scope specifier.
-  bool isInvalid() const { return Range.isValid() && getScopeRep() == nullptr; }
+  bool isInvalid() const { return isNotEmpty() && getScopeRep() == nullptr; }
   /// A scope specifier is present, and it refers to a real scope.
-  bool isValid() const { return getScopeRep() != nullptr; }
+  bool isValid() const { return isNotEmpty() && getScopeRep() != nullptr; }
 
   /// Indicate that this nested-name-specifier is invalid.
   void SetInvalid(SourceRange R) {
@@ -279,7 +278,6 @@ public:
   static const TST TST_char32 = clang::TST_char32;
   static const TST TST_int = clang::TST_int;
   static const TST TST_int128 = clang::TST_int128;
-  static const TST TST_extint = clang::TST_extint;
   static const TST TST_half = clang::TST_half;
   static const TST TST_float = clang::TST_float;
   static const TST TST_double = clang::TST_double;
@@ -415,7 +413,7 @@ private:
             T == TST_underlyingType || T == TST_atomic);
   }
   static bool isExprRep(TST T) {
-    return (T == TST_typeofExpr || T == TST_decltype || T == TST_extint);
+    return (T == TST_typeofExpr || T == TST_decltype);
   }
   static bool isTemplateIdRep(TST T) {
     return (T == TST_auto || T == TST_decltype_auto);
@@ -670,13 +668,6 @@ public:
                        unsigned &DiagID, ParsedType Rep,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID, TypeResult Rep,
-                       const PrintingPolicy &Policy) {
-    if (Rep.isInvalid())
-      return SetTypeSpecError();
-    return SetTypeSpecType(T, Loc, PrevSpec, DiagID, Rep.get(), Policy);
-  }
-  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
                        unsigned &DiagID, Decl *Rep, bool Owned,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
@@ -706,9 +697,6 @@ public:
   bool SetTypePipe(bool isPipe, SourceLocation Loc,
                        const char *&PrevSpec, unsigned &DiagID,
                        const PrintingPolicy &Policy);
-  bool SetExtIntType(SourceLocation KWLoc, Expr *BitWidth,
-                     const char *&PrevSpec, unsigned &DiagID,
-                     const PrintingPolicy &Policy);
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
                       unsigned &DiagID);
   bool SetTypeSpecError();
@@ -842,10 +830,31 @@ public:
     DQ_CSNullability = 0x40
   };
 
+  /// PropertyAttributeKind - list of property attributes.
+  /// Keep this list in sync with LLVM's Dwarf.h ApplePropertyAttributes.
+  enum ObjCPropertyAttributeKind {
+    DQ_PR_noattr = 0x0,
+    DQ_PR_readonly = 0x01,
+    DQ_PR_getter = 0x02,
+    DQ_PR_assign = 0x04,
+    DQ_PR_readwrite = 0x08,
+    DQ_PR_retain = 0x10,
+    DQ_PR_copy = 0x20,
+    DQ_PR_nonatomic = 0x40,
+    DQ_PR_setter = 0x80,
+    DQ_PR_atomic = 0x100,
+    DQ_PR_weak =   0x200,
+    DQ_PR_strong = 0x400,
+    DQ_PR_unsafe_unretained = 0x800,
+    DQ_PR_nullability = 0x1000,
+    DQ_PR_null_resettable = 0x2000,
+    DQ_PR_class = 0x4000,
+    DQ_PR_direct = 0x8000,
+  };
+
   ObjCDeclSpec()
-      : objcDeclQualifier(DQ_None),
-        PropertyAttributes(ObjCPropertyAttribute::kind_noattr), Nullability(0),
-        GetterName(nullptr), SetterName(nullptr) {}
+    : objcDeclQualifier(DQ_None), PropertyAttributes(DQ_PR_noattr),
+      Nullability(0), GetterName(nullptr), SetterName(nullptr) { }
 
   ObjCDeclQualifier getObjCDeclQualifier() const {
     return (ObjCDeclQualifier)objcDeclQualifier;
@@ -857,35 +866,32 @@ public:
     objcDeclQualifier = (ObjCDeclQualifier) (objcDeclQualifier & ~DQVal);
   }
 
-  ObjCPropertyAttribute::Kind getPropertyAttributes() const {
-    return ObjCPropertyAttribute::Kind(PropertyAttributes);
+  ObjCPropertyAttributeKind getPropertyAttributes() const {
+    return ObjCPropertyAttributeKind(PropertyAttributes);
   }
-  void setPropertyAttributes(ObjCPropertyAttribute::Kind PRVal) {
+  void setPropertyAttributes(ObjCPropertyAttributeKind PRVal) {
     PropertyAttributes =
-        (ObjCPropertyAttribute::Kind)(PropertyAttributes | PRVal);
+      (ObjCPropertyAttributeKind)(PropertyAttributes | PRVal);
   }
 
   NullabilityKind getNullability() const {
-    assert(
-        ((getObjCDeclQualifier() & DQ_CSNullability) ||
-         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
-        "Objective-C declspec doesn't have nullability");
+    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
+            (getPropertyAttributes() & DQ_PR_nullability)) &&
+           "Objective-C declspec doesn't have nullability");
     return static_cast<NullabilityKind>(Nullability);
   }
 
   SourceLocation getNullabilityLoc() const {
-    assert(
-        ((getObjCDeclQualifier() & DQ_CSNullability) ||
-         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
-        "Objective-C declspec doesn't have nullability");
+    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
+            (getPropertyAttributes() & DQ_PR_nullability)) &&
+           "Objective-C declspec doesn't have nullability");
     return NullabilityLoc;
   }
 
   void setNullability(SourceLocation loc, NullabilityKind kind) {
-    assert(
-        ((getObjCDeclQualifier() & DQ_CSNullability) ||
-         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
-        "Set the nullability declspec or property attribute first");
+    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
+            (getPropertyAttributes() & DQ_PR_nullability)) &&
+           "Set the nullability declspec or property attribute first");
     Nullability = static_cast<unsigned>(kind);
     NullabilityLoc = loc;
   }
@@ -912,8 +918,8 @@ private:
   // (space saving is negligible).
   unsigned objcDeclQualifier : 7;
 
-  // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttribute::Kind
-  unsigned PropertyAttributes : NumObjCPropertyAttrsBits;
+  // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttributeKind
+  unsigned PropertyAttributes : 16;
 
   unsigned Nullability : 2;
 
@@ -1512,8 +1518,6 @@ struct DeclaratorChunk {
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
     unsigned TypeQuals : 5;
-    /// Location of the '*' token.
-    unsigned StarLoc;
     // CXXScopeSpec has a constructor, so it can't be a direct member.
     // So we need some pointer-aligned storage and a bit of trickery.
     alignas(CXXScopeSpec) char ScopeMem[sizeof(CXXScopeSpec)];
@@ -1656,13 +1660,11 @@ struct DeclaratorChunk {
 
   static DeclaratorChunk getMemberPointer(const CXXScopeSpec &SS,
                                           unsigned TypeQuals,
-                                          SourceLocation StarLoc,
-                                          SourceLocation EndLoc) {
+                                          SourceLocation Loc) {
     DeclaratorChunk I;
     I.Kind          = MemberPointer;
     I.Loc           = SS.getBeginLoc();
-    I.EndLoc = EndLoc;
-    I.Mem.StarLoc = StarLoc.getRawEncoding();
+    I.EndLoc        = Loc;
     I.Mem.TypeQuals = TypeQuals;
     new (I.Mem.ScopeMem) CXXScopeSpec(SS);
     return I;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_DEBUG_H
-#define LLDB_HOST_DEBUG_H
+#ifndef liblldb_Debug_h_
+#define liblldb_Debug_h_
 
 #include <vector>
 
@@ -148,4 +148,4 @@ struct ThreadStopInfo {
 };
 }
 
-#endif // LLDB_HOST_DEBUG_H
+#endif // liblldb_Debug_h_

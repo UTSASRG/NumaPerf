@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_GENEALOGY_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_GENEALOGY_H
+#ifndef __Genealogy_h__
+#define __Genealogy_h__
 
 #include <mach/task.h>
 #include <map>
@@ -116,4 +116,4 @@ private:
   bool m_diagnosticd_call_timed_out;
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_GENEALOGY_H
+#endif // __Genealogy_h__

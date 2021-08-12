@@ -7,7 +7,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include <cctype>
@@ -885,10 +884,11 @@ Function *getFunction(std::string Name) {
 /// CreateEntryBlockAlloca - Create an alloca instruction in the entry block of
 /// the function.  This is used for mutable variables etc.
 static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
-                                          StringRef VarName) {
+                                          const std::string &VarName) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                    TheFunction->getEntryBlock().begin());
-  return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), nullptr, VarName);
+  return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), nullptr,
+                           VarName.c_str());
 }
 
 Value *NumberExprAST::codegen() {
@@ -1277,7 +1277,7 @@ Function *FunctionAST::codegen() {
     Builder.CreateStore(&Arg, Alloca);
 
     // Add arguments to variable symbol table.
-    NamedValues[std::string(Arg.getName())] = Alloca;
+    NamedValues[Arg.getName()] = Alloca;
   }
 
   KSDbgInfo.emitLocation(Body.get());

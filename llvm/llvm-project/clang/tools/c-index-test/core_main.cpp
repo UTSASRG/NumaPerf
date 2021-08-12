@@ -260,9 +260,10 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(modulePath), *pchRdr, ASTUnit::LoadASTOnly, Diags,
+      modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
       FileSystemOpts, /*UseDebugInfo=*/false,
-      /*OnlyLocalDecls=*/true, None, CaptureDiagsKind::None,
+      /*OnlyLocalDecls=*/true, None,
+      CaptureDiagsKind::None,
       /*AllowPCHWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/false);
   if (!AU) {

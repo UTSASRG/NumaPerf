@@ -48,7 +48,6 @@ namespace {
     // RewindFunction - _Unwind_Resume or the target equivalent.
     FunctionCallee RewindFunction = nullptr;
 
-    CodeGenOpt::Level OptLevel;
     DominatorTree *DT = nullptr;
     const TargetLowering *TLI = nullptr;
 
@@ -62,8 +61,7 @@ namespace {
   public:
     static char ID; // Pass identification, replacement for typeid.
 
-    DwarfEHPrepare(CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
-      : FunctionPass(ID), OptLevel(OptLevel) {}
+    DwarfEHPrepare() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &Fn) override;
 
@@ -91,15 +89,12 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(DwarfEHPrepare, DEBUG_TYPE,
                     "Prepare DWARF exceptions", false, false)
 
-FunctionPass *llvm::createDwarfEHPass(CodeGenOpt::Level OptLevel) {
-  return new DwarfEHPrepare(OptLevel);
-}
+FunctionPass *llvm::createDwarfEHPass() { return new DwarfEHPrepare(); }
 
 void DwarfEHPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
-  if (OptLevel != CodeGenOpt::None)
-    AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<DominatorTreeWrapperPass>();
 }
 
 /// GetExceptionObject - Return the exception object from the value passed into
@@ -207,10 +202,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls(Function &Fn) {
 
   LLVMContext &Ctx = Fn.getContext();
 
-  size_t ResumesLeft = Resumes.size();
-  if (OptLevel != CodeGenOpt::None)
-    ResumesLeft = pruneUnreachableResumes(Fn, Resumes, CleanupLPads);
-
+  size_t ResumesLeft = pruneUnreachableResumes(Fn, Resumes, CleanupLPads);
   if (ResumesLeft == 0)
     return true; // We pruned them all.
 
@@ -267,8 +259,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls(Function &Fn) {
 bool DwarfEHPrepare::runOnFunction(Function &Fn) {
   const TargetMachine &TM =
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  DT = OptLevel != CodeGenOpt::None
-      ? &getAnalysis<DominatorTreeWrapperPass>().getDomTree() : nullptr;
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   TLI = TM.getSubtargetImpl(Fn)->getTargetLowering();
   bool Changed = InsertUnwindResumeCalls(Fn);
   DT = nullptr;

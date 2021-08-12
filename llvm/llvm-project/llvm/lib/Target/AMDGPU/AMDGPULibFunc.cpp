@@ -10,18 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPULibFunc.h"
 #include "AMDGPU.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "AMDGPULibFunc.h"
+#include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringSwitch.h>
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/raw_ostream.h"
+#include <llvm/Support/raw_ostream.h>
 #include <string>
 
 using namespace llvm;
@@ -480,6 +479,8 @@ static bool eatTerm(StringRef& mangledName, const char (&str)[N]) {
   return false;
 }
 
+static inline bool isDigit(char c) { return c >= '0' && c <= '9'; }
+
 static int eatNumber(StringRef& s) {
   size_t const savedSize = s.size();
   int n = 0;
@@ -604,7 +605,7 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
 
   // parse type
   char const TC = param.front();
-  if (isDigit(TC)) {
+  if (::isDigit(TC)) {
     res.ArgType = StringSwitch<AMDGPULibFunc::EType>
       (eatLengthPrefixedName(param))
       .Case("ocl_image1darray" , AMDGPULibFunc::IMG1DA)
@@ -862,7 +863,7 @@ std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
   Param P;
   while ((P = I.getNextParam()).ArgType != 0)
     Mangler(S, P);
-  return std::string(S.str());
+  return S.str();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -902,7 +903,7 @@ static Type* getIntrinsicParamType(
     return nullptr;
   }
   if (P.VectorSize > 1)
-    T = FixedVectorType::get(T, P.VectorSize);
+    T = VectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
     T = useAddrSpace ? T->getPointerTo((P.PtrKind & AMDGPULibFunc::ADDR_SPACE)
                                        - 1)
@@ -935,7 +936,7 @@ std::string AMDGPUMangledLibFunc::getName() const {
   SmallString<128> Buf;
   raw_svector_ostream OS(Buf);
   writeName(OS);
-  return std::string(OS.str());
+  return OS.str();
 }
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {

@@ -1,4 +1,4 @@
-//===-- SymbolContext.cpp -------------------------------------------------===//
+//===-- SymbolContext.cpp ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -117,7 +117,9 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       Block *inlined_block = block->GetContainingInlinedBlock();
       const InlineFunctionInfo *inlined_block_info =
           inlined_block->GetInlinedFunctionInfo();
-      s->Printf(" [inlined] %s", inlined_block_info->GetName().GetCString());
+      s->Printf(
+          " [inlined] %s",
+          inlined_block_info->GetName(function->GetLanguage()).GetCString());
 
       lldb_private::AddressRange block_range;
       if (inlined_block->GetRangeContainingAddress(addr, block_range)) {
@@ -655,12 +657,12 @@ SymbolContext::GetFunctionName(Mangled::NamePreference preference) const {
         const InlineFunctionInfo *inline_info =
             inlined_block->GetInlinedFunctionInfo();
         if (inline_info)
-          return inline_info->GetName();
+          return inline_info->GetName(function->GetLanguage());
       }
     }
-    return function->GetMangled().GetName(preference);
+    return function->GetMangled().GetName(function->GetLanguage(), preference);
   } else if (symbol && symbol->ValueIsAddress()) {
-    return symbol->GetMangled().GetName(preference);
+    return symbol->GetMangled().GetName(symbol->GetLanguage(), preference);
   } else {
     // No function, return an empty string.
     return ConstString();
@@ -1074,17 +1076,19 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
       if (inline_info != nullptr) {
         was_inlined = true;
         const Mangled &name = inline_info->GetMangled();
-        if (!name.NameMatches(func_name))
+        if (!name.NameMatches(func_name, sc.function->GetLanguage()))
           return false;
       }
     }
     //  If it wasn't inlined, check the name in the function or symbol:
     if (!was_inlined) {
       if (sc.function != nullptr) {
-        if (!sc.function->GetMangled().NameMatches(func_name))
+        if (!sc.function->GetMangled().NameMatches(func_name,
+                                                   sc.function->GetLanguage()))
           return false;
       } else if (sc.symbol != nullptr) {
-        if (!sc.symbol->GetMangled().NameMatches(func_name))
+        if (!sc.symbol->GetMangled().NameMatches(func_name,
+                                                 sc.symbol->GetLanguage()))
           return false;
       }
     }

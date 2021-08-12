@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBQUEUE_H
-#define LLDB_API_SBQUEUE_H
+#ifndef LLDB_SBQueue_h_
+#define LLDB_SBQueue_h_
 
 #include <vector>
 
@@ -66,4 +66,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBQUEUE_H
+#endif // LLDB_SBQueue_h_

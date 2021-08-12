@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUESINT64_H
-#define LLDB_INTERPRETER_OPTIONVALUESINT64_H
+#ifndef liblldb_OptionValueSInt64_h_
+#define liblldb_OptionValueSInt64_h_
 
 #include "lldb/Interpreter/OptionValue.h"
 
@@ -102,4 +102,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUESINT64_H
+#endif // liblldb_OptionValueSInt64_h_

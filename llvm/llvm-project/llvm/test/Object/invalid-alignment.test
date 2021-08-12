@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj -r %t.o 2>&1 | FileCheck %s
 
-# CHECK:      Format: elf64-x86-64
+# CHECK:      Format: ELF64-x86-64
 # CHECK-NEXT: Arch: x86_64
 # CHECK-NEXT: AddressSize: 64bit
 # CHECK-NEXT: LoadName:
@@ -25,4 +25,5 @@ Sections:
     Type:            SHT_RELA
     Info:            .foo
     Relocations:
-      - Type:        R_X86_64_NONE
+      - Offset:          0
+        Type:            R_X86_64_NONE

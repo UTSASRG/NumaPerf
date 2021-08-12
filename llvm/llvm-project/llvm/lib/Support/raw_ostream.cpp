@@ -65,16 +65,16 @@
 
 using namespace llvm;
 
-constexpr raw_ostream::Colors raw_ostream::BLACK;
-constexpr raw_ostream::Colors raw_ostream::RED;
-constexpr raw_ostream::Colors raw_ostream::GREEN;
-constexpr raw_ostream::Colors raw_ostream::YELLOW;
-constexpr raw_ostream::Colors raw_ostream::BLUE;
-constexpr raw_ostream::Colors raw_ostream::MAGENTA;
-constexpr raw_ostream::Colors raw_ostream::CYAN;
-constexpr raw_ostream::Colors raw_ostream::WHITE;
-constexpr raw_ostream::Colors raw_ostream::SAVEDCOLOR;
-constexpr raw_ostream::Colors raw_ostream::RESET;
+const raw_ostream::Colors raw_ostream::BLACK;
+const raw_ostream::Colors raw_ostream::RED;
+const raw_ostream::Colors raw_ostream::GREEN;
+const raw_ostream::Colors raw_ostream::YELLOW;
+const raw_ostream::Colors raw_ostream::BLUE;
+const raw_ostream::Colors raw_ostream::MAGENTA;
+const raw_ostream::Colors raw_ostream::CYAN;
+const raw_ostream::Colors raw_ostream::WHITE;
+const raw_ostream::Colors raw_ostream::SAVEDCOLOR;
+const raw_ostream::Colors raw_ostream::RESET;
 
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
@@ -343,33 +343,36 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
 }
 
 raw_ostream &raw_ostream::operator<<(const formatv_object_base &Obj) {
+  SmallString<128> S;
   Obj.format(*this);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(const FormattedString &FS) {
-  unsigned LeftIndent = 0;
-  unsigned RightIndent = 0;
-  const ssize_t Difference = FS.Width - FS.Str.size();
-  if (Difference > 0) {
-    switch (FS.Justify) {
-    case FormattedString::JustifyNone:
-      break;
-    case FormattedString::JustifyLeft:
-      RightIndent = Difference;
-      break;
-    case FormattedString::JustifyRight:
-      LeftIndent = Difference;
-      break;
-    case FormattedString::JustifyCenter:
-      LeftIndent = Difference / 2;
-      RightIndent = Difference - LeftIndent;
-      break;
-    }
+  if (FS.Str.size() >= FS.Width || FS.Justify == FormattedString::JustifyNone) {
+    this->operator<<(FS.Str);
+    return *this;
   }
-  indent(LeftIndent);
-  (*this) << FS.Str;
-  indent(RightIndent);
+  const size_t Difference = FS.Width - FS.Str.size();
+  switch (FS.Justify) {
+  case FormattedString::JustifyLeft:
+    this->operator<<(FS.Str);
+    this->indent(Difference);
+    break;
+  case FormattedString::JustifyRight:
+    this->indent(Difference);
+    this->operator<<(FS.Str);
+    break;
+  case FormattedString::JustifyCenter: {
+    int PadAmount = Difference / 2;
+    this->indent(PadAmount);
+    this->operator<<(FS.Str);
+    this->indent(Difference - PadAmount);
+    break;
+  }
+  default:
+    llvm_unreachable("Bad Justification");
+  }
   return *this;
 }
 
@@ -789,7 +792,7 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   // If this is a terminal, don't use buffering. Line buffering
   // would be a more traditional thing to do, but it's not worth
   // the complexity.
-  if (S_ISCHR(statbuf.st_mode) && is_displayed())
+  if (S_ISCHR(statbuf.st_mode) && isatty(FD))
     return 0;
   // Return the preferred block size.
   return statbuf.st_blksize;

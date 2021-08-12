@@ -23,6 +23,9 @@ namespace llvm_check {
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   auto Condition = hasCondition(implicitCastExpr(has(
       callExpr(
           allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
@@ -52,17 +55,15 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
           .bind("rhs");
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               stmt(anyOf(
-                   ifStmt(Any), whileStmt(Any), doStmt(Condition),
-                   binaryOperator(
-                       allOf(unless(isExpansionInFileMatching(
-                                 "llvm/include/llvm/Support/Casting.h")),
-                             hasOperatorName("&&"),
-                             hasLHS(implicitCastExpr().bind("lhs")),
-                             hasRHS(anyOf(implicitCastExpr(has(CallExpression)),
-                                          CallExpression))))
-                       .bind("and")))),
+      stmt(anyOf(ifStmt(Any), whileStmt(Any), doStmt(Condition),
+                 binaryOperator(
+                     allOf(unless(isExpansionInFileMatching(
+                               "llvm/include/llvm/Support/Casting.h")),
+                           hasOperatorName("&&"),
+                           hasLHS(implicitCastExpr().bind("lhs")),
+                           hasRHS(anyOf(implicitCastExpr(has(CallExpression)),
+                                        CallExpression))))
+                     .bind("and"))),
       this);
 }
 

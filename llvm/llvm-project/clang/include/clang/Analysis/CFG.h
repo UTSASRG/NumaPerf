@@ -624,10 +624,10 @@ class CFGBlock {
     template <bool IsOtherConst> friend class ElementRefImpl;
 
     using CFGBlockPtr =
-        std::conditional_t<IsConst, const CFGBlock *, CFGBlock *>;
+        typename std::conditional<IsConst, const CFGBlock *, CFGBlock *>::type;
 
-    using CFGElementPtr =
-        std::conditional_t<IsConst, const CFGElement *, CFGElement *>;
+    using CFGElementPtr = typename std::conditional<IsConst, const CFGElement *,
+                                                    CFGElement *>::type;
 
   protected:
     CFGBlockPtr Parent;
@@ -675,14 +675,15 @@ class CFGBlock {
     friend class ElementRefIterator;
 
     using CFGBlockRef =
-        std::conditional_t<IsConst, const CFGBlock *, CFGBlock *>;
+        typename std::conditional<IsConst, const CFGBlock *, CFGBlock *>::type;
 
-    using UnderlayingIteratorTy = std::conditional_t<
+    using UnderlayingIteratorTy = typename std::conditional<
         IsConst,
-        std::conditional_t<IsReverse, ElementList::const_reverse_iterator,
-                           ElementList::const_iterator>,
-        std::conditional_t<IsReverse, ElementList::reverse_iterator,
-                           ElementList::iterator>>;
+        typename std::conditional<IsReverse,
+                                  ElementList::const_reverse_iterator,
+                                  ElementList::const_iterator>::type,
+        typename std::conditional<IsReverse, ElementList::reverse_iterator,
+                                  ElementList::iterator>::type>::type;
 
     using IteratorTraits = typename std::iterator_traits<UnderlayingIteratorTy>;
     using ElementRef = typename CFGBlock::ElementRefImpl<IsConst>;

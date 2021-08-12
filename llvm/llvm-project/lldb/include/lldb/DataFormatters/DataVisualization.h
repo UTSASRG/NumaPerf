@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_DATAVISUALIZATION_H
-#define LLDB_DATAFORMATTERS_DATAVISUALIZATION_H
+#ifndef lldb_DataVisualization_h_
+#define lldb_DataVisualization_h_
+
 
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -121,4 +122,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_DATAVISUALIZATION_H
+#endif // lldb_DataVisualization_h_

@@ -114,21 +114,18 @@ static void delete_row(struct isl_basic_set *bset, unsigned row)
  * so that
  *		A[i][col] = B[i][col] = a * old(B[i][col])
  */
-static isl_stat construct_column(
-	__isl_keep isl_basic_set *bset1, __isl_keep isl_basic_set *bset2,
+static void construct_column(
+	struct isl_basic_set *bset1, struct isl_basic_set *bset2,
 	unsigned row, unsigned col)
 {
 	int r;
 	isl_int a;
 	isl_int b;
-	isl_size total;
-
-	total = isl_basic_set_dim(bset1, isl_dim_set);
-	if (total < 0)
-		return isl_stat_error;
+	unsigned total;
 
 	isl_int_init(a);
 	isl_int_init(b);
+	total = 1 + isl_basic_set_n_dim(bset1);
 	for (r = 0; r < row; ++r) {
 		if (isl_int_is_zero(bset2->eq[r][col]))
 			continue;
@@ -136,14 +133,12 @@ static isl_stat construct_column(
 		isl_int_divexact(a, bset1->eq[row][col], b);
 		isl_int_divexact(b, bset2->eq[r][col], b);
 		isl_seq_combine(bset1->eq[r], a, bset1->eq[r],
-					      b, bset1->eq[row], 1 + total);
-		isl_seq_scale(bset2->eq[r], bset2->eq[r], a, 1 + total);
+					      b, bset1->eq[row], total);
+		isl_seq_scale(bset2->eq[r], bset2->eq[r], a, total);
 	}
 	isl_int_clear(a);
 	isl_int_clear(b);
 	delete_row(bset1, row);
-
-	return isl_stat_ok;
 }
 
 /* Make first row entries in column col of bset1 identical to
@@ -155,23 +150,21 @@ static isl_stat construct_column(
  * so that
  *	A[i][col] = B[i][col] = old(A[t][col]*B[i][col]-A[i][col]*B[t][col])
  */
-static isl_bool transform_column(
-	__isl_keep isl_basic_set *bset1, __isl_keep isl_basic_set *bset2,
+static int transform_column(
+	struct isl_basic_set *bset1, struct isl_basic_set *bset2,
 	unsigned row, unsigned col)
 {
 	int i, t;
 	isl_int a, b, g;
-	isl_size total;
+	unsigned total;
 
 	for (t = row-1; t >= 0; --t)
 		if (isl_int_ne(bset1->eq[t][col], bset2->eq[t][col]))
 			break;
 	if (t < 0)
-		return isl_bool_false;
+		return 0;
 
-	total = isl_basic_set_dim(bset1, isl_dim_set);
-	if (total < 0)
-		return isl_bool_error;
+	total = 1 + isl_basic_set_n_dim(bset1);
 	isl_int_init(a);
 	isl_int_init(b);
 	isl_int_init(g);
@@ -182,16 +175,16 @@ static isl_bool transform_column(
 		isl_int_divexact(a, a, g);
 		isl_int_divexact(g, b, g);
 		isl_seq_combine(bset1->eq[i], g, bset1->eq[i], a, bset1->eq[t],
-				1 + total);
+				total);
 		isl_seq_combine(bset2->eq[i], g, bset2->eq[i], a, bset2->eq[t],
-				1 + total);
+				total);
 	}
 	isl_int_clear(a);
 	isl_int_clear(b);
 	isl_int_clear(g);
 	delete_row(bset1, t);
 	delete_row(bset2, t);
-	return isl_bool_true;
+	return 1;
 }
 
 /* The implementation is based on Section 5.2 of Michael Karr,
@@ -199,19 +192,17 @@ static isl_bool transform_column(
  * except that the echelon form we use starts from the last column
  * and that we are dealing with integer coefficients.
  */
-static __isl_give isl_basic_set *affine_hull(
-	__isl_take isl_basic_set *bset1, __isl_take isl_basic_set *bset2)
+static struct isl_basic_set *affine_hull(
+	struct isl_basic_set *bset1, struct isl_basic_set *bset2)
 {
-	isl_size dim;
 	unsigned total;
 	int col;
 	int row;
 
-	dim = isl_basic_set_dim(bset1, isl_dim_set);
-	if (dim < 0 || !bset2)
+	if (!bset1 || !bset2)
 		goto error;
 
-	total = 1 + dim;
+	total = 1 + isl_basic_set_n_dim(bset1);
 
 	row = 0;
 	for (col = total-1; col >= 0; --col) {
@@ -223,18 +214,11 @@ static __isl_give isl_basic_set *affine_hull(
 			set_common_multiple(bset1, bset2, row, col);
 			++row;
 		} else if (!is_zero1 && is_zero2) {
-			if (construct_column(bset1, bset2, row, col) < 0)
-				goto error;
+			construct_column(bset1, bset2, row, col);
 		} else if (is_zero1 && !is_zero2) {
-			if (construct_column(bset2, bset1, row, col) < 0)
-				goto error;
+			construct_column(bset2, bset1, row, col);
 		} else {
-			isl_bool transform;
-
-			transform = transform_column(bset1, bset2, row, col);
-			if (transform < 0)
-				goto error;
-			if (transform)
+			if (transform_column(bset1, bset2, row, col))
 				--row;
 		}
 	}
@@ -317,17 +301,11 @@ __isl_give isl_basic_set *isl_basic_set_recession_cone(
 	__isl_take isl_basic_set *bset)
 {
 	int i;
-	isl_bool empty;
-
-	empty = isl_basic_set_plain_is_empty(bset);
-	if (empty < 0)
-		return isl_basic_set_free(bset);
-	if (empty)
-		return bset;
 
 	bset = isl_basic_set_cow(bset);
-	if (isl_basic_set_check_no_locals(bset) < 0)
-		return isl_basic_set_free(bset);
+	if (!bset)
+		return NULL;
+	isl_assert(bset->ctx, bset->n_div == 0, goto error);
 
 	for (i = 0; i < bset->n_eq; ++i)
 		isl_int_set_si(bset->eq[i][0], 0);
@@ -337,6 +315,9 @@ __isl_give isl_basic_set *isl_basic_set_recession_cone(
 
 	ISL_F_CLR(bset, ISL_BASIC_SET_NO_IMPLICIT);
 	return isl_basic_set_implicit_equalities(bset);
+error:
+	isl_basic_set_free(bset);
+	return NULL;
 }
 
 /* Move "sample" to a point that is one up (or down) from the original
@@ -362,11 +343,12 @@ static __isl_give isl_basic_set *add_adjacent_points(
 	__isl_keep isl_basic_set *bset)
 {
 	int i, up;
-	isl_size dim;
+	int dim;
+
+	if (!sample)
+		goto error;
 
 	dim = isl_basic_set_dim(hull, isl_dim_set);
-	if (!sample || dim < 0)
-		goto error;
 
 	for (i = 0; i < dim; ++i) {
 		for (up = 0; up <= 1; ++up) {
@@ -494,20 +476,17 @@ static __isl_give isl_basic_set *initialize_hull(__isl_keep isl_basic_set *bset,
  * we check if there is any point on a hyperplane parallel to the
  * corresponding hyperplane shifted by at least one (in either direction).
  */
-static __isl_give isl_basic_set *uset_affine_hull_bounded(
-	__isl_take isl_basic_set *bset)
+static struct isl_basic_set *uset_affine_hull_bounded(struct isl_basic_set *bset)
 {
 	struct isl_vec *sample = NULL;
 	struct isl_basic_set *hull;
 	struct isl_tab *tab = NULL;
-	isl_size dim;
+	unsigned dim;
 
 	if (isl_basic_set_plain_is_empty(bset))
 		return bset;
 
-	dim = isl_basic_set_dim(bset, isl_dim_set);
-	if (dim < 0)
-		return isl_basic_set_free(bset);
+	dim = isl_basic_set_n_dim(bset);
 
 	if (bset->sample && bset->sample->size == 1 + dim) {
 		int contains = isl_basic_set_contains(bset, bset->sample);
@@ -578,7 +557,7 @@ static __isl_give isl_basic_set *initial_hull(struct isl_tab *tab,
 	int k;
 	struct isl_basic_set *bset = NULL;
 	struct isl_ctx *ctx;
-	isl_size dim;
+	unsigned dim;
 
 	if (!vec || !tab)
 		return NULL;
@@ -586,10 +565,9 @@ static __isl_give isl_basic_set *initial_hull(struct isl_tab *tab,
 	isl_assert(ctx, vec->size != 0, goto error);
 
 	bset = isl_basic_set_alloc(ctx, 0, vec->size - 1, 0, vec->size - 1, 0);
-	dim = isl_basic_set_dim(bset, isl_dim_set);
-	if (dim < 0)
+	if (!bset)
 		goto error;
-	dim -= tab->n_unbounded;
+	dim = isl_basic_set_n_dim(bset) - tab->n_unbounded;
 	for (i = 0; i < dim; ++i) {
 		k = isl_basic_set_alloc_equality(bset);
 		if (k < 0)
@@ -729,15 +707,15 @@ error:
 static struct isl_basic_set *affine_hull_with_cone(struct isl_basic_set *bset,
 	struct isl_basic_set *cone)
 {
-	isl_size total;
+	unsigned total;
 	unsigned cone_dim;
 	struct isl_basic_set *hull;
 	struct isl_mat *M, *U, *Q;
 
-	total = isl_basic_set_dim(cone, isl_dim_all);
-	if (!bset || total < 0)
+	if (!bset || !cone)
 		goto error;
 
+	total = isl_basic_set_total_dim(cone);
 	cone_dim = total - cone->n_eq;
 
 	M = isl_mat_sub_alloc6(bset->ctx, cone->eq, 0, cone->n_eq, 1, total);
@@ -807,7 +785,6 @@ error:
 static struct isl_basic_set *uset_affine_hull(struct isl_basic_set *bset)
 {
 	struct isl_basic_set *cone;
-	isl_size total;
 
 	if (isl_basic_set_plain_is_empty(bset))
 		return bset;
@@ -823,10 +800,7 @@ static struct isl_basic_set *uset_affine_hull(struct isl_basic_set *bset)
 		return isl_basic_set_universe(space);
 	}
 
-	total = isl_basic_set_dim(cone, isl_dim_all);
-	if (total < 0)
-		bset = isl_basic_set_free(bset);
-	if (cone->n_eq < total)
+	if (cone->n_eq < isl_basic_set_total_dim(cone))
 		return affine_hull_with_cone(bset, cone);
 
 	isl_basic_set_free(cone);
@@ -902,7 +876,6 @@ __isl_give isl_basic_map *isl_basic_map_detect_equalities(
 	__isl_take isl_basic_map *bmap)
 {
 	int i, j;
-	isl_size total;
 	struct isl_basic_set *hull = NULL;
 
 	if (!bmap)
@@ -923,15 +896,14 @@ __isl_give isl_basic_map *isl_basic_map_detect_equalities(
 		isl_basic_set_free(hull);
 		return isl_basic_map_set_to_empty(bmap);
 	}
-	bmap = isl_basic_map_extend(bmap, 0, hull->n_eq, 0);
-	total = isl_basic_set_dim(hull, isl_dim_all);
-	if (total < 0)
-		goto error;
+	bmap = isl_basic_map_extend_space(bmap, isl_space_copy(bmap->dim), 0,
+					hull->n_eq, 0);
 	for (i = 0; i < hull->n_eq; ++i) {
 		j = isl_basic_map_alloc_equality(bmap);
 		if (j < 0)
 			goto error;
-		isl_seq_cpy(bmap->eq[j], hull->eq[i], 1 + total);
+		isl_seq_cpy(bmap->eq[j], hull->eq[i],
+				1 + isl_basic_set_total_dim(hull));
 	}
 	isl_vec_free(bmap->sample);
 	bmap->sample = isl_vec_copy(hull->sample);
@@ -1029,7 +1001,8 @@ static __isl_give isl_basic_map *add_strides(__isl_take isl_basic_map *bmap,
 	if (isl_int_is_one(M->row[0][0]))
 		return bmap;
 
-	bmap = isl_basic_map_extend(bmap, M->n_row - 1, M->n_row - 1, 0);
+	bmap = isl_basic_map_extend_space(bmap, isl_space_copy(bmap->dim),
+					M->n_row - 1, M->n_row - 1, 0);
 
 	isl_int_init(gcd);
 	for (i = 1; i < M->n_row; ++i) {
@@ -1087,10 +1060,10 @@ error:
 static __isl_give isl_basic_map *isl_basic_map_make_strides_explicit(
 	__isl_take isl_basic_map *bmap)
 {
-	isl_bool known;
+	int known;
 	int n_known;
 	int n, n_col;
-	isl_size v_div;
+	int total;
 	isl_ctx *ctx;
 	isl_mat *A, *B, *M;
 
@@ -1108,18 +1081,16 @@ static __isl_give isl_basic_map *isl_basic_map_make_strides_explicit(
 		if (isl_int_is_zero(bmap->div[n_known][0]))
 			break;
 	ctx = isl_basic_map_get_ctx(bmap);
-	v_div = isl_basic_map_var_offset(bmap, isl_dim_div);
-	if (v_div < 0)
-		return isl_basic_map_free(bmap);
+	total = isl_space_dim(bmap->dim, isl_dim_all);
 	for (n = 0; n < bmap->n_eq; ++n)
-		if (isl_seq_first_non_zero(bmap->eq[n] + 1 + v_div + n_known,
+		if (isl_seq_first_non_zero(bmap->eq[n] + 1 + total + n_known,
 					    bmap->n_div - n_known) == -1)
 			break;
 	if (n == 0)
 		return bmap;
-	B = isl_mat_sub_alloc6(ctx, bmap->eq, 0, n, 0, 1 + v_div + n_known);
+	B = isl_mat_sub_alloc6(ctx, bmap->eq, 0, n, 0, 1 + total + n_known);
 	n_col = bmap->n_div - n_known;
-	A = isl_mat_sub_alloc6(ctx, bmap->eq, 0, n, 1 + v_div + n_known, n_col);
+	A = isl_mat_sub_alloc6(ctx, bmap->eq, 0, n, 1 + total + n_known, n_col);
 	A = isl_mat_left_hermite(A, 0, NULL, NULL);
 	A = isl_mat_drop_cols(A, n, n_col - n);
 	A = isl_mat_lin_to_aff(A);

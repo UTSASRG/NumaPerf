@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_PIPEBASE_H
-#define LLDB_HOST_PIPEBASE_H
+#ifndef liblldb_Host_PipeBase_h_
+#define liblldb_Host_PipeBase_h_
 
 #include <chrono>
 #include <string>

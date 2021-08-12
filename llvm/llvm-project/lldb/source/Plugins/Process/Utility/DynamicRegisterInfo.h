@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H
+#ifndef lldb_DynamicRegisterInfo_h_
+#define lldb_DynamicRegisterInfo_h_
 
 #include <map>
 #include <vector>
@@ -90,4 +90,4 @@ protected:
                                     // all registers
   bool m_finalized = false;
 };
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H
+#endif // lldb_DynamicRegisterInfo_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_ARMUTILS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_ARMUTILS_H
+#ifndef lldb_ARMUtils_h_
+#define lldb_ARMUtils_h_
 
 #include "ARMDefines.h"
 #include "InstructionUtils.h"
@@ -371,4 +371,4 @@ static inline bool BadReg(uint32_t n) { return n == 13 || n == 15; }
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_ARMUTILS_H
+#endif // lldb_ARMUtils_h_

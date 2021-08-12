@@ -16,6 +16,7 @@
 #include "MipsRegisterInfo.h"
 
 namespace llvm {
+class Mips16InstrInfo;
 
 class Mips16RegisterInfo : public MipsRegisterInfo {
 public:
@@ -28,10 +29,10 @@ public:
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 
   bool saveScavengerRegister(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator I,
-                             MachineBasicBlock::iterator &UseMI,
-                             const TargetRegisterClass *RC,
-                             Register Reg) const override;
+                                     MachineBasicBlock::iterator I,
+                                     MachineBasicBlock::iterator &UseMI,
+                                     const TargetRegisterClass *RC,
+                                     unsigned Reg) const override;
 
   const TargetRegisterClass *intRegClass(unsigned Size) const override;
 

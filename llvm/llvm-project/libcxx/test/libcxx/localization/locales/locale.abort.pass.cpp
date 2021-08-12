@@ -12,7 +12,7 @@
 
 // explicit locale( const char* std_name );
 
-// REQUIRES: no-exceptions
+// REQUIRES: libcpp-no-exceptions
 
 // Make sure we abort() when we construct a locale with a null name and
 // exceptions are disabled.

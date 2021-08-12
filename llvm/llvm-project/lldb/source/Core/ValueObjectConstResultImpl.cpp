@@ -1,4 +1,4 @@
-//===-- ValueObjectConstResultImpl.cpp ------------------------------------===//
+//===-- ValueObjectConstResultImpl.cpp ---------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/SharingPtr.h"
 
 #include <string>
 

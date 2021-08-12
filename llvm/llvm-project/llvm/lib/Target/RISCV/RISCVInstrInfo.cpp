@@ -112,7 +112,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
-                                         Register SrcReg, bool IsKill, int FI,
+                                         unsigned SrcReg, bool IsKill, int FI,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -139,7 +139,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
-                                          Register DstReg, int FI,
+                                          unsigned DstReg, int FI,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -342,7 +342,7 @@ unsigned RISCVInstrInfo::insertBranch(
     *BytesAdded = 0;
 
   // Shouldn't be a fall through.
-  assert(TBB && "insertBranch must not be told to insert a fallthrough");
+  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "RISCV branch conditions have two components!");
 
@@ -473,7 +473,6 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
   case RISCV::PseudoCALLReg:
   case RISCV::PseudoCALL:
-  case RISCV::PseudoJump:
   case RISCV::PseudoTAIL:
   case RISCV::PseudoLLA:
   case RISCV::PseudoLA:
@@ -777,8 +776,6 @@ void RISCVInstrInfo::buildOutlinedFrame(
       }
     }
   }
-
-  MBB.addLiveIn(RISCV::X5);
 
   // Add in a return instruction to the end of the outlined frame.
   MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))

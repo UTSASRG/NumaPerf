@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginProcessLinux
+add_lldb_library(lldbPluginProcessLinux PLUGIN
   NativeProcessLinux.cpp
   NativeRegisterContextLinux.cpp
   NativeRegisterContextLinux_arm.cpp

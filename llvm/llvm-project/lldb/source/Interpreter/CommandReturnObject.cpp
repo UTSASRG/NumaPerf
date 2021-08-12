@@ -1,4 +1,4 @@
-//===-- CommandReturnObject.cpp -------------------------------------------===//
+//===-- CommandReturnObject.cpp ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,9 +14,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
+static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s,
+                                          bool add_newline_if_empty) {
   bool add_newline = false;
-  if (!s.empty()) {
+  if (s.empty()) {
+    add_newline = add_newline_if_empty;
+  } else {
     // We already checked for empty above, now make sure there is a newline in
     // the error, and if there isn't one, add one.
     strm.Write(s.c_str(), s.size());
@@ -43,11 +46,11 @@ void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   sstrm.PrintfVarArg(format, args);
   va_end(args);
 
-  const std::string &s = std::string(sstrm.GetString());
+  const std::string &s = sstrm.GetString();
   if (!s.empty()) {
     Stream &error_strm = GetErrorStream();
     error_strm.PutCString("error: ");
-    DumpStringToStreamWithNewline(error_strm, s);
+    DumpStringToStreamWithNewline(error_strm, s, false);
   }
 }
 

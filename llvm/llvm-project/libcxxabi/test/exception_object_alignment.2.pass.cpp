@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: libcxxabi-no-exceptions
 
 // This test checks that the compiler does not make incorrect assumptions
 // about the alignment of the exception (only in that specific case, of

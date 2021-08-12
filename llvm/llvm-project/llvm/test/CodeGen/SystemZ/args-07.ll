@@ -1,8 +1,6 @@
 ; Test multiple return values (LLVM ABI extension)
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -verify-machineinstrs| FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -verify-machineinstrs \
-; RUN:   -mattr=soft-float | FileCheck %s --check-prefix=SOFT-FLOAT
 
 ; Up to four integer return values fit into GPRs.
 define { i64, i64, i64, i64 } @f1() {
@@ -39,14 +37,6 @@ define { double, double, double, double } @f3() {
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
 ; CHECK: ldeb %f6, 0([[TMP]])
 ; CHECK: br %r14
-
-; SOFT-FLOAT-LABEL: f3:
-; SOFT-FLOAT-NOT: %{{[fv]}}
-; SOFT-FLOAT: llihh   %r2, 16368
-; SOFT-FLOAT-NEXT: llihh   %r3, 16384
-; SOFT-FLOAT-NEXT: llihh   %r4, 16392
-; SOFT-FLOAT-NEXT: llihh   %r5, 16400
-; SOFT-FLOAT-NEXT: br      %r14
   ret { double, double, double, double }
       { double 1.0, double 2.0, double 3.0, double 4.0 }
 }
@@ -65,21 +55,6 @@ define { double, double, double, double, double } @f4() {
 ; CHECK: llihh [[TMP:%r[0-5]]], 16368
 ; CHECK: stg [[TMP]], 0(%r2)
 ; CHECK: br %r14
-
-; SOFT-FLOAT-LABEL: f4:
-; SOFT-FLOAT-NOT: %{{[fv]}}
-; SOFT-FLOAT-NOT: %r2
-; SOFT-FLOAT: llihh   %r0, 16404
-; SOFT-FLOAT-NEXT: stg     %r0, 32(%r2)
-; SOFT-FLOAT-NEXT: llihh   %r0, 16400
-; SOFT-FLOAT-NEXT: stg     %r0, 24(%r2)
-; SOFT-FLOAT-NEXT: llihh   %r0, 16392
-; SOFT-FLOAT-NEXT: stg     %r0, 16(%r2)
-; SOFT-FLOAT-NEXT: llihh   %r0, 16384
-; SOFT-FLOAT-NEXT: stg     %r0, 8(%r2)
-; SOFT-FLOAT-NEXT: llihh   %r0, 16368
-; SOFT-FLOAT-NEXT: stg     %r0, 0(%r2)
-; SOFT-FLOAT-NEXT: br      %r14
   ret { double, double, double, double, double }
       { double 1.0, double 2.0, double 3.0, double 4.0, double 5.0 }
 }

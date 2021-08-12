@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_STOPPOINTLOCATION_H
-#define LLDB_BREAKPOINT_STOPPOINTLOCATION_H
+#ifndef liblldb_StoppointLocation_h_
+#define liblldb_StoppointLocation_h_
 
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
@@ -48,7 +48,7 @@ public:
 
   virtual void Dump(Stream *stream) const {}
 
-  virtual void SetHardwareIndex(uint32_t index) { m_hardware_index = index; }
+  void SetHardwareIndex(uint32_t index) { m_hardware_index = index; }
 
   lldb::break_id_t GetID() const { return m_loc_id; }
 
@@ -77,11 +77,10 @@ protected:
 
 private:
   // For StoppointLocation only
-  StoppointLocation(const StoppointLocation &) = delete;
-  const StoppointLocation &operator=(const StoppointLocation &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(StoppointLocation);
   StoppointLocation() = delete;
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_STOPPOINTLOCATION_H
+#endif // liblldb_StoppointLocation_h_

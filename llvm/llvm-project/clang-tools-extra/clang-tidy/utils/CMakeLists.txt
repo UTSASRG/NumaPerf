@@ -1,22 +1,18 @@
-set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-  )
+set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyUtils
   ASTUtils.cpp
   DeclRefExprUtils.cpp
   ExceptionAnalyzer.cpp
   ExprSequence.cpp
-  FileExtensionsUtils.cpp
   FixItHintUtils.cpp
+  HeaderFileExtensionsUtils.cpp
   HeaderGuard.cpp
   IncludeInserter.cpp
   IncludeSorter.cpp
   LexerUtils.cpp
   NamespaceAliaser.cpp
   OptionsUtils.cpp
-  RenamerClangTidyCheck.cpp
   TransformerClangTidyCheck.cpp
   TypeTraits.cpp
   UsingInserter.cpp

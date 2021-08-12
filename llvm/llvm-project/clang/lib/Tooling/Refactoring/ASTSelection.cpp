@@ -13,6 +13,7 @@
 
 using namespace clang;
 using namespace tooling;
+using ast_type_traits::DynTypedNode;
 
 namespace {
 

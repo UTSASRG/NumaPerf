@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
   Support
   )
 
@@ -17,7 +16,6 @@ add_clang_unittest(ASTMatchersTests
   ASTMatchersNodeTest.cpp
   ASTMatchersNarrowingTest.cpp
   ASTMatchersTraversalTest.cpp
-  GtestMatchersTest.cpp
   )
 
 clang_target_link_libraries(ASTMatchersTests
@@ -29,10 +27,5 @@ clang_target_link_libraries(ASTMatchersTests
   clangSerialization
   clangTooling
   )
-
-target_link_libraries(ASTMatchersTests
-  PRIVATE
-  LLVMTestingSupport
-)
 
 add_subdirectory(Dynamic)

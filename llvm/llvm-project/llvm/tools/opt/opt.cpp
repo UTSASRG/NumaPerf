@@ -21,19 +21,18 @@
 #include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/CommandFlags.inc"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
@@ -55,15 +54,12 @@
 #include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include <algorithm>
 #include <memory>
 using namespace llvm;
 using namespace opt_tool;
-
-static codegen::RegisterCodeGenFlags CFG;
 
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
@@ -119,12 +115,8 @@ static cl::opt<std::string> ThinLinkBitcodeFile(
 static cl::opt<bool>
 NoVerify("disable-verify", cl::desc("Do not run the verifier"), cl::Hidden);
 
-static cl::opt<bool> NoUpgradeDebugInfo("disable-upgrade-debug-info",
-                                        cl::desc("Generate invalid output"),
-                                        cl::ReallyHidden);
-
-static cl::opt<bool> VerifyEach("verify-each",
-                                cl::desc("Verify after each transform"));
+static cl::opt<bool>
+VerifyEach("verify-each", cl::desc("Verify after each transform"));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
@@ -184,6 +176,11 @@ static cl::opt<bool>
 DisableLoopUnrolling("disable-loop-unrolling",
                      cl::desc("Disable loop unrolling in all relevant passes"),
                      cl::init(false));
+
+static cl::opt<bool>
+DisableSLPVectorization("disable-slp-vectorization",
+                        cl::desc("Disable the slp vectorization pass"),
+                        cl::init(false));
 
 static cl::opt<bool> EmitSummaryIndex("module-summary",
                                       cl::desc("Emit module summary index"),
@@ -259,20 +256,6 @@ static cl::opt<bool> Coroutines(
   "enable-coroutines",
   cl::desc("Enable coroutine passes."),
   cl::init(false), cl::Hidden);
-
-static cl::opt<bool> TimeTrace(
-    "time-trace",
-    cl::desc("Record time trace"));
-
-static cl::opt<unsigned> TimeTraceGranularity(
-    "time-trace-granularity",
-    cl::desc("Minimum time granularity (in microseconds) traced by time profiler"),
-    cl::init(500), cl::Hidden);
-
-static cl::opt<std::string>
-    TimeTraceFile("time-trace-file",
-                    cl::desc("Specify time trace file destination"),
-                    cl::value_desc("filename"));
 
 static cl::opt<bool> RemarksWithHotness(
     "pass-remarks-with-hotness",
@@ -406,9 +389,18 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   Builder.DisableUnrollLoops = (DisableLoopUnrolling.getNumOccurrences() > 0) ?
                                DisableLoopUnrolling : OptLevel == 0;
 
-  Builder.LoopVectorize = OptLevel > 1 && SizeLevel < 2;
+  // Check if vectorization is explicitly disabled via -vectorize-loops=false.
+  // The flag enables vectorization in the LoopVectorize pass, it is on by
+  // default, and if it was disabled, leave it disabled here.
+  // Another flag that exists: -loop-vectorize, controls adding the pass to the
+  // pass manager. If set, the pass is added, and there is no additional check
+  // here for it.
+  if (Builder.LoopVectorize)
+    Builder.LoopVectorize = OptLevel > 1 && SizeLevel < 2;
 
-  Builder.SLPVectorize = OptLevel > 1 && SizeLevel < 2;
+  // When #pragma vectorize is on for SLP, do the same as above
+  Builder.SLPVectorize =
+      DisableSLPVectorization ? false : OptLevel > 1 && SizeLevel < 2;
 
   if (TM)
     TM->adjustPassManager(Builder);
@@ -478,17 +470,16 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
                                        StringRef FeaturesStr,
                                        const TargetOptions &Options) {
   std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
+                                                         Error);
   // Some modules don't specify a triple, and this is okay.
   if (!TheTarget) {
     return nullptr;
   }
 
-  return TheTarget->createTargetMachine(
-      TheTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
-      Options, codegen::getExplicitRelocModel(),
-      codegen::getExplicitCodeModel(), GetCodeGenOptLevel());
+  return TheTarget->createTargetMachine(TheTriple.getTriple(), CPUStr,
+                                        FeaturesStr, Options, getRelocModel(),
+                                        getCodeModel(), GetCodeGenOptLevel());
 }
 
 #ifdef BUILD_EXAMPLES
@@ -516,24 +507,6 @@ void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map) {
        << Stats.getEmptyLocationRatio() << '\n';
   }
 }
-
-struct TimeTracerRAII {
-  TimeTracerRAII(StringRef ProgramName) {
-    if (TimeTrace)
-      timeTraceProfilerInitialize(TimeTraceGranularity, ProgramName);
-  }
-  ~TimeTracerRAII() {
-    if (TimeTrace) {
-      if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-        handleAllErrors(std::move(E), [&](const StringError &SE) {
-          errs() << SE.getMessage() << "\n";
-        });
-        return;
-      }
-      timeTraceProfilerCleanup();
-    }
-  }
-};
 
 //===----------------------------------------------------------------------===//
 // main for opt
@@ -602,8 +575,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  TimeTracerRAII TimeTracer(argv[0]);
-
   SMDiagnostic Err;
 
   Context.setDiscardValueNames(DiscardValueNames);
@@ -611,9 +582,9 @@ int main(int argc, char **argv) {
     Context.enableDebugTypeODRUniquing();
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
-      setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
-                                   RemarksFormat, RemarksWithHotness,
-                                   RemarksHotnessThreshold);
+      setupOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
+                               RemarksFormat, RemarksWithHotness,
+                               RemarksHotnessThreshold);
   if (Error E = RemarksFileOrErr.takeError()) {
     errs() << toString(std::move(E)) << '\n';
     return 1;
@@ -621,18 +592,8 @@ int main(int argc, char **argv) {
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
 
   // Load the input module...
-  auto SetDataLayout = [](StringRef) -> Optional<std::string> {
-    if (ClDataLayout.empty())
-      return None;
-    return ClDataLayout;
-  };
-  std::unique_ptr<Module> M;
-  if (NoUpgradeDebugInfo)
-    M = parseAssemblyFileWithIndexNoUpgradeDebugInfo(
-            InputFilename, Err, Context, nullptr, SetDataLayout)
-            .Mod;
-  else
-    M = parseIRFile(InputFilename, Err, Context, SetDataLayout);
+  std::unique_ptr<Module> M =
+      parseIRFile(InputFilename, Err, Context, !NoVerify, ClDataLayout);
 
   if (!M) {
     Err.print(argv[0], errs());
@@ -663,13 +624,6 @@ int main(int argc, char **argv) {
            << ": error: input module is broken!\n";
     return 1;
   }
-
-  // Enable testing of whole program devirtualization on this module by invoking
-  // the facility for updating public visibility to linkage unit visibility when
-  // specified by an internal option. This is normally done during LTO which is
-  // not performed via opt.
-  updateVCallVisibilityInModule(*M,
-                                /* WholeProgramVisibilityEnabledInLTO */ false);
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;
@@ -705,11 +659,11 @@ int main(int argc, char **argv) {
   Triple ModuleTriple(M->getTargetTriple());
   std::string CPUStr, FeaturesStr;
   TargetMachine *Machine = nullptr;
-  const TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  const TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
 
   if (ModuleTriple.getArch()) {
-    CPUStr = codegen::getCPUStr();
-    FeaturesStr = codegen::getFeaturesStr();
+    CPUStr = getCPUStr();
+    FeaturesStr = getFeaturesStr();
     Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
   } else if (ModuleTriple.getArchName() != "unknown" &&
              ModuleTriple.getArchName() != "") {
@@ -722,7 +676,7 @@ int main(int argc, char **argv) {
 
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
-  codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
+  setFunctionAttributes(CPUStr, FeaturesStr, *M);
 
   // If the output is set to be emitted to standard out, and standard out is a
   // console, print out a warning message and refuse to do it.  We don't
@@ -754,7 +708,7 @@ int main(int argc, char **argv) {
                            RemarksFile.get(), PassPipeline, OK, VK,
                            PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
-                           EmitModuleHash, EnableDebugify, Coroutines)
+                           EmitModuleHash, EnableDebugify)
                ? 0
                : 1;
   }

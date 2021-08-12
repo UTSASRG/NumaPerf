@@ -42,15 +42,9 @@ public:
                         llvm::opt::ArgStringList &CmdArgs) const override;
   virtual std::string computeSysRoot() const;
 
-  std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;
-
-  void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const override;
+  virtual std::string getDynamicLinker(const llvm::opt::ArgList &Args) const;
 
   std::vector<std::string> ExtraOpts;
-
-  llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
-      const llvm::fltSemantics *FPType = nullptr) const override;
 
 protected:
   Tool *buildAssembler() const override;

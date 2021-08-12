@@ -30,7 +30,6 @@ using namespace sampleprof;
 namespace llvm {
 namespace sampleprof {
 SampleProfileFormat FunctionSamples::Format;
-bool FunctionSamples::UseMD5;
 } // namespace sampleprof
 } // namespace llvm
 

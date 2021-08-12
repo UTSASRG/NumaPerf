@@ -21,11 +21,11 @@ def Dsp2MicroMips : InstrMapping {
 }
 
 def HasDSP : Predicate<"Subtarget->hasDSP()">,
-             AssemblerPredicate<(all_of FeatureDSP)>;
+             AssemblerPredicate<"FeatureDSP">;
 def HasDSPR2 : Predicate<"Subtarget->hasDSPR2()">,
-               AssemblerPredicate<(all_of FeatureDSPR2)>;
+               AssemblerPredicate<"FeatureDSPR2">;
 def HasDSPR3 : Predicate<"Subtarget->hasDSPR3()">,
-               AssemblerPredicate<(all_of FeatureDSPR3)>;
+               AssemblerPredicate<"FeatureDSPR3">;
 
 class ISA_DSPR2 {
   list<Predicate> ASEPredicate = [HasDSPR2];

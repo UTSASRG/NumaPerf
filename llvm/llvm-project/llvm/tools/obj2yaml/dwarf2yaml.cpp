@@ -9,9 +9,7 @@
 #include "Error.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 
 #include <algorithm>
@@ -58,15 +56,13 @@ void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   }
 }
 
-Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  DWARFDataExtractor ArangesData(DCtx.getDWARFObj().getArangesSection(),
-                                 DCtx.isLittleEndian(), 0);
+void dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+  DataExtractor ArangesData(DCtx.getDWARFObj().getArangesSection(),
+                            DCtx.isLittleEndian(), 0);
   uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
 
-  while (ArangesData.isValidOffset(Offset)) {
-    if (Error E = Set.extract(ArangesData, &Offset))
-      return E;
+  while (Set.extract(ArangesData, &Offset)) {
     DWARFYAML::ARange Range;
     Range.Length.setLength(Set.getHeader().Length);
     Range.Version = Set.getHeader().Version;
@@ -81,46 +77,12 @@ Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     }
     Y.ARanges.push_back(Range);
   }
-  return ErrorSuccess();
 }
 
-Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  // We are assuming all address byte sizes will be consistent across all
-  // compile units.
-  uint8_t AddrSize = 0;
-  for (const auto &CU : DCtx.compile_units()) {
-    const uint8_t CUAddrSize = CU->getAddressByteSize();
-    if (AddrSize == 0)
-      AddrSize = CUAddrSize;
-    else if (CUAddrSize != AddrSize)
-      return createStringError(std::errc::invalid_argument,
-                               "address sizes vary in different compile units");
-  }
-
-  DWARFDataExtractor Data(DCtx.getDWARFObj().getRangesSection().Data,
-                          DCtx.isLittleEndian(), AddrSize);
-  uint64_t Offset = 0;
-  DWARFDebugRangeList DwarfRanges;
-
-  while (Data.isValidOffset(Offset)) {
-    DWARFYAML::Ranges YamlRanges;
-    YamlRanges.Offset = Offset;
-    YamlRanges.AddrSize = AddrSize;
-    if (Error E = DwarfRanges.extract(Data, &Offset))
-      return E;
-    for (const auto &RLE : DwarfRanges.getEntries())
-      YamlRanges.Entries.push_back({RLE.StartAddress, RLE.EndAddress});
-    Y.DebugRanges.push_back(std::move(YamlRanges));
-  }
-  return ErrorSuccess();
-}
-
-static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
-                                            const DWARFSection &Section,
-                                            bool IsGNUStyle) {
+void dumpPubSection(DWARFContext &DCtx, DWARFYAML::PubSection &Y,
+                    DWARFSection Section) {
   DWARFDataExtractor PubSectionData(DCtx.getDWARFObj(), Section,
                                     DCtx.isLittleEndian(), 0);
-  DWARFYAML::PubSection Y(IsGNUStyle);
   uint64_t Offset = 0;
   dumpInitialLength(PubSectionData, Offset, Y.Length);
   Y.Version = PubSectionData.getU16(&Offset);
@@ -129,35 +91,26 @@ static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
   while (Offset < Y.Length.getLength()) {
     DWARFYAML::PubEntry NewEntry;
     NewEntry.DieOffset = PubSectionData.getU32(&Offset);
-    if (IsGNUStyle)
+    if (Y.IsGNUStyle)
       NewEntry.Descriptor = PubSectionData.getU8(&Offset);
     NewEntry.Name = PubSectionData.getCStr(&Offset);
     Y.Entries.push_back(NewEntry);
   }
-
-  return Y;
 }
 
 void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   const DWARFObject &D = DCtx.getDWARFObj();
+  Y.PubNames.IsGNUStyle = false;
+  dumpPubSection(DCtx, Y.PubNames, D.getPubnamesSection());
 
-  const DWARFSection PubNames = D.getPubnamesSection();
-  if (!PubNames.Data.empty())
-    Y.PubNames = dumpPubSection(DCtx, PubNames, /*IsGNUStyle=*/false);
+  Y.PubTypes.IsGNUStyle = false;
+  dumpPubSection(DCtx, Y.PubTypes, D.getPubtypesSection());
 
-  const DWARFSection PubTypes = D.getPubtypesSection();
-  if (!PubTypes.Data.empty())
-    Y.PubTypes = dumpPubSection(DCtx, PubTypes, /*IsGNUStyle=*/false);
+  Y.GNUPubNames.IsGNUStyle = true;
+  dumpPubSection(DCtx, Y.GNUPubNames, D.getGnuPubnamesSection());
 
-  const DWARFSection GNUPubNames = D.getGnuPubnamesSection();
-  if (!GNUPubNames.Data.empty())
-    // TODO: Test dumping .debug_gnu_pubnames section.
-    Y.GNUPubNames = dumpPubSection(DCtx, GNUPubNames, /*IsGNUStyle=*/true);
-
-  const DWARFSection GNUPubTypes = D.getGnuPubtypesSection();
-  if (!GNUPubTypes.Data.empty())
-    // TODO: Test dumping .debug_gnu_pubtypes section.
-    Y.GNUPubTypes = dumpPubSection(DCtx, GNUPubTypes, /*IsGNUStyle=*/true);
+  Y.GNUPubTypes.IsGNUStyle = true;
+  dumpPubSection(DCtx, Y.GNUPubTypes, D.getGnuPubtypesSection());
 }
 
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
@@ -393,15 +346,12 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   }
 }
 
-llvm::Error dwarf2yaml(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+std::error_code dwarf2yaml(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   dumpDebugAbbrev(DCtx, Y);
   dumpDebugStrings(DCtx, Y);
-  if (Error E = dumpDebugARanges(DCtx, Y))
-    return E;
-  if (Error E = dumpDebugRanges(DCtx, Y))
-    return E;
+  dumpDebugARanges(DCtx, Y);
   dumpDebugPubSections(DCtx, Y);
   dumpDebugInfo(DCtx, Y);
   dumpDebugLines(DCtx, Y);
-  return ErrorSuccess();
+  return obj2yaml_error::success;
 }

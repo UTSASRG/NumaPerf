@@ -30,7 +30,8 @@
 namespace llvm {
 
 AVRFrameLowering::AVRFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1), -2) {}
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align::None(),
+                          -2) {}
 
 bool AVRFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {
@@ -52,14 +53,14 @@ bool AVRFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 void AVRFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
+  CallingConv::ID CallConv = MF.getFunction().getCallingConv();
   DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
-  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
   bool HasFP = hasFP(MF);
 
   // Interrupt handlers re-enable interrupts in function entry.
-  if (AFI->isInterruptHandler()) {
+  if (CallConv == CallingConv::AVR_INTR) {
     BuildMI(MBB, MBBI, DL, TII.get(AVR::BSETs))
         .addImm(0x07)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -74,7 +75,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Emit special prologue code to save R1, R0 and SREG in interrupt/signal
   // handlers before saving any other registers.
-  if (AFI->isInterruptOrSignalHandler()) {
+  if (CallConv == CallingConv::AVR_INTR ||
+      CallConv == CallingConv::AVR_SIGNAL) {
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHWRr))
         .addReg(AVR::R1R0, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -98,6 +100,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
   unsigned FrameSize = MFI.getStackSize() - AFI->getCalleeSavedFrameSize();
 
   // Skip the callee-saved push instructions.
@@ -140,11 +143,13 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
 
 void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  CallingConv::ID CallConv = MF.getFunction().getCallingConv();
+  bool isHandler = (CallConv == CallingConv::AVR_INTR ||
+                    CallConv == CallingConv::AVR_SIGNAL);
 
   // Early exit if the frame pointer is not needed in this function except for
   // signal/interrupt handlers where special code generation is required.
-  if (!hasFP(MF) && !AFI->isInterruptOrSignalHandler()) {
+  if (!hasFP(MF) && !isHandler) {
     return;
   }
 
@@ -154,13 +159,14 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
 
   DebugLoc DL = MBBI->getDebugLoc();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
   unsigned FrameSize = MFI.getStackSize() - AFI->getCalleeSavedFrameSize();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
   // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
   // handlers at the very end of the function, just before reti.
-  if (AFI->isInterruptOrSignalHandler()) {
+  if (isHandler) {
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
         .addImm(0x3f)
@@ -228,7 +234,8 @@ bool AVRFrameLowering::hasFP(const MachineFunction &MF) const {
 
 bool AVRFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+    const std::vector<CalleeSavedInfo> &CSI,
+    const TargetRegisterInfo *TRI) const {
   if (CSI.empty()) {
     return false;
   }
@@ -268,7 +275,8 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
 
 bool AVRFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+    std::vector<CalleeSavedInfo> &CSI,
+    const TargetRegisterInfo *TRI) const {
   if (CSI.empty()) {
     return false;
   }
@@ -373,7 +381,7 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
   // For adjcallstackdown we convert it into an 'adiw reg, <amt>' handling
   // the read and write of SP in I/O space.
   if (Amount != 0) {
-    assert(getStackAlign() == Align(1) && "Unsupported stack alignment");
+    assert(getStackAlignment() == 1 && "Unsupported stack alignment");
 
     if (Opcode == TII.getCallFrameSetupOpcode()) {
       fixStackStores(MBB, MI, TII, true);
@@ -502,7 +510,7 @@ struct AVRDynAllocaSR : public MachineFunctionPass {
     MachineBasicBlock::iterator MBBI = EntryMBB.begin();
     DebugLoc DL = EntryMBB.findDebugLoc(MBBI);
 
-    Register SPCopy =
+    unsigned SPCopy =
         MF.getRegInfo().createVirtualRegister(&AVR::DREGSRegClass);
 
     // Create a copy of SP in function entry before any dynallocas are

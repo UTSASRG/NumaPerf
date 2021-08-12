@@ -1,19 +1,6 @@
 set(LLDB_SYSTEM_LIBS)
 
-if (APPLE)
-  list(APPEND LLDB_SYSTEM_LIBS
-       ${FOUNDATION_LIBRARY}
-       ${CORE_FOUNDATION_LIBRARY}
-       ${CORE_SERVICES_LIBRARY}
-       ${SECURITY_LIBRARY}
-       ${DEBUG_SYMBOLS_LIBRARY})
-endif()
-
-if(NOT PURE_WINDOWS)
-  list(APPEND LLDB_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
-endif()
-
-list(APPEND LLDB_SYSTEM_LIBS ${CMAKE_DL_LIBS})
+list(APPEND LLDB_SYSTEM_LIBS ${system_libs})
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   list(APPEND LLDB_SYSTEM_LIBS ws2_32 rpcrt4)
@@ -52,6 +39,7 @@ add_lldb_library(lldbUtility
   ReproducerInstrumentation.cpp
   Scalar.cpp
   SelectHelper.cpp
+  SharingPtr.cpp
   State.cpp
   Status.cpp
   Stream.cpp
@@ -70,7 +58,6 @@ add_lldb_library(lldbUtility
   UserIDResolver.cpp
   VASprintf.cpp
   VMRange.cpp
-  XcodeSDK.cpp
 
   LINK_LIBS
     ${LLDB_SYSTEM_LIBS}

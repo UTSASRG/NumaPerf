@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGRANGES_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGRANGES_H
+#ifndef SymbolFileDWARF_DWARFDebugRanges_h_
+#define SymbolFileDWARF_DWARFDebugRanges_h_
 
 #include "lldb/Core/dwarf.h"
 #include <map>
@@ -39,4 +39,4 @@ protected:
   range_map m_range_map;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGRANGES_H
+#endif // SymbolFileDWARF_DWARFDebugRanges_h_

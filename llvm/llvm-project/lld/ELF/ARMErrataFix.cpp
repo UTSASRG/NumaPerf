@@ -33,8 +33,9 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 // The documented title for Erratum 657417 is:
 // "A 32bit branch instruction that spans two 4K regions can result in an
@@ -70,7 +71,7 @@ using namespace lld::elf;
 // 00001002       2 - bytes padding
 // 00001004 __CortexA8657417_00000FFE: B.w func
 
-class elf::Patch657417Section : public SyntheticSection {
+class Patch657417Section : public SyntheticSection {
 public:
   Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
 
@@ -188,7 +189,7 @@ void Patch657417Section::writeTo(uint8_t *buf) {
   // been altered to point to us!
   uint64_t s = getThumbDestAddr(getBranchAddr(), instr);
   uint64_t p = getVA(4);
-  target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
+  target->relocateOne(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
 }
 
 // Given a branch instruction spanning two 4KiB regions, at offset off from the
@@ -526,3 +527,6 @@ bool ARMErr657417Patcher::createFixes() {
   }
   return addressesChanged;
 }
+
+} // namespace elf
+} // namespace lld

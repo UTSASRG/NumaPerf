@@ -38,7 +38,7 @@ using PluginChainFinal = PluginChain<VP_PLUGIN_LIST>;
 
 template <> class PluginChain<> {
 public:
-  PluginChain(Function &F, TargetLibraryInfo &TLI) {}
+  PluginChain(Function &F) {}
   void get(InstrProfValueKind K, std::vector<CandidateInfo> &Candidates) {}
 };
 
@@ -48,8 +48,7 @@ class PluginChain<PluginT, Ts...> : public PluginChain<Ts...> {
   using Base = PluginChain<Ts...>;
 
 public:
-  PluginChain(Function &F, TargetLibraryInfo &TLI)
-      : PluginChain<Ts...>(F, TLI), Plugin(F, TLI) {}
+  PluginChain(Function &F) : PluginChain<Ts...>(F), Plugin(F) {}
 
   void get(InstrProfValueKind K, std::vector<CandidateInfo> &Candidates) {
     if (K == PluginT::Kind)
@@ -66,9 +65,8 @@ public:
   using PluginChainFinal::PluginChainFinal;
 };
 
-ValueProfileCollector::ValueProfileCollector(Function &F,
-                                             TargetLibraryInfo &TLI)
-    : PImpl(new ValueProfileCollectorImpl(F, TLI)) {}
+ValueProfileCollector::ValueProfileCollector(Function &F)
+    : PImpl(new ValueProfileCollectorImpl(F)) {}
 
 ValueProfileCollector::~ValueProfileCollector() = default;
 

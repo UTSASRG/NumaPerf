@@ -2,8 +2,8 @@
 
 // Selection with both then and else branches
 
-spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.func @selection(%cond: i1) -> () "None" {
+spv.module "Logical" "GLSL450" {
+  func @selection(%cond: i1) -> () {
 // CHECK:        spv.Branch ^bb1
 // CHECK-NEXT: ^bb1:
     %zero = spv.constant 0: i32
@@ -43,11 +43,13 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.Return
   }
 
-  spv.func @main() -> () "None" {
+  func @main() -> () {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @main
   spv.ExecutionMode @main "LocalSize", 1, 1, 1
+} attributes {
+  capabilities = ["Shader"]
 }
 
 // -----
@@ -55,9 +57,9 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // Selection with only then branch
 // Selection in function entry block
 
-spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-// CHECK:      spv.func @selection(%[[ARG:.*]]: i1
-  spv.func @selection(%cond: i1) -> (i32) "None" {
+spv.module "Logical" "GLSL450" {
+// CHECK:      func @selection(%[[ARG:.*]]: i1
+  func @selection(%cond: i1) -> (i32) {
 // CHECK:        spv.Branch ^bb1
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   spv.selection
@@ -80,10 +82,12 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.ReturnValue  %one : i32
   }
 
-  spv.func @main() -> () "None" {
+  func @main() -> () {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @main
   spv.ExecutionMode @main "LocalSize", 1, 1, 1
+} attributes {
+  capabilities = ["Shader"]
 }
 

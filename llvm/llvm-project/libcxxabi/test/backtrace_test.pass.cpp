@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: libcxxabi-no-exceptions
 
 #include <assert.h>
 #include <stddef.h>

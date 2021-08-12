@@ -162,7 +162,7 @@ static const LayoutAlignElem DefaultAlignments[] = {
     {INTEGER_ALIGN, 16, Align(2), Align(2)},   // i16
     {INTEGER_ALIGN, 32, Align(4), Align(4)},   // i32
     {INTEGER_ALIGN, 64, Align(4), Align(8)},   // i64
-    {FLOAT_ALIGN, 16, Align(2), Align(2)},     // half, bfloat
+    {FLOAT_ALIGN, 16, Align(2), Align(2)},     // half
     {FLOAT_ALIGN, 32, Align(4), Align(4)},     // float
     {FLOAT_ALIGN, 64, Align(8), Align(8)},     // double
     {FLOAT_ALIGN, 128, Align(16), Align(16)},  // ppcf128, quad, ...
@@ -229,7 +229,7 @@ static unsigned getAddrSpace(StringRef R) {
 }
 
 void DataLayout::parseSpecifier(StringRef Desc) {
-  StringRepresentation = std::string(Desc);
+  StringRepresentation = Desc;
   while (!Desc.empty()) {
     // Split at '-'.
     std::pair<StringRef, StringRef> Split = split(Desc, '-');
@@ -559,10 +559,7 @@ Align DataLayout::getAlignmentInfo(AlignTypeEnum AlignType, uint32_t BitWidth,
     // with what clang and llvm-gcc do.
     unsigned Alignment =
         getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
-    // We're only calculating a natural alignment, so it doesn't have to be
-    // based on the full size for scalable vectors. Using the minimum element
-    // count should be enough here.
-    Alignment *= cast<VectorType>(Ty)->getElementCount().Min;
+    Alignment *= cast<VectorType>(Ty)->getNumElements();
     Alignment = PowerOf2Ceil(Alignment);
     return Align(Alignment);
    }
@@ -721,7 +718,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::StructTyID: {
     // Packed structure types always have an ABI alignment of one.
     if (cast<StructType>(Ty)->isPacked() && abi_or_pref)
-      return Align(1);
+      return Align::None();
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
@@ -732,7 +729,6 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     AlignType = INTEGER_ALIGN;
     break;
   case Type::HalfTyID:
-  case Type::BFloatTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
   // PPC_FP128TyID and FP128TyID have different data contents, but the
@@ -743,8 +739,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     AlignType = FLOAT_ALIGN;
     break;
   case Type::X86_MMXTyID:
-  case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
+  case Type::VectorTyID:
     AlignType = VECTOR_ALIGN;
     break;
   default:
@@ -757,13 +752,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
                           abi_or_pref, Ty);
 }
 
-/// TODO: Remove this function once the transition to Align is over.
 unsigned DataLayout::getABITypeAlignment(Type *Ty) const {
-  return getABITypeAlign(Ty).value();
-}
-
-Align DataLayout::getABITypeAlign(Type *Ty) const {
-  return getAlignment(Ty, true);
+  return getAlignment(Ty, true).value();
 }
 
 /// getABIIntegerTypeAlignment - Return the minimum ABI-required alignment for
@@ -772,13 +762,8 @@ Align DataLayout::getABIIntegerTypeAlignment(unsigned BitWidth) const {
   return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr);
 }
 
-/// TODO: Remove this function once the transition to Align is over.
 unsigned DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getPrefTypeAlign(Ty).value();
-}
-
-Align DataLayout::getPrefTypeAlign(Type *Ty) const {
-  return getAlignment(Ty, false);
+  return getAlignment(Ty, false).value();
 }
 
 IntegerType *DataLayout::getIntPtrType(LLVMContext &C,
@@ -792,7 +777,7 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   unsigned NumBits = getPointerTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
-    return FixedVectorType::get(IntTy, VecTy->getNumElements());
+    return VectorType::get(IntTy, VecTy->getNumElements());
   return IntTy;
 }
 
@@ -814,7 +799,7 @@ Type *DataLayout::getIndexType(Type *Ty) const {
   unsigned NumBits = getIndexTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
-    return FixedVectorType::get(IntTy, VecTy->getNumElements());
+    return VectorType::get(IntTy, VecTy->getNumElements());
   return IntTy;
 }
 

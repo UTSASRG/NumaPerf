@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// FILE_DEPENDENCIES: test.dat
+// UNSUPPORTED: c++98, c++03
 
 // <fstream>
 

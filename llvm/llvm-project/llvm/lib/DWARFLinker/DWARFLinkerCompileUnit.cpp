@@ -29,14 +29,6 @@ uint16_t CompileUnit::getLanguage() {
   return Language;
 }
 
-StringRef CompileUnit::getSysRoot() {
-  if (SysRoot.empty()) {
-    DWARFDie CU = getOrigUnit().getUnitDIE();
-    SysRoot = dwarf::toStringRef(CU.find(dwarf::DW_AT_LLVM_sysroot)).str();
-  }
-  return SysRoot;
-}
- 
 void CompileUnit::markEverythingAsKept() {
   unsigned Idx = 0;
 

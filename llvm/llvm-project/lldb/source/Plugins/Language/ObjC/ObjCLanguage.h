@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_OBJCLANGUAGE_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_OBJCLANGUAGE_H
+#ifndef liblldb_ObjCLanguage_h_
+#define liblldb_ObjCLanguage_h_
 
 #include <cstring>
 #include <vector>
@@ -160,4 +160,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_OBJCLANGUAGE_H
+#endif // liblldb_ObjCLanguage_h_

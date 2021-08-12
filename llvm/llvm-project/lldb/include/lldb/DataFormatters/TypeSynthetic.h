@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_TYPESYNTHETIC_H
-#define LLDB_DATAFORMATTERS_TYPESYNTHETIC_H
+#ifndef lldb_TypeSynthetic_h_
+#define lldb_TypeSynthetic_h_
 
 #include <stdint.h>
 
@@ -96,9 +96,7 @@ protected:
 
 private:
   bool m_valid;
-  SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
-  const SyntheticChildrenFrontEnd &
-  operator=(const SyntheticChildrenFrontEnd &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SyntheticChildrenFrontEnd);
 };
 
 class SyntheticValueProviderFrontEnd : public SyntheticChildrenFrontEnd {
@@ -123,10 +121,7 @@ public:
   lldb::ValueObjectSP GetSyntheticValue() override = 0;
 
 private:
-  SyntheticValueProviderFrontEnd(const SyntheticValueProviderFrontEnd &) =
-      delete;
-  const SyntheticValueProviderFrontEnd &
-  operator=(const SyntheticValueProviderFrontEnd &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SyntheticValueProviderFrontEnd);
 };
 
 class SyntheticChildren {
@@ -270,8 +265,7 @@ protected:
   Flags m_flags;
 
 private:
-  SyntheticChildren(const SyntheticChildren &) = delete;
-  const SyntheticChildren &operator=(const SyntheticChildren &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SyntheticChildren);
 };
 
 class TypeFilterImpl : public SyntheticChildren {
@@ -339,8 +333,7 @@ public:
   private:
     TypeFilterImpl *filter;
 
-    FrontEnd(const FrontEnd &) = delete;
-    const FrontEnd &operator=(const FrontEnd &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(FrontEnd);
   };
 
   SyntheticChildrenFrontEnd::AutoPointer
@@ -351,8 +344,7 @@ public:
   typedef std::shared_ptr<TypeFilterImpl> SharedPointer;
 
 private:
-  TypeFilterImpl(const TypeFilterImpl &) = delete;
-  const TypeFilterImpl &operator=(const TypeFilterImpl &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(TypeFilterImpl);
 };
 
 class CXXSyntheticChildren : public SyntheticChildren {
@@ -380,8 +372,7 @@ protected:
   std::string m_description;
 
 private:
-  CXXSyntheticChildren(const CXXSyntheticChildren &) = delete;
-  const CXXSyntheticChildren &operator=(const CXXSyntheticChildren &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(CXXSyntheticChildren);
 };
 
 class ScriptedSyntheticChildren : public SyntheticChildren {
@@ -444,8 +435,7 @@ public:
     StructuredData::ObjectSP m_wrapper_sp;
     ScriptInterpreter *m_interpreter;
 
-    FrontEnd(const FrontEnd &) = delete;
-    const FrontEnd &operator=(const FrontEnd &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(FrontEnd);
   };
 
   SyntheticChildrenFrontEnd::AutoPointer
@@ -458,10 +448,8 @@ public:
   }
 
 private:
-  ScriptedSyntheticChildren(const ScriptedSyntheticChildren &) = delete;
-  const ScriptedSyntheticChildren &
-  operator=(const ScriptedSyntheticChildren &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ScriptedSyntheticChildren);
 };
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_TYPESYNTHETIC_H
+#endif // lldb_TypeSynthetic_h_

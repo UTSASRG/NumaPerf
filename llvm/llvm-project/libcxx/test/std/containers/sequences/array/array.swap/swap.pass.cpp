@@ -21,13 +21,13 @@
 #include "disable_missing_braces_warning.h"
 
 struct NonSwappable {
-    TEST_CONSTEXPR NonSwappable() { }
+  NonSwappable() {}
 private:
-    NonSwappable(NonSwappable const&);
-    NonSwappable& operator=(NonSwappable const&);
+  NonSwappable(NonSwappable const&);
+  NonSwappable& operator=(NonSwappable const&);
 };
 
-TEST_CONSTEXPR_CXX20 bool tests()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -89,14 +89,6 @@ TEST_CONSTEXPR_CXX20 bool tests()
 #endif
     }
 
-    return true;
-}
 
-int main(int, char**)
-{
-    tests();
-#if TEST_STD_VER >= 20
-    static_assert(tests(), "");
-#endif
   return 0;
 }

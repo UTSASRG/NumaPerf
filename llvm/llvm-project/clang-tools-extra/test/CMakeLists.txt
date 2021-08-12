@@ -15,10 +15,7 @@ endif ()
 
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
-llvm_canonicalize_cmake_booleans(
-  CLANG_ENABLE_STATIC_ANALYZER
-  LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA
-  )
+llvm_canonicalize_cmake_booleans(CLANG_ENABLE_STATIC_ANALYZER)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -61,6 +58,8 @@ set(CLANG_TOOLS_TEST_DEPS
   # Unit tests
   ExtraToolsUnitTests
 
+  # For the clang-tidy libclang integration test.
+  c-index-test
   # clang-tidy tests require it.
   clang-resource-headers
 
@@ -68,10 +67,6 @@ set(CLANG_TOOLS_TEST_DEPS
   # Clang-tidy tests need clang for building modules.
   clang
 )
-if (LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA)
-  # For the clang-tidy libclang integration test.
-  set(CLANG_TOOLS_TEST_DEPS ${CLANG_TOOLS_TEST_DEPS} "c-index-test")
-endif ()
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS

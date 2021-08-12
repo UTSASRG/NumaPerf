@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANCALLFUNCTIONUSINGABI_H
-#define LLDB_TARGET_THREADPLANCALLFUNCTIONUSINGABI_H
+#ifndef liblldb_ThreadPlanCallFunctionUsingABI_h_
+#define liblldb_ThreadPlanCallFunctionUsingABI_h_
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Thread.h"
@@ -44,12 +44,9 @@ protected:
 
 private:
   llvm::Type &m_return_type;
-  ThreadPlanCallFunctionUsingABI(const ThreadPlanCallFunctionUsingABI &) =
-      delete;
-  const ThreadPlanCallFunctionUsingABI &
-  operator=(const ThreadPlanCallFunctionUsingABI &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallFunctionUsingABI);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANCALLFUNCTIONUSINGABI_H
+#endif // liblldb_ThreadPlanCallFunctionUsingABI_h_

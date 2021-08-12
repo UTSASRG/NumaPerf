@@ -14,13 +14,18 @@
 #define LLVM_LIB_TABLEGEN_TGPARSER_H
 
 #include "TGLexer.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
 
 namespace llvm {
-  class SourceMgr;
-  class Twine;
+  class Record;
+  class RecordVal;
+  class RecordKeeper;
+  class RecTy;
+  class Init;
   struct ForeachLoop;
   struct MultiClass;
   struct SubClassReference;
@@ -107,7 +112,7 @@ public:
   }
 
   void addVar(StringRef Name, Init *I) {
-    bool Ins = vars.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = vars.insert(std::make_pair(Name, I)).second;
     (void)Ins;
     assert(Ins && "Local variable already exists");
   }
@@ -210,7 +215,6 @@ private: // Semantic analysis methods.
   bool addDefOne(std::unique_ptr<Record> Rec);
 
 private:  // Parser methods.
-  bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);
   bool ParseClass();

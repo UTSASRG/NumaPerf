@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
-#define LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
+#ifndef lldb_FormattersContainer_h_
+#define lldb_FormattersContainer_h_
 
 #include <functional>
 #include <map>
@@ -181,13 +181,16 @@ public:
   }
 
   bool Get(ValueObject &valobj, MapValueType &entry,
-           lldb::DynamicValueType use_dynamic) {
+           lldb::DynamicValueType use_dynamic, uint32_t *why = nullptr) {
+    uint32_t value = lldb_private::eFormatterChoiceCriterionDirectChoice;
     CompilerType ast_type(valobj.GetCompilerType());
-    bool ret = Get(valobj, ast_type, entry, use_dynamic);
+    bool ret = Get(valobj, ast_type, entry, use_dynamic, value);
     if (ret)
       entry = MapValueType(entry);
     else
       entry = MapValueType();
+    if (why)
+      *why = value;
     return ret;
   }
 
@@ -218,8 +221,7 @@ protected:
   BackEndType m_format_map;
   std::string m_name;
 
-  FormattersContainer(const FormattersContainer &) = delete;
-  const FormattersContainer &operator=(const FormattersContainer &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(FormattersContainer);
 
   void Add_Impl(MapKeyType type, const MapValueType &entry,
                 RegularExpression *dummy) {
@@ -264,7 +266,7 @@ protected:
     ConstString key = m_format_map.GetKeyAtIndex(index);
     if (key)
       return lldb::TypeNameSpecifierImplSP(
-          new TypeNameSpecifierImpl(key.GetStringRef(), false));
+          new TypeNameSpecifierImpl(key.AsCString(), false));
     else
       return lldb::TypeNameSpecifierImplSP();
   }
@@ -306,13 +308,16 @@ protected:
     return false;
   }
 
-  bool Get(const FormattersMatchVector &candidates, MapValueType &entry) {
+  bool Get(const FormattersMatchVector &candidates, MapValueType &entry,
+           uint32_t *reason) {
     for (const FormattersMatchCandidate &candidate : candidates) {
       if (Get(candidate.GetTypeName(), entry)) {
         if (candidate.IsMatch(entry) == false) {
           entry.reset();
           continue;
         } else {
+          if (reason)
+            *reason = candidate.GetReason();
           return true;
         }
       }
@@ -323,4 +328,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
+#endif // lldb_FormattersContainer_h_

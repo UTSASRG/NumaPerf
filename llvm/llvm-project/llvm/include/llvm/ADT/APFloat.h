@@ -18,7 +18,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
@@ -142,7 +141,7 @@ enum lostFraction { // Example of truncated bits:
 // members.
 struct APFloatBase {
   typedef APInt::WordType integerPart;
-  static constexpr unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
+  static const unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
   typedef int32_t ExponentType;
@@ -151,7 +150,6 @@ struct APFloatBase {
   /// @{
   enum Semantics {
     S_IEEEhalf,
-    S_BFloat,
     S_IEEEsingle,
     S_IEEEdouble,
     S_x87DoubleExtended,
@@ -163,7 +161,6 @@ struct APFloatBase {
   static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
 
   static const fltSemantics &IEEEhalf() LLVM_READNONE;
-  static const fltSemantics &BFloat() LLVM_READNONE;
   static const fltSemantics &IEEEsingle() LLVM_READNONE;
   static const fltSemantics &IEEEdouble() LLVM_READNONE;
   static const fltSemantics &IEEEquad() LLVM_READNONE;
@@ -185,15 +182,13 @@ struct APFloatBase {
   };
 
   /// IEEE-754R 4.3: Rounding-direction attributes.
-  using roundingMode = llvm::RoundingMode;
-
-  static constexpr roundingMode rmNearestTiesToEven =
-                                                RoundingMode::NearestTiesToEven;
-  static constexpr roundingMode rmTowardPositive = RoundingMode::TowardPositive;
-  static constexpr roundingMode rmTowardNegative = RoundingMode::TowardNegative;
-  static constexpr roundingMode rmTowardZero     = RoundingMode::TowardZero;
-  static constexpr roundingMode rmNearestTiesToAway =
-                                                RoundingMode::NearestTiesToAway;
+  enum roundingMode {
+    rmNearestTiesToEven,
+    rmTowardPositive,
+    rmTowardNegative,
+    rmTowardZero,
+    rmNearestTiesToAway
+  };
 
   /// IEEE-754R 7: Default exception handling.
   ///
@@ -516,7 +511,6 @@ private:
   opStatus divideSpecials(const IEEEFloat &);
   opStatus multiplySpecials(const IEEEFloat &);
   opStatus modSpecials(const IEEEFloat &);
-  opStatus remainderSpecials(const IEEEFloat&);
 
   /// @}
 
@@ -543,7 +537,6 @@ private:
   /// @}
 
   APInt convertHalfAPFloatToAPInt() const;
-  APInt convertBFloatAPFloatToAPInt() const;
   APInt convertFloatAPFloatToAPInt() const;
   APInt convertDoubleAPFloatToAPInt() const;
   APInt convertQuadrupleAPFloatToAPInt() const;
@@ -551,7 +544,6 @@ private:
   APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   void initFromHalfAPInt(const APInt &api);
-  void initFromBFloatAPInt(const APInt &api);
   void initFromFloatAPInt(const APInt &api);
   void initFromDoubleAPInt(const APInt &api);
   void initFromQuadrupleAPInt(const APInt &api);
@@ -593,7 +585,7 @@ IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode);
 IEEEFloat frexp(const IEEEFloat &Val, int &Exp, IEEEFloat::roundingMode RM);
 
 // This mode implements more precise float in terms of two APFloats.
-// The interface and layout is designed for arbitrary underlying semantics,
+// The interface and layout is designed for arbitray underlying semantics,
 // though currently only PPCDoubleDouble semantics are supported, whose
 // corresponding underlying semantics are IEEEdouble.
 class DoubleAPFloat final : public APFloatBase {
@@ -861,8 +853,8 @@ public:
   APFloat(const fltSemantics &Semantics) : U(Semantics) {}
   APFloat(const fltSemantics &Semantics, StringRef S);
   APFloat(const fltSemantics &Semantics, integerPart I) : U(Semantics, I) {}
-  template <typename T,
-            typename = std::enable_if_t<std::is_floating_point<T>::value>>
+  template <typename T, typename = typename std::enable_if<
+                            std::is_floating_point<T>::value>::type>
   APFloat(const fltSemantics &Semantics, T V) = delete;
   // TODO: Remove this constructor. This isn't faster than the first one.
   APFloat(const fltSemantics &Semantics, uninitializedTag)
@@ -958,10 +950,9 @@ public:
 
   /// Returns a float which is bitcasted from an all one value int.
   ///
-  /// \param Semantics - type float semantics
   /// \param BitWidth - Select float type
-  static APFloat getAllOnesValue(const fltSemantics &Semantics,
-                                 unsigned BitWidth);
+  /// \param isIEEE   - If 128 bit number, select between PPC and IEEE
+  static APFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false);
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
   /// into FoldingSets.
@@ -1042,13 +1033,6 @@ public:
   // Do something.
   opStatus next(bool nextDown) {
     APFLOAT_DISPATCH_ON_SEMANTICS(next(nextDown));
-  }
-
-  /// Negate an APFloat.
-  APFloat operator-() const {
-    APFloat Result(*this);
-    Result.changeSign();
-    return Result;
   }
 
   /// Add two APFloats, rounding ties to the nearest even.
@@ -1133,27 +1117,7 @@ public:
   double convertToDouble() const { return getIEEE().convertToDouble(); }
   float convertToFloat() const { return getIEEE().convertToFloat(); }
 
-  bool operator==(const APFloat &RHS) const { return compare(RHS) == cmpEqual; }
-
-  bool operator!=(const APFloat &RHS) const { return compare(RHS) != cmpEqual; }
-
-  bool operator<(const APFloat &RHS) const {
-    return compare(RHS) == cmpLessThan;
-  }
-
-  bool operator>(const APFloat &RHS) const {
-    return compare(RHS) == cmpGreaterThan;
-  }
-
-  bool operator<=(const APFloat &RHS) const {
-    cmpResult Res = compare(RHS);
-    return Res == cmpLessThan || Res == cmpEqual;
-  }
-
-  bool operator>=(const APFloat &RHS) const {
-    cmpResult Res = compare(RHS);
-    return Res == cmpGreaterThan || Res == cmpEqual;
-  }
+  bool operator==(const APFloat &) const = delete;
 
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
@@ -1285,7 +1249,7 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
-  return B < A ? B : A;
+  return (B.compare(A) == APFloat::cmpLessThan) ? B : A;
 }
 
 /// Implements IEEE maxNum semantics. Returns the larger of the 2 arguments if
@@ -1296,7 +1260,7 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
-  return A < B ? B : A;
+  return (A.compare(B) == APFloat::cmpLessThan) ? B : A;
 }
 
 /// Implements IEEE 754-2018 minimum semantics. Returns the smaller of 2
@@ -1309,7 +1273,7 @@ inline APFloat minimum(const APFloat &A, const APFloat &B) {
     return B;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? A : B;
-  return B < A ? B : A;
+  return (B.compare(A) == APFloat::cmpLessThan) ? B : A;
 }
 
 /// Implements IEEE 754-2018 maximum semantics. Returns the larger of 2
@@ -1322,7 +1286,7 @@ inline APFloat maximum(const APFloat &A, const APFloat &B) {
     return B;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
-  return A < B ? B : A;
+  return (A.compare(B) == APFloat::cmpLessThan) ? B : A;
 }
 
 } // namespace llvm

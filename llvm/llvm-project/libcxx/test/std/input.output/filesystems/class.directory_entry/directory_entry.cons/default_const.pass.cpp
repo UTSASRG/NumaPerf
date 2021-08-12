@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++98, c++03
+// XFAIL: apple-clang-7, clang-3.7, clang-3.8
 
 // <filesystem>
 

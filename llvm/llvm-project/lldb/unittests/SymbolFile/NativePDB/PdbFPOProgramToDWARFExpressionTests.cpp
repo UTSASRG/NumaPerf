@@ -1,4 +1,4 @@
-//===-- PDBFPOProgramToDWARFExpressionTests.cpp ---------------------------===//
+//===-- PDBFPOProgramToDWARFExpressionTests.cpp -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,11 +11,11 @@
 #include "Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.h"
 
 #include "lldb/Core/StreamBuffer.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -27,22 +27,30 @@ static void
 CheckValidProgramTranslation(llvm::StringRef fpo_program,
                              llvm::StringRef target_register_name,
                              llvm::StringRef expected_dwarf_expression) {
+  // initial setup
+  ArchSpec arch_spec("i686-pc-windows");
+  llvm::Triple::ArchType arch_type = arch_spec.GetMachine();
+  ByteOrder byte_order = arch_spec.GetByteOrder();
+  uint32_t address_size = arch_spec.GetAddressByteSize();
+  uint32_t byte_size = arch_spec.GetDataByteSize();
+
   // program translation
-  StreamBuffer<32> stream(Stream::eBinary, 4, eByteOrderLittle);
+  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
   ASSERT_TRUE(TranslateFPOProgramToDWARFExpression(
-      fpo_program, target_register_name, llvm::Triple::x86, stream));
+      fpo_program, target_register_name, arch_type, stream));
 
   // print dwarf expression to comparable textual representation
-  llvm::DataExtractor extractor({stream.GetData(), stream.GetSize()},
-                                /*IsLittleEndian=*/true, /*AddressSize=*/4);
+  DataBufferSP buffer =
+      std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
+  DataExtractor extractor(buffer, byte_order, address_size, byte_size);
 
-  std::string result;
-  llvm::raw_string_ostream os(result);
-  llvm::DWARFExpression(extractor, /*AddressSize=*/4, llvm::dwarf::DWARF32)
-      .print(os, nullptr, nullptr);
+  StreamString result_dwarf_expression;
+  ASSERT_TRUE(DWARFExpression::PrintDWARFExpression(
+      result_dwarf_expression, extractor, address_size, 4, false));
 
   // actual check
-  ASSERT_EQ(expected_dwarf_expression, os.str());
+  ASSERT_STREQ(expected_dwarf_expression.data(),
+               result_dwarf_expression.GetString().data());
 }
 
 TEST(PDBFPOProgramToDWARFExpressionTests, SingleAssignmentRegisterRef) {
@@ -56,9 +64,9 @@ TEST(PDBFPOProgramToDWARFExpressionTests, MultipleIndependentAssignments) {
 TEST(PDBFPOProgramToDWARFExpressionTests, MultipleDependentAssignments) {
   CheckValidProgramTranslation(
       "$T1 $ebp 4 + = $T0 $T1 8 - 128 @ = ", "$T0",
-      "DW_OP_breg6 +0, DW_OP_consts +4, DW_OP_plus, DW_OP_consts +8, "
-      "DW_OP_minus, DW_OP_consts +128, DW_OP_lit1, DW_OP_minus, DW_OP_not, "
-      "DW_OP_and");
+      "DW_OP_breg6 +0, DW_OP_consts +4, DW_OP_plus , DW_OP_consts +8, "
+      "DW_OP_minus , DW_OP_consts +128, DW_OP_lit1 , DW_OP_minus , DW_OP_not , "
+      "DW_OP_and ");
 }
 
 TEST(PDBFPOProgramToDWARFExpressionTests, DependencyChain) {

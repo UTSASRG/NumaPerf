@@ -35,7 +35,7 @@ public:
     assert(!New->isDetached());
     assert(Role != NodeRole::Detached);
 
-    New->setRole(Role);
+    New->Role = static_cast<unsigned>(Role);
     auto *P = Anchor->parent();
     P->replaceChildRangeLowLevel(Anchor, Anchor, New);
 

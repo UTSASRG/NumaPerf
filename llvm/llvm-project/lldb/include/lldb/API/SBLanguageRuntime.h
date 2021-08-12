@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBLANGUAGERUNTIME_H
-#define LLDB_API_SBLANGUAGERUNTIME_H
+#ifndef LLDB_SBLanguageRuntime_h_
+#define LLDB_SBLanguageRuntime_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -22,4 +22,4 @@ public:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBLANGUAGERUNTIME_H
+#endif // LLDB_SBLanguageRuntime_h_

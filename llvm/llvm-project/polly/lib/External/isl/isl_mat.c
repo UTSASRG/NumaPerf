@@ -252,14 +252,14 @@ __isl_null isl_mat *isl_mat_free(__isl_take isl_mat *mat)
 	return NULL;
 }
 
-isl_size isl_mat_rows(__isl_keep isl_mat *mat)
+int isl_mat_rows(__isl_keep isl_mat *mat)
 {
-	return mat ? mat->n_row : isl_size_error;
+	return mat ? mat->n_row : -1;
 }
 
-isl_size isl_mat_cols(__isl_keep isl_mat *mat)
+int isl_mat_cols(__isl_keep isl_mat *mat)
 {
-	return mat ? mat->n_col : isl_size_error;
+	return mat ? mat->n_col : -1;
 }
 
 /* Check that "col" is a valid column position for "mat".
@@ -423,26 +423,26 @@ __isl_give isl_mat *isl_mat_identity(isl_ctx *ctx, unsigned n_row)
 
 /* Is "mat" a (possibly scaled) identity matrix?
  */
-isl_bool isl_mat_is_scaled_identity(__isl_keep isl_mat *mat)
+int isl_mat_is_scaled_identity(__isl_keep isl_mat *mat)
 {
 	int i;
 
 	if (!mat)
-		return isl_bool_error;
+		return -1;
 	if (mat->n_row != mat->n_col)
-		return isl_bool_false;
+		return 0;
 
 	for (i = 0; i < mat->n_row; ++i) {
 		if (isl_seq_first_non_zero(mat->row[i], i) != -1)
-			return isl_bool_false;
+			return 0;
 		if (isl_int_ne(mat->row[0][0], mat->row[i][i]))
-			return isl_bool_false;
+			return 0;
 		if (isl_seq_first_non_zero(mat->row[i] + i + 1,
 					    mat->n_col - (i + 1)) != -1)
-			return isl_bool_false;
+			return 0;
 	}
 
-	return isl_bool_true;
+	return 1;
 }
 
 __isl_give isl_vec *isl_mat_vec_product(__isl_take isl_mat *mat,
@@ -718,16 +718,15 @@ error:
  */
 static __isl_give isl_mat *eliminate(__isl_take isl_mat *mat, int row, int col)
 {
-	int k;
-	isl_size nr, nc;
+	int k, nr, nc;
 	isl_ctx *ctx;
 
-	nr = isl_mat_rows(mat);
-	nc = isl_mat_cols(mat);
-	if (nr < 0 || nc < 0)
-		return isl_mat_free(mat);
+	if (!mat)
+		return NULL;
 
 	ctx = isl_mat_get_ctx(mat);
+	nr = isl_mat_rows(mat);
+	nc = isl_mat_cols(mat);
 
 	for (k = 0; k < nr; ++k) {
 		if (k == row)
@@ -755,13 +754,13 @@ static __isl_give isl_mat *eliminate(__isl_take isl_mat *mat, int row, int col)
  */
 __isl_give isl_mat *isl_mat_reverse_gauss(__isl_take isl_mat *mat)
 {
-	int k, row, last;
-	isl_size nr, nc;
+	int k, row, last, nr, nc;
+
+	if (!mat)
+		return NULL;
 
 	nr = isl_mat_rows(mat);
 	nc = isl_mat_cols(mat);
-	if (nr < 0 || nc < 0)
-		return isl_mat_free(mat);
 
 	last = nc - 1;
 	for (row = nr - 1; row >= 0; --row) {
@@ -794,13 +793,13 @@ __isl_give isl_mat *isl_mat_reverse_gauss(__isl_take isl_mat *mat)
  */
 __isl_give isl_mat *isl_mat_lexnonneg_rows(__isl_take isl_mat *mat)
 {
-	int i;
-	isl_size nr, nc;
+	int i, nr, nc;
+
+	if (!mat)
+		return NULL;
 
 	nr = isl_mat_rows(mat);
 	nc = isl_mat_cols(mat);
-	if (nr < 0 || nc < 0)
-		return isl_mat_free(mat);
 
 	for (i = 0; i < nr; ++i) {
 		int pos;
@@ -843,16 +842,16 @@ static int hermite_first_zero_col(__isl_keep isl_mat *H, int first_col,
 	return H->n_col;
 }
 
-/* Return the rank of "mat", or isl_size_error in case of error.
+/* Return the rank of "mat", or -1 in case of error.
  */
-isl_size isl_mat_rank(__isl_keep isl_mat *mat)
+int isl_mat_rank(__isl_keep isl_mat *mat)
 {
 	int rank;
 	isl_mat *H;
 
 	H = isl_mat_left_hermite(isl_mat_copy(mat), 0, NULL, NULL);
 	if (!H)
-		return isl_size_error;
+		return -1;
 
 	rank = hermite_first_zero_col(H, 0, H->n_row);
 	isl_mat_free(H);
@@ -1361,15 +1360,15 @@ __isl_give isl_basic_set *isl_basic_set_preimage(
 
 	ctx = bset->ctx;
 	bset = isl_basic_set_cow(bset);
-	if (isl_basic_set_check_no_params(bset) < 0)
+	if (!bset)
 		goto error;
 
+	isl_assert(ctx, bset->dim->nparam == 0, goto error);
 	isl_assert(ctx, 1+bset->dim->n_out == mat->n_row, goto error);
 	isl_assert(ctx, mat->n_col > 0, goto error);
 
 	if (mat->n_col > mat->n_row) {
-		bset = isl_basic_set_add_dims(bset, isl_dim_set,
-						mat->n_col - mat->n_row);
+		bset = isl_basic_set_extend(bset, 0, mat->n_col-1, 0, 0, 0);
 		if (!bset)
 			goto error;
 	} else if (mat->n_col < mat->n_row) {
@@ -1392,7 +1391,7 @@ __isl_give isl_basic_set *isl_basic_set_preimage(
 
 	ISL_F_CLR(bset, ISL_BASIC_SET_NO_IMPLICIT);
 	ISL_F_CLR(bset, ISL_BASIC_SET_NO_REDUNDANT);
-	ISL_F_CLR(bset, ISL_BASIC_SET_SORTED);
+	ISL_F_CLR(bset, ISL_BASIC_SET_NORMALIZED);
 	ISL_F_CLR(bset, ISL_BASIC_SET_NORMALIZED_DIVS);
 	ISL_F_CLR(bset, ISL_BASIC_SET_ALL_EQUALITIES);
 
@@ -2044,22 +2043,19 @@ __isl_give isl_mat *isl_mat_row_basis(__isl_take isl_mat *mat)
 __isl_give isl_mat *isl_mat_row_basis_extension(
 	__isl_take isl_mat *mat1, __isl_take isl_mat *mat2)
 {
-	isl_size n_row;
-	int r1, r;
-	isl_size n1;
+	int n_row;
+	int r1, r, n1;
 	isl_mat *H, *Q;
 
 	n1 = isl_mat_rows(mat1);
 	H = isl_mat_concat(mat1, mat2);
 	H = isl_mat_left_hermite(H, 0, NULL, &Q);
-	if (n1 < 0 || !H || !Q)
+	if (!H || !Q)
 		goto error;
 
 	r1 = hermite_first_zero_col(H, 0, n1);
 	r = hermite_first_zero_col(H, r1, H->n_row);
 	n_row = isl_mat_rows(Q);
-	if (n_row < 0)
-		goto error;
 	Q = isl_mat_drop_rows(Q, r, n_row - r);
 	Q = isl_mat_drop_rows(Q, 0, r1);
 
@@ -2080,7 +2076,7 @@ error:
 isl_bool isl_mat_has_linearly_independent_rows(__isl_keep isl_mat *mat1,
 	__isl_keep isl_mat *mat2)
 {
-	isl_size r1, r2, r;
+	int r1, r2, r;
 	isl_mat *mat;
 
 	r1 = isl_mat_rank(mat1);
@@ -2099,5 +2095,5 @@ isl_bool isl_mat_has_linearly_independent_rows(__isl_keep isl_mat *mat1,
 	isl_mat_free(mat);
 	if (r < 0)
 		return isl_bool_error;
-	return isl_bool_ok(r == r1 + r2);
+	return r == r1 + r2;
 }

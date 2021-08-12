@@ -1,5 +1,4 @@
 ; RUN: llc -fast-isel -fast-isel-abort=1 -asm-verbose=false -mtriple=x86_64-unknown-unknown -mattr=+f16c < %s | FileCheck %s
-; RUN: llc -fast-isel -fast-isel-abort=1 -asm-verbose=false -mtriple=x86_64-unknown-unknown -mattr=+avx512vl < %s | FileCheck %s
 
 ; Verify that fast-isel correctly expands float-half conversions.
 
@@ -15,7 +14,7 @@ entry:
 
 define float @test_fp16_to_fp32(i32 %a) {
 ; CHECK-LABEL: test_fp16_to_fp32:
-; CHECK: movzwl %di, %eax
+; CHECK: movswl %di, %eax
 ; CHECK-NEXT: vmovd %eax, %xmm0
 ; CHECK-NEXT: vcvtph2ps %xmm0, %xmm0
 ; CHECK-NEXT: retq

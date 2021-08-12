@@ -100,11 +100,6 @@ static cl::opt<std::string> OptimizerLastEPPipeline(
              "the OptimizerLast extension point into default pipelines"),
     cl::Hidden);
 
-// Individual pipeline tuning options.
-static cl::opt<bool> DisableLoopUnrolling(
-    "new-pm-disable-loop-unrolling",
-    cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
-
 extern cl::opt<PGOKind> PGOKindFlag;
 extern cl::opt<std::string> ProfileFile;
 extern cl::opt<CSPGOKind> CSPGOKindFlag;
@@ -199,7 +194,7 @@ static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
         });
   if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(
-        [&PB, VerifyEachPass, DebugLogging](ModulePassManager &PM,
+        [&PB, VerifyEachPass, DebugLogging](FunctionPassManager &PM,
                                             PassBuilder::OptimizationLevel) {
           ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline, VerifyEachPass,
@@ -219,58 +214,52 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            bool ShouldPreserveAssemblyUseListOrder,
                            bool ShouldPreserveBitcodeUseListOrder,
                            bool EmitSummaryIndex, bool EmitModuleHash,
-                           bool EnableDebugify, bool Coroutines) {
+                           bool EnableDebugify) {
   bool VerifyEachPass = VK == VK_VerifyEachPass;
 
   Optional<PGOOptions> P;
   switch (PGOKindFlag) {
-  case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", PGOOptions::IRInstr);
-    break;
-  case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, PGOOptions::IRUse);
-    break;
-  case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile,
-                   PGOOptions::SampleUse);
-    break;
-  case NoPGO:
-    if (DebugInfoForProfiling)
-      P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction,
-                     true);
-    else
-      P = None;
-  }
-  if (CSPGOKindFlag != NoCSPGO) {
-    if (P && (P->Action == PGOOptions::IRInstr ||
-              P->Action == PGOOptions::SampleUse))
-      errs() << "CSPGOKind cannot be used with IRInstr or SampleUse";
-    if (CSPGOKindFlag == CSInstrGen) {
-      if (CSProfileGenFile.empty())
-        errs() << "CSInstrGen needs to specify CSProfileGenFile";
-      if (P) {
-        P->CSAction = PGOOptions::CSIRInstr;
-        P->CSProfileGenFile = CSProfileGenFile;
-      } else
-        P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       PGOOptions::NoAction, PGOOptions::CSIRInstr);
-    } else /* CSPGOKindFlag == CSInstrUse */ {
-      if (!P)
-        errs() << "CSInstrUse needs to be together with InstrUse";
-      P->CSAction = PGOOptions::CSIRUse;
+    case InstrGen:
+      P = PGOOptions(ProfileFile, "", "", PGOOptions::IRInstr);
+      break;
+    case InstrUse:
+      P = PGOOptions(ProfileFile, "", ProfileRemappingFile, PGOOptions::IRUse);
+      break;
+    case SampleUse:
+      P = PGOOptions(ProfileFile, "", ProfileRemappingFile,
+                     PGOOptions::SampleUse);
+      break;
+    case NoPGO:
+      if (DebugInfoForProfiling)
+        P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction,
+                       true);
+      else
+        P = None;
     }
-  }
+    if (CSPGOKindFlag != NoCSPGO) {
+      if (P && (P->Action == PGOOptions::IRInstr ||
+                P->Action == PGOOptions::SampleUse))
+        errs() << "CSPGOKind cannot be used with IRInstr or SampleUse";
+      if (CSPGOKindFlag == CSInstrGen) {
+        if (CSProfileGenFile.empty())
+          errs() << "CSInstrGen needs to specify CSProfileGenFile";
+        if (P) {
+          P->CSAction = PGOOptions::CSIRInstr;
+          P->CSProfileGenFile = CSProfileGenFile;
+        } else
+          P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
+                         PGOOptions::NoAction, PGOOptions::CSIRInstr);
+      } else /* CSPGOKindFlag == CSInstrUse */ {
+        if (!P)
+          errs() << "CSInstrUse needs to be together with InstrUse";
+        P->CSAction = PGOOptions::CSIRUse;
+      }
+    }
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI;
   SI.registerCallbacks(PIC);
 
-  PipelineTuningOptions PTO;
-  // LoopUnrolling defaults on to true and DisableLoopUnrolling is initialized
-  // to false above so we shouldn't necessarily need to check whether or not the
-  // option has been enabled.
-  PTO.LoopUnrolling = !DisableLoopUnrolling;
-  PTO.Coroutines = Coroutines;
-  PassBuilder PB(TM, PTO, P, &PIC);
+  PassBuilder PB(TM, PipelineTuningOptions(), P, &PIC);
   registerEPCallbacks(PB, VerifyEachPass, DebugPM);
 
   // Load requested pass plugins and let them register pass builder callbacks

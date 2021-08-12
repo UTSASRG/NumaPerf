@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: no-exceptions
+// REQUIRES: libcxxabi-no-exceptions
 
 #include <cxxabi.h>
 #include <exception>

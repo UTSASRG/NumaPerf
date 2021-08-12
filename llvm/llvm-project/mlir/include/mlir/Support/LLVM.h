@@ -1,6 +1,6 @@
 //===- LLVM.h - Import and forward declare core LLVM types ------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -25,54 +25,34 @@
 
 // Forward declarations.
 namespace llvm {
-// String types
-template <unsigned N>
-class SmallString;
+// Containers.
 class StringRef;
 class StringLiteral;
 class Twine;
-
-// Containers.
+template <typename T> class SmallPtrSetImpl;
+template <typename T, unsigned N> class SmallPtrSet;
+template <typename T> class SmallVectorImpl;
+template <typename T, unsigned N> class SmallVector;
+template <unsigned N> class SmallString;
 template <typename T> class ArrayRef;
+template <typename T> class MutableArrayRef;
+template <typename T> class TinyPtrVector;
+template <typename T> class Optional;
+template <typename... PT> class PointerUnion;
 namespace detail {
 template <typename KeyT, typename ValueT> struct DenseMapPair;
-} // namespace detail
+}
+template <typename T> struct DenseMapInfo;
+template <typename ValueT, typename ValueInfoT> class DenseSet;
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
-template <typename T>
-struct DenseMapInfo;
-template <typename ValueT, typename ValueInfoT>
-class DenseSet;
-class MallocAllocator;
-template <typename T>
-class MutableArrayRef;
-template <typename T>
-class Optional;
-template <typename... PT>
-class PointerUnion;
-template <typename T, unsigned N>
-class SmallPtrSet;
-template <typename T>
-class SmallPtrSetImpl;
-template <typename T, unsigned N>
-class SmallVector;
-template <typename T>
-class SmallVectorImpl;
-template <typename AllocatorTy>
-class StringSet;
-template <typename T>
-class TinyPtrVector;
-template <typename T, typename ResultT>
-class TypeSwitch;
+template <typename Fn> class function_ref;
+template <typename IteratorT> class iterator_range;
 
 // Other common classes.
+class raw_ostream;
 class APInt;
 class APFloat;
-template <typename Fn>
-class function_ref;
-template <typename IteratorT>
-class iterator_range;
-class raw_ostream;
 } // end namespace llvm
 
 namespace mlir {
@@ -84,14 +64,6 @@ using llvm::dyn_cast_or_null;
 using llvm::isa;
 using llvm::isa_and_nonnull;
 
-// String types
-using llvm::SmallString;
-using llvm::StringLiteral;
-using llvm::StringRef;
-using llvm::Twine;
-
-// Container Related types
-//
 // Containers.
 using llvm::ArrayRef;
 using llvm::DenseMapInfo;
@@ -101,26 +73,25 @@ template <typename KeyT, typename ValueT,
 using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
-template <typename AllocatorTy = llvm::MallocAllocator>
-using StringSet = llvm::StringSet<AllocatorTy>;
+template <typename Fn> using function_ref = llvm::function_ref<Fn>;
+using llvm::iterator_range;
 using llvm::MutableArrayRef;
 using llvm::None;
 using llvm::Optional;
 using llvm::PointerUnion;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
+using llvm::SmallString;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
+using llvm::StringLiteral;
+using llvm::StringRef;
 using llvm::TinyPtrVector;
-template <typename T, typename ResultT = void>
-using TypeSwitch = llvm::TypeSwitch<T, ResultT>;
+using llvm::Twine;
 
 // Other common classes.
 using llvm::APFloat;
 using llvm::APInt;
-template <typename Fn>
-using function_ref = llvm::function_ref<Fn>;
-using llvm::iterator_range;
 using llvm::raw_ostream;
 } // namespace mlir
 

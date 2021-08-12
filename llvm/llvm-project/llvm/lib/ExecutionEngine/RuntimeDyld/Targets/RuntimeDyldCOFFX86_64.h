@@ -56,8 +56,7 @@ private:
 public:
   RuntimeDyldCOFFX86_64(RuntimeDyld::MemoryManager &MM,
                         JITSymbolResolver &Resolver)
-      : RuntimeDyldCOFF(MM, Resolver, 8, COFF::IMAGE_REL_AMD64_ADDR64),
-        ImageBase(0) {}
+    : RuntimeDyldCOFF(MM, Resolver), ImageBase(0) {}
 
   unsigned getStubAlignment() override { return 1; }
 
@@ -203,7 +202,7 @@ public:
       return SectionOrError.takeError();
     object::section_iterator SecI = *SectionOrError;
     // If there is no section, this must be an external reference.
-    bool IsExtern = SecI == Obj.section_end();
+    const bool IsExtern = SecI == Obj.section_end();
 
     // Determine the Addend used to adjust the relocation value.
     uint64_t RelType = RelI->getType();
@@ -215,25 +214,7 @@ public:
     Expected<StringRef> TargetNameOrErr = Symbol->getName();
     if (!TargetNameOrErr)
       return TargetNameOrErr.takeError();
-
     StringRef TargetName = *TargetNameOrErr;
-    unsigned TargetSectionID = 0;
-    uint64_t TargetOffset = 0;
-
-    if (TargetName.startswith(getImportSymbolPrefix())) {
-      assert(IsExtern && "DLLImport not marked extern?");
-      TargetSectionID = SectionID;
-      TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName);
-      TargetName = StringRef();
-      IsExtern = false;
-    } else if (!IsExtern) {
-      if (auto TargetSectionIDOrErr =
-              findOrEmitSection(Obj, *SecI, SecI->isText(), ObjSectionToID))
-        TargetSectionID = *TargetSectionIDOrErr;
-      else
-        return TargetSectionIDOrErr.takeError();
-      TargetOffset = getSymbolOffset(*Symbol);
-    }
 
     switch (RelType) {
 
@@ -272,6 +253,14 @@ public:
       RelocationEntry RE(SectionID, Offset, RelType, Addend);
       addRelocationForSymbol(RE, TargetName);
     } else {
+      bool IsCode = SecI->isText();
+      unsigned TargetSectionID;
+      if (auto TargetSectionIDOrErr =
+          findOrEmitSection(Obj, *SecI, IsCode, ObjSectionToID))
+        TargetSectionID = *TargetSectionIDOrErr;
+      else
+        return TargetSectionIDOrErr.takeError();
+      uint64_t TargetOffset = getSymbolOffset(*Symbol);
       RelocationEntry RE(SectionID, Offset, RelType, TargetOffset + Addend);
       addRelocationForSection(RE, TargetSectionID);
     }

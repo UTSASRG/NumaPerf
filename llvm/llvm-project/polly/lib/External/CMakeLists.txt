@@ -241,7 +241,6 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_scheduler.c
     isl/isl_seq.c
     isl/isl_set_list.c
-    isl/isl_set_to_ast_graft_list.c
     isl/isl_sort.c
     isl/isl_space.c
     isl/isl_stride.c

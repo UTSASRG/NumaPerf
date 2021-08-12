@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFUTILS_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFUTILS_H
+#ifndef __CFUtils_h__
+#define __CFUtils_h__
 
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -22,7 +22,7 @@
 // explicitly released using the release() member function.
 template <class T> class CFReleaser {
 public:
-  // Type names for the value
+  // Type names for the avlue
   typedef T element_type;
 
   // Constructors and destructors
@@ -72,4 +72,4 @@ private:
 };
 
 #endif // #ifdef __cplusplus
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFUTILS_H
+#endif // #ifndef __CFUtils_h__

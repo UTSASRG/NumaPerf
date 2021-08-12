@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
+#ifndef liblldb_AppleObjCDeclVendor_h_
+#define liblldb_AppleObjCDeclVendor_h_
 
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/lldb-private.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 namespace lldb_private {
 
@@ -37,7 +37,7 @@ private:
   bool FinishDecl(clang::ObjCInterfaceDecl *decl);
 
   ObjCLanguageRuntime &m_runtime;
-  TypeSystemClang m_ast_ctx;
+  ClangASTContext m_ast_ctx;
   ObjCLanguageRuntime::EncodingToTypeSP m_type_realizer_sp;
   AppleObjCExternalASTSource *m_external_source;
 
@@ -50,4 +50,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
+#endif // liblldb_AppleObjCDeclVendor_h_

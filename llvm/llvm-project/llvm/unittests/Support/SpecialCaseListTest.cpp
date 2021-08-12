@@ -39,7 +39,7 @@ protected:
     raw_fd_ostream OF(FD, true, true);
     OF << Contents;
     OF.close();
-    return std::string(Path.str());
+    return Path.str();
   }
 };
 

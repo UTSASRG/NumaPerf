@@ -199,7 +199,7 @@ static void test_codegen_fns(MyASTConsumer *my) {
           dbgs() << "\n";
         }
 
-        auto* structTy = dyn_cast<llvm::StructType>(llvmTy);
+        llvm::CompositeType* structTy = dyn_cast<CompositeType>(llvmTy);
         ASSERT_TRUE(structTy != NULL);
 
         // Check getLLVMFieldNumber

@@ -7,12 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
-
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -39,7 +35,7 @@ static ThreadSafeModule extractSubModule(ThreadSafeModule &TSM,
       Constant *Aliasee = A.getAliasee();
       assert(A.hasName() && "Anonymous alias?");
       assert(Aliasee->hasName() && "Anonymous aliasee");
-      std::string AliasName = std::string(A.getName());
+      std::string AliasName = A.getName();
 
       if (isa<Function>(Aliasee)) {
         auto *F = cloneFunctionDecl(*A.getParent(), *cast<Function>(Aliasee));
@@ -72,18 +68,18 @@ namespace orc {
 class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
   PartitioningIRMaterializationUnit(ExecutionSession &ES,
-                                    const IRSymbolMapper::ManglingOptions &MO,
+                                    const ManglingOptions &MO,
                                     ThreadSafeModule TSM, VModuleKey K,
                                     CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(ES, MO, std::move(TSM), std::move(K)),
         Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
-      ThreadSafeModule TSM, VModuleKey K, SymbolFlagsMap SymbolFlags,
-      SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition,
+      ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
+      SymbolNameToDefinitionMap SymbolToDefinition,
       CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(std::move(TSM), std::move(K),
-                              std::move(SymbolFlags), std::move(InitSymbol),
+                              std::move(SymbolFlags),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -165,12 +161,10 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R,
     return;
   }
 
-  if (!NonCallables.empty())
-    R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables),
-                        JITDylibLookupFlags::MatchAllSymbols));
-  if (!Callables.empty())
-    R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
-                            std::move(Callables), AliaseeImpls));
+  R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables),
+                      JITDylibLookupFlags::MatchAllSymbols));
+  R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
+                          std::move(Callables), AliaseeImpls));
 }
 
 CompileOnDemandLayer::PerDylibResources &
@@ -178,22 +172,21 @@ CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =
-        getExecutionSession().createBareJITDylib(TargetD.getName() + ".impl");
-    JITDylibSearchOrder NewLinkOrder;
-    TargetD.withLinkOrderDo([&](const JITDylibSearchOrder &TargetLinkOrder) {
-      NewLinkOrder = TargetLinkOrder;
-    });
-
-    assert(!NewLinkOrder.empty() && NewLinkOrder.front().first == &TargetD &&
-           NewLinkOrder.front().second ==
-               JITDylibLookupFlags::MatchAllSymbols &&
-           "TargetD must be at the front of its own search order and match "
-           "non-exported symbol");
-    NewLinkOrder.insert(std::next(NewLinkOrder.begin()),
-                        {&ImplD, JITDylibLookupFlags::MatchAllSymbols});
-    ImplD.setLinkOrder(NewLinkOrder, false);
-    TargetD.setLinkOrder(std::move(NewLinkOrder), false);
-
+        getExecutionSession().createJITDylib(TargetD.getName() + ".impl");
+    TargetD.withSearchOrderDo(
+        [&](const JITDylibSearchOrder &TargetSearchOrder) {
+          auto NewSearchOrder = TargetSearchOrder;
+          assert(
+              !NewSearchOrder.empty() &&
+              NewSearchOrder.front().first == &TargetD &&
+              NewSearchOrder.front().second ==
+                  JITDylibLookupFlags::MatchAllSymbols &&
+              "TargetD must be at the front of its own search order and match "
+              "non-exported symbol");
+          NewSearchOrder.insert(std::next(NewSearchOrder.begin()),
+                                {&ImplD, JITDylibLookupFlags::MatchAllSymbols});
+          ImplD.setSearchOrder(std::move(NewSearchOrder), false);
+        });
     PerDylibResources PDR(ImplD, BuildIndirectStubsManager());
     I = DylibResources.insert(std::make_pair(&TargetD, std::move(PDR))).first;
   }
@@ -258,15 +251,8 @@ void CompileOnDemandLayer::emitPartition(
   auto &ES = getExecutionSession();
   GlobalValueSet RequestedGVs;
   for (auto &Name : R.getRequestedSymbols()) {
-    if (Name == R.getInitializerSymbol())
-      TSM.withModuleDo([&](Module &M) {
-        for (auto &GV : getStaticInitGVs(M))
-          RequestedGVs.insert(&GV);
-      });
-    else {
-      assert(Defs.count(Name) && "No definition for symbol");
-      RequestedGVs.insert(Defs[Name]);
-    }
+    assert(Defs.count(Name) && "No definition for symbol");
+    RequestedGVs.insert(Defs[Name]);
   }
 
   /// Perform partitioning with the context lock held, since the partition
@@ -286,8 +272,7 @@ void CompileOnDemandLayer::emitPartition(
   // If the partition is empty, return the whole module to the symbol table.
   if (GVsToExtract->empty()) {
     R.replace(std::make_unique<PartitioningIRMaterializationUnit>(
-        std::move(TSM), R.getVModuleKey(), R.getSymbols(),
-        R.getInitializerSymbol(), std::move(Defs), *this));
+        std::move(TSM), R.getSymbols(), std::move(Defs), *this));
     return;
   }
 
@@ -298,44 +283,21 @@ void CompileOnDemandLayer::emitPartition(
   //
   // FIXME: We apply this promotion once per partitioning. It's safe, but
   // overkill.
+
   auto ExtractedTSM =
       TSM.withModuleDo([&](Module &M) -> Expected<ThreadSafeModule> {
         auto PromotedGlobals = PromoteSymbols(M);
         if (!PromotedGlobals.empty()) {
-
           MangleAndInterner Mangle(ES, M.getDataLayout());
           SymbolFlagsMap SymbolFlags;
-          IRSymbolMapper::add(ES, *getManglingOptions(),
-                              PromotedGlobals, SymbolFlags);
-
+          for (auto &GV : PromotedGlobals)
+            SymbolFlags[Mangle(GV->getName())] =
+                JITSymbolFlags::fromGlobalValue(*GV);
           if (auto Err = R.defineMaterializing(SymbolFlags))
             return std::move(Err);
         }
 
         expandPartition(*GVsToExtract);
-
-        // Submodule name is given by hashing the names of the globals.
-        std::string SubModuleName;
-        {
-          std::vector<const GlobalValue*> HashGVs;
-          HashGVs.reserve(GVsToExtract->size());
-          for (auto *GV : *GVsToExtract)
-            HashGVs.push_back(GV);
-          llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
-              return LHS->getName() < RHS->getName();
-            });
-          hash_code HC(0);
-          for (auto *GV : HashGVs) {
-            assert(GV->hasName() && "All GVs to extract should be named by now");
-            auto GVName = GV->getName();
-            HC = hash_combine(HC, hash_combine_range(GVName.begin(), GVName.end()));
-          }
-          raw_string_ostream(SubModuleName)
-            << ".submodule."
-            << formatv(sizeof(size_t) == 8 ? "{0:x16}" : "{0:x8}",
-                       static_cast<size_t>(HC))
-            << ".ll";
-        }
 
         // Extract the requested partiton (plus any necessary aliases) and
         // put the rest back into the impl dylib.
@@ -343,7 +305,7 @@ void CompileOnDemandLayer::emitPartition(
           return GVsToExtract->count(&GV);
         };
 
-        return extractSubModule(TSM, SubModuleName , ShouldExtract);
+        return extractSubModule(TSM, ".submodule", ShouldExtract);
       });
 
   if (!ExtractedTSM) {

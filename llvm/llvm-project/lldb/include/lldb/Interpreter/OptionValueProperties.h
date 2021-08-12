@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUEPROPERTIES_H
-#define LLDB_INTERPRETER_OPTIONVALUEPROPERTIES_H
+#ifndef liblldb_OptionValueProperties_h_
+#define liblldb_OptionValueProperties_h_
 
 #include <vector>
 
@@ -218,4 +218,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUEPROPERTIES_H
+#endif // liblldb_OptionValueProperties_h_

@@ -13,7 +13,7 @@ using namespace ento;
 
 void AnalysisManager::anchor() { }
 
-AnalysisManager::AnalysisManager(ASTContext &ASTCtx, Preprocessor &PP,
+AnalysisManager::AnalysisManager(ASTContext &ASTCtx,
                                  const PathDiagnosticConsumers &PDC,
                                  StoreManagerCreator storemgr,
                                  ConstraintManagerCreator constraintmgr,
@@ -38,7 +38,7 @@ AnalysisManager::AnalysisManager(ASTContext &ASTCtx, Preprocessor &PP,
           Options.ShouldElideConstructors,
           /*addVirtualBaseBranches=*/true,
           injector),
-      Ctx(ASTCtx), PP(PP), LangOpts(ASTCtx.getLangOpts()),
+      Ctx(ASTCtx), LangOpts(ASTCtx.getLangOpts()),
       PathConsumers(PDC), CreateStoreMgr(storemgr),
       CreateConstraintMgr(constraintmgr), CheckerMgr(checkerMgr),
       options(Options) {

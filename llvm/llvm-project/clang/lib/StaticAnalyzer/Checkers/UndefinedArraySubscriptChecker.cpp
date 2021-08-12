@@ -62,6 +62,6 @@ void ento::registerUndefinedArraySubscriptChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedArraySubscriptChecker>();
 }
 
-bool ento::shouldRegisterUndefinedArraySubscriptChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterUndefinedArraySubscriptChecker(const LangOptions &LO) {
   return true;
 }

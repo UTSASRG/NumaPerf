@@ -21,6 +21,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
@@ -31,7 +32,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 using namespace llvm;
 
@@ -61,10 +61,10 @@ namespace {
 /// Loop prefetch implementation class.
 class LoopDataPrefetch {
 public:
-  LoopDataPrefetch(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
-                   ScalarEvolution *SE, const TargetTransformInfo *TTI,
+  LoopDataPrefetch(AssumptionCache *AC, LoopInfo *LI, ScalarEvolution *SE,
+                   const TargetTransformInfo *TTI,
                    OptimizationRemarkEmitter *ORE)
-      : AC(AC), DT(DT), LI(LI), SE(SE), TTI(TTI), ORE(ORE) {}
+      : AC(AC), LI(LI), SE(SE), TTI(TTI), ORE(ORE) {}
 
   bool run();
 
@@ -73,16 +73,12 @@ private:
 
   /// Check if the stride of the accesses is large enough to
   /// warrant a prefetch.
-  bool isStrideLargeEnough(const SCEVAddRecExpr *AR, unsigned TargetMinStride);
+  bool isStrideLargeEnough(const SCEVAddRecExpr *AR);
 
-  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
-                                unsigned NumStridedMemAccesses,
-                                unsigned NumPrefetches,
-                                bool HasCall) {
+  unsigned getMinPrefetchStride() {
     if (MinPrefetchStride.getNumOccurrences() > 0)
       return MinPrefetchStride;
-    return TTI->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
-                                     NumPrefetches, HasCall);
+    return TTI->getMinPrefetchStride();
   }
 
   unsigned getPrefetchDistance() {
@@ -97,14 +93,7 @@ private:
     return TTI->getMaxPrefetchIterationsAhead();
   }
 
-  bool doPrefetchWrites() {
-    if (PrefetchWrites.getNumOccurrences() > 0)
-      return PrefetchWrites;
-    return TTI->enableWritePrefetching();
-  }
-
   AssumptionCache *AC;
-  DominatorTree *DT;
   LoopInfo *LI;
   ScalarEvolution *SE;
   const TargetTransformInfo *TTI;
@@ -121,7 +110,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
@@ -150,8 +138,8 @@ FunctionPass *llvm::createLoopDataPrefetchPass() {
   return new LoopDataPrefetchLegacyPass();
 }
 
-bool LoopDataPrefetch::isStrideLargeEnough(const SCEVAddRecExpr *AR,
-                                           unsigned TargetMinStride) {
+bool LoopDataPrefetch::isStrideLargeEnough(const SCEVAddRecExpr *AR) {
+  unsigned TargetMinStride = getMinPrefetchStride();
   // No need to check if any stride goes.
   if (TargetMinStride <= 1)
     return true;
@@ -168,7 +156,6 @@ bool LoopDataPrefetch::isStrideLargeEnough(const SCEVAddRecExpr *AR,
 
 PreservedAnalyses LoopDataPrefetchPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
-  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   LoopInfo *LI = &AM.getResult<LoopAnalysis>(F);
   ScalarEvolution *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
@@ -176,7 +163,7 @@ PreservedAnalyses LoopDataPrefetchPass::run(Function &F,
       &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  LoopDataPrefetch LDP(AC, DT, LI, SE, TTI, ORE);
+  LoopDataPrefetch LDP(AC, LI, SE, TTI, ORE);
   bool Changed = LDP.run();
 
   if (Changed) {
@@ -193,7 +180,6 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   AssumptionCache *AC =
@@ -203,7 +189,7 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
   const TargetTransformInfo *TTI =
       &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  LoopDataPrefetch LDP(AC, DT, LI, SE, TTI, ORE);
+  LoopDataPrefetch LDP(AC, LI, SE, TTI, ORE);
   return LDP.run();
 }
 
@@ -224,49 +210,6 @@ bool LoopDataPrefetch::run() {
   return MadeChange;
 }
 
-/// A record for a potential prefetch made during the initial scan of the
-/// loop. This is used to let a single prefetch target multiple memory accesses.
-struct Prefetch {
-  /// The address formula for this prefetch as returned by ScalarEvolution.
-  const SCEVAddRecExpr *LSCEVAddRec;
-  /// The point of insertion for the prefetch instruction.
-  Instruction *InsertPt;
-  /// True if targeting a write memory access.
-  bool Writes;
-  /// The (first seen) prefetched instruction.
-  Instruction *MemI;
-
-  /// Constructor to create a new Prefetch for \p I.
-  Prefetch(const SCEVAddRecExpr *L, Instruction *I)
-      : LSCEVAddRec(L), InsertPt(nullptr), Writes(false), MemI(nullptr) {
-    addInstruction(I);
-  };
-
-  /// Add the instruction \param I to this prefetch. If it's not the first
-  /// one, 'InsertPt' and 'Writes' will be updated as required.
-  /// \param PtrDiff the known constant address difference to the first added
-  /// instruction.
-  void addInstruction(Instruction *I, DominatorTree *DT = nullptr,
-                      int64_t PtrDiff = 0) {
-    if (!InsertPt) {
-      MemI = I;
-      InsertPt = I;
-      Writes = isa<StoreInst>(I);
-    } else {
-      BasicBlock *PrefBB = InsertPt->getParent();
-      BasicBlock *InsBB = I->getParent();
-      if (PrefBB != InsBB) {
-        BasicBlock *DomBB = DT->findNearestCommonDominator(PrefBB, InsBB);
-        if (DomBB != PrefBB)
-          InsertPt = DomBB->getTerminator();
-      }
-
-      if (isa<StoreInst>(I) && PtrDiff == 0)
-        Writes = true;
-    }
-  }
-};
-
 bool LoopDataPrefetch::runOnLoop(Loop *L) {
   bool MadeChange = false;
 
@@ -279,22 +222,15 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
 
   // Calculate the number of iterations ahead to prefetch
   CodeMetrics Metrics;
-  bool HasCall = false;
   for (const auto BB : L->blocks()) {
     // If the loop already has prefetches, then assume that the user knows
     // what they are doing and don't add any more.
-    for (auto &I : *BB) {
-      if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
+    for (auto &I : *BB)
+      if (CallInst *CI = dyn_cast<CallInst>(&I))
+        if (Function *F = CI->getCalledFunction())
           if (F->getIntrinsicID() == Intrinsic::prefetch)
             return MadeChange;
-          if (TTI->isLoweredToCall(F))
-            HasCall = true;
-        } else { // indirect call.
-          HasCall = true;
-        }
-      }
-    }
+
     Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
   }
   unsigned LoopSize = Metrics.NumInsts;
@@ -308,14 +244,12 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (ItersAhead > getMaxPrefetchIterationsAhead())
     return MadeChange;
 
-  unsigned ConstantMaxTripCount = SE->getSmallConstantMaxTripCount(L);
-  if (ConstantMaxTripCount && ConstantMaxTripCount < ItersAhead + 1)
-    return MadeChange;
+  LLVM_DEBUG(dbgs() << "Prefetching " << ItersAhead
+                    << " iterations ahead (loop size: " << LoopSize << ") in "
+                    << L->getHeader()->getParent()->getName() << ": " << *L);
 
-  unsigned NumMemAccesses = 0;
-  unsigned NumStridedMemAccesses = 0;
-  SmallVector<Prefetch, 16> Prefetches;
-  for (const auto BB : L->blocks())
+  SmallVector<std::pair<Instruction *, const SCEVAddRecExpr *>, 16> PrefLoads;
+  for (const auto BB : L->blocks()) {
     for (auto &I : *BB) {
       Value *PtrValue;
       Instruction *MemI;
@@ -324,7 +258,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
         MemI = LMemI;
         PtrValue = LMemI->getPointerOperand();
       } else if (StoreInst *SMemI = dyn_cast<StoreInst>(&I)) {
-        if (!doPrefetchWrites()) continue;
+        if (!PrefetchWrites) continue;
         MemI = SMemI;
         PtrValue = SMemI->getPointerOperand();
       } else continue;
@@ -332,7 +266,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       unsigned PtrAddrSpace = PtrValue->getType()->getPointerAddressSpace();
       if (PtrAddrSpace)
         continue;
-      NumMemAccesses++;
+
       if (L->isLoopInvariant(PtrValue))
         continue;
 
@@ -340,79 +274,62 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       const SCEVAddRecExpr *LSCEVAddRec = dyn_cast<SCEVAddRecExpr>(LSCEV);
       if (!LSCEVAddRec)
         continue;
-      NumStridedMemAccesses++;
 
-      // We don't want to double prefetch individual cache lines. If this
-      // access is known to be within one cache line of some other one that
-      // has already been prefetched, then don't prefetch this one as well.
+      // Check if the stride of the accesses is large enough to warrant a
+      // prefetch.
+      if (!isStrideLargeEnough(LSCEVAddRec))
+        continue;
+
+      // We don't want to double prefetch individual cache lines. If this load
+      // is known to be within one cache line of some other load that has
+      // already been prefetched, then don't prefetch this one as well.
       bool DupPref = false;
-      for (auto &Pref : Prefetches) {
-        const SCEV *PtrDiff = SE->getMinusSCEV(LSCEVAddRec, Pref.LSCEVAddRec);
+      for (const auto &PrefLoad : PrefLoads) {
+        const SCEV *PtrDiff = SE->getMinusSCEV(LSCEVAddRec, PrefLoad.second);
         if (const SCEVConstant *ConstPtrDiff =
             dyn_cast<SCEVConstant>(PtrDiff)) {
           int64_t PD = std::abs(ConstPtrDiff->getValue()->getSExtValue());
           if (PD < (int64_t) TTI->getCacheLineSize()) {
-            Pref.addInstruction(MemI, DT, PD);
             DupPref = true;
             break;
           }
         }
       }
-      if (!DupPref)
-        Prefetches.push_back(Prefetch(LSCEVAddRec, MemI));
-    }
+      if (DupPref)
+        continue;
 
-  unsigned TargetMinStride =
-    getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
-                         Prefetches.size(), HasCall);
+      const SCEV *NextLSCEV = SE->getAddExpr(LSCEVAddRec, SE->getMulExpr(
+        SE->getConstant(LSCEVAddRec->getType(), ItersAhead),
+        LSCEVAddRec->getStepRecurrence(*SE)));
+      if (!isSafeToExpand(NextLSCEV, *SE))
+        continue;
 
-  LLVM_DEBUG(dbgs() << "Prefetching " << ItersAhead
-             << " iterations ahead (loop size: " << LoopSize << ") in "
-             << L->getHeader()->getParent()->getName() << ": " << *L);
-  LLVM_DEBUG(dbgs() << "Loop has: "
-             << NumMemAccesses << " memory accesses, "
-             << NumStridedMemAccesses << " strided memory accesses, "
-             << Prefetches.size() << " potential prefetch(es), "
-             << "a minimum stride of " << TargetMinStride << ", "
-             << (HasCall ? "calls" : "no calls") << ".\n");
+      PrefLoads.push_back(std::make_pair(MemI, LSCEVAddRec));
 
-  for (auto &P : Prefetches) {
-    // Check if the stride of the accesses is large enough to warrant a
-    // prefetch.
-    if (!isStrideLargeEnough(P.LSCEVAddRec, TargetMinStride))
-      continue;
+      Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), PtrAddrSpace);
+      SCEVExpander SCEVE(*SE, I.getModule()->getDataLayout(), "prefaddr");
+      Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, MemI);
 
-    const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
-      SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
-      P.LSCEVAddRec->getStepRecurrence(*SE)));
-    if (!isSafeToExpand(NextLSCEV, *SE))
-      continue;
-
-    BasicBlock *BB = P.InsertPt->getParent();
-    Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), 0/*PtrAddrSpace*/);
-    SCEVExpander SCEVE(*SE, BB->getModule()->getDataLayout(), "prefaddr");
-    Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, P.InsertPt);
-
-    IRBuilder<> Builder(P.InsertPt);
-    Module *M = BB->getParent()->getParent();
-    Type *I32 = Type::getInt32Ty(BB->getContext());
-    Function *PrefetchFunc = Intrinsic::getDeclaration(
-        M, Intrinsic::prefetch, PrefPtrValue->getType());
-    Builder.CreateCall(
-        PrefetchFunc,
-        {PrefPtrValue,
-         ConstantInt::get(I32, P.Writes),
-         ConstantInt::get(I32, 3), ConstantInt::get(I32, 1)});
-    ++NumPrefetches;
-    LLVM_DEBUG(dbgs() << "  Access: "
-               << *P.MemI->getOperand(isa<LoadInst>(P.MemI) ? 0 : 1)
-               << ", SCEV: " << *P.LSCEVAddRec << "\n");
-    ORE->emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "Prefetched", P.MemI)
-          << "prefetched memory access";
+      IRBuilder<> Builder(MemI);
+      Module *M = BB->getParent()->getParent();
+      Type *I32 = Type::getInt32Ty(BB->getContext());
+      Function *PrefetchFunc = Intrinsic::getDeclaration(
+          M, Intrinsic::prefetch, PrefPtrValue->getType());
+      Builder.CreateCall(
+          PrefetchFunc,
+          {PrefPtrValue,
+           ConstantInt::get(I32, MemI->mayReadFromMemory() ? 0 : 1),
+           ConstantInt::get(I32, 3), ConstantInt::get(I32, 1)});
+      ++NumPrefetches;
+      LLVM_DEBUG(dbgs() << "  Access: " << *PtrValue << ", SCEV: " << *LSCEV
+                        << "\n");
+      ORE->emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "Prefetched", MemI)
+               << "prefetched memory access";
       });
 
-    MadeChange = true;
+      MadeChange = true;
+    }
   }
 
   return MadeChange;

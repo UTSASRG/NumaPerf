@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TABLEGEN_TGLEXER_H
 #define LLVM_LIB_TABLEGEN_TGLEXER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/DataTypes.h"
@@ -21,11 +22,10 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
-template <typename T> class ArrayRef;
 class SourceMgr;
+class SMLoc;
 class Twine;
 
 namespace tgtok {

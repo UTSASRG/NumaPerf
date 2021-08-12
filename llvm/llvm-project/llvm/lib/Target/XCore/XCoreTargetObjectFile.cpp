@@ -140,9 +140,10 @@ MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
   report_fatal_error("Target does not support TLS or Common sections");
 }
 
-MCSection *XCoreTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+MCSection *XCoreTargetObjectFile::getSectionForConstant(const DataLayout &DL,
+                                                        SectionKind Kind,
+                                                        const Constant *C,
+                                                        unsigned &Align) const {
   if (Kind.isMergeableConst4())           return MergeableConst4Section;
   if (Kind.isMergeableConst8())           return MergeableConst8Section;
   if (Kind.isMergeableConst16())          return MergeableConst16Section;

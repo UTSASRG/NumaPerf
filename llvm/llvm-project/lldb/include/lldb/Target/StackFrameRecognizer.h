@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_STACKFRAMERECOGNIZER_H
-#define LLDB_TARGET_STACKFRAMERECOGNIZER_H
+#ifndef liblldb_StackFrameRecognizer_h_
+#define liblldb_StackFrameRecognizer_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
@@ -34,14 +33,10 @@ public:
   virtual lldb::ValueObjectSP GetExceptionObject() {
     return lldb::ValueObjectSP();
   }
-  virtual lldb::StackFrameSP GetMostRelevantFrame() { return nullptr; };
   virtual ~RecognizedStackFrame(){};
-
-  std::string GetStopDescription() { return m_stop_desc; }
 
 protected:
   lldb::ValueObjectListSP m_arguments;
-  std::string m_stop_desc;
 };
 
 /// \class StackFrameRecognizer
@@ -90,9 +85,7 @@ public:
       lldb::StackFrameSP frame) override;
 
 private:
-  ScriptedStackFrameRecognizer(const ScriptedStackFrameRecognizer &) = delete;
-  const ScriptedStackFrameRecognizer &
-  operator=(const ScriptedStackFrameRecognizer &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ScriptedStackFrameRecognizer);
 };
 
 /// \class StackFrameRecognizerManager
@@ -104,7 +97,7 @@ class StackFrameRecognizerManager {
 public:
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
                             ConstString module,
-                            llvm::ArrayRef<ConstString> symbols,
+                            ConstString symbol,
                             bool first_instruction_only = true);
 
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
@@ -112,11 +105,10 @@ public:
                             lldb::RegularExpressionSP symbol,
                             bool first_instruction_only = true);
 
-  static void
-  ForEach(std::function<void(uint32_t recognizer_id,
-                             std::string recognizer_name, std::string module,
-                             llvm::ArrayRef<ConstString> symbols,
-                             bool regexp)> const &callback);
+  static void ForEach(
+      std::function<void(uint32_t recognizer_id, std::string recognizer_name,
+                         std::string module, std::string symbol,
+                         bool regexp)> const &callback);
 
   static bool RemoveRecognizerWithID(uint32_t recognizer_id);
 
@@ -166,4 +158,4 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_STACKFRAMERECOGNIZER_H
+#endif // liblldb_StackFrameRecognizer_h_

@@ -10,12 +10,7 @@
 // sanitizers.
 //
 //===----------------------------------------------------------------------===//
-
 #include "clang/Basic/SanitizerBlacklist.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SanitizerSpecialCaseList.h"
-#include "clang/Basic/Sanitizers.h"
-#include "clang/Basic/SourceManager.h"
 
 using namespace clang;
 
@@ -24,8 +19,6 @@ SanitizerBlacklist::SanitizerBlacklist(
     : SSCL(SanitizerSpecialCaseList::createOrDie(
           BlacklistPaths, SM.getFileManager().getVirtualFileSystem())),
       SM(SM) {}
-
-SanitizerBlacklist::~SanitizerBlacklist() = default;
 
 bool SanitizerBlacklist::isBlacklistedGlobal(SanitizerMask Mask,
                                              StringRef GlobalName,

@@ -7,6 +7,4 @@ void test_cldemote(const void *p) {
   //CHECK-LABEL: @test_cldemote
   //CHECK: call void @llvm.x86.cldemote(i8* %{{.*}})
   _cldemote(p);
-  //CHECK: call void @llvm.x86.cldemote(i8* %{{.*}})
-  _mm_cldemote(p);
 }

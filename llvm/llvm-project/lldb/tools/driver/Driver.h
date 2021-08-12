@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DRIVER_DRIVER_H
-#define LLDB_TOOLS_DRIVER_DRIVER_H
+#ifndef lldb_Driver_h_
+#define lldb_Driver_h_
 
 #include "Platform.h"
 
@@ -99,4 +99,4 @@ private:
   OptionData m_option_data;
 };
 
-#endif // LLDB_TOOLS_DRIVER_DRIVER_H
+#endif // lldb_Driver_h_

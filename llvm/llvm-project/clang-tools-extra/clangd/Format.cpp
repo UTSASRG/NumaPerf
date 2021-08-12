@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Format.h"
-#include "support/Logger.h"
-#include "clang/Basic/FileManager.h"
+#include "Logger.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
@@ -327,7 +326,7 @@ formatIncremental(llvm::StringRef OriginalCode, unsigned OriginalCursor,
   tooling::Replacements Final;
   unsigned FinalCursor = OriginalCursor;
 #ifndef NDEBUG
-  std::string FinalCode = std::string(OriginalCode);
+  std::string FinalCode = OriginalCode;
   dlog("Initial code: {0}", FinalCode);
 #endif
   for (auto Pass :

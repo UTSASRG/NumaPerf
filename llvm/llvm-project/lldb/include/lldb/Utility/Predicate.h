@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_PREDICATE_H
-#define LLDB_UTILITY_PREDICATE_H
+#ifndef liblldb_Predicate_h_
+#define liblldb_Predicate_h_
 
 #include <stdint.h>
 #include <time.h>
@@ -221,10 +221,9 @@ private:
       m_condition.notify_all();
   }
 
-  Predicate(const Predicate &) = delete;
-  const Predicate &operator=(const Predicate &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Predicate);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_PREDICATE_H
+#endif // liblldb_Predicate_h_

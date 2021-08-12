@@ -252,7 +252,7 @@ Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
   PtrTy = dyn_cast<PointerType>(Ty);
   if (PtrTy)
     Ty = PtrTy->getElementType();
-  Size = cast<VectorType>(Ty)->getNumElements();
+  Size = Ty->getVectorNumElements();
   if (!CachePtr)
     Tmp.resize(Size, nullptr);
   else if (CachePtr->empty())
@@ -269,7 +269,7 @@ Value *Scatterer::operator[](unsigned I) {
     return CV[I];
   IRBuilder<> Builder(BB, BBI);
   if (PtrTy) {
-    Type *ElTy = cast<VectorType>(PtrTy->getElementType())->getElementType();
+    Type *ElTy = PtrTy->getElementType()->getVectorElementType();
     if (!CV[0]) {
       Type *NewPtrTy = PointerType::get(ElTy, PtrTy->getAddressSpace());
       CV[0] = Builder.CreateBitCast(V, NewPtrTy, V->getName() + ".i0");
@@ -485,17 +485,15 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
 
   unsigned NumElems = VT->getNumElements();
   IRBuilder<> Builder(&I);
-  Scatterer VOp0 = scatter(&I, I.getOperand(0));
-  Scatterer VOp1 = scatter(&I, I.getOperand(1));
-  assert(VOp0.size() == NumElems && "Mismatched binary operation");
-  assert(VOp1.size() == NumElems && "Mismatched binary operation");
+  Scatterer Op0 = scatter(&I, I.getOperand(0));
+  Scatterer Op1 = scatter(&I, I.getOperand(1));
+  assert(Op0.size() == NumElems && "Mismatched binary operation");
+  assert(Op1.size() == NumElems && "Mismatched binary operation");
   ValueVector Res;
   Res.resize(NumElems);
-  for (unsigned Elem = 0; Elem < NumElems; ++Elem) {
-    Value *Op0 = VOp0[Elem];
-    Value *Op1 = VOp1[Elem];
-    Res[Elem] = Split(Builder, Op0, Op1, I.getName() + ".i" + Twine(Elem));
-  }
+  for (unsigned Elem = 0; Elem < NumElems; ++Elem)
+    Res[Elem] = Split(Builder, Op0[Elem], Op1[Elem],
+                      I.getName() + ".i" + Twine(Elem));
   gather(&I, Res);
   return true;
 }
@@ -578,31 +576,24 @@ bool ScalarizerVisitor::visitSelectInst(SelectInst &SI) {
 
   unsigned NumElems = VT->getNumElements();
   IRBuilder<> Builder(&SI);
-  Scatterer VOp1 = scatter(&SI, SI.getOperand(1));
-  Scatterer VOp2 = scatter(&SI, SI.getOperand(2));
-  assert(VOp1.size() == NumElems && "Mismatched select");
-  assert(VOp2.size() == NumElems && "Mismatched select");
+  Scatterer Op1 = scatter(&SI, SI.getOperand(1));
+  Scatterer Op2 = scatter(&SI, SI.getOperand(2));
+  assert(Op1.size() == NumElems && "Mismatched select");
+  assert(Op2.size() == NumElems && "Mismatched select");
   ValueVector Res;
   Res.resize(NumElems);
 
   if (SI.getOperand(0)->getType()->isVectorTy()) {
-    Scatterer VOp0 = scatter(&SI, SI.getOperand(0));
-    assert(VOp0.size() == NumElems && "Mismatched select");
-    for (unsigned I = 0; I < NumElems; ++I) {
-      Value *Op0 = VOp0[I];
-      Value *Op1 = VOp1[I];
-      Value *Op2 = VOp2[I];
-      Res[I] = Builder.CreateSelect(Op0, Op1, Op2,
+    Scatterer Op0 = scatter(&SI, SI.getOperand(0));
+    assert(Op0.size() == NumElems && "Mismatched select");
+    for (unsigned I = 0; I < NumElems; ++I)
+      Res[I] = Builder.CreateSelect(Op0[I], Op1[I], Op2[I],
                                     SI.getName() + ".i" + Twine(I));
-    }
   } else {
     Value *Op0 = SI.getOperand(0);
-    for (unsigned I = 0; I < NumElems; ++I) {
-      Value *Op1 = VOp1[I];
-      Value *Op2 = VOp2[I];
-      Res[I] = Builder.CreateSelect(Op0, Op1, Op2,
+    for (unsigned I = 0; I < NumElems; ++I)
+      Res[I] = Builder.CreateSelect(Op0, Op1[I], Op2[I],
                                     SI.getName() + ".i" + Twine(I));
-    }
   }
   gather(&SI, Res);
   return true;
@@ -811,7 +802,7 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
 
   for (unsigned I = 0; I < NumElems; ++I)
     Res[I] = Builder.CreateAlignedLoad(Layout.VecTy->getElementType(), Ptr[I],
-                                       Align(Layout.getElemAlign(I)),
+                                       Layout.getElemAlign(I),
                                        LI.getName() + ".i" + Twine(I));
   gather(&LI, Res);
   return true;
@@ -831,16 +822,14 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
 
   unsigned NumElems = Layout.VecTy->getNumElements();
   IRBuilder<> Builder(&SI);
-  Scatterer VPtr = scatter(&SI, SI.getPointerOperand());
-  Scatterer VVal = scatter(&SI, FullValue);
+  Scatterer Ptr = scatter(&SI, SI.getPointerOperand());
+  Scatterer Val = scatter(&SI, FullValue);
 
   ValueVector Stores;
   Stores.resize(NumElems);
   for (unsigned I = 0; I < NumElems; ++I) {
     unsigned Align = Layout.getElemAlign(I);
-    Value *Val = VVal[I];
-    Value *Ptr = VPtr[I];
-    Stores[I] = Builder.CreateAlignedStore(Val, Ptr, MaybeAlign(Align));
+    Stores[I] = Builder.CreateAlignedStore(Val[I], Ptr[I], Align);
   }
   transferMetadataAndIRFlags(&SI, Stores);
   return true;
@@ -863,10 +852,10 @@ bool ScalarizerVisitor::finish() {
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // InsertElements.
-      auto *Ty = cast<VectorType>(Op->getType());
+      Type *Ty = Op->getType();
       Value *Res = UndefValue::get(Ty);
       BasicBlock *BB = Op->getParent();
-      unsigned Count = Ty->getNumElements();
+      unsigned Count = Ty->getVectorNumElements();
       IRBuilder<> Builder(Op);
       if (isa<PHINode>(Op))
         Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());

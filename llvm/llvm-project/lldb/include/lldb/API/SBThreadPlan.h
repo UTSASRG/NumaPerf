@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTHREADPLAN_H
-#define LLDB_API_SBTHREADPLAN_H
+#ifndef LLDB_SBThreadPlan_h_
+#define LLDB_SBThreadPlan_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -125,4 +125,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBTHREADPLAN_H
+#endif // LLDB_SBThreadPlan_h_

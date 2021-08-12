@@ -76,13 +76,9 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
       !ETy->getTypeAtIndex(2U)->isPointerTy())
     return false; // Not (int, ptr, ptr).
 
-  // Collect the contents of @llvm.global_dtors, ordered by priority. Within a
-  // priority, sequences of destructors with the same associated object are
-  // recorded so that we can register them as a group.
-  std::map<
-      uint16_t,
-      std::vector<std::pair<Constant *, std::vector<Constant *>>>
-  > DtorFuncs;
+  // Collect the contents of @llvm.global_dtors, collated by priority and
+  // associated symbol.
+  std::map<uint16_t, MapVector<Constant *, std::vector<Constant *>>> DtorFuncs;
   for (Value *O : InitList->operands()) {
     auto *CS = dyn_cast<ConstantStruct>(O);
     if (!CS)
@@ -100,14 +96,7 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
     Constant *Associated = CS->getOperand(2);
     Associated = cast<Constant>(Associated->stripPointerCasts());
 
-    auto &AtThisPriority = DtorFuncs[PriorityValue];
-    if (AtThisPriority.empty() || AtThisPriority.back().first != Associated) {
-        std::vector<Constant *> NewList;
-        NewList.push_back(DtorFunc);
-        AtThisPriority.push_back(std::make_pair(Associated, NewList));
-    } else {
-        AtThisPriority.back().second.push_back(DtorFunc);
-    }
+    DtorFuncs[PriorityValue][Associated].push_back(DtorFunc);
   }
   if (DtorFuncs.empty())
     return false;
@@ -142,19 +131,14 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
   // first function with __cxa_atexit.
   for (auto &PriorityAndMore : DtorFuncs) {
     uint16_t Priority = PriorityAndMore.first;
-    uint64_t Id = 0;
-    auto &AtThisPriority = PriorityAndMore.second;
-    for (auto &AssociatedAndMore : AtThisPriority) {
+    for (auto &AssociatedAndMore : PriorityAndMore.second) {
       Constant *Associated = AssociatedAndMore.first;
-      auto ThisId = Id++;
 
       Function *CallDtors = Function::Create(
           AtExitFuncTy, Function::PrivateLinkage,
           "call_dtors" +
               (Priority != UINT16_MAX ? (Twine(".") + Twine(Priority))
                                       : Twine()) +
-              (AtThisPriority.size() > 1 ? Twine("$") + Twine(ThisId)
-                                         : Twine()) +
               (!Associated->isNullValue() ? (Twine(".") + Associated->getName())
                                           : Twine()),
           &M);
@@ -162,7 +146,7 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
       FunctionType *VoidVoid = FunctionType::get(Type::getVoidTy(C),
                                                  /*isVarArg=*/false);
 
-      for (auto Dtor : reverse(AssociatedAndMore.second))
+      for (auto Dtor : AssociatedAndMore.second)
         CallInst::Create(VoidVoid, Dtor, "", BB);
       ReturnInst::Create(C, BB);
 
@@ -171,8 +155,6 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
           "register_call_dtors" +
               (Priority != UINT16_MAX ? (Twine(".") + Twine(Priority))
                                       : Twine()) +
-              (AtThisPriority.size() > 1 ? Twine("$") + Twine(ThisId)
-                                         : Twine()) +
               (!Associated->isNullValue() ? (Twine(".") + Associated->getName())
                                           : Twine()),
           &M);

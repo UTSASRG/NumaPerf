@@ -43,6 +43,7 @@ int main() {
  return 0;
 }
 
-// CHECK: call noalias nonnull i8* @_Znam
-// CHECK: call noalias nonnull i8* @_Znam
-// CHECK: call noalias nonnull i8* @_Znam
+// CHECK: call i8* @_Znam
+// CHECK: call i8* @_Znam
+// CHECK: call i8* @_Znam
+

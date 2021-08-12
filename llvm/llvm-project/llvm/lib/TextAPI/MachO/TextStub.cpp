@@ -412,10 +412,8 @@ template <> struct ScalarTraits<Target> {
 
   static StringRef input(StringRef Scalar, void *, Target &Value) {
     auto Result = Target::create(Scalar);
-    if (!Result) {
-      consumeError(Result.takeError());
-      return "unparsable target";
-    }
+    if (!Result)
+      return toString(Result.takeError());
 
     Value = *Result;
     if (Value.Arch == AK_unknown)
@@ -452,8 +450,10 @@ template <> struct MappingTraits<const InterfaceFile *> {
       if (File->isInstallAPI())
         Flags |= TBDFlags::InstallAPI;
 
-      if (!File->umbrellas().empty())
-        ParentUmbrella = File->umbrellas().begin()->second;
+      for (const auto &Iter : File->umbrellas()) {
+        ParentUmbrella = Iter.second;
+        break;
+      }
 
       std::set<ArchitectureSet> ArchSet;
       for (const auto &Library : File->allowableClients())
@@ -959,8 +959,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
           for (auto &sym : CurrentSection.WeakSymbols)
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
-                            CurrentSection.Targets, SymbolFlags::WeakDefined);
-
+                            CurrentSection.Targets);
           for (auto &sym : CurrentSection.TlvSymbols)
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
                             CurrentSection.Targets,
@@ -1108,7 +1107,7 @@ static void DiagHandler(const SMDiagnostic &Diag, void *Context) {
 Expected<std::unique_ptr<InterfaceFile>>
 TextAPIReader::get(MemoryBufferRef InputBuffer) {
   TextAPIContext Ctx;
-  Ctx.Path = std::string(InputBuffer.getBufferIdentifier());
+  Ctx.Path = InputBuffer.getBufferIdentifier();
   yaml::Input YAMLIn(InputBuffer.getBuffer(), &Ctx, DiagHandler, &Ctx);
 
   // Fill vector with interface file objects created by parsing the YAML file.
@@ -1120,10 +1119,6 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
   auto File = std::unique_ptr<InterfaceFile>(
       const_cast<InterfaceFile *>(Files.front()));
 
-  for (auto Iter = std::next(Files.begin()); Iter != Files.end(); ++Iter)
-    File->addDocument(
-        std::shared_ptr<InterfaceFile>(const_cast<InterfaceFile *>(*Iter)));
-
   if (YAMLIn.error())
     return make_error<StringError>(Ctx.ErrorMessage, YAMLIn.error());
 
@@ -1132,15 +1127,12 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
 
 Error TextAPIWriter::writeToStream(raw_ostream &OS, const InterfaceFile &File) {
   TextAPIContext Ctx;
-  Ctx.Path = std::string(File.getPath());
+  Ctx.Path = File.getPath();
   Ctx.FileKind = File.getFileType();
   llvm::yaml::Output YAMLOut(OS, &Ctx, /*WrapColumn=*/80);
 
   std::vector<const InterfaceFile *> Files;
   Files.emplace_back(&File);
-
-  for (auto Document : File.documents())
-    Files.emplace_back(Document.get());
 
   // Stream out yaml.
   YAMLOut << Files;

@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-freebsd
+# UNSUPPORTED: system-windows, system-freebsd
 
 # This tests the replaying of GDB remote packets.
 #

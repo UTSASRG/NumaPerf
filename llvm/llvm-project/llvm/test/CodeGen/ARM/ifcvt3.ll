@@ -13,9 +13,7 @@ define i32 @t1(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 cond_true:
 ; CHECK: addne r0
-; CHECK: addeq r0
-; CHECK: addeq r0
-; CHECK: bx
+; CHECK: bxne
 	%tmp12 = add i32 %a, 1
 	%tmp1518 = add i32 %tmp12, %b
 	ret i32 %tmp1518
@@ -28,6 +26,7 @@ cond_next:
 ; CHECK-V4-CMP: cmpne
 ; CHECK-V4-CMP-NOT: cmpne
 
+; CHECK-V4-BX: bx
 ; CHECK-V4-BX: bx
 ; CHECK-V4-BX-NOT: bx
 

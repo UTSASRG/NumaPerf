@@ -42,7 +42,7 @@ public:
   static char ID;
   OptimizeReturned() : FunctionPass(ID) {}
 
-  void visitCallBase(CallBase &CB);
+  void visitCallSite(CallSite CS);
 };
 } // End anonymous namespace
 
@@ -55,16 +55,17 @@ FunctionPass *llvm::createWebAssemblyOptimizeReturned() {
   return new OptimizeReturned();
 }
 
-void OptimizeReturned::visitCallBase(CallBase &CB) {
-  for (unsigned I = 0, E = CB.getNumArgOperands(); I < E; ++I)
-    if (CB.paramHasAttr(I, Attribute::Returned)) {
-      Value *Arg = CB.getArgOperand(I);
+void OptimizeReturned::visitCallSite(CallSite CS) {
+  for (unsigned I = 0, E = CS.getNumArgOperands(); I < E; ++I)
+    if (CS.paramHasAttr(I, Attribute::Returned)) {
+      Instruction *Inst = CS.getInstruction();
+      Value *Arg = CS.getArgOperand(I);
       // Ignore constants, globals, undef, etc.
       if (isa<Constant>(Arg))
         continue;
       // Like replaceDominatedUsesWith but using Instruction/Use dominance.
-      Arg->replaceUsesWithIf(&CB,
-                             [&](Use &U) { return DT->dominates(&CB, U); });
+      Arg->replaceUsesWithIf(Inst,
+                             [&](Use &U) { return DT->dominates(Inst, U); });
     }
 }
 

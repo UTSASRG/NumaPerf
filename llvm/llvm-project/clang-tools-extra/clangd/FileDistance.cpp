@@ -31,7 +31,7 @@
 //===-------------------------------------------------------------------------//
 
 #include "FileDistance.h"
-#include "support/Logger.h"
+#include "Logger.h"
 #include "llvm/ADT/STLExtras.h"
 #include <queue>
 

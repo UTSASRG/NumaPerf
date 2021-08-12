@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_UNWINDTABLE_H
-#define LLDB_SYMBOL_UNWINDTABLE_H
+#ifndef liblldb_UnwindTable_h
+#define liblldb_UnwindTable_h
 
 #include <map>
 #include <mutex>
@@ -79,10 +79,9 @@ private:
   std::unique_ptr<CompactUnwindInfo> m_compact_unwind_up;
   std::unique_ptr<ArmUnwindInfo> m_arm_unwind_up;
 
-  UnwindTable(const UnwindTable &) = delete;
-  const UnwindTable &operator=(const UnwindTable &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(UnwindTable);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_UNWINDTABLE_H
+#endif // liblldb_UnwindTable_h

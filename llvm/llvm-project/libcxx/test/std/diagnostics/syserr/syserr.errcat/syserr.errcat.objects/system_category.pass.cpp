@@ -17,6 +17,8 @@
 // XFAIL: with_system_cxx_lib=macosx10.11
 // XFAIL: with_system_cxx_lib=macosx10.10
 // XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
 
 #include <system_error>
 #include <cassert>
@@ -29,8 +31,7 @@ void test_message_for_bad_value() {
     errno = E2BIG; // something that message will never generate
     const std::error_category& e_cat1 = std::system_category();
     const std::string msg = e_cat1.message(-1);
-    // Exact message format varies by platform.
-    LIBCPP_ASSERT(msg.rfind("Unknown error", 0) == 0);
+    LIBCPP_ASSERT(msg == "Unknown error -1" || msg == "Unknown error");
     assert(errno == E2BIG);
 }
 

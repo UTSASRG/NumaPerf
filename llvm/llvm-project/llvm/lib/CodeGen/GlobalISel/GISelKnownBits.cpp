@@ -24,17 +24,19 @@ using namespace llvm;
 
 char llvm::GISelKnownBitsAnalysis::ID = 0;
 
-INITIALIZE_PASS(GISelKnownBitsAnalysis, DEBUG_TYPE,
-                "Analysis for ComputingKnownBits", false, true)
+INITIALIZE_PASS_BEGIN(GISelKnownBitsAnalysis, DEBUG_TYPE,
+                      "Analysis for ComputingKnownBits", false, true)
+INITIALIZE_PASS_END(GISelKnownBitsAnalysis, DEBUG_TYPE,
+                    "Analysis for ComputingKnownBits", false, true)
 
-GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
+GISelKnownBits::GISelKnownBits(MachineFunction &MF)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
-      DL(MF.getFunction().getParent()->getDataLayout()), MaxDepth(MaxDepth) {}
+      DL(MF.getFunction().getParent()->getDataLayout()) {}
 
 Align GISelKnownBits::inferAlignmentForFrameIdx(int FrameIdx, int Offset,
                                                 const MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return commonAlignment(MFI.getObjectAlign(FrameIdx), Offset);
+  return commonAlignment(Align(MFI.getObjectAlignment(FrameIdx)), Offset);
   // TODO: How to handle cases with Base + Offset?
 }
 
@@ -57,7 +59,7 @@ void GISelKnownBits::computeKnownBitsForAlignment(KnownBits &Known,
                                                   MaybeAlign Alignment) {
   if (Alignment)
     // The low bits are known zero if the pointer is aligned.
-    Known.Zero.setLowBits(Log2(*Alignment));
+    Known.Zero.setLowBits(Log2(Alignment));
 }
 
 KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
@@ -65,20 +67,11 @@ KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
 }
 
 KnownBits GISelKnownBits::getKnownBits(Register R) {
-  const LLT Ty = MRI.getType(R);
+  KnownBits Known;
+  LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isVector() ? APInt::getAllOnesValue(Ty.getNumElements()) : APInt(1, 1);
-  return getKnownBits(R, DemandedElts);
-}
-
-KnownBits GISelKnownBits::getKnownBits(Register R, const APInt &DemandedElts,
-                                       unsigned Depth) {
-  // For now, we only maintain the cache during one request.
-  assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
-
-  KnownBits Known;
   computeKnownBitsImpl(R, Known, DemandedElts);
-  ComputeKnownBitsCache.clear();
   return Known;
 }
 
@@ -93,17 +86,6 @@ APInt GISelKnownBits::getKnownZeroes(Register R) {
 }
 
 APInt GISelKnownBits::getKnownOnes(Register R) { return getKnownBits(R).One; }
-
-LLVM_ATTRIBUTE_UNUSED static void
-dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
-  dbgs() << "[" << Depth << "] Compute known bits: " << MI << "[" << Depth
-         << "] Computed for: " << MI << "[" << Depth << "] Known: 0x"
-         << (Known.Zero | Known.One).toString(16, false) << "\n"
-         << "[" << Depth << "] Zero: 0x" << Known.Zero.toString(16, false)
-         << "\n"
-         << "[" << Depth << "] One:  0x" << Known.One.toString(16, false)
-         << "\n";
-}
 
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                                           const APInt &DemandedElts,
@@ -122,28 +104,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 
   unsigned BitWidth = DstTy.getSizeInBits();
-  auto CacheEntry = ComputeKnownBitsCache.find(R);
-  if (CacheEntry != ComputeKnownBitsCache.end()) {
-    Known = CacheEntry->second;
-    LLVM_DEBUG(dbgs() << "Cache hit at ");
-    LLVM_DEBUG(dumpResult(MI, Known, Depth));
-    assert(Known.getBitWidth() == BitWidth && "Cache entry size doesn't match");
-    return;
-  }
   Known = KnownBits(BitWidth); // Don't know anything
 
   if (DstTy.isVector())
     return; // TODO: Handle vectors.
 
-  // Depth may get bigger than max depth if it gets passed to a different
-  // GISelKnownBits object.
-  // This may happen when say a generic part uses a GISelKnownBits object
-  // with some max depth, but then we hit TL.computeKnownBitsForTargetInstr
-  // which creates a new GISelKnownBits object with a different and smaller
-  // depth. If we just check for equality, we would never exit if the depth
-  // that is passed down to the target specific GISelKnownBits object is
-  // already bigger than its max depth.
-  if (Depth >= getMaxDepth())
+  if (Depth == getMaxDepth())
     return;
 
   if (!DemandedElts)
@@ -156,53 +122,20 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     TL.computeKnownBitsForTargetInstr(*this, R, Known, DemandedElts, MRI,
                                       Depth);
     break;
-  case TargetOpcode::COPY:
-  case TargetOpcode::G_PHI:
-  case TargetOpcode::PHI: {
-    Known.One = APInt::getAllOnesValue(BitWidth);
-    Known.Zero = APInt::getAllOnesValue(BitWidth);
-    // Destination registers should not have subregisters at this
-    // point of the pipeline, otherwise the main live-range will be
-    // defined more than once, which is against SSA.
-    assert(MI.getOperand(0).getSubReg() == 0 && "Is this code in SSA?");
-    // Record in the cache that we know nothing for MI.
-    // This will get updated later and in the meantime, if we reach that
-    // phi again, because of a loop, we will cut the search thanks to this
-    // cache entry.
-    // We could actually build up more information on the phi by not cutting
-    // the search, but that additional information is more a side effect
-    // than an intended choice.
-    // Therefore, for now, save on compile time until we derive a proper way
-    // to derive known bits for PHIs within loops.
-    ComputeKnownBitsCache[R] = KnownBits(BitWidth);
-    // PHI's operand are a mix of registers and basic blocks interleaved.
-    // We only care about the register ones.
-    for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
-      const MachineOperand &Src = MI.getOperand(Idx);
-      Register SrcReg = Src.getReg();
-      // Look through trivial copies and phis but don't look through trivial
-      // copies or phis of the form `%1:(s32) = OP %0:gpr32`, known-bits
-      // analysis is currently unable to determine the bit width of a
-      // register class.
-      //
-      // We can't use NoSubRegister by name as it's defined by each target but
-      // it's always defined to be 0 by tablegen.
-      if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
-          MRI.getType(SrcReg).isValid()) {
-        // For COPYs we don't do anything, don't increase the depth.
-        computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
-                             Depth + (Opcode != TargetOpcode::COPY));
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
-        // If we reach a point where we don't know anything
-        // just stop looking through the operands.
-        if (Known.One == 0 && Known.Zero == 0)
-          break;
-      } else {
-        // We know nothing.
-        Known = KnownBits(BitWidth);
-        break;
-      }
+  case TargetOpcode::COPY: {
+    MachineOperand Dst = MI.getOperand(0);
+    MachineOperand Src = MI.getOperand(1);
+    // Look through trivial copies but don't look through trivial copies of the
+    // form `%1:(s32) = OP %0:gpr32` known-bits analysis is currently unable to
+    // determine the bit width of a register class.
+    //
+    // We can't use NoSubRegister by name as it's defined by each target but
+    // it's always defined to be 0 by tablegen.
+    if (Dst.getSubReg() == 0 /*NoSubRegister*/ && Src.getReg().isVirtual() &&
+        Src.getSubReg() == 0 /*NoSubRegister*/ &&
+        MRI.getType(Src.getReg()).isValid()) {
+      // Don't increment Depth for this one since we didn't do any work.
+      computeKnownBitsImpl(Src.getReg(), Known, DemandedElts, Depth);
     }
     break;
   }
@@ -219,12 +152,18 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_SUB: {
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+    // If low bits are known to be zero in both operands, then we know they are
+    // going to be 0 in the result. Both addition and complement operations
+    // preserve the low zero bits.
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
+    unsigned KnownZeroLow = Known2.countMinTrailingZeros();
+    if (KnownZeroLow == 0)
+      break;
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForAddSub(/*Add*/ false, /*NSW*/ false, Known,
-                                        Known2);
+    KnownZeroLow = std::min(KnownZeroLow, Known2.countMinTrailingZeros());
+    Known.Zero.setLowBits(KnownZeroLow);
     break;
   }
   case TargetOpcode::G_XOR: {
@@ -233,7 +172,11 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
 
-    Known ^= Known2;
+    // Output known-0 bits are known if clear or set in both the LHS & RHS.
+    APInt KnownZeroOut = (Known.Zero & Known2.Zero) | (Known.One & Known2.One);
+    // Output known-1 are known to be set if set in only one of the LHS, RHS.
+    Known.One = (Known.Zero & Known2.One) | (Known.One & Known2.Zero);
+    Known.Zero = KnownZeroOut;
     break;
   }
   case TargetOpcode::G_PTR_ADD: {
@@ -244,12 +187,24 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     LLVM_FALLTHROUGH;
   }
   case TargetOpcode::G_ADD: {
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+    // Output known-0 bits are known if clear or set in both the low clear bits
+    // common to both LHS & RHS.  For example, 8+(X<<3) is known to have the
+    // low 3 bits clear.
+    // Output known-0 bits are also known if the top bits of each input are
+    // known to be clear. For example, if one input has the top 10 bits clear
+    // and the other has the top 8 bits clear, we know the top 7 bits of the
+    // output must be clear.
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
+    unsigned KnownZeroHigh = Known2.countMinLeadingZeros();
+    unsigned KnownZeroLow = Known2.countMinTrailingZeros();
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known =
-        KnownBits::computeForAddSub(/*Add*/ true, /*NSW*/ false, Known, Known2);
+    KnownZeroHigh = std::min(KnownZeroHigh, Known2.countMinLeadingZeros());
+    KnownZeroLow = std::min(KnownZeroLow, Known2.countMinTrailingZeros());
+    Known.Zero.setLowBits(KnownZeroLow);
+    if (KnownZeroHigh > 1)
+      Known.Zero.setHighBits(KnownZeroHigh - 1);
     break;
   }
   case TargetOpcode::G_AND: {
@@ -259,7 +214,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
 
-    Known &= Known2;
+    // Output known-1 bits are only known if set in both the LHS & RHS.
+    Known.One &= Known2.One;
+    // Output known-0 are known to be clear if zero in either the LHS | RHS.
+    Known.Zero |= Known2.Zero;
     break;
   }
   case TargetOpcode::G_OR: {
@@ -269,7 +227,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
 
-    Known |= Known2;
+    // Output known-0 bits are only known if clear in both the LHS & RHS.
+    Known.Zero &= Known2.Zero;
+    // Output known-1 are known to be set if set in either the LHS | RHS.
+    Known.One |= Known2.One;
     break;
   }
   case TargetOpcode::G_MUL: {
@@ -326,7 +287,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_ANYEXT: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
-    Known = Known.zext(BitWidth);
+    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
     break;
   }
   case TargetOpcode::G_LOAD: {
@@ -392,9 +353,9 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                                ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
                                : SrcTy.getSizeInBits();
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
-    Known = Known.zextOrTrunc(SrcBitWidth);
+    Known = Known.zextOrTrunc(SrcBitWidth, true);
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
-    Known = Known.zextOrTrunc(BitWidth);
+    Known = Known.zextOrTrunc(BitWidth, true);
     if (BitWidth > SrcBitWidth)
       Known.Zero.setBitsFrom(SrcBitWidth);
     break;
@@ -402,10 +363,14 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-  LLVM_DEBUG(dumpResult(MI, Known, Depth));
-
-  // Update the cache.
-  ComputeKnownBitsCache[R] = Known;
+  LLVM_DEBUG(dbgs() << "[" << Depth << "] Compute known bits: " << MI << "["
+                    << Depth << "] Computed for: " << MI << "[" << Depth
+                    << "] Known: 0x"
+                    << (Known.Zero | Known.One).toString(16, false) << "\n"
+                    << "[" << Depth << "] Zero: 0x"
+                    << Known.Zero.toString(16, false) << "\n"
+                    << "[" << Depth << "] One:  0x"
+                    << Known.One.toString(16, false) << "\n");
 }
 
 unsigned GISelKnownBits::computeNumSignBits(Register R,
@@ -424,7 +389,6 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     return 1; // No demanded elts, better to assume we don't know anything.
 
   LLT DstTy = MRI.getType(R);
-  const unsigned TyBits = DstTy.getScalarSizeInBits();
 
   // Handle the case where this is called on a register that does not have a
   // type constraint. This is unlikely to occur except by looking through copies
@@ -433,7 +397,6 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
   if (!DstTy.isValid())
     return 1;
 
-  unsigned FirstAnswer = 1;
   switch (Opcode) {
   case TargetOpcode::COPY: {
     MachineOperand &Src = MI.getOperand(1);
@@ -463,34 +426,13 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
       return NumSrcSignBits - (NumSrcBits - DstTyBits);
     break;
   }
-  case TargetOpcode::G_INTRINSIC:
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-  default: {
-    unsigned NumBits =
-      TL.computeNumSignBitsForTargetInstr(*this, R, DemandedElts, MRI, Depth);
-    if (NumBits > 1)
-      FirstAnswer = std::max(FirstAnswer, NumBits);
+  default:
     break;
   }
-  }
 
-  // Finally, if we can prove that the top bits of the result are 0's or 1's,
-  // use this information.
-  KnownBits Known = getKnownBits(R, DemandedElts, Depth);
-  APInt Mask;
-  if (Known.isNonNegative()) {        // sign bit is 0
-    Mask = Known.Zero;
-  } else if (Known.isNegative()) {  // sign bit is 1;
-    Mask = Known.One;
-  } else {
-    // Nothing known.
-    return FirstAnswer;
-  }
-
-  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
-  // the number of identical bits in the top of the input value.
-  Mask <<= Mask.getBitWidth() - TyBits;
-  return std::max(FirstAnswer, Mask.countLeadingOnes());
+  // TODO: Handle target instructions
+  // TODO: Fall back to known bits
+  return 1;
 }
 
 unsigned GISelKnownBits::computeNumSignBits(Register R, unsigned Depth) {

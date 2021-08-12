@@ -460,7 +460,7 @@ bool sys::RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg) {
   if (FilesToRemove == NULL)
     FilesToRemove = new std::vector<std::string>;
 
-  FilesToRemove->push_back(std::string(Filename));
+  FilesToRemove->push_back(Filename);
 
   LeaveCriticalSection(&CriticalSection);
   return false;
@@ -584,7 +584,7 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
   LeaveCriticalSection(&CriticalSection);
 }
 
-static void Cleanup(bool ExecuteSignalHandlers) {
+static void Cleanup() {
   if (CleanupExecuted)
     return;
 
@@ -600,10 +600,7 @@ static void Cleanup(bool ExecuteSignalHandlers) {
       llvm::sys::fs::remove(FilesToRemove->back());
       FilesToRemove->pop_back();
     }
-
-  if (ExecuteSignalHandlers)
-    llvm::sys::RunSignalHandlers();
-
+  llvm::sys::RunSignalHandlers();
   LeaveCriticalSection(&CriticalSection);
 }
 
@@ -613,7 +610,7 @@ void llvm::sys::RunInterruptHandlers() {
   // error handler). We must ensure that the critical section is properly
   // initialized.
   InitializeThreading();
-  Cleanup(true);
+  Cleanup();
 }
 
 /// Find the Windows Registry Key for a given location.
@@ -806,7 +803,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
-  Cleanup(true);
+  Cleanup();
 
   // We'll automatically write a Minidump file here to help diagnose
   // the nasty sorts of crashes that aren't 100% reproducible from a set of
@@ -837,10 +834,7 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
 static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
   // We are running in our very own thread, courtesy of Windows.
   EnterCriticalSection(&CriticalSection);
-  // This function is only ever called when a CTRL-C or similar control signal
-  // is fired. Killing a process in this way is normal, so don't trigger the
-  // signal handlers.
-  Cleanup(false);
+  Cleanup();
 
   // If an interrupt function has been set, go and run one it; otherwise,
   // the process dies.

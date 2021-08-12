@@ -253,7 +253,7 @@ std::string llvm::codeview::computeTypeName(TypeCollection &Types,
     consumeError(std::move(EC));
     return "<unknown UDT>";
   }
-  return std::string(Computer.name());
+  return Computer.name();
 }
 
 static int getSymbolNameOffset(CVSymbol Sym) {

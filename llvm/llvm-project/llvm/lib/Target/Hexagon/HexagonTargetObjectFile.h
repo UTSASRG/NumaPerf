@@ -13,7 +13,6 @@
 #include "llvm/MC/MCSectionELF.h"
 
 namespace llvm {
-  class Type;
 
   class HexagonTargetObjectFile : public TargetLoweringObjectFileELF {
   public:

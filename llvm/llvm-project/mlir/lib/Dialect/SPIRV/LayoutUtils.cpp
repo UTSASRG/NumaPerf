@@ -1,6 +1,6 @@
 //===-- LayoutUtils.cpp - Decorate composite type with layout information -===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -17,13 +17,6 @@
 using namespace mlir;
 
 spirv::StructType
-VulkanLayoutUtils::decorateType(spirv::StructType structType) {
-  Size size = 0;
-  Size alignment = 1;
-  return decorateType(structType, size, alignment);
-}
-
-spirv::StructType
 VulkanLayoutUtils::decorateType(spirv::StructType structType,
                                 VulkanLayoutUtils::Size &size,
                                 VulkanLayoutUtils::Size &alignment) {
@@ -32,26 +25,21 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
   }
 
   SmallVector<Type, 4> memberTypes;
-  SmallVector<Size, 4> layoutInfo;
+  SmallVector<VulkanLayoutUtils::Size, 4> layoutInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
 
-  Size structMemberOffset = 0;
-  Size maxMemberAlignment = 1;
+  VulkanLayoutUtils::Size structMemberOffset = 0;
+  VulkanLayoutUtils::Size maxMemberAlignment = 1;
 
   for (uint32_t i = 0, e = structType.getNumElements(); i < e; ++i) {
-    Size memberSize = 0;
-    Size memberAlignment = 1;
+    VulkanLayoutUtils::Size memberSize = 0;
+    VulkanLayoutUtils::Size memberAlignment = 1;
 
-    auto memberType =
-        decorateType(structType.getElementType(i), memberSize, memberAlignment);
+    auto memberType = VulkanLayoutUtils::decorateType(
+        structType.getElementType(i), memberSize, memberAlignment);
     structMemberOffset = llvm::alignTo(structMemberOffset, memberAlignment);
     memberTypes.push_back(memberType);
     layoutInfo.push_back(structMemberOffset);
-    // If the member's size is the max value, it must be the last member and it
-    // must be a runtime array.
-    assert(memberSize != std::numeric_limits<Size>().max() ||
-           (i + 1 == e &&
-            structType.getElementType(i).isa<spirv::RuntimeArrayType>()));
     // According to the Vulkan spec:
     // "A structure has a base alignment equal to the largest base alignment of
     // any of its members."
@@ -71,8 +59,8 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
 
 Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
                                      VulkanLayoutUtils::Size &alignment) {
-  if (type.isa<spirv::ScalarType>()) {
-    alignment = getScalarTypeAlignment(type);
+  if (spirv::SPIRVDialect::isValidScalarType(type)) {
+    alignment = VulkanLayoutUtils::getScalarTypeAlignment(type);
     // Vulkan spec does not specify any padding for a scalar type.
     size = alignment;
     return type;
@@ -80,14 +68,14 @@ Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
 
   switch (type.getKind()) {
   case spirv::TypeKind::Struct:
-    return decorateType(type.cast<spirv::StructType>(), size, alignment);
+    return VulkanLayoutUtils::decorateType(type.cast<spirv::StructType>(), size,
+                                           alignment);
   case spirv::TypeKind::Array:
-    return decorateType(type.cast<spirv::ArrayType>(), size, alignment);
+    return VulkanLayoutUtils::decorateType(type.cast<spirv::ArrayType>(), size,
+                                           alignment);
   case StandardTypes::Vector:
-    return decorateType(type.cast<VectorType>(), size, alignment);
-  case spirv::TypeKind::RuntimeArray:
-    size = std::numeric_limits<Size>().max();
-    return decorateType(type.cast<spirv::RuntimeArrayType>(), alignment);
+    return VulkanLayoutUtils::decorateType(type.cast<VectorType>(), size,
+                                           alignment);
   default:
     llvm_unreachable("unhandled SPIR-V type");
   }
@@ -98,10 +86,11 @@ Type VulkanLayoutUtils::decorateType(VectorType vectorType,
                                      VulkanLayoutUtils::Size &alignment) {
   const auto numElements = vectorType.getNumElements();
   auto elementType = vectorType.getElementType();
-  Size elementSize = 0;
-  Size elementAlignment = 1;
+  VulkanLayoutUtils::Size elementSize = 0;
+  VulkanLayoutUtils::Size elementAlignment = 1;
 
-  auto memberType = decorateType(elementType, elementSize, elementAlignment);
+  auto memberType = VulkanLayoutUtils::decorateType(elementType, elementSize,
+                                                    elementAlignment);
   // According to the Vulkan spec:
   // 1. "A two-component vector has a base alignment equal to twice its scalar
   // alignment."
@@ -117,25 +106,17 @@ Type VulkanLayoutUtils::decorateType(spirv::ArrayType arrayType,
                                      VulkanLayoutUtils::Size &alignment) {
   const auto numElements = arrayType.getNumElements();
   auto elementType = arrayType.getElementType();
-  Size elementSize = 0;
-  Size elementAlignment = 1;
+  spirv::ArrayType::LayoutInfo elementSize = 0;
+  VulkanLayoutUtils::Size elementAlignment = 1;
 
-  auto memberType = decorateType(elementType, elementSize, elementAlignment);
+  auto memberType = VulkanLayoutUtils::decorateType(elementType, elementSize,
+                                                    elementAlignment);
   // According to the Vulkan spec:
   // "An array has a base alignment equal to the base alignment of its element
   // type."
   size = elementSize * numElements;
   alignment = elementAlignment;
   return spirv::ArrayType::get(memberType, numElements, elementSize);
-}
-
-Type VulkanLayoutUtils::decorateType(spirv::RuntimeArrayType arrayType,
-                                     VulkanLayoutUtils::Size &alignment) {
-  auto elementType = arrayType.getElementType();
-  Size elementSize = 0;
-
-  auto memberType = decorateType(elementType, elementSize, alignment);
-  return spirv::RuntimeArrayType::get(memberType, elementSize);
 }
 
 VulkanLayoutUtils::Size

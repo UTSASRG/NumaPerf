@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
-#include "support/Logger.h"
+#include "Logger.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"

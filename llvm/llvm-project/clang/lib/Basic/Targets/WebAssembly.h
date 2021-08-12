@@ -38,9 +38,6 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasMutableGlobals = false;
   bool HasMultivalue = false;
   bool HasTailCall = false;
-  bool HasReferenceTypes = false;
-
-  std::string ABI;
 
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
@@ -60,9 +57,6 @@ public:
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
   }
-
-  StringRef getABI() const override;
-  bool setABI(const std::string &Name) override;
 
 protected:
   void getTargetDefines(const LangOptions &Opts,
@@ -120,18 +114,6 @@ private:
                ? (IsSigned ? SignedLongLong : UnsignedLongLong)
                : TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
   }
-
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_C:
-    case CC_Swift:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
-  }
-
-  bool hasExtIntType() const override { return true; }
 };
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo
     : public WebAssemblyTargetInfo {

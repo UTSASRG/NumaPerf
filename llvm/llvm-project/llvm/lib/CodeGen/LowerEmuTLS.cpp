@@ -21,7 +21,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

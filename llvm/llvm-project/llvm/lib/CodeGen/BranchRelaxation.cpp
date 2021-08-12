@@ -67,13 +67,16 @@ class BranchRelaxation : public MachineFunctionPass {
     unsigned postOffset(const MachineBasicBlock &MBB) const {
       const unsigned PO = Offset + Size;
       const Align Alignment = MBB.getAlignment();
+      if (Alignment == 1)
+        return PO;
+
       const Align ParentAlign = MBB.getParent()->getAlignment();
       if (Alignment <= ParentAlign)
-        return alignTo(PO, Alignment);
+        return PO + offsetToAlignment(PO, Alignment);
 
       // The alignment of this MBB is larger than the function's alignment, so we
       // can't tell whether or not it will insert nops. Assume that it will.
-      return alignTo(PO, Alignment) + Alignment.value() - ParentAlign.value();
+      return PO + Alignment.value() + offsetToAlignment(PO, Alignment);
     }
   };
 
@@ -126,6 +129,7 @@ void BranchRelaxation::verify() {
   unsigned PrevNum = MF->begin()->getNumber();
   for (MachineBasicBlock &MBB : *MF) {
     const unsigned Num = MBB.getNumber();
+    assert(isAligned(MBB.getAlignment(), BlockInfo[Num].Offset));
     assert(!Num || BlockInfo[PrevNum].postOffset(MBB) <= BlockInfo[Num].Offset);
     assert(BlockInfo[Num].Size == computeBlockSize(MBB));
     PrevNum = Num;
@@ -191,9 +195,10 @@ unsigned BranchRelaxation::getInstrOffset(const MachineInstr &MI) const {
 
 void BranchRelaxation::adjustBlockOffsets(MachineBasicBlock &Start) {
   unsigned PrevNum = Start.getNumber();
-  for (auto &MBB :
-       make_range(std::next(MachineFunction::iterator(Start)), MF->end())) {
+  for (auto &MBB : make_range(MachineFunction::iterator(Start), MF->end())) {
     unsigned Num = MBB.getNumber();
+    if (!Num) // block zero is never changed from offset zero.
+      continue;
     // Get the offset and known bits at the end of the layout predecessor.
     // Include the alignment of the current block.
     BlockInfo[Num].Offset = BlockInfo[PrevNum].postOffset(MBB);

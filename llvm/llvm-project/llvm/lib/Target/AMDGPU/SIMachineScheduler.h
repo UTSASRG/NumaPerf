@@ -435,6 +435,9 @@ class SIScheduleDAGMI final : public ScheduleDAGMILive {
   std::vector<unsigned> ScheduledSUnits;
   std::vector<unsigned> ScheduledSUnitsInv;
 
+  unsigned VGPRSetID;
+  unsigned SGPRSetID;
+
 public:
   SIScheduleDAGMI(MachineSchedContext *C);
 
@@ -480,6 +483,9 @@ public:
     }
     return OutRegs;
   };
+
+  unsigned getVGPRSetID() const { return VGPRSetID; }
+  unsigned getSGPRSetID() const { return SGPRSetID; }
 
 private:
   void topologicalSort();

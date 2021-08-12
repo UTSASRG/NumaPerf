@@ -247,8 +247,7 @@ TimerGroup::TimerGroup(StringRef Name, StringRef Description,
     : TimerGroup(Name, Description) {
   TimersToPrint.reserve(Records.size());
   for (const auto &P : Records)
-    TimersToPrint.emplace_back(P.getValue(), std::string(P.getKey()),
-                               std::string(P.getKey()));
+    TimersToPrint.emplace_back(P.getValue(), P.getKey(), P.getKey());
   assert(TimersToPrint.size() == Records.size() && "Size mismatch");
 }
 

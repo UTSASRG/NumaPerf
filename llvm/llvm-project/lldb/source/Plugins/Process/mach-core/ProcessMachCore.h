@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H
+#ifndef liblldb_ProcessMachCore_h_
+#define liblldb_ProcessMachCore_h_
 
 #include <list>
 #include <vector>
@@ -121,8 +121,7 @@ private:
   lldb::addr_t m_mach_kernel_addr;
   lldb_private::ConstString m_dyld_plugin_name;
 
-  ProcessMachCore(const ProcessMachCore &) = delete;
-  const ProcessMachCore &operator=(const ProcessMachCore &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ProcessMachCore);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H
+#endif // liblldb_ProcessMachCore_h_

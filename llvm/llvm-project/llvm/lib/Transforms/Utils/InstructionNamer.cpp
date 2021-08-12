@@ -42,7 +42,7 @@ namespace {
 
         for (Instruction &I : BB)
           if (!I.hasName() && !I.getType()->isVoidTy())
-            I.setName("i");
+            I.setName("tmp");
       }
       return true;
     }

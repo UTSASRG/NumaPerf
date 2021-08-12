@@ -39,12 +39,12 @@ enum class OOBKind {
   Global,
 };
 
-std::string LeftOOBReadMessage(OOBKind oob_kind, int oob_distance) {
+string LeftOOBReadMessage(OOBKind oob_kind, int oob_distance) {
   return oob_kind == OOBKind::Stack ? kStackReadUnderflow
                                     : ::LeftOOBReadMessage(oob_distance);
 }
 
-std::string RightOOBReadMessage(OOBKind oob_kind, int oob_distance) {
+string RightOOBReadMessage(OOBKind oob_kind, int oob_distance) {
   return oob_kind == OOBKind::Stack ? kStackReadOverflow
                                     : ::RightOOBReadMessage(oob_distance);
 }
@@ -480,7 +480,7 @@ TEST(AddressSanitizer, StrNCatOOBTest) {
   free(from);
 }
 
-static std::string OverlapErrorMessage(const std::string &func) {
+static string OverlapErrorMessage(const string &func) {
   return func + "-param-overlap";
 }
 

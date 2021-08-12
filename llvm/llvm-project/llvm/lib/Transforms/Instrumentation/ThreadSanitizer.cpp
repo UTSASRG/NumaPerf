@@ -68,14 +68,6 @@ static cl::opt<bool>  ClInstrumentAtomics(
 static cl::opt<bool>  ClInstrumentMemIntrinsics(
     "tsan-instrument-memintrinsics", cl::init(true),
     cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
-static cl::opt<bool>  ClDistinguishVolatile(
-    "tsan-distinguish-volatile", cl::init(false),
-    cl::desc("Emit special instrumentation for accesses to volatiles"),
-    cl::Hidden);
-static cl::opt<bool>  ClInstrumentReadBeforeWrite(
-    "tsan-instrument-read-before-write", cl::init(false),
-    cl::desc("Do not eliminate read instrumentation for read-before-writes"),
-    cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -126,10 +118,6 @@ private:
   FunctionCallee TsanWrite[kNumberOfAccessSizes];
   FunctionCallee TsanUnalignedRead[kNumberOfAccessSizes];
   FunctionCallee TsanUnalignedWrite[kNumberOfAccessSizes];
-  FunctionCallee TsanVolatileRead[kNumberOfAccessSizes];
-  FunctionCallee TsanVolatileWrite[kNumberOfAccessSizes];
-  FunctionCallee TsanUnalignedVolatileRead[kNumberOfAccessSizes];
-  FunctionCallee TsanUnalignedVolatileWrite[kNumberOfAccessSizes];
   FunctionCallee TsanAtomicLoad[kNumberOfAccessSizes];
   FunctionCallee TsanAtomicStore[kNumberOfAccessSizes];
   FunctionCallee TsanAtomicRMW[AtomicRMWInst::LAST_BINOP + 1]
@@ -143,9 +131,7 @@ private:
 };
 
 struct ThreadSanitizerLegacyPass : FunctionPass {
-  ThreadSanitizerLegacyPass() : FunctionPass(ID) {
-    initializeThreadSanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  ThreadSanitizerLegacyPass() : FunctionPass(ID) {}
   StringRef getPassName() const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
@@ -249,24 +235,6 @@ void ThreadSanitizer::initialize(Module &M) {
     SmallString<64> UnalignedWriteName("__tsan_unaligned_write" + ByteSizeStr);
     TsanUnalignedWrite[i] = M.getOrInsertFunction(
         UnalignedWriteName, Attr, IRB.getVoidTy(), IRB.getInt8PtrTy());
-
-    SmallString<64> VolatileReadName("__tsan_volatile_read" + ByteSizeStr);
-    TsanVolatileRead[i] = M.getOrInsertFunction(
-        VolatileReadName, Attr, IRB.getVoidTy(), IRB.getInt8PtrTy());
-
-    SmallString<64> VolatileWriteName("__tsan_volatile_write" + ByteSizeStr);
-    TsanVolatileWrite[i] = M.getOrInsertFunction(
-        VolatileWriteName, Attr, IRB.getVoidTy(), IRB.getInt8PtrTy());
-
-    SmallString<64> UnalignedVolatileReadName("__tsan_unaligned_volatile_read" +
-                                              ByteSizeStr);
-    TsanUnalignedVolatileRead[i] = M.getOrInsertFunction(
-        UnalignedVolatileReadName, Attr, IRB.getVoidTy(), IRB.getInt8PtrTy());
-
-    SmallString<64> UnalignedVolatileWriteName(
-        "__tsan_unaligned_volatile_write" + ByteSizeStr);
-    TsanUnalignedVolatileWrite[i] = M.getOrInsertFunction(
-        UnalignedVolatileWriteName, Attr, IRB.getVoidTy(), IRB.getInt8PtrTy());
 
     Type *Ty = Type::getIntNTy(M.getContext(), BitSize);
     Type *PtrTy = Ty->getPointerTo();
@@ -417,7 +385,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       Value *Addr = Load->getPointerOperand();
       if (!shouldInstrumentReadWriteFromAddress(I->getModule(), Addr))
         continue;
-      if (!ClInstrumentReadBeforeWrite && WriteTargets.count(Addr)) {
+      if (WriteTargets.count(Addr)) {
         // We will write to this temp, so no reason to analyze the read.
         NumOmittedReadsBeforeWrite++;
         continue;
@@ -472,11 +440,6 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // This is required to prevent instrumenting call to __tsan_init from within
   // the module constructor.
   if (F.getName() == kTsanModuleCtorName)
-    return false;
-  // Naked functions can not have prologue/epilogue
-  // (__tsan_func_entry/__tsan_func_exit) generated, so don't instrument them at
-  // all.
-  if (F.hasFnAttribute(Attribute::Naked))
     return false;
   initialize(*F.getParent());
   SmallVector<Instruction*, 8> AllLoadsAndStores;
@@ -597,24 +560,13 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
   const unsigned Alignment = IsWrite
       ? cast<StoreInst>(I)->getAlignment()
       : cast<LoadInst>(I)->getAlignment();
-  const bool IsVolatile =
-      ClDistinguishVolatile && (IsWrite ? cast<StoreInst>(I)->isVolatile()
-                                        : cast<LoadInst>(I)->isVolatile());
   Type *OrigTy = cast<PointerType>(Addr->getType())->getElementType();
   const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   FunctionCallee OnAccessFunc = nullptr;
-  if (Alignment == 0 || Alignment >= 8 || (Alignment % (TypeSize / 8)) == 0) {
-    if (IsVolatile)
-      OnAccessFunc = IsWrite ? TsanVolatileWrite[Idx] : TsanVolatileRead[Idx];
-    else
-      OnAccessFunc = IsWrite ? TsanWrite[Idx] : TsanRead[Idx];
-  } else {
-    if (IsVolatile)
-      OnAccessFunc = IsWrite ? TsanUnalignedVolatileWrite[Idx]
-                             : TsanUnalignedVolatileRead[Idx];
-    else
-      OnAccessFunc = IsWrite ? TsanUnalignedWrite[Idx] : TsanUnalignedRead[Idx];
-  }
+  if (Alignment == 0 || Alignment >= 8 || (Alignment % (TypeSize / 8)) == 0)
+    OnAccessFunc = IsWrite ? TsanWrite[Idx] : TsanRead[Idx];
+  else
+    OnAccessFunc = IsWrite ? TsanUnalignedWrite[Idx] : TsanUnalignedRead[Idx];
   IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
   if (IsWrite) NumInstrumentedWrites++;
   else         NumInstrumentedReads++;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_MACOSX_SYMBOLVENDORMACOSX_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_MACOSX_SYMBOLVENDORMACOSX_H
+#ifndef liblldb_SymbolVendorMacOSX_h_
+#define liblldb_SymbolVendorMacOSX_h_
 
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/lldb-private.h"
@@ -38,8 +38,7 @@ public:
   virtual uint32_t GetPluginVersion();
 
 private:
-  SymbolVendorMacOSX(const SymbolVendorMacOSX &) = delete;
-  const SymbolVendorMacOSX &operator=(const SymbolVendorMacOSX &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SymbolVendorMacOSX);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_MACOSX_SYMBOLVENDORMACOSX_H
+#endif // liblldb_SymbolVendorMacOSX_h_

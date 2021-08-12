@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_DEBUGMACROS_H
-#define LLDB_SYMBOL_DEBUGMACROS_H
+#ifndef liblldb_DebugMacros_h_
+#define liblldb_DebugMacros_h_
 
 #include <memory>
 #include <vector>
@@ -89,12 +89,11 @@ public:
   }
 
 private:
-  DebugMacros(const DebugMacros &) = delete;
-  const DebugMacros &operator=(const DebugMacros &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DebugMacros);
 
   std::vector<DebugMacroEntry> m_macro_entries;
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_DEBUGMACROS_H
+#endif // liblldb_DebugMacros_h_

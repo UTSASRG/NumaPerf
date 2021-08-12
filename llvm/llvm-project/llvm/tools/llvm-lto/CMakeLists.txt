@@ -5,7 +5,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   BitReader
   BitWriter
-  CodeGen
   Core
   IRReader
   LTO
@@ -18,5 +17,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-lto
   llvm-lto.cpp
 
-  DEPENDS intrinsics_gen
+  DEPENDS
+  intrinsics_gen
   )
+

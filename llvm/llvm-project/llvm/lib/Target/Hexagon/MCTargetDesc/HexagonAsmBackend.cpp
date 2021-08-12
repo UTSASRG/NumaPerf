@@ -22,7 +22,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include <sstream>
@@ -44,7 +43,6 @@ class HexagonAsmBackend : public MCAsmBackend {
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
-  unsigned MaxPacketSize;
 
   void ReplaceInstruction(MCCodeEmitter &E, MCRelaxableFragment &RF,
                           MCInst &HMB) const {
@@ -64,8 +62,7 @@ public:
                     StringRef CPU)
       : MCAsmBackend(support::little), OSABI(OSABI), CPU(CPU), relaxedCnt(0),
         MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
-        Extender(nullptr), MaxPacketSize(HexagonMCInstrInfo::packetSize(CPU))
-        {}
+        Extender(nullptr) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -651,12 +648,11 @@ public:
     llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
 
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
            "Hexagon relaxInstruction only works on bundles");
 
-    MCInst Res;
     Res.setOpcode(Hexagon::BUNDLE);
     Res.addOperand(MCOperand::createImm(Inst.getOperand(0).getImm()));
     // Copy the results into the bundle.
@@ -680,8 +676,6 @@ public:
       // now copy over the original instruction(the one we may have extended)
       Res.addOperand(MCOperand::createInst(I.getInst()));
     }
-
-    Inst = std::move(Res);
     (void)Update;
     assert(Update && "Didn't find relaxation target");
   }
@@ -691,7 +685,7 @@ public:
                           ParseIn  = 0x00004000, // In packet parse-bits.
                           ParseEnd = 0x0000c000; // End of packet parse-bits.
 
-    while (Count % HEXAGON_INSTR_SIZE) {
+    while(Count % HEXAGON_INSTR_SIZE) {
       LLVM_DEBUG(dbgs() << "Alignment not a multiple of the instruction size:"
                         << Count % HEXAGON_INSTR_SIZE << "/"
                         << HEXAGON_INSTR_SIZE << "\n");
@@ -699,11 +693,11 @@ public:
       OS << '\0';
     }
 
-    while (Count) {
+    while(Count) {
       Count -= HEXAGON_INSTR_SIZE;
       // Close the packet whenever a multiple of the maximum packet size remains
-      uint32_t ParseBits = (Count % (MaxPacketSize * HEXAGON_INSTR_SIZE)) ?
-                           ParseIn : ParseEnd;
+      uint32_t ParseBits = (Count % (HEXAGON_PACKET_SIZE * HEXAGON_INSTR_SIZE))?
+                           ParseIn: ParseEnd;
       support::endian::write<uint32_t>(OS, Nopcode | ParseBits, Endian);
     }
     return true;
@@ -734,8 +728,7 @@ public:
               MCContext &Context = Asm.getContext();
               auto &RF = cast<MCRelaxableFragment>(*K);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
-              while (Size > 0 &&
-                     HexagonMCInstrInfo::bundleSize(Inst) < MaxPacketSize) {
+              while (Size > 0 && HexagonMCInstrInfo::bundleSize(Inst) < 4) {
                 MCInst *Nop = new (Context) MCInst;
                 Nop->setOpcode(Hexagon::A2_nop);
                 Inst.addOperand(MCOperand::createInst(Nop));

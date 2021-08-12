@@ -16,7 +16,7 @@ namespace clang {
 namespace clangd {
 
 // Describes the source of information about a symbol.
-// Mainly useful for debugging, e.g. understanding code completion results.
+// Mainly useful for debugging, e.g. understanding code completion reuslts.
 // This is a bitfield as information can be combined from several sources.
 enum class SymbolOrigin : uint8_t {
   Unknown = 0,

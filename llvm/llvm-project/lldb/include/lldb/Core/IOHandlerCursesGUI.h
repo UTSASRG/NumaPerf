@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_IOHANDLERCURSESGUI_H
-#define LLDB_CORE_IOHANDLERCURSESGUI_H
+#ifndef liblldb_IOHandlerCursesGUI_h_
+#define liblldb_IOHandlerCursesGUI_h_
 
 #include "lldb/Core/IOHandler.h"
 
@@ -37,4 +37,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_IOHANDLERCURSESGUI_H
+#endif // liblldb_IOHandlerCursesGUI_h_

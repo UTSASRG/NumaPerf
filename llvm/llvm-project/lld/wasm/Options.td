@@ -64,6 +64,9 @@ def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
 
 def mllvm: S<"mllvm">, HelpText<"Options to pass to LLVM">;
 
+def no_threads: F<"no-threads">,
+  HelpText<"Do not run the linker multi-threaded">;
+
 def no_color_diagnostics: F<"no-color-diagnostics">,
   HelpText<"Do not use colors in diagnostics">;
 
@@ -86,18 +89,13 @@ def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
 defm reproduce: Eq<"reproduce", "Dump linker invocation and input files for debugging">;
 
-defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
-  MetaVarName<"[posix,windows]">;
-
 def shared: F<"shared">, HelpText<"Build a shared object">;
 
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
-defm threads
-    : Eq<"threads", "Number of threads. '1' disables multi-threading. By "
-                    "default all available hardware threads are used">;
+def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
@@ -197,5 +195,4 @@ def save_temps: F<"save-temps">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
-def thinlto_jobs: J<"thinlto-jobs=">,
-  HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

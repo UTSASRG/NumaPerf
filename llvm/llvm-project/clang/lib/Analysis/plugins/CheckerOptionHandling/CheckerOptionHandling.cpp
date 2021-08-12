@@ -21,7 +21,7 @@ void registerMyChecker(CheckerManager &Mgr) {
                << '\n';
 }
 
-bool shouldRegisterMyChecker(const CheckerManager &mgr) { return true; }
+bool shouldRegisterMyChecker(const LangOptions &LO) { return true; }
 
 } // end anonymous namespace
 

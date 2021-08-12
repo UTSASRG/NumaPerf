@@ -10,7 +10,6 @@
 
 #include "../CodeGenInstruction.h"
 
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -612,23 +611,18 @@ void GIMatchTreeOpcodePartitioner::emitPartitionResults(
 
 void GIMatchTreeOpcodePartitioner::generatePartitionSelectorCode(
     raw_ostream &OS, StringRef Indent) const {
-  // Make sure not to emit empty switch or switch with just default
-  if (PartitionToInstr.size() == 1 && PartitionToInstr[0] == nullptr) {
-    OS << Indent << "Partition = 0;\n";
-  } else if (PartitionToInstr.size()) {
-    OS << Indent << "Partition = -1;\n"
-       << Indent << "switch (MIs[" << InstrID << "]->getOpcode()) {\n";
-    for (const auto &EnumInstr : enumerate(PartitionToInstr)) {
-      if (EnumInstr.value() == nullptr)
-        OS << Indent << "default:";
-      else
-        OS << Indent << "case " << EnumInstr.value()->Namespace
-           << "::" << EnumInstr.value()->TheDef->getName() << ":";
-      OS << " Partition = " << EnumInstr.index() << "; break;\n";
-    }
-    OS << Indent << "}\n";
+  OS << Indent << "Partition = -1;\n"
+     << Indent << "switch (MIs[" << InstrID << "]->getOpcode()) {\n";
+  for (const auto &EnumInstr : enumerate(PartitionToInstr)) {
+    if (EnumInstr.value() == nullptr)
+      OS << Indent << "default:";
+    else
+      OS << Indent << "case " << EnumInstr.value()->Namespace
+         << "::" << EnumInstr.value()->TheDef->getName() << ":";
+    OS << " Partition = " << EnumInstr.index() << "; break;\n";
   }
-  OS << Indent
+  OS << Indent << "}\n"
+     << Indent
      << "// Default case but without conflicting with potential default case "
         "in selection.\n"
      << Indent << "if (Partition == -1) return false;\n";
@@ -780,3 +774,4 @@ void GIMatchTreeVRegDefPartitioner::generatePartitionSelectorCode(
 
   OS << Indent << "if (Partition == -1) return false;\n";
 }
+

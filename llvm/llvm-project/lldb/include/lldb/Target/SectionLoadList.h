@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_SECTIONLOADLIST_H
-#define LLDB_TARGET_SECTIONLOADLIST_H
+#ifndef liblldb_SectionLoadList_h_
+#define liblldb_SectionLoadList_h_
 
 #include <map>
 #include <mutex>
@@ -70,4 +70,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_SECTIONLOADLIST_H
+#endif // liblldb_SectionLoadList_h_

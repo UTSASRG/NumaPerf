@@ -199,8 +199,7 @@ Expected<Tweak::Effect> RemoveUsingNamespace::apply(const Selection &Inputs) {
 }
 
 std::string RemoveUsingNamespace::title() const {
-  return std::string(
-      llvm::formatv("Remove using namespace, re-qualify names instead."));
+  return llvm::formatv("Remove using namespace, re-qualify names instead.");
 }
 } // namespace
 } // namespace clangd

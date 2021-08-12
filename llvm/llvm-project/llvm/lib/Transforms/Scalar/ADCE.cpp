@@ -182,7 +182,7 @@ class AggressiveDeadCodeElimination {
 
   /// Identify connected sections of the control flow graph which have
   /// dead terminators and rewrite the control flow graph to remove them.
-  bool updateDeadRegions();
+  void updateDeadRegions();
 
   /// Set the BlockInfo::PostOrder field based on a post-order
   /// numbering of the reverse control flow graph.
@@ -505,7 +505,7 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
 //===----------------------------------------------------------------------===//
 bool AggressiveDeadCodeElimination::removeDeadInstructions() {
   // Updates control and dataflow around dead blocks
-  bool RegionsUpdated = updateDeadRegions();
+  updateDeadRegions();
 
   LLVM_DEBUG({
     for (Instruction &I : instructions(F)) {
@@ -556,11 +556,11 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
     I->eraseFromParent();
   }
 
-  return !Worklist.empty() || RegionsUpdated;
+  return !Worklist.empty();
 }
 
 // A dead region is the set of dead blocks with a common live post-dominator.
-bool AggressiveDeadCodeElimination::updateDeadRegions() {
+void AggressiveDeadCodeElimination::updateDeadRegions() {
   LLVM_DEBUG({
     dbgs() << "final dead terminator blocks: " << '\n';
     for (auto *BB : BlocksWithDeadTerminators)
@@ -570,7 +570,6 @@ bool AggressiveDeadCodeElimination::updateDeadRegions() {
 
   // Don't compute the post ordering unless we needed it.
   bool HavePostOrder = false;
-  bool Changed = false;
 
   for (auto *BB : BlocksWithDeadTerminators) {
     auto &Info = BlockInfo[BB];
@@ -625,10 +624,7 @@ bool AggressiveDeadCodeElimination::updateDeadRegions() {
         .applyUpdates(DeletedEdges);
 
     NumBranchesRemoved += 1;
-    Changed = true;
   }
-
-  return Changed;
 }
 
 // reverse top-sort order
@@ -689,14 +685,10 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  // TODO: We could track if we have actually done CFG changes.
-  if (!RemoveControlFlowFlag)
-    PA.preserveSet<CFGAnalyses>();
-  else {
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<PostDominatorTreeAnalysis>();
-  }
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
   return PA;
 }
 

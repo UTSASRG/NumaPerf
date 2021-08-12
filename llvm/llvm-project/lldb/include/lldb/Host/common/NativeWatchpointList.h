@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_COMMON_NATIVEWATCHPOINTLIST_H
-#define LLDB_HOST_COMMON_NATIVEWATCHPOINTLIST_H
+#ifndef liblldb_NativeWatchpointList_h_
+#define liblldb_NativeWatchpointList_h_
 
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
@@ -38,4 +38,4 @@ private:
 };
 }
 
-#endif // LLDB_HOST_COMMON_NATIVEWATCHPOINTLIST_H
+#endif // ifndef liblldb_NativeWatchpointList_h_

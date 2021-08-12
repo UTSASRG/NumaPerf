@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_VECTORTYPE_H
-#define LLDB_DATAFORMATTERS_VECTORTYPE_H
+#ifndef liblldb_VectorType_h_
+#define liblldb_VectorType_h_
 
 #include "lldb/lldb-forward.h"
 
@@ -21,4 +21,4 @@ VectorTypeSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_VECTORTYPE_H
+#endif // liblldb_VectorType_h_

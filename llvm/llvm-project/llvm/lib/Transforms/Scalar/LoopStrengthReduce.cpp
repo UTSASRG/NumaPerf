@@ -69,9 +69,8 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -110,7 +109,6 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -809,12 +807,7 @@ static bool isAddressUse(const TargetTransformInfo &TTI,
     switch (II->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::prefetch:
-    case Intrinsic::masked_load:
       if (II->getArgOperand(0) == OperandVal)
-        isAddress = true;
-      break;
-    case Intrinsic::masked_store:
-      if (II->getArgOperand(1) == OperandVal)
         isAddress = true;
       break;
     case Intrinsic::memmove:
@@ -865,15 +858,6 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
     case Intrinsic::memcpy:
       AccessTy.AddrSpace = OperandVal->getType()->getPointerAddressSpace();
       AccessTy.MemTy = OperandVal->getType();
-      break;
-    case Intrinsic::masked_load:
-      AccessTy.AddrSpace =
-          II->getArgOperand(0)->getType()->getPointerAddressSpace();
-      break;
-    case Intrinsic::masked_store:
-      AccessTy.MemTy = II->getOperand(0)->getType();
-      AccessTy.AddrSpace =
-          II->getArgOperand(1)->getType()->getPointerAddressSpace();
       break;
     default: {
       MemIntrinsicInfo IntrInfo;
@@ -976,6 +960,33 @@ static bool isHighCostExpansion(const SCEV *S,
 
   // Fow now, consider any other type of expression (div/mul/min/max) high cost.
   return true;
+}
+
+/// If any of the instructions in the specified set are trivially dead, delete
+/// them and see if this makes any of their operands subsequently dead.
+static bool
+DeleteTriviallyDeadInstructions(SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  bool Changed = false;
+
+  while (!DeadInsts.empty()) {
+    Value *V = DeadInsts.pop_back_val();
+    Instruction *I = dyn_cast_or_null<Instruction>(V);
+
+    if (!I || !isInstructionTriviallyDead(I))
+      continue;
+
+    for (Use &O : I->operands())
+      if (Instruction *U = dyn_cast<Instruction>(O)) {
+        O = nullptr;
+        if (U->use_empty())
+          DeadInsts.emplace_back(U);
+      }
+
+    I->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 namespace {
@@ -1902,10 +1913,9 @@ class LSRInstance {
   DominatorTree &DT;
   LoopInfo &LI;
   AssumptionCache &AC;
-  TargetLibraryInfo &TLI;
+  TargetLibraryInfo &LibInfo;
   const TargetTransformInfo &TTI;
   Loop *const L;
-  MemorySSAUpdater *MSSAU;
   bool FavorBackedgeIndex = false;
   bool Changed = false;
 
@@ -2043,7 +2053,7 @@ class LSRInstance {
 public:
   LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE, DominatorTree &DT,
               LoopInfo &LI, const TargetTransformInfo &TTI, AssumptionCache &AC,
-              TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU);
+              TargetLibraryInfo &LibInfo);
 
   bool getChanged() const { return Changed; }
 
@@ -2820,10 +2830,9 @@ bool IVChain::isProfitableIncrement(const SCEV *OperExpr,
 /// increments can be computed in fewer registers when chained.
 ///
 /// TODO: Consider IVInc free if it's already used in another chains.
-static bool isProfitableChain(IVChain &Chain,
-                              SmallPtrSetImpl<Instruction *> &Users,
-                              ScalarEvolution &SE,
-                              const TargetTransformInfo &TTI) {
+static bool
+isProfitableChain(IVChain &Chain, SmallPtrSetImpl<Instruction*> &Users,
+                  ScalarEvolution &SE) {
   if (StressIVChain)
     return true;
 
@@ -2852,14 +2861,7 @@ static bool isProfitableChain(IVChain &Chain,
   unsigned NumConstIncrements = 0;
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
-
-  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
-    return true;
-
   for (const IVInc &Inc : Chain) {
-    if (TTI.isProfitableLSRChainElement(Inc.UserInst))
-      return true;
-
     if (Inc.IncExpr->isZero())
       continue;
 
@@ -3090,7 +3092,7 @@ void LSRInstance::CollectChains() {
   for (unsigned UsersIdx = 0, NChains = IVChainVec.size();
        UsersIdx < NChains; ++UsersIdx) {
     if (!isProfitableChain(IVChainVec[UsersIdx],
-                           ChainUsersVec[UsersIdx].FarUsers, SE, TTI))
+                           ChainUsersVec[UsersIdx].FarUsers, SE))
       continue;
     // Preserve the chain at UsesIdx.
     if (ChainIdx != UsersIdx)
@@ -3210,8 +3212,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
       IVOper = Builder.CreateTruncOrBitCast(IVOper, OperTy, "lsr.chain");
     }
     Inc.UserInst->replaceUsesOfWith(Inc.IVOperand, IVOper);
-    if (auto *OperandIsInstr = dyn_cast<Instruction>(Inc.IVOperand))
-      DeadInsts.emplace_back(OperandIsInstr);
+    DeadInsts.emplace_back(Inc.IVOperand);
   }
   // If LSR created a new, wider phi, we may also replace its postinc. We only
   // do this if we also found a wide value for the head of the chain.
@@ -3239,7 +3240,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
 
 void LSRInstance::CollectFixupsAndInitialFormulae() {
   BranchInst *ExitBranch = nullptr;
-  bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &TLI);
+  bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &LibInfo);
 
   for (const IVStrideUse &U : IU) {
     Instruction *UserInst = U.getUser();
@@ -3551,6 +3552,9 @@ static bool mayUsePostIncMode(const TargetTransformInfo &TTI,
     return false;
   const SCEV *LoopStep = AR->getStepRecurrence(SE);
   if (!isa<SCEVConstant>(LoopStep))
+    return false;
+  if (LU.AccessTy.getType()->getScalarSizeInBits() !=
+      LoopStep->getType()->getScalarSizeInBits())
     return false;
   // Check if a post-indexed load/store can be used.
   if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
@@ -4919,24 +4923,19 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // Ignore formulae which may not be ideal in terms of register reuse of
     // ReqRegs.  The formula should use all required registers before
     // introducing new ones.
-    // This can sometimes (notably when trying to favour postinc) lead to
-    // sub-optimial decisions. There it is best left to the cost modelling to
-    // get correct.
-    if (!TTI.shouldFavorPostInc() || LU.Kind != LSRUse::Address) {
-      int NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
-      for (const SCEV *Reg : ReqRegs) {
-        if ((F.ScaledReg && F.ScaledReg == Reg) ||
-            is_contained(F.BaseRegs, Reg)) {
-          --NumReqRegsToFind;
-          if (NumReqRegsToFind == 0)
-            break;
-        }
+    int NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
+    for (const SCEV *Reg : ReqRegs) {
+      if ((F.ScaledReg && F.ScaledReg == Reg) ||
+          is_contained(F.BaseRegs, Reg)) {
+        --NumReqRegsToFind;
+        if (NumReqRegsToFind == 0)
+          break;
       }
-      if (NumReqRegsToFind != 0) {
-        // If none of the formulae satisfied the required registers, then we could
-        // clear ReqRegs and try again. Currently, we simply give up in this case.
-        continue;
-      }
+    }
+    if (NumReqRegsToFind != 0) {
+      // If none of the formulae satisfied the required registers, then we could
+      // clear ReqRegs and try again. Currently, we simply give up in this case.
+      continue;
     }
 
     // Evaluate the cost of the current formula. If it's already worse than
@@ -5269,8 +5268,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   // form, update the ICmp's other operand.
   if (LU.Kind == LSRUse::ICmpZero) {
     ICmpInst *CI = cast<ICmpInst>(LF.UserInst);
-    if (auto *OperandIsInstr = dyn_cast<Instruction>(CI->getOperand(1)))
-      DeadInsts.emplace_back(OperandIsInstr);
+    DeadInsts.emplace_back(CI->getOperand(1));
     assert(!F.BaseGV && "ICmp does not support folding a global value and "
                            "a scale at the same time!");
     if (F.Scale == -1) {
@@ -5451,8 +5449,7 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
       LF.UserInst->replaceUsesOfWith(LF.OperandValToReplace, FullV);
   }
 
-  if (auto *OperandIsInstr = dyn_cast<Instruction>(LF.OperandValToReplace))
-    DeadInsts.emplace_back(OperandIsInstr);
+  DeadInsts.emplace_back(LF.OperandValToReplace);
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen
@@ -5493,17 +5490,16 @@ void LSRInstance::ImplementSolution(
   // instructions.
   Rewriter.clear();
 
-  Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts,
-                                                                  &TLI, MSSAU);
+  Changed |= DeleteTriviallyDeadInstructions(DeadInsts);
 }
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          DominatorTree &DT, LoopInfo &LI,
                          const TargetTransformInfo &TTI, AssumptionCache &AC,
-                         TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU)
-    : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), TLI(TLI), TTI(TTI), L(L),
-      MSSAU(MSSAU), FavorBackedgeIndex(EnableBackedgeIndexing &&
-                                       TTI.shouldFavorBackedgeIndex(L)) {
+                         TargetLibraryInfo &LibInfo)
+    : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), LibInfo(LibInfo), TTI(TTI), L(L),
+      FavorBackedgeIndex(EnableBackedgeIndexing &&
+                         TTI.shouldFavorBackedgeIndex(L)) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -5706,26 +5702,21 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<IVUsersWrapperPass>();
   AU.addPreserved<IVUsersWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addPreserved<MemorySSAWrapperPass>();
 }
 
 static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                DominatorTree &DT, LoopInfo &LI,
                                const TargetTransformInfo &TTI,
-                               AssumptionCache &AC, TargetLibraryInfo &TLI,
-                               MemorySSA *MSSA) {
+                               AssumptionCache &AC,
+                               TargetLibraryInfo &LibInfo) {
 
   bool Changed = false;
-  std::unique_ptr<MemorySSAUpdater> MSSAU;
-  if (MSSA)
-    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
   // Run the main LSR transformation.
-  Changed |=
-      LSRInstance(L, IU, SE, DT, LI, TTI, AC, TLI, MSSAU.get()).getChanged();
+  Changed |= LSRInstance(L, IU, SE, DT, LI, TTI, AC, LibInfo).getChanged();
 
   // Remove any extra phis created by processing inner loops.
-  Changed |= DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
+  Changed |= DeleteDeadPHIs(L->getHeader());
   if (EnablePhiElim && L->isLoopSimplifyForm()) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
@@ -5736,9 +5727,8 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     unsigned numFolded = Rewriter.replaceCongruentIVs(L, &DT, DeadInsts, &TTI);
     if (numFolded) {
       Changed = true;
-      RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts, &TLI,
-                                                           MSSAU.get());
-      DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
+      DeleteTriviallyDeadInstructions(DeadInsts);
+      DeleteDeadPHIs(L->getHeader());
     }
   }
   return Changed;
@@ -5756,26 +5746,19 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
       *L->getHeader()->getParent());
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
       *L->getHeader()->getParent());
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
       *L->getHeader()->getParent());
-  auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-  MemorySSA *MSSA = nullptr;
-  if (MSSAAnalysis)
-    MSSA = &MSSAAnalysis->getMSSA();
-  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA);
+  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, LibInfo);
 }
 
 PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
   if (!ReduceLoopStrength(&L, AM.getResult<IVUsersAnalysis>(L, AR), AR.SE,
-                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA))
+                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI))
     return PreservedAnalyses::all();
 
-  auto PA = getLoopPassPreservedAnalyses();
-  if (AR.MSSA)
-    PA.preserve<MemorySSAAnalysis>();
-  return PA;
+  return getLoopPassPreservedAnalyses();
 }
 
 char LoopStrengthReduce::ID = 0;

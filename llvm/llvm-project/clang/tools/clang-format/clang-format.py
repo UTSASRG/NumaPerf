@@ -71,7 +71,7 @@ def main():
   encoding = vim.eval("&encoding")
   buf = get_buffer(encoding)
   # Join the buffer into a single string with a terminating newline
-  text = ('\n'.join(buf) + '\n').encode(encoding)
+  text = '\n'.join(buf) + '\n'
 
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':
@@ -90,14 +90,9 @@ def main():
     lines = ['-lines', '%s:%s' % (vim.current.range.start + 1,
                                   vim.current.range.end + 1)]
 
-  # Convert cursor (line, col) to bytes.
-  # Don't use line2byte: https://github.com/vim/vim/issues/5930
-  _, cursor_line, cursor_col, _ = vim.eval('getpos(".")') # 1-based
-  cursor_byte = 0
-  for line in text.split(b'\n')[:int(cursor_line) - 1]:
-    cursor_byte += len(line) + 1
-  cursor_byte += int(cursor_col) - 1
-  if cursor_byte < 0:
+  # Determine the cursor position.
+  cursor = int(vim.eval('line2byte(line("."))+col(".")')) - 2
+  if cursor < 0:
     print('Couldn\'t determine cursor position. Is your file empty?')
     return
 
@@ -109,7 +104,7 @@ def main():
     startupinfo.wShowWindow = subprocess.SW_HIDE
 
   # Call formatter.
-  command = [binary, '-cursor', str(cursor_byte)]
+  command = [binary, '-cursor', str(cursor)]
   if lines != ['-lines', 'all']:
     command += lines
   if style:
@@ -121,7 +116,7 @@ def main():
   p = subprocess.Popen(command,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        stdin=subprocess.PIPE, startupinfo=startupinfo)
-  stdout, stderr = p.communicate(input=text)
+  stdout, stderr = p.communicate(input=text.encode(encoding))
 
   # If successful, replace buffer contents.
   if stderr:
@@ -133,24 +128,18 @@ def main():
         'Please report to bugs.llvm.org.'
     )
   else:
-    header, content = stdout.split(b'\n', 1)
-    header = json.loads(header)
+    lines = stdout.decode(encoding).split('\n')
+    output = json.loads(lines[0])
     # Strip off the trailing newline (added above).
     # This maintains trailing empty lines present in the buffer if
     # the -lines specification requests them to remain unchanged.
-    lines = content.decode(encoding).split('\n')[:-1]
+    lines = lines[1:-1]
     sequence = difflib.SequenceMatcher(None, buf, lines)
     for op in reversed(sequence.get_opcodes()):
       if op[0] != 'equal':
         vim.current.buffer[op[1]:op[2]] = lines[op[3]:op[4]]
-    if header.get('IncompleteFormat'):
+    if output.get('IncompleteFormat'):
       print('clang-format: incomplete (syntax errors)')
-    # Convert cursor bytes to (line, col)
-    # Don't use goto: https://github.com/vim/vim/issues/5930
-    cursor_byte = int(header['Cursor'])
-    prefix = content[0:cursor_byte]
-    cursor_line = 1 + prefix.count(b'\n')
-    cursor_column = 1 + len(prefix.rsplit(b'\n', 1)[-1])
-    vim.command('call cursor(%d, %d)' % (cursor_line, cursor_column))
+    vim.command('goto %d' % (output['Cursor'] + 1))
 
 main()

@@ -35,9 +35,8 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
   OS << ", ";
 
   // Emit the property type.
-  llvm::StringRef type = Property->getValueAsString("Type");
   OS << "OptionValue::eType";
-  OS << type;
+  OS << Property->getValueAsString("Type");
   OS << ", ";
 
   // Emit the property's global value.
@@ -47,12 +46,11 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
   bool hasDefaultUnsignedValue = Property->getValue("HasDefaultUnsignedValue");
   bool hasDefaultEnumValue = Property->getValue("HasDefaultEnumValue");
   bool hasDefaultStringValue = Property->getValue("HasDefaultStringValue");
-  bool hasElementType = Property->getValue("HasElementType");
 
   // Guarantee that every property has a default value.
   assert((hasDefaultUnsignedValue || hasDefaultEnumValue ||
-          hasDefaultStringValue || hasElementType) &&
-         "Property must have a default value or an element type");
+          hasDefaultStringValue) &&
+         "Property must have a default value");
 
   // Guarantee that no property has both a default unsigned value and a default
   // enum value, since they're bothed stored in the same field.
@@ -74,18 +72,11 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
       !(Property->getValueAsString("Type") == "Enum" && !hasDefaultEnumValue) &&
       "Enum property must have a enum default value.");
 
-  // Guarantee that only arrays and dictionaries have an element type;
-  assert(((type != "Array" && type != "Dictionary") || hasElementType) &&
-         "Only dictionaries and arrays can have an element type.");
-
   // Emit the default uint value.
   if (hasDefaultUnsignedValue) {
     OS << std::to_string(Property->getValueAsInt("DefaultUnsignedValue"));
   } else if (hasDefaultEnumValue) {
     OS << Property->getValueAsString("DefaultEnumValue");
-  } else if (hasElementType) {
-    OS << "OptionValue::eType";
-    OS << Property->getValueAsString("ElementType");
   } else {
     OS << "0";
   }

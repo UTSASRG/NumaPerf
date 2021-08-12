@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_STRINGEXTRACTOR_H
-#define LLDB_UTILITY_STRINGEXTRACTOR_H
+#ifndef utility_StringExtractor_h_
+#define utility_StringExtractor_h_
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,7 +26,7 @@ public:
   virtual ~StringExtractor();
 
   void Reset(llvm::StringRef str) {
-    m_packet = std::string(str);
+    m_packet = str;
     m_index = 0;
   }
 
@@ -118,4 +118,4 @@ protected:
   uint64_t m_index;
 };
 
-#endif // LLDB_UTILITY_STRINGEXTRACTOR_H
+#endif // utility_StringExtractor_h_

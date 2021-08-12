@@ -314,7 +314,7 @@ static std::string getLabel(const GraphDiffRenderer::GraphT::EdgeValueType &E,
     const auto &RightStat = EdgeAttr.CorrEdgePtr[1]->second.S;
 
     double RelDiff = statRelDiff(LeftStat, RightStat, EL);
-    return std::string(formatv(R"({0:P})", RelDiff));
+    return formatv(R"({0:P})", RelDiff);
   }
 }
 
@@ -324,19 +324,17 @@ static std::string getLabel(const GraphDiffRenderer::GraphT::VertexValueType &V,
   const auto &VertexAttr = V.second;
   switch (VL) {
   case GraphDiffRenderer::StatType::NONE:
-    return std::string(
-        formatv(R"({0})", truncateString(VertexId, TrunLen).str()));
+    return formatv(R"({0})", truncateString(VertexId, TrunLen).str());
   default:
     if (containsNullptr(VertexAttr.CorrVertexPtr))
-      return std::string(
-          formatv(R"({0})", truncateString(VertexId, TrunLen).str()));
+      return formatv(R"({0})", truncateString(VertexId, TrunLen).str());
 
     const auto &LeftStat = VertexAttr.CorrVertexPtr[0]->second.S;
     const auto &RightStat = VertexAttr.CorrVertexPtr[1]->second.S;
 
     double RelDiff = statRelDiff(LeftStat, RightStat, VL);
-    return std::string(formatv(
-        R"({{{0}|{1:P}})", truncateString(VertexId, TrunLen).str(), RelDiff));
+    return formatv(R"({{{0}|{1:P}})", truncateString(VertexId, TrunLen).str(),
+                   RelDiff);
   }
 }
 

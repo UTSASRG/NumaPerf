@@ -1,4 +1,4 @@
-//===-- BreakpointResolver.cpp --------------------------------------------===//
+//===-- BreakpointResolver.cpp ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -60,7 +60,7 @@ BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
   return UnknownResolver;
 }
 
-BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
+BreakpointResolver::BreakpointResolver(Breakpoint *bkpt,
                                        const unsigned char resolverTy,
                                        lldb::addr_t offset)
     : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
@@ -163,8 +163,7 @@ StructuredData::DictionarySP BreakpointResolver::WrapOptionsDict(
   return type_dict_sp;
 }
 
-void BreakpointResolver::SetBreakpoint(const BreakpointSP &bkpt) {
-  assert(bkpt);
+void BreakpointResolver::SetBreakpoint(Breakpoint *bkpt) {
   m_breakpoint = bkpt;
   NotifyBreakpointSet();
 }
@@ -328,7 +327,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   }
 
   BreakpointLocationSP bp_loc_sp(AddLocation(line_start));
-  if (log && bp_loc_sp && !GetBreakpoint()->IsInternal()) {
+  if (log && bp_loc_sp && !m_breakpoint->IsInternal()) {
     StreamString s;
     bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
     LLDB_LOGF(log, "Added location (skipped prologue: %s): %s \n",
@@ -339,7 +338,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
 BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
   loc_addr.Slide(m_offset);
-  return GetBreakpoint()->AddLocation(loc_addr, new_location);
+  return m_breakpoint->AddLocation(loc_addr, new_location);
 }
 
 void BreakpointResolver::SetOffset(lldb::addr_t offset) {

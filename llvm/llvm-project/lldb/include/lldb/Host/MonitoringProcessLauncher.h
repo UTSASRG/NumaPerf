@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_MONITORINGPROCESSLAUNCHER_H
-#define LLDB_HOST_MONITORINGPROCESSLAUNCHER_H
+#ifndef lldb_Host_MonitoringProcessLauncher_h_
+#define lldb_Host_MonitoringProcessLauncher_h_
 
 #include <memory>
 #include "lldb/Host/ProcessLauncher.h"
@@ -31,4 +31,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_MONITORINGPROCESSLAUNCHER_H
+#endif // lldb_Host_MonitoringProcessLauncher_h_

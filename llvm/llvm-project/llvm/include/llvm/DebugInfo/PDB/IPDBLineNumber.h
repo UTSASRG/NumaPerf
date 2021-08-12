@@ -9,7 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBLINENUMBER_H
 #define LLVM_DEBUGINFO_PDB_IPDBLINENUMBER_H
 
-#include <cstdint>
+#include "PDBTypes.h"
 
 namespace llvm {
 namespace pdb {

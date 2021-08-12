@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATEINSTRUCTIONARM_H
-#define LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATEINSTRUCTIONARM_H
+#ifndef lldb_EmulateInstructionARM_h_
+#define lldb_EmulateInstructionARM_h_
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -783,4 +783,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATEINSTRUCTIONARM_H
+#endif // lldb_EmulateInstructionARM_h_

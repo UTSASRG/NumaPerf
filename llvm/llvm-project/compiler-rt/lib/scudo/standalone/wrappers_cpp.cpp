@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 extern "C" void malloc_postinit();
-extern HIDDEN scudo::Allocator<scudo::Config, malloc_postinit> Allocator;
+extern scudo::Allocator<scudo::Config, malloc_postinit> *AllocatorPtr;
 
 namespace std {
 struct nothrow_t {};
@@ -24,85 +24,85 @@ enum class align_val_t : size_t {};
 } // namespace std
 
 INTERFACE WEAK void *operator new(size_t size) {
-  return Allocator.allocate(size, scudo::Chunk::Origin::New);
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::New);
 }
 INTERFACE WEAK void *operator new[](size_t size) {
-  return Allocator.allocate(size, scudo::Chunk::Origin::NewArray);
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::NewArray);
 }
 INTERFACE WEAK void *operator new(size_t size,
                                   std::nothrow_t const &) NOEXCEPT {
-  return Allocator.allocate(size, scudo::Chunk::Origin::New);
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::New);
 }
 INTERFACE WEAK void *operator new[](size_t size,
                                     std::nothrow_t const &) NOEXCEPT {
-  return Allocator.allocate(size, scudo::Chunk::Origin::NewArray);
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::NewArray);
 }
 INTERFACE WEAK void *operator new(size_t size, std::align_val_t align) {
-  return Allocator.allocate(size, scudo::Chunk::Origin::New,
-                            static_cast<scudo::uptr>(align));
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::New,
+                                static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void *operator new[](size_t size, std::align_val_t align) {
-  return Allocator.allocate(size, scudo::Chunk::Origin::NewArray,
-                            static_cast<scudo::uptr>(align));
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::NewArray,
+                                static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void *operator new(size_t size, std::align_val_t align,
                                   std::nothrow_t const &) NOEXCEPT {
-  return Allocator.allocate(size, scudo::Chunk::Origin::New,
-                            static_cast<scudo::uptr>(align));
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::New,
+                                static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void *operator new[](size_t size, std::align_val_t align,
                                     std::nothrow_t const &) NOEXCEPT {
-  return Allocator.allocate(size, scudo::Chunk::Origin::NewArray,
-                            static_cast<scudo::uptr>(align));
+  return AllocatorPtr->allocate(size, scudo::Chunk::Origin::NewArray,
+                                static_cast<scudo::uptr>(align));
 }
 
 INTERFACE WEAK void operator delete(void *ptr)NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::New);
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::New);
 }
 INTERFACE WEAK void operator delete[](void *ptr) NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray);
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::NewArray);
 }
 INTERFACE WEAK void operator delete(void *ptr, std::nothrow_t const &)NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::New);
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::New);
 }
 INTERFACE WEAK void operator delete[](void *ptr,
                                       std::nothrow_t const &) NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray);
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::NewArray);
 }
 INTERFACE WEAK void operator delete(void *ptr, size_t size)NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::New, size);
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::New, size);
 }
 INTERFACE WEAK void operator delete[](void *ptr, size_t size) NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray, size);
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::NewArray, size);
 }
 INTERFACE WEAK void operator delete(void *ptr, std::align_val_t align)NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::New, 0,
-                       static_cast<scudo::uptr>(align));
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::New, 0,
+                           static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete[](void *ptr,
                                       std::align_val_t align) NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray, 0,
-                       static_cast<scudo::uptr>(align));
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::NewArray, 0,
+                           static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete(void *ptr, std::align_val_t align,
                                     std::nothrow_t const &)NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::New, 0,
-                       static_cast<scudo::uptr>(align));
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::New, 0,
+                           static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete[](void *ptr, std::align_val_t align,
                                       std::nothrow_t const &) NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray, 0,
-                       static_cast<scudo::uptr>(align));
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::NewArray, 0,
+                           static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete(void *ptr, size_t size,
                                     std::align_val_t align)NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::New, size,
-                       static_cast<scudo::uptr>(align));
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::New, size,
+                           static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete[](void *ptr, size_t size,
                                       std::align_val_t align) NOEXCEPT {
-  Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray, size,
-                       static_cast<scudo::uptr>(align));
+  AllocatorPtr->deallocate(ptr, scudo::Chunk::Origin::NewArray, size,
+                           static_cast<scudo::uptr>(align));
 }
 
 #endif // !SCUDO_ANDROID || !_BIONIC

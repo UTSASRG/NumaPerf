@@ -1,4 +1,4 @@
-//===-- Scalar.cpp --------------------------------------------------------===//
+//===-- Scalar.cpp ----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -331,7 +331,7 @@ Scalar &Scalar::operator=(unsigned long v) {
 
 Scalar &Scalar::operator=(long long v) {
   m_type = e_slonglong;
-  m_integer = llvm::APInt(sizeof(long long) * 8, v, true);
+  m_integer = llvm::APInt(sizeof(long) * 8, v, true);
   return *this;
 }
 

@@ -119,7 +119,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   // a macro. They get unpoisoned where it is allowed.
   (Ident__VA_ARGS__ = getIdentifierInfo("__VA_ARGS__"))->setIsPoisoned();
   SetPoisonReason(Ident__VA_ARGS__,diag::ext_pp_bad_vaargs_use);
-  if (getLangOpts().CPlusPlus20) {
+  if (getLangOpts().CPlusPlus2a) {
     (Ident__VA_OPT__ = getIdentifierInfo("__VA_OPT__"))->setIsPoisoned();
     SetPoisonReason(Ident__VA_OPT__,diag::ext_pp_bad_vaopt_use);
   } else {
@@ -166,8 +166,6 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
       this->PPOpts->ExcludedConditionalDirectiveSkipMappings;
   if (ExcludedConditionalDirectiveSkipMappings)
     ExcludedConditionalDirectiveSkipMappings->clear();
-
-  MaxTokens = LangOpts.MaxTokens;
 }
 
 Preprocessor::~Preprocessor() {
@@ -771,13 +769,9 @@ static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
     return llvm::StringSwitch<diag::kind>(II.getName())
 #define CXX11_KEYWORD(NAME, FLAGS)                                             \
         .Case(#NAME, diag::warn_cxx11_keyword)
-#define CXX20_KEYWORD(NAME, FLAGS)                                             \
-        .Case(#NAME, diag::warn_cxx20_keyword)
+#define CXX2A_KEYWORD(NAME, FLAGS)                                             \
+        .Case(#NAME, diag::warn_cxx2a_keyword)
 #include "clang/Basic/TokenKinds.def"
-        // char8_t is not modeled as a CXX20_KEYWORD because it's not
-        // unconditionally enabled in C++20 mode. (It can be disabled
-        // by -fno-char8_t.)
-        .Case("char8_t", diag::warn_cxx20_keyword)
         ;
 
   llvm_unreachable(
@@ -912,9 +906,6 @@ void Preprocessor::Lex(Token &Result) {
     }
   } while (!ReturnedToken);
 
-  if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
-    return;
-
   if (Result.is(tok::code_completion) && Result.getIdentifierInfo()) {
     // Remember the identifier before code completion token.
     setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
@@ -968,12 +959,8 @@ void Preprocessor::Lex(Token &Result) {
 
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
-
-  if (LexLevel == 0 && !Result.getFlag(Token::IsReinjected)) {
-    ++TokenCount;
-    if (OnToken)
-      OnToken(Result);
-  }
+  if (OnToken && LexLevel == 0 && !Result.getFlag(Token::IsReinjected))
+    OnToken(Result);
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
@@ -1213,13 +1200,6 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       Suffix[0].setAnnotationValue(Action.ModuleForHeader);
       // FIXME: Call the moduleImport callback?
       break;
-    case ImportAction::Failure:
-      assert(TheModuleLoader.HadFatalFailure &&
-             "This should be an early exit only to a fatal error");
-      Result.setKind(tok::eof);
-      CurLexer->cutOffLexing();
-      EnterTokens(Suffix);
-      return true;
     }
 
     EnterTokens(Suffix);
@@ -1359,7 +1339,7 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
     return false;
   }
 
-  String = std::string(Literal.GetString());
+  String = Literal.GetString();
   return true;
 }
 

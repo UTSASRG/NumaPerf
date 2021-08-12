@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_USERID_H
-#define LLDB_UTILITY_USERID_H
+#ifndef liblldb_UserID_h_
+#define liblldb_UserID_h_
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
@@ -90,4 +90,4 @@ Stream &operator<<(Stream &strm, const UserID &uid);
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_USERID_H
+#endif // liblldb_UserID_h_

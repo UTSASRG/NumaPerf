@@ -66,12 +66,6 @@ static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsage
 #endif
 }
 
-Process::Pid Process::getProcessId() {
-  static_assert(sizeof(Pid) >= sizeof(pid_t),
-                "Process::Pid should be big enough to store pid_t");
-  return Pid(::getpid());
-}
-
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and
 // offset in mmap(3) should be aligned to the AllocationGranularity.
 Expected<unsigned> Process::getPageSize() {
@@ -286,7 +280,7 @@ bool Process::FileDescriptorIsDisplayed(int fd) {
 #endif
 }
 
-static unsigned getColumns() {
+static unsigned getColumns(int FileID) {
   // If COLUMNS is defined in the environment, wrap to that many columns.
   if (const char *ColumnsStr = std::getenv("COLUMNS")) {
     int Columns = std::atoi(ColumnsStr);
@@ -294,23 +288,31 @@ static unsigned getColumns() {
       return Columns;
   }
 
-  // We used to call ioctl TIOCGWINSZ to determine the width. It is considered
-  // unuseful.
-  return 0;
+  unsigned Columns = 0;
+
+#if defined(HAVE_SYS_IOCTL_H) && defined(HAVE_TERMIOS_H) \
+  && !(defined(_XOPEN_SOURCE) || defined(_POSIX_C_SOURCE))
+  // Try to determine the width of the terminal.
+  struct winsize ws;
+  if (ioctl(FileID, TIOCGWINSZ, &ws) == 0)
+    Columns = ws.ws_col;
+#endif
+
+  return Columns;
 }
 
 unsigned Process::StandardOutColumns() {
   if (!StandardOutIsDisplayed())
     return 0;
 
-  return getColumns();
+  return getColumns(1);
 }
 
 unsigned Process::StandardErrColumns() {
   if (!StandardErrIsDisplayed())
     return 0;
 
-  return getColumns();
+  return getColumns(2);
 }
 
 #ifdef HAVE_TERMINFO

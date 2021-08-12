@@ -30,9 +30,6 @@ public:
         LegacyResourceConsumers(Options.get(
             "LegacyResourceConsumers", "::free;::realloc;::freopen;::fclose")) {
   }
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11;
-  }
 
   /// Make configuration of checker discoverable.
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

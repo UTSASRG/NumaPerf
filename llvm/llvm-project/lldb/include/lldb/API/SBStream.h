@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBSTREAM_H
-#define LLDB_API_SBSTREAM_H
+#ifndef LLDB_SBStream_h_
+#define LLDB_SBStream_h_
 
 #include <stdio.h>
 
@@ -36,8 +36,6 @@ public:
   size_t GetSize();
 
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
-
-  void Print(const char *str);
 
   void RedirectToFile(const char *path, bool append);
 
@@ -101,12 +99,11 @@ protected:
   lldb_private::Stream &ref();
 
 private:
-  SBStream(const SBStream &) = delete;
-  const SBStream &operator=(const SBStream &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SBStream);
   std::unique_ptr<lldb_private::Stream> m_opaque_up;
   bool m_is_file;
 };
 
 } // namespace lldb
 
-#endif // LLDB_API_SBSTREAM_H
+#endif // LLDB_SBStream_h_

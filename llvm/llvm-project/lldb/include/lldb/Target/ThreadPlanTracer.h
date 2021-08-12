@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANTRACER_H
-#define LLDB_TARGET_THREADPLANTRACER_H
+#ifndef liblldb_ThreadPlanTracer_h_
+#define liblldb_ThreadPlanTracer_h_
 
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Thread.h"
@@ -57,12 +57,9 @@ public:
   }
 
   bool SingleStepEnabled() { return m_single_step; }
-  
-  Thread &GetThread();
 
 protected:
-  Process &m_process;
-  lldb::tid_t m_tid;
+  Thread &m_thread;
 
   Stream *GetLogStream();
 
@@ -74,7 +71,6 @@ private:
   bool m_single_step;
   bool m_enabled;
   lldb::StreamSP m_stream_sp;
-  Thread *m_thread;
 };
 
 class ThreadPlanAssemblyTracer : public ThreadPlanTracer {
@@ -100,4 +96,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANTRACER_H
+#endif // liblldb_ThreadPlanTracer_h_

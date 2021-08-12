@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLESET_H
-#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLESET_H
+#ifndef CoreFoundationCPP_CFMutableSet_h_
+#define CoreFoundationCPP_CFMutableSet_h_
 
 #include "CFCReleaser.h"
 
@@ -35,4 +35,4 @@ private:
   // For CFCMutableSet only
 };
 
-#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLESET_H
+#endif // CoreFoundationCPP_CFMutableSet_h_

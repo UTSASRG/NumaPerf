@@ -47,7 +47,6 @@ FunctionPass *createARMConstantIslandPass();
 FunctionPass *createMLxExpansionPass();
 FunctionPass *createThumb2ITBlockPass();
 FunctionPass *createMVEVPTBlockPass();
-FunctionPass *createMVEVPTOptimisationsPass();
 FunctionPass *createARMOptimizeBarriersPass();
 FunctionPass *createThumb2SizeReductionPass(
     std::function<bool(const Function &)> Ftor = nullptr);
@@ -67,7 +66,6 @@ void initializeARMExpandPseudoPass(PassRegistry &);
 void initializeThumb2SizeReducePass(PassRegistry &);
 void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeMVEVPTBlockPass(PassRegistry &);
-void initializeMVEVPTOptimisationsPass(PassRegistry &);
 void initializeARMLowOverheadLoopsPass(PassRegistry &);
 void initializeMVETailPredicationPass(PassRegistry &);
 void initializeMVEGatherScatterLoweringPass(PassRegistry &);

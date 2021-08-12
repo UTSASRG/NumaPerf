@@ -61,7 +61,7 @@ void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   unsigned VariantCount = Target.getAsmParserVariantCount();
 
   // Page title.
-  std::string Title = std::string(Target.getName());
+  std::string Title = Target.getName();
   Title += " Instructions";
   writeTitle(Title, OS);
   OS << "\n";

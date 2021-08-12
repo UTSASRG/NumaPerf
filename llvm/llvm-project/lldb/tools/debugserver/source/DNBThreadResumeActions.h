@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBTHREADRESUMEACTIONS_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBTHREADRESUMEACTIONS_H
+#ifndef __DNBThreadResumeActions_h__
+#define __DNBThreadResumeActions_h__
 
 #include <vector>
 
@@ -62,4 +62,4 @@ protected:
   mutable std::vector<bool> m_signal_handled;
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBTHREADRESUMEACTIONS_H
+#endif // #ifndef __DNBThreadResumeActions_h__

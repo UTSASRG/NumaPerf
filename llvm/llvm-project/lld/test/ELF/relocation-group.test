@@ -35,7 +35,8 @@ Sections:
     Link:            .symtab
     Info:            .text.foo
     Relocations:
-      - Symbol:          foo
+      - Offset:          0x0000000000000000
+        Symbol:          foo
         Type:            R_X86_64_64
 Symbols:
   - Name:    foo

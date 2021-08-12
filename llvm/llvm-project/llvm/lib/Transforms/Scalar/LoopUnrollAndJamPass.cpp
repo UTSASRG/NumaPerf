@@ -11,10 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/PriorityWorklist.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -22,36 +20,37 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <vector>
-
-namespace llvm {
-class Instruction;
-class Value;
-} // namespace llvm
+#include <string>
 
 using namespace llvm;
 
@@ -92,7 +91,7 @@ static cl::opt<unsigned> PragmaUnrollAndJamThreshold(
 // Returns the loop hint metadata node with the given name (for example,
 // "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
 // returned.
-static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+static MDNode *GetUnrollMetadataForLoop(const Loop *L, StringRef Name) {
   if (MDNode *LoopID = L->getLoopID())
     return GetUnrollMetadata(LoopID, Name);
   return nullptr;
@@ -100,14 +99,14 @@ static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
 
 // Returns true if the loop has any metadata starting with Prefix. For example a
 // Prefix of "llvm.loop.unroll." returns true if we have any unroll metadata.
-static bool hasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
+static bool HasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
   if (MDNode *LoopID = L->getLoopID()) {
     // First operand should refer to the loop id itself.
     assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
     assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-    for (unsigned I = 1, E = LoopID->getNumOperands(); I < E; ++I) {
-      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(I));
+    for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
       if (!MD)
         continue;
 
@@ -123,14 +122,14 @@ static bool hasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
 }
 
 // Returns true if the loop has an unroll_and_jam(enable) pragma.
-static bool hasUnrollAndJamEnablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.enable");
+static bool HasUnrollAndJamEnablePragma(const Loop *L) {
+  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.enable");
 }
 
 // If loop has an unroll_and_jam_count pragma return the (necessarily
 // positive) value from the pragma.  Otherwise return 0.
-static unsigned unrollAndJamCountPragmaValue(const Loop *L) {
-  MDNode *MD = getUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.count");
+static unsigned UnrollAndJamCountPragmaValue(const Loop *L) {
+  MDNode *MD = GetUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.count");
   if (MD) {
     assert(MD->getNumOperands() == 2 &&
            "Unroll count hint metadata should have two operands.");
@@ -191,7 +190,7 @@ static bool computeUnrollAndJamCount(
   }
 
   // Check for unroll_and_jam pragmas
-  unsigned PragmaCount = unrollAndJamCountPragmaValue(L);
+  unsigned PragmaCount = UnrollAndJamCountPragmaValue(L);
   if (PragmaCount > 0) {
     UP.Count = PragmaCount;
     UP.Runtime = true;
@@ -203,7 +202,7 @@ static bool computeUnrollAndJamCount(
       return true;
   }
 
-  bool PragmaEnableUnroll = hasUnrollAndJamEnablePragma(L);
+  bool PragmaEnableUnroll = HasUnrollAndJamEnablePragma(L);
   bool ExplicitUnrollAndJamCount = PragmaCount > 0 || UserUnrollCount;
   bool ExplicitUnrollAndJam = PragmaEnableUnroll || ExplicitUnrollAndJamCount;
 
@@ -280,6 +279,21 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                       ScalarEvolution &SE, const TargetTransformInfo &TTI,
                       AssumptionCache &AC, DependenceInfo &DI,
                       OptimizationRemarkEmitter &ORE, int OptLevel) {
+  // Quick checks of the correct loop form
+  if (!L->isLoopSimplifyForm() || L->getSubLoops().size() != 1)
+    return LoopUnrollResult::Unmodified;
+  Loop *SubLoop = L->getSubLoops()[0];
+  if (!SubLoop->isLoopSimplifyForm())
+    return LoopUnrollResult::Unmodified;
+
+  BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *Exit = L->getExitingBlock();
+  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
+  BasicBlock *SubLoopExit = SubLoop->getExitingBlock();
+
+  if (Latch != Exit || SubLoopLatch != SubLoopExit)
+    return LoopUnrollResult::Unmodified;
+
   TargetTransformInfo::UnrollingPreferences UP =
       gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, OptLevel, None,
                                  None, None, None, None, None, None, None);
@@ -303,13 +317,13 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // the unroller, so long as it does not explicitly have unroll_and_jam
   // metadata. This means #pragma nounroll will disable unroll and jam as well
   // as unrolling
-  if (hasAnyUnrollPragma(L, "llvm.loop.unroll.") &&
-      !hasAnyUnrollPragma(L, "llvm.loop.unroll_and_jam.")) {
+  if (HasAnyUnrollPragma(L, "llvm.loop.unroll.") &&
+      !HasAnyUnrollPragma(L, "llvm.loop.unroll_and_jam.")) {
     LLVM_DEBUG(dbgs() << "  Disabled due to pragma.\n");
     return LoopUnrollResult::Unmodified;
   }
 
-  if (!isSafeToUnrollAndJam(L, SE, DT, DI, *LI)) {
+  if (!isSafeToUnrollAndJam(L, SE, DT, DI)) {
     LLVM_DEBUG(dbgs() << "  Disabled due to not being safe.\n");
     return LoopUnrollResult::Unmodified;
   }
@@ -320,7 +334,6 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   bool Convergent;
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
-  Loop *SubLoop = L->getSubLoops()[0];
   unsigned InnerLoopSize =
       ApproximateLoopSize(SubLoop, NumInlineCandidates, NotDuplicatable,
                           Convergent, TTI, EphValues, UP.BEInsns);
@@ -358,8 +371,6 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     SubLoop->setLoopID(NewInnerEpilogueLoopID.getValue());
 
   // Find trip count and trip multiple
-  BasicBlock *Latch = L->getLoopLatch();
-  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
   unsigned OuterTripCount = SE.getSmallConstantTripCount(L, Latch);
   unsigned OuterTripMultiple = SE.getSmallConstantTripMultiple(L, Latch);
   unsigned InnerTripCount = SE.getSmallConstantTripCount(SubLoop, SubLoopLatch);
@@ -377,7 +388,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   Loop *EpilogueOuterLoop = nullptr;
   LoopUnrollResult UnrollResult = UnrollAndJamLoop(
       L, UP.Count, OuterTripCount, OuterTripMultiple, UP.UnrollRemainder, LI,
-      &SE, &DT, &AC, &TTI, &ORE, &EpilogueOuterLoop);
+      &SE, &DT, &AC, &ORE, &EpilogueOuterLoop);
 
   // Assign new loop attributes.
   if (EpilogueOuterLoop) {
@@ -424,23 +435,22 @@ static bool tryToUnrollAndJamLoop(Function &F, DominatorTree &DT, LoopInfo &LI,
                                   int OptLevel) {
   bool DidSomething = false;
 
-  // The loop unroll and jam pass requires loops to be in simplified form, and
-  // also needs LCSSA. Since simplification may add new inner loops, it has to
-  // run before the legality and profitability checks. This means running the
-  // loop unroll and jam pass will simplify all loops, regardless of whether
-  // anything end up being unroll and jammed.
+  // The loop unroll and jam pass requires loops to be in simplified form, and also needs LCSSA.
+  // Since simplification may add new inner loops, it has to run before the
+  // legality and profitability checks. This means running the loop unroll and jam pass
+  // will simplify all loops, regardless of whether anything end up being
+  // unroll and jammed.
   for (auto &L : LI) {
     DidSomething |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
     DidSomething |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
-  // Add the loop nests in the reverse order of LoopInfo. See method
-  // declaration.
   SmallPriorityWorklist<Loop *, 4> Worklist;
-  appendLoopsToWorklist(LI, Worklist);
+  internal::appendLoopsToWorklist(reverse(LI), Worklist);
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
+    formLCSSA(*L, DT, &LI, &SE);
     LoopUnrollResult Result =
         tryToUnrollAndJamLoop(L, DT, &LI, SE, TTI, AC, DI, ORE, OptLevel);
     if (Result != LoopUnrollResult::Unmodified)

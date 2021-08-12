@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 
 // This test fails due to a stack overflow
 // XFAIL: LIBCXX-WINDOWS-FIXME

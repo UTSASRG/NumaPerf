@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFATTRIBUTE_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFATTRIBUTE_H
+#ifndef SymbolFileDWARF_DWARFAttribute_h_
+#define SymbolFileDWARF_DWARFAttribute_h_
 
 #include "DWARFDefines.h"
 #include "DWARFFormValue.h"
@@ -82,4 +82,4 @@ protected:
   collection m_infos;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFATTRIBUTE_H
+#endif // SymbolFileDWARF_DWARFAttribute_h_

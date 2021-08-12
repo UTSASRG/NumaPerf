@@ -13,7 +13,6 @@ namespace lld {
 namespace elf {
 void writeMapFile();
 void writeCrossReferenceTable();
-void writeArchiveStats();
 } // namespace elf
 } // namespace lld
 

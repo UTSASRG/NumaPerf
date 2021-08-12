@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_JSON_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_JSON_H
+#ifndef utility_JSON_h_
+#define utility_JSON_h_
 
 #include "StdStringExtractor.h"
 
@@ -299,4 +299,4 @@ protected:
   JSONValue::SP ParseJSONArray();
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_JSON_H
+#endif // utility_JSON_h_

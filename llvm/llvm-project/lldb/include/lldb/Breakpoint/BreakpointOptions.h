@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_BREAKPOINTOPTIONS_H
-#define LLDB_BREAKPOINT_BREAKPOINTOPTIONS_H
+#ifndef liblldb_BreakpointOptions_h_
+#define liblldb_BreakpointOptions_h_
 
 #include <memory>
 #include <string>
@@ -406,4 +406,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_BREAKPOINTOPTIONS_H
+#endif // liblldb_BreakpointOptions_h_

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANPYTHON_H
-#define LLDB_TARGET_THREADPLANPYTHON_H
+#ifndef liblldb_ThreadPlan_Python_h_
+#define liblldb_ThreadPlan_Python_h_
 
 #include <string>
 
@@ -55,8 +55,6 @@ protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;
-  
-  ScriptInterpreter *GetScriptInterpreter();
 
 private:
   std::string m_class_name;
@@ -68,10 +66,9 @@ private:
   StructuredData::ObjectSP m_implementation_sp;
   bool m_did_push;
 
-  ThreadPlanPython(const ThreadPlanPython &) = delete;
-  const ThreadPlanPython &operator=(const ThreadPlanPython &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanPython);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANPYTHON_H
+#endif // liblldb_ThreadPlan_Python_h_

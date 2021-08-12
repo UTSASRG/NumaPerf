@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANCALLFUNCTION_H
-#define LLDB_TARGET_THREADPLANCALLFUNCTION_H
+#ifndef liblldb_ThreadPlanCallFunction_h_
+#define liblldb_ThreadPlanCallFunction_h_
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -146,11 +146,9 @@ protected:
 
 private:
   CompilerType m_return_type;
-  ThreadPlanCallFunction(const ThreadPlanCallFunction &) = delete;
-  const ThreadPlanCallFunction &
-  operator=(const ThreadPlanCallFunction &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallFunction);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANCALLFUNCTION_H
+#endif // liblldb_ThreadPlanCallFunction_h_

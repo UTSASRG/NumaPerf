@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTGUI_H
-#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTGUI_H
+#ifndef liblldb_CommandObjectGUI_h_
+#define liblldb_CommandObjectGUI_h_
 
 #include "lldb/Interpreter/CommandObject.h"
 
@@ -27,4 +27,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTGUI_H
+#endif // liblldb_CommandObjectGUI_h_

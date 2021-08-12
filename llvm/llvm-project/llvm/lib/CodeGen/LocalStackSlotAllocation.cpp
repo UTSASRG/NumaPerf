@@ -79,11 +79,11 @@ namespace {
     using StackObjSet = SmallSetVector<int, 8>;
 
     void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx, int64_t &Offset,
-                           bool StackGrowsDown, Align &MaxAlign);
+                           bool StackGrowsDown, unsigned &MaxAlign);
     void AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
                                SmallSet<int, 16> &ProtectedObjs,
                                MachineFrameInfo &MFI, bool StackGrowsDown,
-                               int64_t &Offset, Align &MaxAlign);
+                               int64_t &Offset, unsigned &MaxAlign);
     void calculateFrameObjectOffsets(MachineFunction &Fn);
     bool insertFrameReferenceRegisters(MachineFunction &Fn);
 
@@ -140,21 +140,22 @@ bool LocalStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
 }
 
 /// AdjustStackOffset - Helper function used to adjust the stack frame offset.
-void LocalStackSlotPass::AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
-                                           int64_t &Offset, bool StackGrowsDown,
-                                           Align &MaxAlign) {
+void LocalStackSlotPass::AdjustStackOffset(MachineFrameInfo &MFI,
+                                           int FrameIdx, int64_t &Offset,
+                                           bool StackGrowsDown,
+                                           unsigned &MaxAlign) {
   // If the stack grows down, add the object size to find the lowest address.
   if (StackGrowsDown)
     Offset += MFI.getObjectSize(FrameIdx);
 
-  Align Alignment = MFI.getObjectAlign(FrameIdx);
+  unsigned Align = MFI.getObjectAlignment(FrameIdx);
 
   // If the alignment of this object is greater than that of the stack, then
   // increase the stack alignment to match.
-  MaxAlign = std::max(MaxAlign, Alignment);
+  MaxAlign = std::max(MaxAlign, Align);
 
   // Adjust to alignment boundary.
-  Offset = alignTo(Offset, Alignment);
+  Offset = (Offset + Align - 1) / Align * Align;
 
   int64_t LocalOffset = StackGrowsDown ? -Offset : Offset;
   LLVM_DEBUG(dbgs() << "Allocate FI(" << FrameIdx << ") to local offset "
@@ -172,10 +173,11 @@ void LocalStackSlotPass::AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
 
 /// AssignProtectedObjSet - Helper function to assign large stack objects (i.e.,
 /// those required to be close to the Stack Protector) to stack offsets.
-void LocalStackSlotPass::AssignProtectedObjSet(
-    const StackObjSet &UnassignedObjs, SmallSet<int, 16> &ProtectedObjs,
-    MachineFrameInfo &MFI, bool StackGrowsDown, int64_t &Offset,
-    Align &MaxAlign) {
+void LocalStackSlotPass::AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
+                                           SmallSet<int, 16> &ProtectedObjs,
+                                           MachineFrameInfo &MFI,
+                                           bool StackGrowsDown, int64_t &Offset,
+                                           unsigned &MaxAlign) {
   for (StackObjSet::const_iterator I = UnassignedObjs.begin(),
         E = UnassignedObjs.end(); I != E; ++I) {
     int i = *I;
@@ -193,7 +195,7 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   bool StackGrowsDown =
     TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
   int64_t Offset = 0;
-  Align MaxAlign;
+  unsigned MaxAlign = 0;
 
   // Make sure that the stack protector comes before the local variables on the
   // stack.
@@ -260,7 +262,7 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   // Remember how big this blob of stack space is
   MFI.setLocalFrameSize(Offset);
-  MFI.setLocalFrameMaxAlign(MaxAlign);
+  MFI.setLocalFrameMaxAlign(assumeAligned(MaxAlign));
 }
 
 static inline bool

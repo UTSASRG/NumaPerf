@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADSPEC_H
-#define LLDB_TARGET_THREADSPEC_H
+#ifndef liblldb_ThreadSpec_h_
+#define liblldb_ThreadSpec_h_
 
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
@@ -46,11 +46,9 @@ public:
 
   void SetTID(lldb::tid_t tid) { m_tid = tid; }
 
-  void SetName(llvm::StringRef name) { m_name = std::string(name); }
+  void SetName(llvm::StringRef name) { m_name = name; }
 
-  void SetQueueName(llvm::StringRef queue_name) {
-    m_queue_name = std::string(queue_name);
-  }
+  void SetQueueName(llvm::StringRef queue_name) { m_queue_name = queue_name; }
 
   uint32_t GetIndex() const { return m_index; }
 
@@ -128,4 +126,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADSPEC_H
+#endif // liblldb_ThreadSpec_h_

@@ -1,11 +1,6 @@
 About
 ========
 
-.. warning::
-
-   If you are using a released version of LLVM, see `the download page
-   <https://llvm.org/releases/>`_ to find your documentation.
-
 The LLVM compiler infrastructure supports a wide range of projects, from
 industrial strength compilers to specialized JIT applications to small
 research projects.
@@ -27,7 +22,7 @@ Several introductory papers and presentations.
 `Introduction to the LLVM Compiler`__
   Presentation providing a users introduction to LLVM.
 
-  .. __: https://llvm.org/pubs/2008-10-04-ACAT-LLVM-Intro.html
+  .. __: http://llvm.org/pubs/2008-10-04-ACAT-LLVM-Intro.html
 
 `Intro to LLVM`__
   A chapter from the book "The Architecture of Open Source Applications" that
@@ -39,12 +34,12 @@ Several introductory papers and presentations.
 `LLVM: A Compilation Framework for Lifelong Program Analysis & Transformation`__
   Design overview.
 
-  .. __: https://llvm.org/pubs/2004-01-30-CGO-LLVM.html
+  .. __: http://llvm.org/pubs/2004-01-30-CGO-LLVM.html
 
 `LLVM: An Infrastructure for Multi-Stage Optimization`__
   More details (quite old now).
 
-  .. __: https://llvm.org/pubs/2002-12-LattnerMSThesis.html
+  .. __: http://llvm.org/pubs/2002-12-LattnerMSThesis.html
 
 Documentation
 =============

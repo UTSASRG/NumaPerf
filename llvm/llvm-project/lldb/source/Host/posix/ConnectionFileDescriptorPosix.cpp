@@ -1,4 +1,4 @@
-//===-- ConnectionFileDescriptorPosix.cpp ---------------------------------===//
+//===-- ConnectionFileDescriptorPosix.cpp -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -42,7 +42,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Host/common/UDPSocket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -224,7 +223,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
             m_write_sp =
                 std::make_shared<NativeFile>(fd, File::eOpenOptionWrite, false);
           }
-          m_uri = std::string(*addr);
+          m_uri = *addr;
           return eConnectionStatusSuccess;
         }
       }
@@ -653,7 +652,7 @@ ConnectionFileDescriptor::NamedSocketAccept(llvm::StringRef socket_name,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(std::string(socket_name));
+  m_uri.assign(socket_name);
   return eConnectionStatusSuccess;
 }
 
@@ -670,7 +669,7 @@ ConnectionFileDescriptor::NamedSocketConnect(llvm::StringRef socket_name,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(std::string(socket_name));
+  m_uri.assign(socket_name);
   return eConnectionStatusSuccess;
 }
 
@@ -687,79 +686,66 @@ ConnectionFileDescriptor::UnixAbstractSocketConnect(llvm::StringRef socket_name,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(std::string(socket_name));
+  m_uri.assign(socket_name);
   return eConnectionStatusSuccess;
 }
 
 ConnectionStatus
 ConnectionFileDescriptor::SocketListenAndAccept(llvm::StringRef s,
                                                 Status *error_ptr) {
-  if (error_ptr)
-    *error_ptr = Status();
   m_port_predicate.SetValue(0, eBroadcastNever);
 
+  Socket *socket = nullptr;
   m_waiting_for_accept = true;
-  llvm::Expected<std::unique_ptr<TCPSocket>> listening_socket =
-      Socket::TcpListen(s, m_child_processes_inherit, &m_port_predicate);
-  if (!listening_socket) {
-    if (error_ptr)
-      *error_ptr = listening_socket.takeError();
-    else
-      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION),
-                     listening_socket.takeError(), "tcp listen failed: {0}");
-    return eConnectionStatusError;
-  }
-
-
-  Socket *accepted_socket;
-  Status error = listening_socket.get()->Accept(accepted_socket);
+  Status error = Socket::TcpListen(s, m_child_processes_inherit, socket,
+                                   &m_port_predicate);
   if (error_ptr)
     *error_ptr = error;
   if (error.Fail())
     return eConnectionStatusError;
 
-  InitializeSocket(accepted_socket);
+  std::unique_ptr<Socket> listening_socket_up;
+
+  listening_socket_up.reset(socket);
+  socket = nullptr;
+  error = listening_socket_up->Accept(socket);
+  listening_socket_up.reset();
+  if (error_ptr)
+    *error_ptr = error;
+  if (error.Fail())
+    return eConnectionStatusError;
+
+  InitializeSocket(socket);
   return eConnectionStatusSuccess;
 }
 
 ConnectionStatus ConnectionFileDescriptor::ConnectTCP(llvm::StringRef s,
                                                       Status *error_ptr) {
+  Socket *socket = nullptr;
+  Status error = Socket::TcpConnect(s, m_child_processes_inherit, socket);
   if (error_ptr)
-    *error_ptr = Status();
-
-  llvm::Expected<std::unique_ptr<Socket>> socket =
-      Socket::TcpConnect(s, m_child_processes_inherit);
-  if (!socket) {
-    if (error_ptr)
-      *error_ptr = socket.takeError();
-    else
-      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION),
-                     socket.takeError(), "tcp connect failed: {0}");
+    *error_ptr = error;
+  m_write_sp.reset(socket);
+  m_read_sp = m_write_sp;
+  if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_write_sp = std::move(*socket);
-  m_read_sp = m_write_sp;
-  m_uri.assign(std::string(s));
+  m_uri.assign(s);
   return eConnectionStatusSuccess;
 }
 
 ConnectionStatus ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
                                                       Status *error_ptr) {
+  Socket *socket = nullptr;
+  Status error = Socket::UdpConnect(s, m_child_processes_inherit, socket);
   if (error_ptr)
-    *error_ptr = Status();
-  llvm::Expected<std::unique_ptr<UDPSocket>> socket =
-      Socket::UdpConnect(s, m_child_processes_inherit);
-  if (!socket) {
-    if (error_ptr)
-      *error_ptr = socket.takeError();
-    else
-      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION),
-                     socket.takeError(), "tcp connect failed: {0}");
+    *error_ptr = error;
+  m_write_sp.reset(socket);
+  m_read_sp = m_write_sp;
+  if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_write_sp = std::move(*socket);
-  m_read_sp = m_write_sp;
-  m_uri.assign(std::string(s));
+  m_uri.assign(s);
   return eConnectionStatusSuccess;
 }
 

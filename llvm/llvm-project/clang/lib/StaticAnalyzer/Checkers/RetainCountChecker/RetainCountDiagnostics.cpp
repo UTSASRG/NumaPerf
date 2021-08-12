@@ -18,7 +18,7 @@ using namespace clang;
 using namespace ento;
 using namespace retaincountchecker;
 
-StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugKind BT) {
+StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugType BT) {
   switch (BT) {
   case UseAfterRelease:
     return "Use-after-release";
@@ -37,7 +37,7 @@ StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugKind BT) {
   case LeakAtReturn:
     return "Leak of returned object";
   }
-  llvm_unreachable("Unknown RefCountBugKind");
+  llvm_unreachable("Unknown RefCountBugType");
 }
 
 StringRef RefCountBug::getDescription() const {
@@ -60,14 +60,13 @@ StringRef RefCountBug::getDescription() const {
   case LeakAtReturn:
     return "";
   }
-  llvm_unreachable("Unknown RefCountBugKind");
+  llvm_unreachable("Unknown RefCountBugType");
 }
 
-RefCountBug::RefCountBug(CheckerNameRef Checker, RefCountBugKind BT)
+RefCountBug::RefCountBug(const CheckerBase *Checker, RefCountBugType BT)
     : BugType(Checker, bugTypeToName(BT), categories::MemoryRefCount,
-              /*SuppressOnSink=*/BT == LeakWithinFunction ||
-                  BT == LeakAtReturn),
-      BT(BT) {}
+              /*SuppressOnSink=*/BT == LeakWithinFunction || BT == LeakAtReturn),
+      BT(BT), Checker(Checker) {}
 
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
@@ -85,7 +84,7 @@ static std::string getPrettyTypeName(QualType QT) {
   QualType PT = QT->getPointeeType();
   if (!PT.isNull() && !QT->getAs<TypedefType>())
     if (const auto *RD = PT->getAsCXXRecordDecl())
-      return std::string(RD->getName());
+      return RD->getName();
   return QT.getAsString();
 }
 
@@ -454,6 +453,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
                                  PathSensitiveBugReport &BR) {
 
   const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
+  const auto *Checker =
+      static_cast<const RetainCountChecker *>(BT.getChecker());
 
   bool IsFreeUnowned = BT.getBugType() == RefCountBug::FreeNotOwned ||
                        BT.getBugType() == RefCountBug::DeallocNotOwned;
@@ -544,11 +545,11 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 
   const ProgramPointTag *Tag = N->getLocation().getTag();
 
-  if (Tag == &RetainCountChecker::getCastFailTag()) {
+  if (Tag == &Checker->getCastFailTag()) {
     os << "Assuming dynamic cast returns null due to type mismatch";
   }
 
-  if (Tag == &RetainCountChecker::getDeallocSentTag()) {
+  if (Tag == &Checker->getDeallocSentTag()) {
     // We only have summaries attached to nodes after evaluating CallExpr and
     // ObjCMessageExprs.
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();

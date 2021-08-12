@@ -1,4 +1,5 @@
-//===-- PlatformDarwinKernel.cpp ------------------------------------------===//
+//===-- PlatformDarwinKernel.cpp -----------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -327,7 +328,7 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
 
   // DeveloperDirectory is something like
   // "/Applications/Xcode.app/Contents/Developer"
-  std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+  std::string developer_dir = GetDeveloperDirectory();
   if (developer_dir.empty())
     developer_dir = "/Applications/Xcode.app/Contents/Developer";
 

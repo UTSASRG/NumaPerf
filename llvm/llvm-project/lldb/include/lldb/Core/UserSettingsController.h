@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_USERSETTINGSCONTROLLER_H
-#define LLDB_CORE_USERSETTINGSCONTROLLER_H
+#ifndef liblldb_UserSettingsController_h_
+#define liblldb_UserSettingsController_h_
 
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -88,4 +88,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_USERSETTINGSCONTROLLER_H
+#endif // liblldb_UserSettingsController_h_

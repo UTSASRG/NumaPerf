@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_POSIX_PROCESSLAUNCHERPOSIXFORK_H
-#define LLDB_HOST_POSIX_PROCESSLAUNCHERPOSIXFORK_H
+#ifndef lldb_Host_posix_ProcessLauncherPosixFork_h_
+#define lldb_Host_posix_ProcessLauncherPosixFork_h_
 
 #include "lldb/Host/ProcessLauncher.h"
 

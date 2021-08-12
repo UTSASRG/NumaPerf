@@ -32,23 +32,20 @@ struct DefaultConfig {
   // 512KB regions
   typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
 #endif
-  typedef MapAllocator<MapAllocatorCache<>> Secondary;
+  typedef MapAllocator<> Secondary;
   template <class A> using TSDRegistryT = TSDRegistryExT<A>; // Exclusive
 };
 
 struct AndroidConfig {
   using SizeClassMap = AndroidSizeClassMap;
 #if SCUDO_CAN_USE_PRIMARY64
-  // 256MB regions
-  typedef SizeClassAllocator64<SizeClassMap, 28U, 1000, 1000,
-                               /*MaySupportMemoryTagging=*/true>
-      Primary;
+  // 1GB regions
+  typedef SizeClassAllocator64<SizeClassMap, 30U> Primary;
 #else
-  // 256KB regions
-  typedef SizeClassAllocator32<SizeClassMap, 18U, 1000, 1000> Primary;
+  // 512KB regions
+  typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
 #endif
-  // Cache blocks up to 2MB
-  typedef MapAllocator<MapAllocatorCache<32U, 2UL << 20, 0, 1000>> Secondary;
+  typedef MapAllocator<> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 2U>; // Shared, max 2 TSDs.
 };
@@ -56,13 +53,13 @@ struct AndroidConfig {
 struct AndroidSvelteConfig {
   using SizeClassMap = SvelteSizeClassMap;
 #if SCUDO_CAN_USE_PRIMARY64
-  // 128MB regions
-  typedef SizeClassAllocator64<SizeClassMap, 27U, 1000, 1000> Primary;
+  // 512MB regions
+  typedef SizeClassAllocator64<SizeClassMap, 29U> Primary;
 #else
   // 64KB regions
-  typedef SizeClassAllocator32<SizeClassMap, 16U, 1000, 1000> Primary;
+  typedef SizeClassAllocator32<SizeClassMap, 16U> Primary;
 #endif
-  typedef MapAllocator<MapAllocatorCache<4U, 1UL << 18, 0, 0>> Secondary;
+  typedef MapAllocator<0U> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 1U>; // Shared, only 1 TSD.
 };
@@ -71,7 +68,7 @@ struct AndroidSvelteConfig {
 struct FuchsiaConfig {
   // 1GB Regions
   typedef SizeClassAllocator64<DefaultSizeClassMap, 30U> Primary;
-  typedef MapAllocator<MapAllocatorNoCache> Secondary;
+  typedef MapAllocator<0U> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 8U>; // Shared, max 8 TSDs.
 };

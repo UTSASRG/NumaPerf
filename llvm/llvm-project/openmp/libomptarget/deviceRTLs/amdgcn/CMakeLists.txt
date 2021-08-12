@@ -55,8 +55,6 @@ get_filename_component(devicertl_base_directory
   DIRECTORY)
 
 set(cuda_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_smid.hip
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_locks.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.hip
   ${devicertl_base_directory}/common/src/cancel.cu
   ${devicertl_base_directory}/common/src/critical.cu
@@ -99,7 +97,7 @@ endif()
 
 macro(add_cuda_bc_library)
   set(cu_cmd ${AOMP_BINDIR}/clang++
-    -std=c++14
+    -std=c++11
     -fcuda-rdc
     -fvisibility=default
     --cuda-device-only

@@ -9,9 +9,13 @@
 #include "lldb/Host/Host.h"
 
 #include <AvailabilityMacros.h>
-#include <TargetConditionals.h>
 
-#if TARGET_OS_OSX
+// On device doesn't have supporty for XPC.
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#define NO_XPC_SERVICES 1
+#endif
+
+#if !defined(NO_XPC_SERVICES)
 #define __XPC_PRIVATE_H__
 #include <xpc/xpc.h>
 
@@ -131,8 +135,6 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
   return false;
 }
 
-#if TARGET_OS_OSX
-
 static void *AcceptPIDFromInferior(void *arg) {
   const char *connect_url = (const char *)arg;
   ConnectionFileDescriptor file_conn;
@@ -150,6 +152,35 @@ static void *AcceptPIDFromInferior(void *arg) {
   }
   return NULL;
 }
+
+static bool WaitForProcessToSIGSTOP(const lldb::pid_t pid,
+                                    const int timeout_in_seconds) {
+  const int time_delta_usecs = 100000;
+  const int num_retries = timeout_in_seconds / time_delta_usecs;
+  for (int i = 0; i < num_retries; i++) {
+    struct proc_bsdinfo bsd_info;
+    int error = ::proc_pidinfo(pid, PROC_PIDTBSDINFO, (uint64_t)0, &bsd_info,
+                               PROC_PIDTBSDINFO_SIZE);
+
+    switch (error) {
+    case EINVAL:
+    case ENOTSUP:
+    case ESRCH:
+    case EPERM:
+      return false;
+
+    default:
+      break;
+
+    case 0:
+      if (bsd_info.pbi_status == SSTOP)
+        return true;
+    }
+    ::usleep(time_delta_usecs);
+  }
+  return false;
+}
+#if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 
 const char *applscript_in_new_tty = "tell application \"Terminal\"\n"
                                     "   activate\n"
@@ -294,6 +325,11 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   lldb_error = accept_thread->Join(&accept_thread_result);
   if (lldb_error.Success() && accept_thread_result) {
     pid = (intptr_t)accept_thread_result;
+
+    // Wait for process to be stopped at the entry point by watching
+    // for the process status to be set to SSTOP which indicates it it
+    // SIGSTOP'ed at the entry point
+    WaitForProcessToSIGSTOP(pid, 5);
   }
 
   llvm::sys::fs::remove(unix_socket_name);
@@ -303,13 +339,13 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   return error;
 }
 
-#endif // TARGET_OS_OSX
+#endif // #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 
 bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
                                     uint32_t line_no) {
-#if !TARGET_OS_OSX
+#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
   return false;
-#else // !TARGET_OS_OSX
+#else
   // We attach this to an 'odoc' event to specify a particular selection
   typedef struct {
     int16_t reserved0; // must be zero
@@ -400,7 +436,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   }
 
   return true;
-#endif // TARGET_OS_OSX
+#endif // #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 }
 
 Environment Host::GetEnvironment() { return Environment(*_NSGetEnviron()); }
@@ -587,8 +623,8 @@ static bool GetMacOSXProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   return false;
 }
 
-uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
-                                 ProcessInstanceInfoList &process_infos) {
+uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                             ProcessInstanceInfoList &process_infos) {
   std::vector<struct kinfo_proc> kinfos;
 
   int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
@@ -656,11 +692,11 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))
-          process_infos.push_back(process_info);
+          process_infos.Append(process_info);
       }
     }
   }
-  return process_infos.size();
+  return process_infos.GetSize();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
@@ -685,7 +721,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-#if TARGET_OS_OSX
+#if !NO_XPC_SERVICES
 static void PackageXPCArguments(xpc_object_t message, const char *prefix,
                                 const Args &args) {
   size_t count = args.GetArgumentCount();
@@ -837,7 +873,7 @@ static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
 static Status LaunchProcessXPC(const char *exe_path,
                                ProcessLaunchInfo &launch_info,
                                lldb::pid_t &pid) {
-#if TARGET_OS_OSX
+#if !NO_XPC_SERVICES
   Status error = getXPCAuthorization(launch_info);
   if (error.Fail())
     return error;
@@ -1084,6 +1120,43 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     return error;
   }
 
+// posix_spawnattr_setbinpref_np appears to be an Apple extension per:
+// http://www.unix.com/man-page/OSX/3/posix_spawnattr_setbinpref_np/
+#if !defined(__arm__)
+
+  // Don't set the binpref if a shell was provided.  After all, that's only
+  // going to affect what version of the shell
+  // is launched, not what fork of the binary is launched.  We insert "arch
+  // --arch <ARCH> as part of the shell invocation
+  // to do that job on OSX.
+
+  if (launch_info.GetShell() == FileSpec()) {
+    // We don't need to do this for ARM, and we really shouldn't now that we
+    // have multiple CPU subtypes and no posix_spawnattr call that allows us
+    // to set which CPU subtype to launch...
+    const ArchSpec &arch_spec = launch_info.GetArchitecture();
+    cpu_type_t cpu = arch_spec.GetMachOCPUType();
+    cpu_type_t sub = arch_spec.GetMachOCPUSubType();
+    if (cpu != 0 && cpu != static_cast<cpu_type_t>(UINT32_MAX) &&
+        cpu != static_cast<cpu_type_t>(LLDB_INVALID_CPUTYPE) &&
+        !(cpu == 0x01000007 && sub == 8)) // If haswell is specified, don't try
+                                          // to set the CPU type or we will fail
+    {
+      size_t ocount = 0;
+      error.SetError(::posix_spawnattr_setbinpref_np(&attr, 1, &cpu, &ocount),
+                     eErrorTypePOSIX);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "error: {0}, ::posix_spawnattr_setbinpref_np ( &attr, 1, "
+                 "cpu_type = {1:x}, count => {2} )",
+                 error, cpu, ocount);
+
+      if (error.Fail() || ocount != 1)
+        return error;
+    }
+  }
+#endif // !defined(__arm__)
+
   const char *tmp_argv[2];
   char *const *argv = const_cast<char *const *>(
       launch_info.GetArguments().GetConstArgumentVector());
@@ -1190,7 +1263,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
 static bool ShouldLaunchUsingXPC(ProcessLaunchInfo &launch_info) {
   bool result = false;
 
-#if TARGET_OS_OSX
+#if !NO_XPC_SERVICES
   bool launchingAsRoot = launch_info.GetUserID() == 0;
   bool currentUserIsRoot = HostInfo::GetEffectiveUserID() == 0;
 
@@ -1222,7 +1295,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   }
 
   if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY)) {
-#if TARGET_OS_OSX
+#if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
     return LaunchInNewTerminalWithAppleScript(exe_spec.GetPath().c_str(),
                                               launch_info);
 #else

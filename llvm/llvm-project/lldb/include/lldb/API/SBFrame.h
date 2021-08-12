@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBFRAME_H
-#define LLDB_API_SBFRAME_H
+#ifndef LLDB_SBFrame_h_
+#define LLDB_SBFrame_h_
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBValueList.h"
@@ -202,4 +202,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBFRAME_H
+#endif // LLDB_SBFrame_h_

@@ -1,1 +1,1 @@
-add_subdirectory(LLVMC)
+add_subdirectory(llvm)

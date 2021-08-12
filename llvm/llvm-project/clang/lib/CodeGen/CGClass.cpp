@@ -35,37 +35,20 @@ using namespace CodeGen;
 /// Return the best known alignment for an unknown pointer to a
 /// particular class.
 CharUnits CodeGenModule::getClassPointerAlignment(const CXXRecordDecl *RD) {
-  if (!RD->hasDefinition())
+  if (!RD->isCompleteDefinition())
     return CharUnits::One(); // Hopefully won't be used anywhere.
 
   auto &layout = getContext().getASTRecordLayout(RD);
 
   // If the class is final, then we know that the pointer points to an
   // object of that type and can use the full alignment.
-  if (RD->isEffectivelyFinal())
+  if (RD->hasAttr<FinalAttr>()) {
     return layout.getAlignment();
 
   // Otherwise, we have to assume it could be a subclass.
-  return layout.getNonVirtualAlignment();
-}
-
-/// Return the smallest possible amount of storage that might be allocated
-/// starting from the beginning of an object of a particular class.
-///
-/// This may be smaller than sizeof(RD) if RD has virtual base classes.
-CharUnits CodeGenModule::getMinimumClassObjectSize(const CXXRecordDecl *RD) {
-  if (!RD->hasDefinition())
-    return CharUnits::One();
-
-  auto &layout = getContext().getASTRecordLayout(RD);
-
-  // If the class is final, then we know that the pointer points to an
-  // object of that type and can use the full alignment.
-  if (RD->isEffectivelyFinal())
-    return layout.getSize();
-
-  // Otherwise, we have to assume it could be a subclass.
-  return std::max(layout.getNonVirtualSize(), CharUnits::One());
+  } else {
+    return layout.getNonVirtualAlignment();
+  }
 }
 
 /// Return the best known alignment for a pointer to a virtual base,
@@ -155,8 +138,8 @@ CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                                  memberPtr, memberPtrType);
 
   QualType memberType = memberPtrType->getPointeeType();
-  CharUnits memberAlign =
-      CGM.getNaturalTypeAlignment(memberType, BaseInfo, TBAAInfo);
+  CharUnits memberAlign = getNaturalTypeAlignment(memberType, BaseInfo,
+                                                  TBAAInfo);
   memberAlign =
     CGM.getDynamicOffsetAlignment(base.getAlignment(),
                             memberPtrType->getClass()->getAsCXXRecordDecl(),
@@ -2145,7 +2128,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
 
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
     Address Src(Args[1].getRValue(*this).getScalarVal(),
-                CGM.getNaturalTypeAlignment(SrcTy));
+                getNaturalTypeAlignment(SrcTy));
     LValue SrcLVal = MakeAddrLValue(Src, SrcTy);
     QualType DestTy = getContext().getTypeDeclType(ClassDecl);
     LValue DestLVal = MakeAddrLValue(This, DestTy);
@@ -2165,7 +2148,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   }
 
   // Insert any ABI-specific implicit constructor arguments.
-  CGCXXABI::AddedStructorArgCounts ExtraArgs =
+  CGCXXABI::AddedStructorArgs ExtraArgs =
       CGM.getCXXABI().addImplicitConstructorArgs(*this, D, Type, ForVirtualBase,
                                                  Delegating, Args);
 
@@ -2174,7 +2157,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
-  EmitCall(Info, Callee, ReturnValueSlot(), Args, nullptr, Loc);
+  EmitCall(Info, Callee, ReturnValueSlot(), Args);
 
   // Generate vtable assumptions if we're constructing a complete object
   // with a vtable.  We don't do this for base subobjects for two reasons:
@@ -2658,9 +2641,7 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
   if (SanOpts.has(SanitizerKind::CFIVCall))
     EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
   else if (CGM.getCodeGenOpts().WholeProgramVTables &&
-           // Don't insert type test assumes if we are forcing public std
-           // visibility.
-           !CGM.HasLTOVisibilityPublicStd(RD)) {
+           CGM.HasHiddenLTOVisibility(RD)) {
     llvm::Metadata *MD =
         CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
     llvm::Value *TypeId =
@@ -2869,9 +2850,7 @@ void CodeGenFunction::EmitForwardingCallToLambda(
   if (!resultType->isVoidType() &&
       calleeFnInfo.getReturnInfo().getKind() == ABIArgInfo::Indirect &&
       !hasScalarEvaluationKind(calleeFnInfo.getReturnType()))
-    returnSlot =
-        ReturnValueSlot(ReturnValue, resultType.isVolatileQualified(),
-                        /*IsUnused=*/false, /*IsExternallyDestructed=*/true);
+    returnSlot = ReturnValueSlot(ReturnValue, resultType.isVolatileQualified());
 
   // We don't need to separately arrange the call arguments because
   // the call can't be variadic anyway --- it's impossible to forward

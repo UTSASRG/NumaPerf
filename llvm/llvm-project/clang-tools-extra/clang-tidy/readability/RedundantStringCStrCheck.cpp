@@ -46,8 +46,8 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
   if (const auto *Op = dyn_cast<clang::UnaryOperator>(&ExprNode)) {
     if (Op->getOpcode() == UO_AddrOf) {
       // Strip leading '&'.
-      return std::string(tooling::fixit::getText(
-          *Op->getSubExpr()->IgnoreParens(), *Result.Context));
+      return tooling::fixit::getText(*Op->getSubExpr()->IgnoreParens(),
+                                     *Result.Context);
     }
   }
   StringRef Text = tooling::fixit::getText(ExprNode, *Result.Context);
@@ -61,14 +61,15 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
   return (llvm::Twine("*") + Text).str();
 }
 
-AST_MATCHER(MaterializeTemporaryExpr, isBoundToLValue) {
-  return Node.isBoundToLvalueReference();
-}
-
 } // end namespace
 
 void RedundantStringCStrCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
+  // Only register the matchers for C++; the functionality currently does not
+  // provide any benefit to other languages, despite being benign.
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   // Match expressions of type 'string' or 'string*'.
   const auto StringDecl = type(hasUnqualifiedDesugaredType(recordType(
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string"))))));
@@ -94,20 +95,18 @@ void RedundantStringCStrCheck::registerMatchers(
           .bind("call");
 
   // Detect redundant 'c_str()' calls through a string constructor.
-  // If CxxConstructExpr is the part of some CallExpr we need to
-  // check that matched ParamDecl of the ancestor CallExpr is not rvalue.
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               cxxConstructExpr(StringConstructorExpr,
-                                hasArgument(0, StringCStrCallExpr),
-                                unless(hasParent(materializeTemporaryExpr(
-                                    unless(isBoundToLValue())))))),
-      this);
+  Finder->addMatcher(cxxConstructExpr(StringConstructorExpr,
+                                      hasArgument(0, StringCStrCallExpr)),
+                     this);
 
   // Detect: 's == str.c_str()'  ->  's == str'
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          hasAnyOverloadedOperatorName("<", ">", ">=", "<=", "!=", "==", "+"),
+          anyOf(
+              hasOverloadedOperatorName("<"), hasOverloadedOperatorName(">"),
+              hasOverloadedOperatorName(">="), hasOverloadedOperatorName("<="),
+              hasOverloadedOperatorName("!="), hasOverloadedOperatorName("=="),
+              hasOverloadedOperatorName("+")),
           anyOf(allOf(hasArgument(0, StringExpr),
                       hasArgument(1, StringCStrCallExpr)),
                 allOf(hasArgument(0, StringCStrCallExpr),
@@ -116,11 +115,11 @@ void RedundantStringCStrCheck::registerMatchers(
 
   // Detect: 'dst += str.c_str()'  ->  'dst += str'
   // Detect: 's = str.c_str()'  ->  's = str'
-  Finder->addMatcher(
-      cxxOperatorCallExpr(hasAnyOverloadedOperatorName("=", "+="),
-                          hasArgument(0, StringExpr),
-                          hasArgument(1, StringCStrCallExpr)),
-      this);
+  Finder->addMatcher(cxxOperatorCallExpr(anyOf(hasOverloadedOperatorName("="),
+                                               hasOverloadedOperatorName("+=")),
+                                         hasArgument(0, StringExpr),
+                                         hasArgument(1, StringCStrCallExpr)),
+                     this);
 
   // Detect: 'dst.append(str.c_str())'  ->  'dst.append(str)'
   Finder->addMatcher(
@@ -155,22 +154,20 @@ void RedundantStringCStrCheck::registerMatchers(
 
   // Detect redundant 'c_str()' calls through a StringRef constructor.
   Finder->addMatcher(
-      traverse(
-          ast_type_traits::TK_AsIs,
-          cxxConstructExpr(
-              // Implicit constructors of these classes are overloaded
-              // wrt. string types and they internally make a StringRef
-              // referring to the argument.  Passing a string directly to
-              // them is preferred to passing a char pointer.
-              hasDeclaration(cxxMethodDecl(hasAnyName(
-                  "::llvm::StringRef::StringRef", "::llvm::Twine::Twine"))),
-              argumentCountIs(1),
-              // The only argument must have the form x.c_str() or p->c_str()
-              // where the method is string::c_str().  StringRef also has
-              // a constructor from string which is more efficient (avoids
-              // strlen), so we can construct StringRef from the string
-              // directly.
-              hasArgument(0, StringCStrCallExpr))),
+      cxxConstructExpr(
+          // Implicit constructors of these classes are overloaded
+          // wrt. string types and they internally make a StringRef
+          // referring to the argument.  Passing a string directly to
+          // them is preferred to passing a char pointer.
+          hasDeclaration(cxxMethodDecl(hasAnyName(
+              "::llvm::StringRef::StringRef", "::llvm::Twine::Twine"))),
+          argumentCountIs(1),
+          // The only argument must have the form x.c_str() or p->c_str()
+          // where the method is string::c_str().  StringRef also has
+          // a constructor from string which is more efficient (avoids
+          // strlen), so we can construct StringRef from the string
+          // directly.
+          hasArgument(0, StringCStrCallExpr)),
       this);
 }
 

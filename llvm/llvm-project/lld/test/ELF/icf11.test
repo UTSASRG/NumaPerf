@@ -32,13 +32,15 @@ Sections:
     Link:            .symtab
     Info:            .text.foo
     Relocations:
-      - Type:        R_X86_64_NONE
+      - Offset:          0x0000000000000000
+        Type:            R_X86_64_NONE
   - Name:            .rela.text.bar
     Type:            SHT_RELA
     Link:            .symtab
     Info:            .text.bar
     Relocations:
-      - Symbol:          zed
+      - Offset:          0
+        Symbol:          zed
         Type:            R_X86_64_64
 Symbols:
   - Name:     zed

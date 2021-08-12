@@ -1,4 +1,4 @@
-//===-- BreakpointResolverAddress.cpp -------------------------------------===//
+//===-- BreakpointResolverAddress.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,19 +22,21 @@ using namespace lldb_private;
 
 // BreakpointResolverAddress:
 BreakpointResolverAddress::BreakpointResolverAddress(
-    const BreakpointSP &bkpt, const Address &addr, const FileSpec &module_spec)
+    Breakpoint *bkpt, const Address &addr, const FileSpec &module_spec)
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),
       m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS),
       m_module_filespec(module_spec) {}
 
-BreakpointResolverAddress::BreakpointResolverAddress(const BreakpointSP &bkpt,
+BreakpointResolverAddress::BreakpointResolverAddress(Breakpoint *bkpt,
                                                      const Address &addr)
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),
       m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS), m_module_filespec() {
 }
 
+BreakpointResolverAddress::~BreakpointResolverAddress() {}
+
 BreakpointResolver *BreakpointResolverAddress::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
+    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
     Status &error) {
   llvm::StringRef module_name;
   lldb::addr_t addr_offset;
@@ -98,7 +100,7 @@ void BreakpointResolverAddress::ResolveBreakpoint(SearchFilter &filter) {
   bool re_resolve = false;
   if (m_addr.GetSection() || m_module_filespec)
     re_resolve = true;
-  else if (GetBreakpoint()->GetNumLocations() == 0)
+  else if (m_breakpoint->GetNumLocations() == 0)
     re_resolve = true;
 
   if (re_resolve)
@@ -111,7 +113,7 @@ void BreakpointResolverAddress::ResolveBreakpointInModules(
   bool re_resolve = false;
   if (m_addr.GetSection())
     re_resolve = true;
-  else if (GetBreakpoint()->GetNumLocations() == 0)
+  else if (m_breakpoint->GetNumLocations() == 0)
     re_resolve = true;
 
   if (re_resolve)
@@ -120,16 +122,15 @@ void BreakpointResolverAddress::ResolveBreakpointInModules(
 
 Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
     SearchFilter &filter, SymbolContext &context, Address *addr) {
-  BreakpointSP breakpoint_sp = GetBreakpoint();
-  Breakpoint &breakpoint = *breakpoint_sp;
+  assert(m_breakpoint != nullptr);
 
   if (filter.AddressPasses(m_addr)) {
-    if (breakpoint.GetNumLocations() == 0) {
+    if (m_breakpoint->GetNumLocations() == 0) {
       // If the address is just an offset, and we're given a module, see if we
       // can find the appropriate module loaded in the binary, and fix up
       // m_addr to use that.
       if (!m_addr.IsSectionOffset() && m_module_filespec) {
-        Target &target = breakpoint.GetTarget();
+        Target &target = m_breakpoint->GetTarget();
         ModuleSpec module_spec(m_module_filespec);
         ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec);
         if (module_sp) {
@@ -139,9 +140,9 @@ Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
         }
       }
 
-      m_resolved_addr = m_addr.GetLoadAddress(&breakpoint.GetTarget());
+      m_resolved_addr = m_addr.GetLoadAddress(&m_breakpoint->GetTarget());
       BreakpointLocationSP bp_loc_sp(AddLocation(m_addr));
-      if (bp_loc_sp && !breakpoint.IsInternal()) {
+      if (bp_loc_sp && !m_breakpoint->IsInternal()) {
         StreamString s;
         bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
         Log *log(
@@ -149,9 +150,9 @@ Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
         LLDB_LOGF(log, "Added location: %s\n", s.GetData());
       }
     } else {
-      BreakpointLocationSP loc_sp = breakpoint.GetLocationAtIndex(0);
+      BreakpointLocationSP loc_sp = m_breakpoint->GetLocationAtIndex(0);
       lldb::addr_t cur_load_location =
-          m_addr.GetLoadAddress(&breakpoint.GetTarget());
+          m_addr.GetLoadAddress(&m_breakpoint->GetTarget());
       if (cur_load_location != m_resolved_addr) {
         m_resolved_addr = cur_load_location;
         loc_sp->ClearBreakpointSite();
@@ -168,7 +169,7 @@ lldb::SearchDepth BreakpointResolverAddress::GetDepth() {
 
 void BreakpointResolverAddress::GetDescription(Stream *s) {
   s->PutCString("address = ");
-  m_addr.Dump(s, GetBreakpoint()->GetTarget().GetProcessSP().get(),
+  m_addr.Dump(s, m_breakpoint->GetTarget().GetProcessSP().get(),
               Address::DumpStyleModuleWithFileAddress,
               Address::DumpStyleLoadAddress);
 }
@@ -176,8 +177,8 @@ void BreakpointResolverAddress::GetDescription(Stream *s) {
 void BreakpointResolverAddress::Dump(Stream *s) const {}
 
 lldb::BreakpointResolverSP
-BreakpointResolverAddress::CopyForBreakpoint(BreakpointSP &breakpoint) {
+BreakpointResolverAddress::CopyForBreakpoint(Breakpoint &breakpoint) {
   lldb::BreakpointResolverSP ret_sp(
-      new BreakpointResolverAddress(breakpoint, m_addr));
+      new BreakpointResolverAddress(&breakpoint, m_addr));
   return ret_sp;
 }

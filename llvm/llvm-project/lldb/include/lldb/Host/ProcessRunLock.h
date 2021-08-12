@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_PROCESSRUNLOCK_H
-#define LLDB_HOST_PROCESSRUNLOCK_H
+#ifndef liblldb_ProcessRunLock_h_
+#define liblldb_ProcessRunLock_h_
 
 #include <stdint.h>
 #include <time.h>
@@ -67,8 +67,7 @@ public:
     ProcessRunLock *m_lock;
 
   private:
-    ProcessRunLocker(const ProcessRunLocker &) = delete;
-    const ProcessRunLocker &operator=(const ProcessRunLocker &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(ProcessRunLocker);
   };
 
 protected:
@@ -76,10 +75,9 @@ protected:
   bool m_running;
 
 private:
-  ProcessRunLock(const ProcessRunLock &) = delete;
-  const ProcessRunLock &operator=(const ProcessRunLock &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ProcessRunLock);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_PROCESSRUNLOCK_H
+#endif // liblldb_ProcessRunLock_h_

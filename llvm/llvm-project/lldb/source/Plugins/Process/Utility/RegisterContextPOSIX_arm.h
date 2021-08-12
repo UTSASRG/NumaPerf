@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
+#ifndef liblldb_RegisterContextPOSIX_arm_h_
+#define liblldb_RegisterContextPOSIX_arm_h_
 
 #include "RegisterInfoInterface.h"
 #include "lldb-arm-register-enums.h"
@@ -103,4 +103,4 @@ protected:
   virtual bool WriteFPR() = 0;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
+#endif // liblldb_RegisterContextPOSIX_arm_h_

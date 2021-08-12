@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGDIAGNOSTIC_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGDIAGNOSTIC_H
+#ifndef lldb_ClangDiagnostic_h
+#define lldb_ClangDiagnostic_h
 
 #include <vector>
 
@@ -47,4 +47,4 @@ private:
 };
 
 } // namespace lldb_private
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGDIAGNOSTIC_H
+#endif /* lldb_ClangDiagnostic_h */

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: -fno-rtti
+// UNSUPPORTED: libcpp-no-rtti
 
 // "support/test_macros.hpp"
 

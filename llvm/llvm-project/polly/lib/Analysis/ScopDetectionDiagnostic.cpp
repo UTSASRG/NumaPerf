@@ -225,7 +225,7 @@ std::string ReportUnreachableInExit::getRemarkName() const {
 const Value *ReportUnreachableInExit::getRemarkBB() const { return BB; }
 
 std::string ReportUnreachableInExit::getMessage() const {
-  std::string BBName = BB->getName().str();
+  std::string BBName = BB->getName();
   return "Unreachable in exit block" + BBName;
 }
 
@@ -411,7 +411,7 @@ bool ReportDifferentArrayElementSize::classof(const RejectReason *RR) {
 
 std::string ReportDifferentArrayElementSize::getEndUserMessage() const {
   StringRef BaseName = BaseValue->getName();
-  std::string Name = BaseName.empty() ? "UNKNOWN" : BaseName.str();
+  std::string Name = BaseName.empty() ? "UNKNOWN" : BaseName;
   return "The array \"" + Name +
          "\" is accessed through elements that differ "
          "in size";
@@ -438,7 +438,7 @@ bool ReportNonAffineAccess::classof(const RejectReason *RR) {
 
 std::string ReportNonAffineAccess::getEndUserMessage() const {
   StringRef BaseName = BaseValue->getName();
-  std::string Name = BaseName.empty() ? "UNKNOWN" : BaseName.str();
+  std::string Name = BaseName.empty() ? "UNKNOWN" : BaseName;
   return "The array subscript of \"" + Name + "\" is not affine";
 }
 

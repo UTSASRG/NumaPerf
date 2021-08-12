@@ -226,17 +226,17 @@ bool isManaged(const Value &val) {
 
 std::string getTextureName(const Value &val) {
   assert(val.hasName() && "Found texture variable with no name");
-  return std::string(val.getName());
+  return val.getName();
 }
 
 std::string getSurfaceName(const Value &val) {
   assert(val.hasName() && "Found surface variable with no name");
-  return std::string(val.getName());
+  return val.getName();
 }
 
 std::string getSamplerName(const Value &val) {
   assert(val.hasName() && "Found sampler variable with no name");
-  return std::string(val.getName());
+  return val.getName();
 }
 
 bool getMaxNTIDx(const Function &F, unsigned &x) {

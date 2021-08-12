@@ -22,7 +22,7 @@ namespace scudo {
 
 class HybridMutex {
 public:
-  void init() { M = {}; }
+  void init() { memset(this, 0, sizeof(*this)); }
   bool tryLock();
   NOINLINE void lock() {
     if (LIKELY(tryLock()))

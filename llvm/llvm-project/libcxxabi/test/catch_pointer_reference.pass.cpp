@@ -24,7 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: libcxxabi-no-exceptions
 
 #include <exception>
 #include <stdlib.h>

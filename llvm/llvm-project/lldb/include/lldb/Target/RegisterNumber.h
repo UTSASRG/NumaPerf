@@ -56,4 +56,4 @@ private:
   const char *m_name;
 };
 
-#endif // LLDB_TARGET_REGISTERNUMBER_H
+#endif // liblldb_RegisterNumber_h

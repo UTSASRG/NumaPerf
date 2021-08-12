@@ -73,22 +73,16 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeEvexToVexInstPassPass(PR);
   initializeFixupLEAPassPass(PR);
   initializeFPSPass(PR);
-  initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
-  initializeX86AvoidTrailingCallPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
-  initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
   initializeX86CondBrFoldingPassPass(PR);
-  initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
-  initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
-  initializeX86PartialReductionPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -98,9 +92,19 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
     return std::make_unique<TargetLoweringObjectFileMachO>();
   }
 
+  if (TT.isOSFreeBSD())
+    return std::make_unique<X86FreeBSDTargetObjectFile>();
+  if (TT.isOSLinux() || TT.isOSNaCl() || TT.isOSIAMCU())
+    return std::make_unique<X86LinuxNaClTargetObjectFile>();
+  if (TT.isOSSolaris())
+    return std::make_unique<X86SolarisTargetObjectFile>();
+  if (TT.isOSFuchsia())
+    return std::make_unique<X86FuchsiaTargetObjectFile>();
+  if (TT.isOSBinFormatELF())
+    return std::make_unique<X86ELFTargetObjectFile>();
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
-  return std::make_unique<X86ELFTargetObjectFile>();
+  llvm_unreachable("unknown subtarget type");
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -218,7 +222,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
           getEffectiveRelocModel(TT, JIT, RM),
           getEffectiveX86CodeModel(CM, JIT, TT.getArch() == Triple::x86_64),
           OL),
-      TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
+      TLOF(createTLOF(getTargetTriple())) {
   // On PS4, the "return address" of a 'noreturn' call must still be within
   // the calling function, and TrapUnreachable is an easy way to get that.
   if (TT.isPS4() || TT.isOSBinFormatMachO()) {
@@ -227,9 +231,6 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   }
 
   setMachineOutliner(true);
-
-  // x86 supports the debug entry values.
-  setSupportsDebugEntryValues(true);
 
   initAsmInfo();
 }
@@ -405,10 +406,8 @@ void X86PassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
-  if (TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createInterleavedAccessPass());
-    addPass(createX86PartialReductionPass());
-  }
 
   // Add passes that handle indirect branch removal and insertion of a retpoline
   // thunk. These will be a no-op unless a function subtarget has the retpoline
@@ -497,7 +496,6 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86FloatingPointStackifierPass());
-  addPass(createX86LoadValueInjectionLoadHardeningPass());
 }
 
 void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }
@@ -521,24 +519,13 @@ void X86PassConfig::addPreEmitPass() {
   }
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
-  addPass(createX86InsertX87waitPass());
 }
 
 void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
   const MCAsmInfo *MAI = TM->getMCAsmInfo();
 
-  // The X86 Speculative Execution Pass must run after all control
-  // flow graph modifying passes. As a result it was listed to run right before
-  // the X86 Retpoline Thunks pass. The reason it must run after control flow
-  // graph modifications is that the model of LFENCE in LLVM has to be updated
-  // (FIXME: https://bugs.llvm.org/show_bug.cgi?id=45167). Currently the
-  // placement of this pass was hand checked to ensure that the subsequent
-  // passes don't move the code around the LFENCEs in a way that will hurt the
-  // correctness of this pass. This placement has been shown to work based on
-  // hand inspection of the codegen output.
-  addPass(createX86SpeculativeExecutionSideEffectSuppression());
-  addPass(createX86IndirectThunksPass());
+  addPass(createX86RetpolineThunksPass());
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
@@ -555,7 +542,6 @@ void X86PassConfig::addPreEmitPass2() {
   // Identify valid longjmp targets for Windows Control Flow Guard.
   if (TT.isOSWindows())
     addPass(createCFGuardLongjmpPass());
-  addPass(createX86LoadValueInjectionRetHardeningPass());
 }
 
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {

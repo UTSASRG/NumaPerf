@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_CALLFRAMEINFO_H
-#define LLDB_SYMBOL_CALLFRAMEINFO_H
+#ifndef liblldb_CallFrameInfo_h_
+#define liblldb_CallFrameInfo_h_
 
 #include "lldb/Core/Address.h"
 
@@ -25,4 +25,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_CALLFRAMEINFO_H
+#endif // liblldb_CallFrameInfo_h_

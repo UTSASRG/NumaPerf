@@ -2,13 +2,13 @@
 //      Check that \DexExpectStepKind correctly counts 'FUNC_EXTERNAL' steps
 //      for a trivial test. Expect one 'FUNC_EXTERNAL' per external call.
 //
-// UNSUPPORTED: system-darwin
+// REQUIRES: system-linux, lldb
+// XFAIL: system-linux
+// This fails right now on my linux machine, needs examining as to why.
 //
-// XFAIL:*
-// This fails right now on my linux and windows machine, needs examining as to
-// why.
-//
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter --fail-lt 1.0 -w  \
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
+// RUN:     | FileCheck %s
 // CHECK: func_external.cpp:
 
 #include <cstdlib>

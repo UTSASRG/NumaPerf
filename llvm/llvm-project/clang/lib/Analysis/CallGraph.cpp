@@ -66,16 +66,16 @@ public:
     return nullptr;
   }
 
-  void addCalledDecl(Decl *D, Expr *CallExpr) {
-    if (G->includeCalleeInGraph(D)) {
+  void addCalledDecl(Decl *D) {
+    if (G->includeInGraph(D)) {
       CallGraphNode *CalleeNode = G->getOrInsertNode(D);
-      CallerNode->addCallee({CalleeNode, CallExpr});
+      CallerNode->addCallee(CalleeNode);
     }
   }
 
   void VisitCallExpr(CallExpr *CE) {
     if (Decl *D = getDeclFromCall(CE))
-      addCalledDecl(D, CE);
+      addCalledDecl(D);
     VisitChildren(CE);
   }
 
@@ -89,14 +89,14 @@ public:
 
   void VisitCXXNewExpr(CXXNewExpr *E) {
     if (FunctionDecl *FD = E->getOperatorNew())
-      addCalledDecl(FD, E);
+      addCalledDecl(FD);
     VisitChildren(E);
   }
 
   void VisitCXXConstructExpr(CXXConstructExpr *E) {
     CXXConstructorDecl *Ctor = E->getConstructor();
     if (FunctionDecl *Def = Ctor->getDefinition())
-      addCalledDecl(Def, E);
+      addCalledDecl(Def);
     VisitChildren(E);
   }
 
@@ -122,7 +122,7 @@ public:
       else
         D = IDecl->lookupPrivateClassMethod(Sel);
       if (D) {
-        addCalledDecl(D, ME);
+        addCalledDecl(D);
         NumObjCCallEdges++;
       }
     }
@@ -157,10 +157,6 @@ bool CallGraph::includeInGraph(const Decl *D) {
   if (!D->hasBody())
     return false;
 
-  return includeCalleeInGraph(D);
-}
-
-bool CallGraph::includeCalleeInGraph(const Decl *D) {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     // We skip function template definitions, as their semantics is
     // only determined when they are instantiated.
@@ -211,7 +207,7 @@ CallGraphNode *CallGraph::getOrInsertNode(Decl *F) {
   Node = std::make_unique<CallGraphNode>(F);
   // Make Root node a parent of all functions to make sure all are reachable.
   if (F)
-    Root->addCallee({Node.get(), /*Call=*/nullptr});
+    Root->addCallee(Node.get());
   return Node.get();
 }
 
@@ -234,8 +230,8 @@ void CallGraph::print(raw_ostream &OS) const {
     OS << " calls: ";
     for (CallGraphNode::const_iterator CI = N->begin(),
                                        CE = N->end(); CI != CE; ++CI) {
-      assert(CI->Callee != Root && "No one can call the root node.");
-      CI->Callee->print(OS);
+      assert(*CI != Root && "No one can call the root node.");
+      (*CI)->print(OS);
       OS << " ";
     }
     OS << '\n';

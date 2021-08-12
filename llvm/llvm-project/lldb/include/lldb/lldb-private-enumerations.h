@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_LLDB_PRIVATE_ENUMERATIONS_H
-#define LLDB_LLDB_PRIVATE_ENUMERATIONS_H
+#ifndef LLDB_lldb_private_enumerations_h_
+#define LLDB_lldb_private_enumerations_h_
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatProviders.h"
@@ -148,6 +148,18 @@ enum ExecutionPolicy {
   eExecutionPolicyTopLevel // used for top-level code
 };
 
+// Ways that the FormatManager picks a particular format for a type
+enum FormatterChoiceCriterion {
+  eFormatterChoiceCriterionDirectChoice = 0x00000000,
+  eFormatterChoiceCriterionStrippedPointerReference = 0x00000001,
+  eFormatterChoiceCriterionNavigatedTypedefs = 0x00000002,
+  eFormatterChoiceCriterionRegularExpressionSummary = 0x00000004,
+  eFormatterChoiceCriterionRegularExpressionFilter = 0x00000004,
+  eFormatterChoiceCriterionLanguagePlugin = 0x00000008,
+  eFormatterChoiceCriterionStrippedBitField = 0x00000010,
+  eFormatterChoiceCriterionWentToStaticValue = 0x00000020
+};
+
 // Synchronicity behavior of scripted commands
 enum ScriptedCommandSynchronicity {
   eScriptedCommandSynchronicitySynchronous,
@@ -255,4 +267,4 @@ template <> struct format_provider<lldb_private::Vote> {
 };
 }
 
-#endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H
+#endif // LLDB_lldb_private_enumerations_h_

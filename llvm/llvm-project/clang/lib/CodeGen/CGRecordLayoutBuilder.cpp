@@ -385,8 +385,7 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
         Run = FieldEnd;
         continue;
       }
-      llvm::Type *Type =
-          Types.ConvertTypeForMem(Field->getType(), /*ForBitFields=*/true);
+      llvm::Type *Type = Types.ConvertTypeForMem(Field->getType());
       // If we don't have a run yet, or don't live within the previous run's
       // allocated storage then we allocate some storage and start a new run.
       if (Run == FieldEnd || BitOffset >= Tail) {
@@ -730,8 +729,8 @@ CGBitFieldInfo CGBitFieldInfo::MakeInfo(CodeGenTypes &Types,
   return CGBitFieldInfo(Offset, Size, IsSigned, StorageSize, StorageOffset);
 }
 
-std::unique_ptr<CGRecordLayout>
-CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
+CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
+                                                  llvm::StructType *Ty) {
   CGRecordLowering Builder(*this, D, /*Packed=*/false);
 
   Builder.lower(/*NonVirtualBaseType=*/false);
@@ -758,9 +757,9 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
   // but we may need to recursively layout D while laying D out as a base type.
   Ty->setBody(Builder.FieldTypes, Builder.Packed);
 
-  auto RL = std::make_unique<CGRecordLayout>(
-      Ty, BaseTy, (bool)Builder.IsZeroInitializable,
-      (bool)Builder.IsZeroInitializableAsBase);
+  CGRecordLayout *RL =
+    new CGRecordLayout(Ty, BaseTy, Builder.IsZeroInitializable,
+                        Builder.IsZeroInitializableAsBase);
 
   RL->NonVirtualBases.swap(Builder.NonVirtualBases);
   RL->CompleteObjectVirtualBases.swap(Builder.VirtualBases);

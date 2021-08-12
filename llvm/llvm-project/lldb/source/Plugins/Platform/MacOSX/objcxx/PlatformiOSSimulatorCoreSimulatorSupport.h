@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_OBJCXX_PLATFORMIOSSIMULATORCORESIMULATORSUPPORT_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_OBJCXX_PLATFORMIOSSIMULATORCORESIMULATORSUPPORT_H
+#ifndef liblldb_PlatformiOSSimulatorCoreSimulatorSupport_h_
+#define liblldb_PlatformiOSSimulatorCoreSimulatorSupport_h_
 
 #include <functional>
 #include <ostream>
@@ -217,4 +217,4 @@ private:
 };
 }
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_OBJCXX_PLATFORMIOSSIMULATORCORESIMULATORSUPPORT_H
+#endif // liblldb_PlatformiOSSimulatorCoreSimulatorSupport_h_

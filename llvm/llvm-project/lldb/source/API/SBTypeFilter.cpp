@@ -1,4 +1,5 @@
-//===-- SBTypeFilter.cpp --------------------------------------------------===//
+//===-- SBTypeFilter.cpp ------------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +31,7 @@ SBTypeFilter::SBTypeFilter(const lldb::SBTypeFilter &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeFilter, (const lldb::SBTypeFilter &), rhs);
 }
 
-SBTypeFilter::~SBTypeFilter() = default;
+SBTypeFilter::~SBTypeFilter() {}
 
 bool SBTypeFilter::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFilter, IsValid);

@@ -1,4 +1,4 @@
-//===-- NSArray.cpp -------------------------------------------------------===//
+//===-- NSArray.cpp ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/TargetInfo.h"
 
 #include "Cocoa.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/FunctionCaller.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -437,7 +436,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::NSArrayMSyntheticFrontE
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
       m_id_type() {
   if (valobj_sp) {
-    auto *clang_ast_context = TypeSystemClang::GetScratch(
+    auto *clang_ast_context = ClangASTContext::GetScratch(
         *valobj_sp->GetExecutionContextRef().GetTargetSP());
     if (clang_ast_context)
       m_id_type = CompilerType(
@@ -529,7 +528,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetIndexOfChildWithName
 template <typename D32, typename D64>
 lldb_private::formatters::
   GenericNSArrayMSyntheticFrontEnd<D32, D64>::
-    ~GenericNSArrayMSyntheticFrontEnd<D32, D64>() {
+    ~GenericNSArrayMSyntheticFrontEnd() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;
@@ -585,7 +584,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      auto *clang_ast_context = TypeSystemClang::GetScratch(
+      auto *clang_ast_context = ClangASTContext::GetScratch(
           *valobj_sp->GetExecutionContextRef().GetTargetSP());
       if (clang_ast_context)
         m_id_type = clang_ast_context->GetType(
@@ -596,7 +595,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 
 template <typename D32, typename D64, bool Inline>
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
-  ~GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>() {
+  ~GenericNSArrayISyntheticFrontEnd() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;
@@ -754,7 +753,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
 
   if (idx == 0) {
     auto *clang_ast_context =
-        TypeSystemClang::GetScratch(*m_backend.GetTargetSP());
+        ClangASTContext::GetScratch(*m_backend.GetTargetSP());
     if (clang_ast_context) {
       CompilerType id_type(
           clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID));

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTARGET_H
-#define LLDB_API_SBTARGET_H
+#ifndef LLDB_SBTarget_h_
+#define LLDB_SBTarget_h_
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
@@ -94,15 +94,6 @@ public:
   ///     A platform object.
   lldb::SBPlatform GetPlatform();
 
-  /// Return the environment variables that would be used to launch a new
-  /// process.
-  ///
-  /// \return
-  ///     An lldb::SBEnvironment object which is a copy of the target's
-  ///     environment.
-
-  SBEnvironment GetEnvironment();
-
   /// Install any binaries that need to be installed.
   ///
   /// This function does nothing when debugging on the host system.
@@ -136,9 +127,7 @@ public:
   ///     The argument array.
   ///
   /// \param[in] envp
-  ///     The environment array. If this is null, the default
-  ///     environment values (provided through `settings set
-  ///     target.env-vars`) will be used.
+  ///     The environment array.
   ///
   /// \param[in] stdin_path
   ///     The path to use when re-directing the STDIN of the new
@@ -186,9 +175,7 @@ public:
   ///     The argument array.
   ///
   /// \param[in] envp
-  ///     The environment array. If this isn't provided, the default
-  ///     environment values (provided through `settings set
-  ///     target.env-vars`) will be used.
+  ///     The environment array.
   ///
   /// \param[in] working_directory
   ///     The working directory to have the child process run in
@@ -842,7 +829,6 @@ protected:
   friend class SBFunction;
   friend class SBInstruction;
   friend class SBModule;
-  friend class SBPlatform;
   friend class SBProcess;
   friend class SBSection;
   friend class SBSourceManager;
@@ -863,4 +849,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBTARGET_H
+#endif // LLDB_SBTarget_h_

@@ -14,7 +14,6 @@
 #define LLVM_TOOLS_DSYMUTIL_BINARYHOLDER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 #include <mutex>
 
@@ -38,8 +36,7 @@ class BinaryHolder {
 public:
   using TimestampTy = sys::TimePoint<std::chrono::seconds>;
 
-  BinaryHolder(IntrusiveRefCntPtr<vfs::FileSystem> VFS, bool Verbose = false)
-      : VFS(VFS), Verbose(Verbose) {}
+  BinaryHolder(bool Verbose = false) : Verbose(Verbose) {}
 
   // Forward declarations for friend declaration.
   class ObjectEntry;
@@ -57,8 +54,7 @@ public:
   class ObjectEntry : public EntryBase {
   public:
     /// Load the given object binary in memory.
-    Error load(IntrusiveRefCntPtr<vfs::FileSystem> VFS, StringRef Filename,
-               bool Verbose = false);
+    Error load(StringRef Filename, bool Verbose = false);
 
     /// Access all owned ObjectFiles.
     std::vector<const object::ObjectFile *> getObjects() const;
@@ -109,8 +105,7 @@ public:
     };
 
     /// Load the given object binary in memory.
-    Error load(IntrusiveRefCntPtr<vfs::FileSystem> VFS, StringRef Filename,
-               TimestampTy Timestamp, bool Verbose = false);
+    Error load(StringRef Filename, TimestampTy Timestamp, bool Verbose = false);
 
     Expected<const ObjectEntry &> getObjectEntry(StringRef Filename,
                                                  TimestampTy Timestamp,
@@ -136,9 +131,6 @@ private:
   /// Object entries for objects that are not in a static archive.
   StringMap<ObjectEntry> ObjectCache;
   std::mutex ObjectCacheMutex;
-
-  /// Virtual File System instance.
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 
   bool Verbose;
 };

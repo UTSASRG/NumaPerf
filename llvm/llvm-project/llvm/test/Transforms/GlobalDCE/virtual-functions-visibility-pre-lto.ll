@@ -85,11 +85,10 @@ entry:
 
 declare dso_local noalias nonnull i8* @_Znwm(i64)
 
-!llvm.module.flags = !{!5}
+!llvm.module.flags = !{}
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTSM1AFvvE.virtual"}
 !2 = !{i64 0} ; public vcall visibility
 !3 = !{i64 1} ; linkage-unit vcall visibility
 !4 = !{i64 2} ; translation-unit vcall visibility
-!5 = !{i32 1, !"Virtual Function Elim", i32 1}

@@ -8,24 +8,23 @@
 #include "../Target.h"
 
 #include "../Error.h"
-#include "../ParallelSnippetGenerator.h"
-#include "../SerialSnippetGenerator.h"
+#include "../Latency.h"
 #include "../SnippetGenerator.h"
+#include "../Uops.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
 namespace exegesis {
 
-// Returns a non-null reason if we cannot handle the memory references in this
+// Returns an error if we cannot handle the memory references in this
 // instruction.
-static const char *isInvalidMemoryInstr(const Instruction &Instr) {
+static Error isInvalidMemoryInstr(const Instruction &Instr) {
   switch (Instr.Description.TSFlags & X86II::FormMask) {
   default:
     llvm_unreachable("Unknown FormMask value");
@@ -33,7 +32,6 @@ static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::Pseudo:
   case X86II::RawFrm:
   case X86II::AddCCFrm:
-  case X86II::PrefixByte:
   case X86II::MRMDestReg:
   case X86II::MRMSrcReg:
   case X86II::MRMSrcReg4VOp3:
@@ -114,14 +112,15 @@ static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::MRM_FE:
   case X86II::MRM_FF:
   case X86II::RawFrmImm8:
-    return nullptr;
+    return Error::success();
   case X86II::AddRegFrm:
     return (Instr.Description.Opcode == X86::POP16r ||
             Instr.Description.Opcode == X86::POP32r ||
             Instr.Description.Opcode == X86::PUSH16r ||
             Instr.Description.Opcode == X86::PUSH32r)
-               ? "unsupported opcode: unsupported memory access"
-               : nullptr;
+               ? make_error<Failure>(
+                     "unsupported opcode: unsupported memory access")
+               : Error::success();
   // These access memory and are handled.
   case X86II::MRMDestMem:
   case X86II::MRMSrcMem:
@@ -138,40 +137,38 @@ static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::MRM5m:
   case X86II::MRM6m:
   case X86II::MRM7m:
-    return nullptr;
+    return Error::success();
   // These access memory and are not handled yet.
   case X86II::RawFrmImm16:
   case X86II::RawFrmMemOffs:
   case X86II::RawFrmSrc:
   case X86II::RawFrmDst:
   case X86II::RawFrmDstSrc:
-    return "unsupported opcode: non uniform memory access";
+    return make_error<Failure>("unsupported opcode: non uniform memory access");
   }
 }
 
-// If the opcode is invalid, returns a pointer to a character literal indicating
-// the reason. nullptr indicates a valid opcode.
-static const char *isInvalidOpcode(const Instruction &Instr) {
+static Error IsInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
   if ((Instr.Description.TSFlags & X86II::FormMask) == X86II::Pseudo)
-    return "unsupported opcode: pseudo instruction";
-  if (OpcodeName.startswith("POP") || OpcodeName.startswith("PUSH") ||
-      OpcodeName.startswith("ADJCALLSTACK") || OpcodeName.startswith("LEAVE"))
-    return "unsupported opcode: Push/Pop/AdjCallStack/Leave";
-  if (const auto reason = isInvalidMemoryInstr(Instr))
-    return reason;
+    return make_error<Failure>("unsupported opcode: pseudo instruction");
+  if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
+      OpcodeName.startswith("ADJCALLSTACK"))
+    return make_error<Failure>("unsupported opcode: Push/Pop/AdjCallStack");
+  if (Error Error = isInvalidMemoryInstr(Instr))
+    return Error;
   // We do not handle instructions with OPERAND_PCREL.
   for (const Operand &Op : Instr.Operands)
     if (Op.isExplicit() &&
         Op.getExplicitOperandInfo().OperandType == MCOI::OPERAND_PCREL)
-      return "unsupported opcode: PC relative operand";
+      return make_error<Failure>("unsupported opcode: PC relative operand");
   // We do not handle second-form X87 instructions. We only handle first-form
   // ones (_Fp), see comment in X86InstrFPStack.td.
   for (const Operand &Op : Instr.Operands)
     if (Op.isReg() && Op.isExplicit() &&
         Op.getExplicitOperandInfo().RegClass == X86::RSTRegClassID)
-      return "unsupported second-form X87 instruction";
-  return nullptr;
+      return make_error<Failure>("unsupported second-form X87 instruction");
+  return Error::success();
 }
 
 static unsigned getX86FPFlags(const Instruction &Instr) {
@@ -191,8 +188,7 @@ static void setMemOp(InstructionTemplate &IT, int OpIdx,
 static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
     const Instruction &Instr, const BitVector &ForbiddenRegisters,
     const LLVMState &State, const SnippetGenerator::Options &Opts,
-    std::function<void(unsigned, unsigned, BitVector &CandidateDestRegs)>
-        RestrictDestRegs) {
+    std::function<unsigned(unsigned, unsigned)> GetDestReg) {
   assert(Instr.Operands.size() == 6 && "invalid LEA");
   assert(X86II::getMemoryOperandNo(Instr.Description.TSFlags) == 1 &&
          "invalid LEA");
@@ -226,15 +222,8 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
           // SegmentReg must be 0 for LEA.
           setMemOp(IT, 5, MCOperand::createReg(0));
 
-          // Output reg candidates are selected by the caller.
-          auto PossibleDestRegsNow = PossibleDestRegs;
-          RestrictDestRegs(BaseReg, IndexReg, PossibleDestRegsNow);
-          assert(PossibleDestRegsNow.set_bits().begin() !=
-                     PossibleDestRegsNow.set_bits().end() &&
-                 "no remaining registers");
-          setMemOp(
-              IT, 0,
-              MCOperand::createReg(*PossibleDestRegsNow.set_bits().begin()));
+          // Output reg is selected by the caller.
+          setMemOp(IT, 0, MCOperand::createReg(GetDestReg(BaseReg, IndexReg)));
 
           CodeTemplate CT;
           CT.Instructions.push_back(std::move(IT));
@@ -253,46 +242,37 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
 }
 
 namespace {
-class X86SerialSnippetGenerator : public SerialSnippetGenerator {
+class X86LatencySnippetGenerator : public LatencySnippetGenerator {
 public:
-  using SerialSnippetGenerator::SerialSnippetGenerator;
+  using LatencySnippetGenerator::LatencySnippetGenerator;
 
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(InstructionTemplate Variant,
+  generateCodeTemplates(const Instruction &Instr,
                         const BitVector &ForbiddenRegisters) const override;
 };
 } // namespace
 
 Expected<std::vector<CodeTemplate>>
-X86SerialSnippetGenerator::generateCodeTemplates(
-    InstructionTemplate Variant, const BitVector &ForbiddenRegisters) const {
-  const Instruction &Instr = Variant.getInstr();
-
-  if (const auto reason = isInvalidOpcode(Instr))
-    return make_error<Failure>(reason);
+X86LatencySnippetGenerator::generateCodeTemplates(
+    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
+  if (auto E = IsInvalidOpcode(Instr))
+    return std::move(E);
 
   // LEA gets special attention.
   const auto Opcode = Instr.Description.getOpcode();
   if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
-    return generateLEATemplatesCommon(
-        Instr, ForbiddenRegisters, State, Opts,
-        [this](unsigned BaseReg, unsigned IndexReg,
-               BitVector &CandidateDestRegs) {
-          // We just select a destination register that aliases the base
-          // register.
-          CandidateDestRegs &=
-              State.getRATC().getRegister(BaseReg).aliasedBits();
-        });
+    return generateLEATemplatesCommon(Instr, ForbiddenRegisters, State, Opts,
+                                      [](unsigned BaseReg, unsigned IndexReg) {
+                                        // We just select the same base and
+                                        // output register.
+                                        return BaseReg;
+                                      });
   }
-
-  if (Instr.hasMemoryOperands())
-    return make_error<Failure>(
-        "unsupported memory operand in latency measurements");
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
-    return SerialSnippetGenerator::generateCodeTemplates(Variant,
-                                                         ForbiddenRegisters);
+    return LatencySnippetGenerator::generateCodeTemplates(Instr,
+                                                          ForbiddenRegisters);
   case X86II::ZeroArgFP:
   case X86II::OneArgFP:
   case X86II::SpecialFP:
@@ -305,51 +285,56 @@ X86SerialSnippetGenerator::generateCodeTemplates(
     //   - `ST(0) = fsqrt(ST(0))` (OneArgFPRW)
     //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
     // They are intrinsically serial and do not modify the state of the stack.
-    return generateSelfAliasingCodeTemplates(Variant);
+    return generateSelfAliasingCodeTemplates(Instr);
   default:
     llvm_unreachable("Unknown FP Type!");
   }
 }
 
 namespace {
-class X86ParallelSnippetGenerator : public ParallelSnippetGenerator {
+class X86UopsSnippetGenerator : public UopsSnippetGenerator {
 public:
-  using ParallelSnippetGenerator::ParallelSnippetGenerator;
+  using UopsSnippetGenerator::UopsSnippetGenerator;
 
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(InstructionTemplate Variant,
+  generateCodeTemplates(const Instruction &Instr,
                         const BitVector &ForbiddenRegisters) const override;
 };
 
 } // namespace
 
 Expected<std::vector<CodeTemplate>>
-X86ParallelSnippetGenerator::generateCodeTemplates(
-    InstructionTemplate Variant, const BitVector &ForbiddenRegisters) const {
-  const Instruction &Instr = Variant.getInstr();
-
-  if (const auto reason = isInvalidOpcode(Instr))
-    return make_error<Failure>(reason);
+X86UopsSnippetGenerator::generateCodeTemplates(
+    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
+  if (auto E = IsInvalidOpcode(Instr))
+    return std::move(E);
 
   // LEA gets special attention.
   const auto Opcode = Instr.Description.getOpcode();
   if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
+    // Any destination register that is not used for adddressing is fine.
+    auto PossibleDestRegs =
+        Instr.Operands[0].getRegisterAliasing().sourceBits();
+    remove(PossibleDestRegs, ForbiddenRegisters);
     return generateLEATemplatesCommon(
         Instr, ForbiddenRegisters, State, Opts,
-        [this](unsigned BaseReg, unsigned IndexReg,
-               BitVector &CandidateDestRegs) {
-          // Any destination register that is not used for addressing is fine.
-          remove(CandidateDestRegs,
+        [this, &PossibleDestRegs](unsigned BaseReg, unsigned IndexReg) {
+          auto PossibleDestRegsNow = PossibleDestRegs;
+          remove(PossibleDestRegsNow,
                  State.getRATC().getRegister(BaseReg).aliasedBits());
-          remove(CandidateDestRegs,
+          remove(PossibleDestRegsNow,
                  State.getRATC().getRegister(IndexReg).aliasedBits());
+          assert(PossibleDestRegsNow.set_bits().begin() !=
+                     PossibleDestRegsNow.set_bits().end() &&
+                 "no remaining registers");
+          return *PossibleDestRegsNow.set_bits().begin();
         });
   }
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
-    return ParallelSnippetGenerator::generateCodeTemplates(Variant,
-                                                           ForbiddenRegisters);
+    return UopsSnippetGenerator::generateCodeTemplates(Instr,
+                                                       ForbiddenRegisters);
   case X86II::ZeroArgFP:
   case X86II::OneArgFP:
   case X86II::SpecialFP:
@@ -361,13 +346,13 @@ X86ParallelSnippetGenerator::generateCodeTemplates(
     //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
     // They are intrinsically serial and do not modify the state of the stack.
     // We generate the same code for latency and uops.
-    return generateSelfAliasingCodeTemplates(Variant);
+    return generateSelfAliasingCodeTemplates(Instr);
   case X86II::CompareFP:
   case X86II::CondMovFP:
     // We can compute uops for any FP instruction that does not grow or shrink
     // the stack (either do not touch the stack or push as much as they pop).
     return generateUnconstrainedCodeTemplates(
-        Variant, "instruction does not grow/shrink the FP stack");
+        Instr, "instruction does not grow/shrink the FP stack");
   default:
     llvm_unreachable("Unknown FP Type!");
   }
@@ -572,9 +557,9 @@ private:
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
-  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
-                                 MCOperand &AssignedValue,
-                                 const BitVector &ForbiddenRegs) const override;
+  void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
+                          MCOperand &AssignedValue,
+                          const BitVector &ForbiddenRegs) const override;
 
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
@@ -592,26 +577,16 @@ private:
                             sizeof(kUnavailableRegisters[0]));
   }
 
-  bool allowAsBackToBack(const Instruction &Instr) const override {
-    const unsigned Opcode = Instr.Description.Opcode;
-    return !isInvalidOpcode(Instr) && Opcode != X86::LEA64r &&
-           Opcode != X86::LEA64_32r && Opcode != X86::LEA16r;
-  }
-
-  std::vector<InstructionTemplate>
-  generateInstructionVariants(const Instruction &Instr,
-                              unsigned MaxConfigsPerOpcode) const override;
-
-  std::unique_ptr<SnippetGenerator> createSerialSnippetGenerator(
+  std::unique_ptr<SnippetGenerator> createLatencySnippetGenerator(
       const LLVMState &State,
       const SnippetGenerator::Options &Opts) const override {
-    return std::make_unique<X86SerialSnippetGenerator>(State, Opts);
+    return std::make_unique<X86LatencySnippetGenerator>(State, Opts);
   }
 
-  std::unique_ptr<SnippetGenerator> createParallelSnippetGenerator(
+  std::unique_ptr<SnippetGenerator> createUopsSnippetGenerator(
       const LLVMState &State,
       const SnippetGenerator::Options &Opts) const override {
-    return std::make_unique<X86ParallelSnippetGenerator>(State, Opts);
+    return std::make_unique<X86UopsSnippetGenerator>(State, Opts);
   }
 
   bool matchesArch(Triple::ArchType Arch) const override {
@@ -654,21 +629,20 @@ unsigned ExegesisX86Target::getLoopCounterRegister(const Triple &TT) const {
   return kLoopCounterReg;
 }
 
-Error ExegesisX86Target::randomizeTargetMCOperand(
+void ExegesisX86Target::randomizeMCOperand(
     const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
     const BitVector &ForbiddenRegs) const {
+  ExegesisTarget::randomizeMCOperand(Instr, Var, AssignedValue, ForbiddenRegs);
+
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
-  case X86::OperandType::OPERAND_ROUNDING_CONTROL:
+  case X86::OperandType::OPERAND_COND_CODE:
     AssignedValue =
-        MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::TO_ZERO));
-    return Error::success();
+        MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
+    break;
   default:
     break;
   }
-  return make_error<Failure>(
-      Twine("unimplemented operand type ")
-          .concat(Twine(Op.getExplicitOperandInfo().OperandType)));
 }
 
 void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
@@ -679,7 +653,12 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
   int MemOpIdx = X86II::getMemoryOperandNo(IT.getInstr().Description.TSFlags);
   assert(MemOpIdx >= 0 && "invalid memory operand index");
   // getMemoryOperandNo() ignores tied operands, so we have to add them back.
-  MemOpIdx += X86II::getOperandBias(IT.getInstr().Description);
+  for (unsigned I = 0; I <= static_cast<unsigned>(MemOpIdx); ++I) {
+    const auto &Op = IT.getInstr().Operands[I];
+    if (Op.isTied() && Op.getTiedToIndex() < I) {
+      ++MemOpIdx;
+    }
+  }
   setMemOp(IT, MemOpIdx + 0, MCOperand::createReg(Reg));    // BaseReg
   setMemOp(IT, MemOpIdx + 1, MCOperand::createImm(1));      // ScaleAmt
   setMemOp(IT, MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg
@@ -740,68 +719,11 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
     return CI.popFlagAndFinalize();
   if (Reg == X86::MXCSR)
     return CI.loadImplicitRegAndFinalize(
-        STI.getFeatureBits()[X86::FeatureAVX] ? X86::VLDMXCSR : X86::LDMXCSR,
-        0x1f80);
+              STI.getFeatureBits()[X86::FeatureAVX] ? X86::VLDMXCSR
+                                                    : X86::LDMXCSR, 0x1f80);
   if (Reg == X86::FPCW)
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
   return {}; // Not yet implemented.
-}
-
-// Instruction can have some variable operands, and we may want to see how
-// different operands affect performance. So for each operand position,
-// precompute all the possible choices we might care about,
-// and greedily generate all the possible combinations of choices.
-std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
-    const Instruction &Instr, unsigned MaxConfigsPerOpcode) const {
-  bool Exploration = false;
-  SmallVector<SmallVector<MCOperand, 1>, 4> VariableChoices;
-  VariableChoices.resize(Instr.Variables.size());
-  for (auto I : llvm::zip(Instr.Variables, VariableChoices)) {
-    const Variable &Var = std::get<0>(I);
-    SmallVectorImpl<MCOperand> &Choices = std::get<1>(I);
-
-    switch (Instr.getPrimaryOperand(Var).getExplicitOperandInfo().OperandType) {
-    default:
-      // We don't wish to explicitly explore this variable.
-      Choices.emplace_back(); // But add invalid MCOperand to simplify logic.
-      continue;
-    case X86::OperandType::OPERAND_COND_CODE: {
-      Exploration = true;
-      auto CondCodes = seq((int)X86::CondCode::COND_O,
-                           1 + (int)X86::CondCode::LAST_VALID_COND);
-      Choices.reserve(std::distance(CondCodes.begin(), CondCodes.end()));
-      for (int CondCode : CondCodes)
-        Choices.emplace_back(MCOperand::createImm(CondCode));
-      break;
-    }
-    }
-  }
-
-  // If we don't wish to explore any variables, defer to the baseline method.
-  if (!Exploration)
-    return ExegesisTarget::generateInstructionVariants(Instr,
-                                                       MaxConfigsPerOpcode);
-
-  std::vector<InstructionTemplate> Variants;
-  size_t NumVariants;
-  CombinationGenerator<MCOperand, decltype(VariableChoices)::value_type, 4> G(
-      VariableChoices);
-
-  // How many operand combinations can we produce, within the limit?
-  NumVariants = std::min(G.numCombinations(), (size_t)MaxConfigsPerOpcode);
-  // And actually produce all the wanted operand combinations.
-  Variants.reserve(NumVariants);
-  G.generate([&](ArrayRef<MCOperand> State) -> bool {
-    Variants.emplace_back(&Instr);
-    Variants.back().setVariableValues(State);
-    // Did we run out of space for variants?
-    return Variants.size() >= NumVariants;
-  });
-
-  assert(Variants.size() == NumVariants &&
-         Variants.size() <= MaxConfigsPerOpcode &&
-         "Should not produce too many variants");
-  return Variants;
 }
 
 static ExegesisTarget *getTheExegesisX86Target() {

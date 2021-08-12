@@ -46,7 +46,6 @@ template <typename M> TestMatch matchCode(StringRef Code, M Matcher) {
   ASTContext &Context = ASTUnit->getASTContext();
   assert(!Context.getDiagnostics().hasErrorOccurred() && "Compilation error");
 
-  TraversalKindScope RAII(Context, ast_type_traits::TK_AsIs);
   auto Matches = ast_matchers::match(Matcher, Context);
   // We expect a single, exact match.
   assert(Matches.size() != 0 && "no matches found");
@@ -109,7 +108,7 @@ Expected<CharSourceRange> selectFromAssorted(RangeSelector Selector) {
 }
 
 // Matches the message expected for type-error failures.
-testing::Matcher<StringError> withTypeErrorMessage(const std::string &NodeID) {
+testing::Matcher<StringError> withTypeErrorMessage(StringRef NodeID) {
   return testing::Property(
       &StringError::getMessage,
       AllOf(HasSubstr(NodeID), HasSubstr("mismatched type")));
@@ -132,7 +131,7 @@ TEST(RangeSelectorTest, BeforeOp) {
     int f(int x, int y, int z) { return 3; }
     int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
   )cc";
-  const char *Call = "call";
+  StringRef Call = "call";
   TestMatch Match = matchCode(Code, callExpr().bind(Call));
   const auto* E = Match.Result.Nodes.getNodeAs<Expr>(Call);
   assert(E != nullptr);
@@ -174,8 +173,8 @@ TEST(RangeSelectorTest, RangeOp) {
     int f(int x, int y, int z) { return 3; }
     int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
   )cc";
-  const char *Arg0 = "a0";
-  const char *Arg1 = "a1";
+  StringRef Arg0 = "a0";
+  StringRef Arg1 = "a1";
   StringRef Call = "call";
   auto Matcher = callExpr(hasArgument(0, expr().bind(Arg0)),
                           hasArgument(1, expr().bind(Arg1)))
@@ -191,21 +190,21 @@ TEST(RangeSelectorTest, RangeOp) {
 
 TEST(RangeSelectorTest, NodeOpStatement) {
   StringRef Code = "int f() { return 3; }";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, returnStmt().bind(ID));
   EXPECT_THAT_EXPECTED(select(node(ID), Match), HasValue("return 3;"));
 }
 
 TEST(RangeSelectorTest, NodeOpExpression) {
   StringRef Code = "int f() { return 3; }";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, expr().bind(ID));
   EXPECT_THAT_EXPECTED(select(node(ID), Match), HasValue("3"));
 }
 
 TEST(RangeSelectorTest, StatementOp) {
   StringRef Code = "int f() { return 3; }";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, expr().bind(ID));
   EXPECT_THAT_EXPECTED(select(statement(ID), Match), HasValue("3;"));
 }
@@ -220,7 +219,7 @@ TEST(RangeSelectorTest, MemberOp) {
       return s.member;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("member"));
 }
@@ -239,7 +238,7 @@ TEST(RangeSelectorTest, MemberOpQualified) {
       return t.S::member;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("member"));
 }
@@ -255,7 +254,7 @@ TEST(RangeSelectorTest, MemberOpTemplate) {
     }
   )cc";
 
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("foo"));
 }
@@ -271,7 +270,7 @@ TEST(RangeSelectorTest, MemberOpOperator) {
     }
   )cc";
 
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, memberExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(member(ID), Match), HasValue("operator *"));
 }
@@ -282,7 +281,7 @@ TEST(RangeSelectorTest, NameOpNamedDecl) {
       return 3;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, functionDecl().bind(ID));
   EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("myfun"));
 }
@@ -294,7 +293,7 @@ TEST(RangeSelectorTest, NameOpDeclRef) {
     }
     int g(int x) { return foo(x) * x; }
   )cc";
-  const char *Ref = "ref";
+  StringRef Ref = "ref";
   TestMatch Match = matchCode(Code, declRefExpr(to(functionDecl())).bind(Ref));
   EXPECT_THAT_EXPECTED(select(name(Ref), Match), HasValue("foo"));
 }
@@ -307,7 +306,7 @@ TEST(RangeSelectorTest, NameOpCtorInitializer) {
       int field;
     };
   )cc";
-  const char *Init = "init";
+  StringRef Init = "init";
   TestMatch Match = matchCode(Code, cxxCtorInitializer().bind(Init));
   EXPECT_THAT_EXPECTED(select(name(Init), Match), HasValue("field"));
 }
@@ -329,7 +328,7 @@ TEST(RangeSelectorTest, NameOpDeclRefError) {
       return *s + x;
     }
   )cc";
-  const char *Ref = "ref";
+  StringRef Ref = "ref";
   TestMatch Match = matchCode(Code, declRefExpr(to(functionDecl())).bind(Ref));
   EXPECT_THAT_EXPECTED(
       name(Ref)(Match.Result),
@@ -348,7 +347,7 @@ TEST(RangeSelectorTest, CallArgsOp) {
       return x.bar(3, 4);
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("3, 4"));
 }
@@ -363,7 +362,7 @@ TEST(RangeSelectorTest, CallArgsOpNoArgs) {
       return x.bar();
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue(""));
 }
@@ -378,7 +377,7 @@ TEST(RangeSelectorTest, CallArgsOpNoArgsWithComments) {
       return x.bar(/*empty*/);
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("/*empty*/"));
 }
@@ -395,7 +394,7 @@ TEST(RangeSelectorTest, CallArgsOpWithParens) {
       return C().bar(3, 4);
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match =
       matchCode(Code, callExpr(callee(functionDecl(hasName("bar")))).bind(ID));
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("3, 4"));
@@ -411,7 +410,7 @@ TEST(RangeSelectorTest, CallArgsOpLeadingComments) {
       return x.bar(/*leading*/ 3, 4);
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match),
                        HasValue("/*leading*/ 3, 4"));
@@ -427,7 +426,7 @@ TEST(RangeSelectorTest, CallArgsOpTrailingComments) {
       return x.bar(3 /*trailing*/, 4);
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match),
                        HasValue("3 /*trailing*/, 4"));
@@ -446,7 +445,7 @@ TEST(RangeSelectorTest, CallArgsOpEolComments) {
       );
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, callExpr().bind(ID));
   std::string ExpectedString = R"(  // Header
           1,           // foo
@@ -467,7 +466,7 @@ TEST(RangeSelectorTest, StatementsOp) {
     void g();
     void f() { /* comment */ g(); /* comment */ g(); /* comment */ }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, compoundStmt().bind(ID));
   EXPECT_THAT_EXPECTED(
       select(statements(ID), Match),
@@ -476,7 +475,7 @@ TEST(RangeSelectorTest, StatementsOp) {
 
 TEST(RangeSelectorTest, StatementsOpEmptyList) {
   StringRef Code = "void f() {}";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, compoundStmt().bind(ID));
   EXPECT_THAT_EXPECTED(select(statements(ID), Match), HasValue(""));
 }
@@ -495,7 +494,7 @@ TEST(RangeSelectorTest, ElementsOp) {
       (void)v;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, initListExpr().bind(ID));
   EXPECT_THAT_EXPECTED(
       select(initListElements(ID), Match),
@@ -509,7 +508,7 @@ TEST(RangeSelectorTest, ElementsOpEmptyList) {
       (void)v;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, initListExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(initListElements(ID), Match), HasValue(""));
 }
@@ -530,7 +529,7 @@ TEST(RangeSelectorTest, ElseBranchOpSingleStatement) {
       return x + 5;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, ifStmt().bind(ID));
   EXPECT_THAT_EXPECTED(select(elseBranch(ID), Match), HasValue("else x = 4;"));
 }
@@ -544,7 +543,7 @@ TEST(RangeSelectorTest, ElseBranchOpCompoundStatement) {
       return x + 5;
     }
   )cc";
-  const char *ID = "id";
+  StringRef ID = "id";
   TestMatch Match = matchCode(Code, ifStmt().bind(ID));
   EXPECT_THAT_EXPECTED(select(elseBranch(ID), Match),
                        HasValue("else { x = 4; }"));
@@ -557,7 +556,7 @@ TEST(RangeSelectorTest, ExpansionOp) {
     BADDECL(x * x)
   )cc";
 
-  const char *Fun = "Fun";
+  StringRef Fun = "Fun";
   TestMatch Match = matchCode(Code, functionDecl(hasName("bad")).bind(Fun));
   EXPECT_THAT_EXPECTED(select(expansion(node(Fun)), Match),
                        HasValue("BADDECL(x * x)"));
@@ -570,7 +569,7 @@ TEST(RangeSelectorTest, ExpansionOpPartial) {
     BADDECL(x * x)
   )cc";
 
-  const char *Ret = "Ret";
+  StringRef Ret = "Ret";
   TestMatch Match = matchCode(Code, returnStmt().bind(Ret));
   EXPECT_THAT_EXPECTED(select(expansion(node(Ret)), Match),
                        HasValue("BADDECL(x * x)"));
@@ -582,7 +581,7 @@ TEST(RangeSelectorTest, IfBoundOpBound) {
       return 3 + 5;
     }
   )cc";
-  const char *ID = "id", *Op = "op";
+  StringRef ID = "id", Op = "op";
   TestMatch Match =
       matchCode(Code, binaryOperator(hasLHS(expr().bind(ID))).bind(Op));
   EXPECT_THAT_EXPECTED(select(ifBound(ID, node(ID), node(Op)), Match),
@@ -595,7 +594,7 @@ TEST(RangeSelectorTest, IfBoundOpUnbound) {
       return 3 + 5;
     }
   )cc";
-  const char *ID = "id", *Op = "op";
+  StringRef ID = "id", Op = "op";
   TestMatch Match = matchCode(Code, binaryOperator().bind(Op));
   EXPECT_THAT_EXPECTED(select(ifBound(ID, node(ID), node(Op)), Match),
                        HasValue("3 + 5"));

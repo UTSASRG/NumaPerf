@@ -1,6 +1,6 @@
 //===- MlirOptMain.cpp - MLIR Optimizer Driver ----------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/MlirOptMain.h"
+#include "mlir/Analysis/Passes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
@@ -40,14 +41,7 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
                                     bool verifyPasses, SourceMgr &sourceMgr,
                                     MLIRContext *context,
                                     const PassPipelineCLParser &passPipeline) {
-  // Disable multi-threading when parsing the input file. This removes the
-  // unnecessary/costly context synchronization when parsing.
-  bool wasThreadingEnabled = context->isMultithreadingEnabled();
-  context->disableMultithreading();
-
-  // Parse the input file and reset the context threading state.
   OwningModuleRef module(parseSourceFile(sourceMgr, context));
-  context->enableMultithreading(wasThreadingEnabled);
   if (!module)
     return failure();
 
@@ -65,7 +59,6 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
 
   // Print the output.
   module->print(os);
-  os << '\n';
   return success();
 }
 
@@ -74,7 +67,6 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
 static LogicalResult processBuffer(raw_ostream &os,
                                    std::unique_ptr<MemoryBuffer> ownedBuffer,
                                    bool verifyDiagnostics, bool verifyPasses,
-                                   bool allowUnregisteredDialects,
                                    const PassPipelineCLParser &passPipeline) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   SourceMgr sourceMgr;
@@ -82,8 +74,6 @@ static LogicalResult processBuffer(raw_ostream &os,
 
   // Parse the input file.
   MLIRContext context;
-  context.allowUnregisteredDialects(allowUnregisteredDialects);
-  context.printOpOnDiagnostic(!verifyDiagnostics);
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
@@ -110,8 +100,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &os,
                                 std::unique_ptr<MemoryBuffer> buffer,
                                 const PassPipelineCLParser &passPipeline,
                                 bool splitInputFile, bool verifyDiagnostics,
-                                bool verifyPasses,
-                                bool allowUnregisteredDialects) {
+                                bool verifyPasses) {
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
   if (splitInputFile)
@@ -119,11 +108,10 @@ LogicalResult mlir::MlirOptMain(raw_ostream &os,
         std::move(buffer),
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
           return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
-                               verifyPasses, allowUnregisteredDialects,
-                               passPipeline);
+                               verifyPasses, passPipeline);
         },
         os);
 
   return processBuffer(os, std::move(buffer), verifyDiagnostics, verifyPasses,
-                       allowUnregisteredDialects, passPipeline);
+                       passPipeline);
 }

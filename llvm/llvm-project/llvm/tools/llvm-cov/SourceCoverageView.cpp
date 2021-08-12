@@ -48,7 +48,7 @@ std::string CoveragePrinter::getOutputPath(StringRef Path, StringRef Extension,
   sys::path::append(FullPath, PathFilename);
   sys::path::native(FullPath);
 
-  return std::string(FullPath.str());
+  return FullPath.str();
 }
 
 Expected<CoveragePrinter::OwnedStream>
@@ -158,7 +158,7 @@ std::string SourceCoverageView::getSourceName() const {
   SmallString<128> SourceText(SourceName);
   sys::path::remove_dots(SourceText, /*remove_dot_dots=*/true);
   sys::path::native(SourceText);
-  return std::string(SourceText.str());
+  return SourceText.str();
 }
 
 void SourceCoverageView::addExpansion(

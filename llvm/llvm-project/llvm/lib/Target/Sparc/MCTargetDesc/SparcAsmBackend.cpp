@@ -15,7 +15,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -271,8 +270,8 @@ namespace {
       llvm_unreachable("fixupNeedsRelaxation() unimplemented");
       return false;
     }
-    void relaxInstruction(MCInst &Inst,
-                          const MCSubtargetInfo &STI) const override {
+    void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                          MCInst &Res) const override {
       // FIXME.
       llvm_unreachable("relaxInstruction() unimplemented");
     }

@@ -16,20 +16,16 @@
 namespace llvm {
 class ARMAsmBackendDarwin : public ARMAsmBackend {
   const MCRegisterInfo &MRI;
-  Triple TT;
 public:
   const MachO::CPUSubTypeARM Subtype;
   ARMAsmBackendDarwin(const Target &T, const MCSubtargetInfo &STI,
-                      const MCRegisterInfo &MRI)
-      : ARMAsmBackend(T, STI, support::little), MRI(MRI),
-        TT(STI.getTargetTriple()),
-        Subtype((MachO::CPUSubTypeARM)cantFail(
-            MachO::getCPUSubType(STI.getTargetTriple()))) {}
+                      const MCRegisterInfo &MRI, MachO::CPUSubTypeARM st)
+      : ARMAsmBackend(T, STI, support::little), MRI(MRI), Subtype(st) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createARMMachObjectWriter(
-        /*Is64Bit=*/false, cantFail(MachO::getCPUType(TT)), Subtype);
+    return createARMMachObjectWriter(/*Is64Bit=*/false, MachO::CPU_TYPE_ARM,
+                                     Subtype);
   }
 
   uint32_t generateCompactUnwindEncoding(

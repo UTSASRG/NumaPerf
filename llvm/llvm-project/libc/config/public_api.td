@@ -24,7 +24,6 @@ class PublicAPI<string name> {
   string HeaderName = name;
   list<MacroDef> Macros = [];
   list<TypeDecl> TypeDeclarations = [];
-  list<string> Enumerations = [];
   list<string> Structs = [];
   list<string> Functions = [];
 }

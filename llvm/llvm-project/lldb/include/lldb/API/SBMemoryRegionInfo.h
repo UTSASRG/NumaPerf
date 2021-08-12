@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBMEMORYREGIONINFO_H
-#define LLDB_API_SBMEMORYREGIONINFO_H
+#ifndef LLDB_SBMemoryRegionInfo_h_
+#define LLDB_SBMemoryRegionInfo_h_
 
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBDefines.h"
@@ -95,4 +95,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBMEMORYREGIONINFO_H
+#endif // LLDB_SBMemoryRegionInfo_h_

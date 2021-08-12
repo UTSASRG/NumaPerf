@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_THREADSAFEDENSEMAP_H
-#define LLDB_CORE_THREADSAFEDENSEMAP_H
+#ifndef liblldb_ThreadSafeDenseMap_h_
+#define liblldb_ThreadSafeDenseMap_h_
 
 #include <mutex>
 
@@ -62,4 +62,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_THREADSAFEDENSEMAP_H
+#endif // liblldb_ThreadSafeDenseMap_h_

@@ -17,6 +17,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
+class Target;
 
 class BPFMCAsmInfo : public MCAsmInfo {
 public:
@@ -41,8 +42,6 @@ public:
     // section will be parsable, but with odd offsets and
     // line numbers, etc.
     CodePointerSize = 8;
-
-    UseIntegratedAssembler = false;
   }
 
   void setDwarfUsesRelocationsAcrossSections(bool enable) {

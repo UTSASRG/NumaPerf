@@ -1,4 +1,4 @@
-//===-- SBSection.cpp -----------------------------------------------------===//
+//===-- SBSection.cpp -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,7 +44,7 @@ const SBSection &SBSection::operator=(const SBSection &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBSection::~SBSection() = default;
+SBSection::~SBSection() {}
 
 bool SBSection::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, IsValid);
@@ -281,7 +281,7 @@ bool SBSection::GetDescription(SBStream &description) {
     const addr_t file_addr = section_sp->GetFileAddress();
     strm.Printf("[0x%16.16" PRIx64 "-0x%16.16" PRIx64 ") ", file_addr,
                 file_addr + section_sp->GetByteSize());
-    section_sp->DumpName(strm.AsRawOstream());
+    section_sp->DumpName(&strm);
   } else {
     strm.PutCString("No value");
   }

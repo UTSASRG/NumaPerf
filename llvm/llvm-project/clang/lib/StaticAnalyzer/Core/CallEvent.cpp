@@ -450,7 +450,8 @@ void CallEvent::dump(raw_ostream &Out) const {
     return;
   }
 
-  Out << "Unknown call (type " << getKindAsString() << ")";
+  // FIXME: a string representation of the kind would be nice.
+  Out << "Unknown call (type " << getKind() << ")";
 }
 
 bool CallEvent::isCallStmt(const Stmt *S) {
@@ -564,7 +565,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     return RuntimeDefinition(Decl);
   }
 
-  ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
+  SubEngine &Engine = getState()->getStateManager().getOwningEngine();
   AnalyzerOptions &Opts = Engine.getAnalysisManager().options;
 
   // Try to get CTU definition only if CTUDir is provided.
@@ -888,22 +889,24 @@ void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
                                Params);
 }
 
-SVal AnyCXXConstructorCall::getCXXThisVal() const {
+SVal CXXConstructorCall::getCXXThisVal() const {
   if (Data)
     return loc::MemRegionVal(static_cast<const MemRegion *>(Data));
   return UnknownVal();
 }
 
-void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
+void CXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
                            RegionAndSymbolInvalidationTraits *ETraits) const {
-  SVal V = getCXXThisVal();
-  if (SymbolRef Sym = V.getAsSymbol(true))
-    ETraits->setTrait(Sym,
-                      RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
-  Values.push_back(V);
+  if (Data) {
+    loc::MemRegionVal MV(static_cast<const MemRegion *>(Data));
+    if (SymbolRef Sym = MV.getAsSymbol(true))
+      ETraits->setTrait(Sym,
+                        RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+    Values.push_back(MV);
+  }
 }
 
-void AnyCXXConstructorCall::getInitialStackFrameContents(
+void CXXConstructorCall::getInitialStackFrameContents(
                                              const StackFrameContext *CalleeCtx,
                                              BindingsTy &Bindings) const {
   AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
@@ -915,14 +918,6 @@ void AnyCXXConstructorCall::getInitialStackFrameContents(
     Loc ThisLoc = SVB.getCXXThis(MD, CalleeCtx);
     Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
   }
-}
-
-const StackFrameContext *
-CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrameContext *SFC = getLocationContext()->getStackFrame();
-  while (isa<CXXInheritedCtorInitExpr>(SFC->getCallSite()))
-    SFC = SFC->getParent()->getStackFrame();
-  return SFC;
 }
 
 SVal CXXDestructorCall::getCXXThisVal() const {
@@ -972,6 +967,14 @@ void ObjCMethodCall::getExtraInvalidatedValues(
   Values.push_back(getReceiverSVal());
 }
 
+SVal ObjCMethodCall::getSelfSVal() const {
+  const LocationContext *LCtx = getLocationContext();
+  const ImplicitParamDecl *SelfDecl = LCtx->getSelfDecl();
+  if (!SelfDecl)
+    return SVal();
+  return getState()->getSVal(getState()->getRegion(SelfDecl, LCtx));
+}
+
 SVal ObjCMethodCall::getReceiverSVal() const {
   // FIXME: Is this the best way to handle class receivers?
   if (!isInstanceMessage())
@@ -983,7 +986,7 @@ SVal ObjCMethodCall::getReceiverSVal() const {
   // An instance message with no expression means we are sending to super.
   // In this case the object reference is the same as 'self'.
   assert(getOriginExpr()->getReceiverKind() == ObjCMessageExpr::SuperInstance);
-  SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+  SVal SelfVal = getSelfSVal();
   assert(SelfVal.isValid() && "Calling super but not in ObjC method");
   return SelfVal;
 }
@@ -997,9 +1000,8 @@ bool ObjCMethodCall::isReceiverSelfOrSuper() const {
     return false;
 
   SVal RecVal = getSVal(getOriginExpr()->getInstanceReceiver());
-  SVal SelfVal = getState()->getSelfSVal(getLocationContext());
 
-  return (RecVal == SelfVal);
+  return (RecVal == getSelfSVal());
 }
 
 SourceRange ObjCMethodCall::getSourceRange() const {
@@ -1166,77 +1168,23 @@ static const ObjCMethodDecl *findDefiningRedecl(const ObjCMethodDecl *MD) {
   return MD;
 }
 
-struct PrivateMethodKey {
-  const ObjCInterfaceDecl *Interface;
-  Selector LookupSelector;
-  bool IsClassMethod;
-};
+static bool isCallToSelfClass(const ObjCMessageExpr *ME) {
+  const Expr* InstRec = ME->getInstanceReceiver();
+  if (!InstRec)
+    return false;
+  const auto *InstRecIg = dyn_cast<DeclRefExpr>(InstRec->IgnoreParenImpCasts());
 
-namespace llvm {
-template <> struct DenseMapInfo<PrivateMethodKey> {
-  using InterfaceInfo = DenseMapInfo<const ObjCInterfaceDecl *>;
-  using SelectorInfo = DenseMapInfo<Selector>;
+  // Check that receiver is called 'self'.
+  if (!InstRecIg || !InstRecIg->getFoundDecl() ||
+      !InstRecIg->getFoundDecl()->getName().equals("self"))
+    return false;
 
-  static inline PrivateMethodKey getEmptyKey() {
-    return {InterfaceInfo::getEmptyKey(), SelectorInfo::getEmptyKey(), false};
-  }
+  // Check that the method name is 'class'.
+  if (ME->getSelector().getNumArgs() != 0 ||
+      !ME->getSelector().getNameForSlot(0).equals("class"))
+    return false;
 
-  static inline PrivateMethodKey getTombstoneKey() {
-    return {InterfaceInfo::getTombstoneKey(), SelectorInfo::getTombstoneKey(),
-            true};
-  }
-
-  static unsigned getHashValue(const PrivateMethodKey &Key) {
-    return llvm::hash_combine(
-        llvm::hash_code(InterfaceInfo::getHashValue(Key.Interface)),
-        llvm::hash_code(SelectorInfo::getHashValue(Key.LookupSelector)),
-        Key.IsClassMethod);
-  }
-
-  static bool isEqual(const PrivateMethodKey &LHS,
-                      const PrivateMethodKey &RHS) {
-    return InterfaceInfo::isEqual(LHS.Interface, RHS.Interface) &&
-           SelectorInfo::isEqual(LHS.LookupSelector, RHS.LookupSelector) &&
-           LHS.IsClassMethod == RHS.IsClassMethod;
-  }
-};
-} // end namespace llvm
-
-static const ObjCMethodDecl *
-lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
-                        Selector LookupSelector, bool InstanceMethod) {
-  // Repeatedly calling lookupPrivateMethod() is expensive, especially
-  // when in many cases it returns null.  We cache the results so
-  // that repeated queries on the same ObjCIntefaceDecl and Selector
-  // don't incur the same cost.  On some test cases, we can see the
-  // same query being issued thousands of times.
-  //
-  // NOTE: This cache is essentially a "global" variable, but it
-  // only gets lazily created when we get here.  The value of the
-  // cache probably comes from it being global across ExprEngines,
-  // where the same queries may get issued.  If we are worried about
-  // concurrency, or possibly loading/unloading ASTs, etc., we may
-  // need to revisit this someday.  In terms of memory, this table
-  // stays around until clang quits, which also may be bad if we
-  // need to release memory.
-  using PrivateMethodCache =
-      llvm::DenseMap<PrivateMethodKey, Optional<const ObjCMethodDecl *>>;
-
-  static PrivateMethodCache PMC;
-  Optional<const ObjCMethodDecl *> &Val =
-      PMC[{Interface, LookupSelector, InstanceMethod}];
-
-  // Query lookupPrivateMethod() if the cache does not hit.
-  if (!Val.hasValue()) {
-    Val = Interface->lookupPrivateMethod(LookupSelector, InstanceMethod);
-
-    if (!*Val) {
-      // Query 'lookupMethod' as a backup.
-      Val = Interface->lookupMethod(LookupSelector, InstanceMethod);
-    }
-  }
-
-  return Val.getValue();
+  return true;
 }
 
 RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
@@ -1246,9 +1194,8 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
 
   if (E->isInstanceMessage()) {
     // Find the receiver type.
-    const ObjCObjectType *ReceiverT = nullptr;
+    const ObjCObjectPointerType *ReceiverT = nullptr;
     bool CanBeSubClassed = false;
-    bool LookingForInstanceMethod = true;
     QualType SupersType = E->getSuperType();
     const MemRegion *Receiver = nullptr;
 
@@ -1256,7 +1203,7 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
       // The receiver is guaranteed to be 'super' in this case.
       // Super always means the type of immediate predecessor to the method
       // where the call occurs.
-      ReceiverT = cast<ObjCObjectPointerType>(SupersType)->getObjectType();
+      ReceiverT = cast<ObjCObjectPointerType>(SupersType);
     } else {
       Receiver = getReceiverSVal().getAsRegion();
       if (!Receiver)
@@ -1271,59 +1218,100 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
 
       QualType DynType = DTI.getType();
       CanBeSubClassed = DTI.canBeASubClass();
+      ReceiverT = dyn_cast<ObjCObjectPointerType>(DynType.getCanonicalType());
 
-      const auto *ReceiverDynT =
-          dyn_cast<ObjCObjectPointerType>(DynType.getCanonicalType());
+      if (ReceiverT && CanBeSubClassed)
+        if (ObjCInterfaceDecl *IDecl = ReceiverT->getInterfaceDecl())
+          if (!canBeOverridenInSubclass(IDecl, Sel))
+            CanBeSubClassed = false;
+    }
 
-      if (ReceiverDynT) {
-        ReceiverT = ReceiverDynT->getObjectType();
+    // Handle special cases of '[self classMethod]' and
+    // '[[self class] classMethod]', which are treated by the compiler as
+    // instance (not class) messages. We will statically dispatch to those.
+    if (auto *PT = dyn_cast_or_null<ObjCObjectPointerType>(ReceiverT)) {
+      // For [self classMethod], return the compiler visible declaration.
+      if (PT->getObjectType()->isObjCClass() &&
+          Receiver == getSelfSVal().getAsRegion())
+        return RuntimeDefinition(findDefiningRedecl(E->getMethodDecl()));
 
-        // It can be actually class methods called with Class object as a
-        // receiver. This type of messages is treated by the compiler as
-        // instance (not class).
-        if (ReceiverT->isObjCClass()) {
-
-          SVal SelfVal = getState()->getSelfSVal(getLocationContext());
-          // For [self classMethod], return compiler visible declaration.
-          if (Receiver == SelfVal.getAsRegion()) {
+      // Similarly, handle [[self class] classMethod].
+      // TODO: We are currently doing a syntactic match for this pattern with is
+      // limiting as the test cases in Analysis/inlining/InlineObjCClassMethod.m
+      // shows. A better way would be to associate the meta type with the symbol
+      // using the dynamic type info tracking and use it here. We can add a new
+      // SVal for ObjC 'Class' values that know what interface declaration they
+      // come from. Then 'self' in a class method would be filled in with
+      // something meaningful in ObjCMethodCall::getReceiverSVal() and we could
+      // do proper dynamic dispatch for class methods just like we do for
+      // instance methods now.
+      if (E->getInstanceReceiver())
+        if (const auto *M = dyn_cast<ObjCMessageExpr>(E->getInstanceReceiver()))
+          if (isCallToSelfClass(M))
             return RuntimeDefinition(findDefiningRedecl(E->getMethodDecl()));
-          }
-
-          // Otherwise, let's check if we know something about the type
-          // inside of this class object.
-          if (SymbolRef ReceiverSym = getReceiverSVal().getAsSymbol()) {
-            DynamicTypeInfo DTI =
-                getClassObjectDynamicTypeInfo(getState(), ReceiverSym);
-            if (DTI.isValid()) {
-              // Let's use this type for lookup.
-              ReceiverT =
-                  cast<ObjCObjectType>(DTI.getType().getCanonicalType());
-
-              CanBeSubClassed = DTI.canBeASubClass();
-              // And it should be a class method instead.
-              LookingForInstanceMethod = false;
-            }
-          }
-        }
-
-        if (CanBeSubClassed)
-          if (ObjCInterfaceDecl *IDecl = ReceiverT->getInterface())
-            // Even if `DynamicTypeInfo` told us that it can be
-            // not necessarily this type, but its descendants, we still want
-            // to check again if this selector can be actually overridden.
-            CanBeSubClassed = canBeOverridenInSubclass(IDecl, Sel);
-      }
     }
 
     // Lookup the instance method implementation.
     if (ReceiverT)
-      if (ObjCInterfaceDecl *IDecl = ReceiverT->getInterface()) {
-        const ObjCMethodDecl *MD =
-            lookupRuntimeDefinition(IDecl, Sel, LookingForInstanceMethod);
+      if (ObjCInterfaceDecl *IDecl = ReceiverT->getInterfaceDecl()) {
+        // Repeatedly calling lookupPrivateMethod() is expensive, especially
+        // when in many cases it returns null.  We cache the results so
+        // that repeated queries on the same ObjCIntefaceDecl and Selector
+        // don't incur the same cost.  On some test cases, we can see the
+        // same query being issued thousands of times.
+        //
+        // NOTE: This cache is essentially a "global" variable, but it
+        // only gets lazily created when we get here.  The value of the
+        // cache probably comes from it being global across ExprEngines,
+        // where the same queries may get issued.  If we are worried about
+        // concurrency, or possibly loading/unloading ASTs, etc., we may
+        // need to revisit this someday.  In terms of memory, this table
+        // stays around until clang quits, which also may be bad if we
+        // need to release memory.
+        using PrivateMethodKey = std::pair<const ObjCInterfaceDecl *, Selector>;
+        using PrivateMethodCache =
+            llvm::DenseMap<PrivateMethodKey, Optional<const ObjCMethodDecl *>>;
 
+        static PrivateMethodCache PMC;
+        Optional<const ObjCMethodDecl *> &Val = PMC[std::make_pair(IDecl, Sel)];
+
+        // Query lookupPrivateMethod() if the cache does not hit.
+        if (!Val.hasValue()) {
+          Val = IDecl->lookupPrivateMethod(Sel);
+
+          // If the method is a property accessor, we should try to "inline" it
+          // even if we don't actually have an implementation.
+          if (!*Val)
+            if (const ObjCMethodDecl *CompileTimeMD = E->getMethodDecl())
+              if (CompileTimeMD->isPropertyAccessor()) {
+                if (!CompileTimeMD->getSelfDecl() &&
+                    isa<ObjCCategoryDecl>(CompileTimeMD->getDeclContext())) {
+                  // If the method is an accessor in a category, and it doesn't
+                  // have a self declaration, first
+                  // try to find the method in a class extension. This
+                  // works around a bug in Sema where multiple accessors
+                  // are synthesized for properties in class
+                  // extensions that are redeclared in a category and the
+                  // the implicit parameters are not filled in for
+                  // the method on the category.
+                  // This ensures we find the accessor in the extension, which
+                  // has the implicit parameters filled in.
+                  auto *ID = CompileTimeMD->getClassInterface();
+                  for (auto *CatDecl : ID->visible_extensions()) {
+                    Val = CatDecl->getMethod(Sel,
+                                             CompileTimeMD->isInstanceMethod());
+                    if (*Val)
+                      break;
+                  }
+                }
+                if (!*Val)
+                  Val = IDecl->lookupInstanceMethod(Sel);
+              }
+        }
+
+        const ObjCMethodDecl *MD = Val.getValue();
         if (MD && !MD->hasBody())
           MD = MD->getCanonicalDecl();
-
         if (CanBeSubClassed)
           return RuntimeDefinition(MD, Receiver);
         else
@@ -1404,20 +1392,17 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx))
       return Out;
 
+    // All other cases are handled by getCall.
+    assert(isa<CXXConstructExpr>(CallSite) &&
+           "This is not an inlineable statement");
+
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
     const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
     Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeCtx);
     SVal ThisVal = State->getSVal(ThisPtr);
 
-    if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
-      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx);
-    else if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
-      return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
-                                            CallerCtx);
-    else {
-      // All other cases are handled by getCall.
-      llvm_unreachable("This is not an inlineable statement");
-    }
+    return getCXXConstructorCall(cast<CXXConstructExpr>(CallSite),
+                                 ThisVal.getAsRegion(), State, CallerCtx);
   }
 
   // Fall back to the CFG. The only thing we haven't handled yet is

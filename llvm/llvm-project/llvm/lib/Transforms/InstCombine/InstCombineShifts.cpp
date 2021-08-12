@@ -408,7 +408,8 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
     // demand the sign bit (and many others) here??
     Value *Rem = Builder.CreateAnd(A, ConstantInt::get(I.getType(), *B - 1),
                                    Op1->getName());
-    return replaceOperand(I, 1, Rem);
+    I.setOperand(1, Rem);
+    return &I;
   }
 
   if (Instruction *Logic = foldShiftOfShiftedLogic(I, Builder))
@@ -612,13 +613,19 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   // We can always evaluate constants shifted.
   if (Constant *C = dyn_cast<Constant>(V)) {
     if (isLeftShift)
-      return IC.Builder.CreateShl(C, NumBits);
+      V = IC.Builder.CreateShl(C, NumBits);
     else
-      return IC.Builder.CreateLShr(C, NumBits);
+      V = IC.Builder.CreateLShr(C, NumBits);
+    // If we got a constantexpr back, try to simplify it with TD info.
+    if (auto *C = dyn_cast<Constant>(V))
+      if (auto *FoldedC =
+              ConstantFoldConstant(C, DL, &IC.getTargetLibraryInfo()))
+        V = FoldedC;
+    return V;
   }
 
   Instruction *I = cast<Instruction>(V);
-  IC.Worklist.push(I);
+  IC.Worklist.Add(I);
 
   switch (I->getOpcode()) {
   default: llvm_unreachable("Inconsistency with CanEvaluateShifted");
@@ -774,7 +781,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
           APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
           Constant *Mask = ConstantInt::get(I.getContext(), Bits);
           if (VectorType *VT = dyn_cast<VectorType>(X->getType()))
-            Mask = ConstantVector::getSplat(VT->getElementCount(), Mask);
+            Mask = ConstantVector::getSplat(VT->getNumElements(), Mask);
           return BinaryOperator::CreateAnd(X, Mask);
         }
 
@@ -809,7 +816,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
           APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
           Constant *Mask = ConstantInt::get(I.getContext(), Bits);
           if (VectorType *VT = dyn_cast<VectorType>(X->getType()))
-            Mask = ConstantVector::getSplat(VT->getElementCount(), Mask);
+            Mask = ConstantVector::getSplat(VT->getNumElements(), Mask);
           return BinaryOperator::CreateAnd(X, Mask);
         }
 

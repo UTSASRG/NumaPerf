@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLEARRAY_H
-#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLEARRAY_H
+#ifndef CoreFoundationCPP_CFMutableArray_h_
+#define CoreFoundationCPP_CFMutableArray_h_
 
 #include "CFCReleaser.h"
 
@@ -40,4 +40,4 @@ public:
                                                 bool can_create = true);
 };
 
-#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLEARRAY_H
+#endif // #ifndef CoreFoundationCPP_CFMutableArray_h_

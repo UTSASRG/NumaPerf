@@ -49,7 +49,7 @@ void ARMBasicBlockUtils::computeBlockSize(MachineBasicBlock *MBB) {
   BasicBlockInfo &BBI = BBInfo[MBB->getNumber()];
   BBI.Size = 0;
   BBI.Unalign = 0;
-  BBI.PostAlign = Align(1);
+  BBI.PostAlign = Align::None();
 
   for (MachineInstr &I : *MBB) {
     BBI.Size += TII->getInstSizeInBytes(I);

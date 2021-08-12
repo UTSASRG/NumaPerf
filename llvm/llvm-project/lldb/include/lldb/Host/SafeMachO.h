@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLDB_HOST_SAFEMACHO_H
-#define LLDB_HOST_SAFEMACHO_H
+#ifndef liblldb_SafeMachO_h_
+#define liblldb_SafeMachO_h_
 
 // This header file is required to work around collisions between the defines
 // in mach/machine.h, and enum members of the same name in llvm's MachO.h.  If
@@ -112,4 +112,4 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 
-#endif // LLDB_HOST_SAFEMACHO_H
+#endif // liblldb_SafeMachO_h_

@@ -32,8 +32,8 @@ void LanaiFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   unsigned FrameSize = MFI.getStackSize();
 
   // Get the alignment.
-  Align StackAlign =
-      LRI->needsStackRealignment(MF) ? MFI.getMaxAlign() : getStackAlign();
+  unsigned StackAlign = LRI->needsStackRealignment(MF) ? MFI.getMaxAlignment()
+                                                       : getStackAlignment();
 
   // Get the maximum call frame size of all the calls.
   unsigned MaxCallFrameSize = MFI.getMaxCallFrameSize();

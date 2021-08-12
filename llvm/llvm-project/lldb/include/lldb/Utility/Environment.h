@@ -50,7 +50,6 @@ public:
   using Base::erase;
   using Base::find;
   using Base::insert;
-  using Base::insert_or_assign;
   using Base::lookup;
   using Base::size;
   using Base::try_emplace;
@@ -69,8 +68,7 @@ public:
   }
 
   std::pair<iterator, bool> insert(llvm::StringRef KeyEqValue) {
-    auto Split = KeyEqValue.split('=');
-    return insert(std::make_pair(Split.first, std::string(Split.second)));
+    return insert(KeyEqValue.split('='));
   }
 
   void insert(const_iterator first, const_iterator last);
@@ -94,4 +92,4 @@ template <> struct format_provider<lldb_private::Environment> {
 };
 } // namespace llvm
 
-#endif // LLDB_UTILITY_ENVIRONMENT_H
+#endif // #ifndef LLDB_UTILITY_ENVIRONMENT_H

@@ -123,9 +123,6 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic is no-return.
   bool isNoReturn;
 
-  /// True if the intrinsic is no-sync.
-  bool isNoSync;
-
   /// True if the intrinsic is will-return.
   bool isWillReturn;
 
@@ -142,32 +139,17 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as speculatable.
   bool isSpeculatable;
 
-  enum ArgAttrKind {
+  enum ArgAttribute {
     NoCapture,
     NoAlias,
     Returned,
     ReadOnly,
     WriteOnly,
     ReadNone,
-    ImmArg,
-    Alignment
+    ImmArg
   };
 
-  struct ArgAttribute {
-    unsigned Index;
-    ArgAttrKind Kind;
-    uint64_t Value;
-
-    ArgAttribute(unsigned Idx, ArgAttrKind K, uint64_t V)
-        : Index(Idx), Kind(K), Value(V) {}
-
-    bool operator<(const ArgAttribute &Other) const {
-      return std::tie(Index, Kind, Value) <
-             std::tie(Other.Index, Other.Kind, Other.Value);
-    }
-  };
-
-  std::vector<ArgAttribute> ArgumentAttributes;
+  std::vector<std::pair<unsigned, ArgAttribute>> ArgumentAttributes;
 
   bool hasProperty(enum SDNP Prop) const {
     return Properties & (1 << Prop);

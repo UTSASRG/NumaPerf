@@ -1,5 +1,3 @@
-set(LLVM_LINK_COMPONENTS Support)
-
 add_tablegen(libc-hdrgen llvm-libc
   Command.h
   Command.cpp
@@ -11,5 +9,3 @@ add_tablegen(libc-hdrgen llvm-libc
   PublicAPICommand.cpp
   PublicAPICommand.h
 )
-
-add_subdirectory(PrototypeTestGen)

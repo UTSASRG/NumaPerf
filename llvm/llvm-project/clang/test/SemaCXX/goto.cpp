@@ -40,7 +40,7 @@ namespace N {
 }
 
 void g() {
-  end = 1; // expected-error{{incompatible integer to pointer conversion assigning to 'double *' from 'int'}}
+  end = 1; // expected-error{{assigning to 'double *' from incompatible type 'int'}}
 }
 
 void h(int end) {

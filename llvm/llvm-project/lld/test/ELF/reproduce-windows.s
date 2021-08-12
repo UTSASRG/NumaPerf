@@ -6,7 +6,7 @@
 # RUN: llvm-mc %s -o %t.dir/build/foo.o -filetype=obj -triple=x86_64-pc-linux
 # RUN: cd %t.dir
 # RUN: ld.lld build/foo.o --reproduce repro.tar
-# RUN: tar tf repro.tar | FileCheck -DPATH='repro/%:t.dir' %s
+# RUN: tar tf repro.tar | FileCheck %s
 
 # CHECK: repro/response.txt
-# CHECK: [[PATH]]/build/foo.o
+# CHECK: repro/{{.*}}/build/foo.o

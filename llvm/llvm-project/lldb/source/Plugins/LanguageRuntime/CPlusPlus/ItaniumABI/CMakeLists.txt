@@ -8,5 +8,4 @@ add_lldb_library(lldbPluginCXXItaniumABI PLUGIN
     lldbSymbol
     lldbTarget
     lldbPluginCPPRuntime
-    lldbPluginTypeSystemClang
   )

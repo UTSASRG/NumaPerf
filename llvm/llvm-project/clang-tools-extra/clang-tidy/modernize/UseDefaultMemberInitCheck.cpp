@@ -17,12 +17,6 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-namespace {
-AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
-  return Node.getNumInits() == N;
-}
-} // namespace
-
 static StringRef getValueOfValueInit(const QualType InitType) {
   switch (InitType->getScalarTypeKind()) {
   case Type::STK_CPointer:
@@ -186,8 +180,8 @@ static bool sameValue(const Expr *E1, const Expr *E2) {
 UseDefaultMemberInitCheck::UseDefaultMemberInitCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      UseAssignment(Options.get("UseAssignment", false)),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      UseAssignment(Options.get("UseAssignment", 0) != 0),
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true) != 0) {}
 
 void UseDefaultMemberInitCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -196,28 +190,25 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto InitBase =
-      anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
-            unaryOperator(hasAnyOperatorName("+", "-"),
-                          hasUnaryOperand(integerLiteral())),
-            floatLiteral(),
-            unaryOperator(hasAnyOperatorName("+", "-"),
-                          hasUnaryOperand(floatLiteral())),
-            cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr(to(enumConstantDecl())));
+  if (!getLangOpts().CPlusPlus11)
+    return;
 
   auto Init =
-      anyOf(initListExpr(anyOf(
-                allOf(initCountIs(1), hasInit(0, ignoringImplicit(InitBase))),
-                initCountIs(0))),
-            InitBase);
+      anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
+            unaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-")),
+                          hasUnaryOperand(integerLiteral())),
+            floatLiteral(),
+            unaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-")),
+                          hasUnaryOperand(floatLiteral())),
+            cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
+            initListExpr(), declRefExpr(to(enumConstantDecl())));
 
   Finder->addMatcher(
       cxxConstructorDecl(
           isDefaultConstructor(), unless(isInstantiated()),
           forEachConstructorInitializer(
               cxxCtorInitializer(
-                  forField(unless(anyOf(getLangOpts().CPlusPlus20
+                  forField(unless(anyOf(getLangOpts().CPlusPlus2a
                                             ? unless(anything())
                                             : isBitField(),
                                         hasInClassInitializer(anything()),

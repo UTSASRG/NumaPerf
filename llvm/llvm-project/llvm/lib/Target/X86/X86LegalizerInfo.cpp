@@ -86,13 +86,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                         MachineIRBuilder &MIRBuilder,
-                                         GISelChangeObserver &Observer) const {
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &MIRBuilder) const {
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
   case Intrinsic::memset:
   case Intrinsic::memmove:
-    if (createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI) ==
+    if (createMemLibcall(MIRBuilder, MRI, MI) ==
         LegalizerHelper::UnableToLegalize)
       return false;
     MI.eraseFromParent();

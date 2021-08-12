@@ -21,12 +21,12 @@ namespace clang {
 namespace ento {
 
 class SimpleConstraintManager : public ConstraintManager {
-  ExprEngine *EE;
+  SubEngine *SU;
   SValBuilder &SVB;
 
 public:
-  SimpleConstraintManager(ExprEngine *exprengine, SValBuilder &SB)
-      : EE(exprengine), SVB(SB) {}
+  SimpleConstraintManager(SubEngine *subengine, SValBuilder &SB)
+      : SU(subengine), SVB(SB) {}
 
   ~SimpleConstraintManager() override;
 

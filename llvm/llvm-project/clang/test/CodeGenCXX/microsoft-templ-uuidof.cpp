@@ -1,10 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-win32 -fms-extensions | FileCheck %s
 
-struct _GUID {
-  __UINT32_TYPE__ a;
-  __UINT16_TYPE__ b, c;
-  __UINT8_TYPE__ d[8];
-};
+struct _GUID;
 
 template <typename>
 struct X {

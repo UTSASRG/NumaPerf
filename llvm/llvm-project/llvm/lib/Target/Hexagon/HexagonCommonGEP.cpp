@@ -204,7 +204,17 @@ namespace {
   Type *next_type(Type *Ty, Value *Idx) {
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return PTy->getElementType();
-    return GetElementPtrInst::getTypeAtIndex(Ty, Idx);
+    // Advance the type.
+    if (!Ty->isStructTy()) {
+      Type *NexTy = cast<SequentialType>(Ty)->getElementType();
+      return NexTy;
+    }
+    // Otherwise it is a struct type.
+    ConstantInt *CI = dyn_cast<ConstantInt>(Idx);
+    assert(CI && "Struct type with non-constant index");
+    int64_t i = CI->getValue().getSExtValue();
+    Type *NextTy = cast<StructType>(Ty)->getElementType(i);
+    return NextTy;
   }
 
   raw_ostream &operator<< (raw_ostream &OS, const GepNode &GN) {
@@ -1292,8 +1302,7 @@ bool HexagonCommonGEP::runOnFunction(Function &F) {
 
 #ifdef EXPENSIVE_CHECKS
   // Run this only when expensive checks are enabled.
-  if (verifyFunction(F, &dbgs()))
-    report_fatal_error("Broken function");
+  verifyFunction(F);
 #endif
   return true;
 }

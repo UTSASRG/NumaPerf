@@ -86,14 +86,14 @@ __isl_give isl_val *isl_val_int_from_chunks(isl_ctx *ctx, size_t n,
 /* Return the number of chunks of size "size" required to
  * store the absolute value of the numerator of "v".
  */
-isl_size isl_val_n_abs_num_chunks(__isl_keep isl_val *v, size_t size)
+size_t isl_val_n_abs_num_chunks(__isl_keep isl_val *v, size_t size)
 {
 	if (!v)
-		return isl_size_error;
+		return 0;
 
 	if (!isl_val_is_rat(v))
 		isl_die(isl_val_get_ctx(v), isl_error_invalid,
-			"expecting rational value", return isl_size_error);
+			"expecting rational value", return 0);
 
 	size *= 8;
 	return (mpz_sizeinbase(v->n, 2) + size - 1) / size;
@@ -110,19 +110,19 @@ isl_size isl_val_n_abs_num_chunks(__isl_keep isl_val *v, size_t size)
  * return one, while mpz_export will not fill in any chunks.  We therefore
  * do it ourselves.
  */
-isl_stat isl_val_get_abs_num_chunks(__isl_keep isl_val *v, size_t size,
+int isl_val_get_abs_num_chunks(__isl_keep isl_val *v, size_t size,
 	void *chunks)
 {
 	if (!v || !chunks)
-		return isl_stat_error;
+		return -1;
 
 	if (!isl_val_is_rat(v))
 		isl_die(isl_val_get_ctx(v), isl_error_invalid,
-			"expecting rational value", return isl_stat_error);
+			"expecting rational value", return -1);
 
 	mpz_export(chunks, NULL, -1, size, 0, 0, v->n);
 	if (isl_val_is_zero(v))
 		memset(chunks, 0, size);
 
-	return isl_stat_ok;
+	return 0;
 }

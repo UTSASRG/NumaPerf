@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "disable_missing_braces_warning.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -30,7 +30,6 @@ TEST_CONSTEXPR_CXX20 bool tests()
         assert(c[1] == 5.5);
         assert(c[2] == 5.5);
     }
-
     {
         typedef double T;
         typedef std::array<T, 0> C;
@@ -38,14 +37,6 @@ TEST_CONSTEXPR_CXX20 bool tests()
         c.fill(5.5);
         assert(c.size() == 0);
     }
-    return true;
-}
 
-int main(int, char**)
-{
-    tests();
-#if TEST_STD_VER >= 20
-    static_assert(tests(), "");
-#endif
-    return 0;
+  return 0;
 }

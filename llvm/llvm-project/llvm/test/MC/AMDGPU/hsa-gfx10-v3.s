@@ -4,7 +4,7 @@
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // big endian not supported
-// XFAIL: host-byteorder-big-endian
+// XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256

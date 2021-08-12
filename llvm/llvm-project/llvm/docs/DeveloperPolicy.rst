@@ -89,9 +89,7 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be made with ``git format-patch``, or similar (see special
-   commands for `Requesting Phabricator review via the web interface
-   <Phabricator.html#phabricator-request-review-web>`_ ). If you use a
+#. Patches should be made with ``git format-patch``, or similar. If you use a
    different tool, make sure it uses the ``diff -u`` format and that it
    doesn't contain clutter which makes it hard to read.
 
@@ -123,9 +121,49 @@ licensing terms and may result in your contribution being excluded.
 Code Reviews
 ------------
 
-LLVM has a code-review policy. Code review is one way to increase the quality of
-software. Please see :doc:`CodeReview` for more information on LLVM's code-review
-process.
+LLVM has a code review policy. Code review is one way to increase the quality of
+software. We generally follow these policies:
+
+#. All developers are required to have significant changes reviewed before they
+   are committed to the repository.
+
+#. Code reviews are conducted by email on the relevant project's commit mailing
+   list, or alternatively on the project's development list or bug tracker.
+
+#. Code can be reviewed either before it is committed or after.  We expect major
+   changes to be reviewed before being committed, but smaller changes (or
+   changes where the developer owns the component) can be reviewed after commit.
+
+#. The developer responsible for a code change is also responsible for making
+   all necessary review-related changes.
+
+#. Code review can be an iterative process, which continues until the patch is
+   ready to be committed. Specifically, once a patch is sent out for review, it
+   needs an explicit "looks good" before it is submitted. Do not assume silent
+   approval, or request active objections to the patch with a deadline.
+
+Sometimes code reviews will take longer than you would hope for, especially for
+larger features. Accepted ways to speed up review times for your patches are:
+
+* Review other people's patches. If you help out, everybody will be more
+  willing to do the same for you; goodwill is our currency.
+* Ping the patch. If it is urgent, provide reasons why it is important to you to
+  get this patch landed and ping it every couple of days. If it is
+  not urgent, the common courtesy ping rate is one week. Remember that you're
+  asking for valuable time from other professional developers.
+* Ask for help on IRC. Developers on IRC will be able to either help you
+  directly, or tell you who might be a good reviewer.
+* Split your patch into multiple smaller patches that build on each other. The
+  smaller your patch, the higher the probability that somebody will take a quick
+  look at it.
+
+Developers should participate in code reviews as both reviewers and
+reviewees. If someone is kind enough to review your code, you should return the
+favor for someone else.  Note that anyone is welcome to review and give feedback
+on a patch, but only people with Subversion write access can approve it.
+
+There is a web based code review tool that can optionally be used
+for code reviews. See :doc:`Phabricator`.
 
 .. _code owners:
 
@@ -287,9 +325,9 @@ Below are some guidelines about the format of the message itself:
   and in-code comments, ex. capitalization, full stop, etc.
 
 * If the commit is a bug fix on top of another recently committed patch, or a
-  revert or reapply of a patch, include the git commit hash of the prior
-  related commit. This could be as simple as "Revert commit NNNN because it
-  caused PR#".
+  revert or reapply of a patch, include the svn revision number of the prior
+  related commit. This could be as simple as "Revert rNNNN because it caused
+  PR#".
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
@@ -315,9 +353,10 @@ This is normal and will be done when the mailing list owner has time.
 
 If you have recently been granted commit access, these policies apply:
 
-#. You are granted *commit-after-approval* to all parts of LLVM. For
-   information on how to get approval for a patch, please see :doc:`CodeReview`.
-   When approved, you may commit it yourself.
+#. You are granted *commit-after-approval* to all parts of LLVM.  To get
+   approval, submit a `patch`_ to `llvm-commits
+   <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_. When approved,
+   you may commit it yourself.
 
 #. You are allowed to commit patches without approval which you think are
    obvious. This is clearly a subjective decision --- we simply expect you to
@@ -345,8 +384,8 @@ after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
 
-Current Contributors - Transferring from SVN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current Contributors - Transfering from SVN
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you had commit access to SVN and would like to request commit access to
 GitHub, please email `llvm-admin <mailto:llvm-admin@lists.llvm.org>`_ with your
 SVN username and GitHub username.
@@ -531,15 +570,9 @@ and then trying to fix emergent problems in-tree is problematic for a variety
 of reasons.
 
 For these reasons, new targets are *always* added as *experimental* until
-they can be proven stable, and later moved to non-experimental. The differences
-between both classes are:
-
-* Experimental targets are not built by default (they need to be explicitly
-  enabled at CMake time).
-
-* Test failures, bugs, and build breakages that only appear when the
-  experimental target is enabled, caused by changes unrelated to the target, are
-  the responsibility of the community behind the target to fix.
+they can be proven stable, and later moved to non-experimental. The difference
+between both classes is that experimental targets are not built by default
+(need to be added to -DLLVM_TARGETS_TO_BUILD at CMake time).
 
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
@@ -711,7 +744,7 @@ OpenMP, etc), Polly, and all other subprojects.  There are a few exceptions:
   is used by LLVM.
 * Some subprojects are impractical or uninteresting to relicense (e.g. llvm-gcc
   and dragonegg). These will be split off from the LLVM project (e.g. to
-  separate GitHub projects), allowing interested people to continue their
+  separate Github projects), allowing interested people to continue their
   development elsewhere.
 
 To relicense LLVM, we will be seeking approval from all of the copyright holders
@@ -842,7 +875,7 @@ holds though)::
 
    Q2: If at any time after my contribution, I am able to license other patent
    claims that would have been subject to Apache's Grant of Patent License if
-   they were licensable by me at the time of my contribution, do those other
+   they were licenseable by me at the time of my contribution, do those other
    claims become subject to the Grant of Patent License?
 
    A2: Yes.

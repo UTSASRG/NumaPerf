@@ -214,7 +214,6 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     if (!MaybeNumElts)
       return MaybeNumElts.takeError();
     uint32_t NumElts = MaybeNumElts.get();
-    Vals.reserve(Vals.size() + NumElts);
 
     for (unsigned i = 0; i != NumElts; ++i)
       if (Expected<uint64_t> MaybeVal = ReadVBR64(6))
@@ -264,7 +263,6 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
       if (!MaybeNumElts)
         return MaybeNumElts.takeError();
       uint32_t NumElts = MaybeNumElts.get();
-      Vals.reserve(Vals.size() + NumElts);
 
       // Get the element encoding.
       if (i + 2 != e)
@@ -336,8 +334,8 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
       *Blob = StringRef(Ptr, NumElts);
     } else {
       // Otherwise, unpack into Vals with zero extension.
-      auto *UPtr = reinterpret_cast<const unsigned char *>(Ptr);
-      Vals.append(UPtr, UPtr + NumElts);
+      for (; NumElts; --NumElts)
+        Vals.push_back((unsigned char)*Ptr++);
     }
   }
 
@@ -460,15 +458,21 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
         return None;
       if (!ReadBlockInfoNames)
         break; // Ignore name.
-      CurBlockInfo->Name = std::string(Record.begin(), Record.end());
+      std::string Name;
+      for (unsigned i = 0, e = Record.size(); i != e; ++i)
+        Name += (char)Record[i];
+      CurBlockInfo->Name = Name;
       break;
     }
       case bitc::BLOCKINFO_CODE_SETRECORDNAME: {
         if (!CurBlockInfo) return None;
         if (!ReadBlockInfoNames)
           break; // Ignore name.
-        CurBlockInfo->RecordNames.emplace_back(
-            (unsigned)Record[0], std::string(Record.begin() + 1, Record.end()));
+        std::string Name;
+        for (unsigned i = 1, e = Record.size(); i != e; ++i)
+          Name += (char)Record[i];
+        CurBlockInfo->RecordNames.push_back(std::make_pair((unsigned)Record[0],
+                                                           Name));
         break;
       }
       }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANSTEPINRANGE_H
-#define LLDB_TARGET_THREADPLANSTEPINRANGE_H
+#ifndef liblldb_ThreadPlanStepInRange_h_
+#define liblldb_ThreadPlanStepInRange_h_
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
@@ -48,12 +48,6 @@ public:
   static void SetDefaultFlagValue(uint32_t new_value);
 
   bool IsVirtualStep() override;
-
-  // Plans that are implementing parts of a step in might need to follow the
-  // behavior of this plan w.r.t. StepThrough.  They can get that from here.
-  static uint32_t GetDefaultFlagsValue() {
-    return s_default_flag_values;
-  }
 
 protected:
   static bool DefaultShouldStopHereCallback(ThreadPlan *current_plan,
@@ -105,11 +99,9 @@ private:
   bool m_virtual_step; // true if we've just done a "virtual step", i.e. just
                        // moved the inline stack depth.
   ConstString m_step_into_target;
-  ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
-  const ThreadPlanStepInRange &
-  operator=(const ThreadPlanStepInRange &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepInRange);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANSTEPINRANGE_H
+#endif // liblldb_ThreadPlanStepInRange_h_

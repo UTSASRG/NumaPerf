@@ -156,12 +156,13 @@ public:
   }
 
   template <typename T>
-  static std::enable_if_t<std::is_integral<T>::value, Integral> from(T Value) {
+  static typename std::enable_if<std::is_integral<T>::value, Integral>::type
+  from(T Value) {
     return Integral(Value);
   }
 
   template <unsigned SrcBits, bool SrcSign>
-  static std::enable_if_t<SrcBits != 0, Integral>
+  static typename std::enable_if<SrcBits != 0, Integral>::type
   from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
   }
@@ -205,52 +206,52 @@ public:
 
 private:
   template <typename T>
-  static std::enable_if_t<std::is_signed<T>::value, bool> CheckAddUB(T A, T B,
-                                                                     T &R) {
+  static typename std::enable_if<std::is_signed<T>::value, bool>::type
+  CheckAddUB(T A, T B, T &R) {
     return llvm::AddOverflow<T>(A, B, R);
   }
 
   template <typename T>
-  static std::enable_if_t<std::is_unsigned<T>::value, bool> CheckAddUB(T A, T B,
-                                                                       T &R) {
+  static typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+  CheckAddUB(T A, T B, T &R) {
     R = A + B;
     return false;
   }
 
   template <typename T>
-  static std::enable_if_t<std::is_signed<T>::value, bool> CheckSubUB(T A, T B,
-                                                                     T &R) {
+  static typename std::enable_if<std::is_signed<T>::value, bool>::type
+  CheckSubUB(T A, T B, T &R) {
     return llvm::SubOverflow<T>(A, B, R);
   }
 
   template <typename T>
-  static std::enable_if_t<std::is_unsigned<T>::value, bool> CheckSubUB(T A, T B,
-                                                                       T &R) {
+  static typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+  CheckSubUB(T A, T B, T &R) {
     R = A - B;
     return false;
   }
 
   template <typename T>
-  static std::enable_if_t<std::is_signed<T>::value, bool> CheckMulUB(T A, T B,
-                                                                     T &R) {
+  static typename std::enable_if<std::is_signed<T>::value, bool>::type
+  CheckMulUB(T A, T B, T &R) {
     return llvm::MulOverflow<T>(A, B, R);
   }
 
   template <typename T>
-  static std::enable_if_t<std::is_unsigned<T>::value, bool> CheckMulUB(T A, T B,
-                                                                       T &R) {
+  static typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+  CheckMulUB(T A, T B, T &R) {
     R = A * B;
     return false;
   }
 
   template <typename T, T Min, T Max>
-  static std::enable_if_t<std::is_signed<T>::value, bool>
+  static typename std::enable_if<std::is_signed<T>::value, bool>::type
   CheckRange(int64_t V) {
     return Min <= V && V <= Max;
   }
 
   template <typename T, T Min, T Max>
-  static std::enable_if_t<std::is_unsigned<T>::value, bool>
+  static typename std::enable_if<std::is_unsigned<T>::value, bool>::type
   CheckRange(int64_t V) {
     return V >= 0 && static_cast<uint64_t>(V) <= Max;
   }

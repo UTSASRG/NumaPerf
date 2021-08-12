@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_NONE_SCRIPTINTERPRETERNONE_H
-#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_NONE_SCRIPTINTERPRETERNONE_H
+#ifndef liblldb_ScriptInterpreterNone_h_
+#define liblldb_ScriptInterpreterNone_h_
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
 
@@ -44,4 +44,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_NONE_SCRIPTINTERPRETERNONE_H
+#endif // liblldb_ScriptInterpreterNone_h_

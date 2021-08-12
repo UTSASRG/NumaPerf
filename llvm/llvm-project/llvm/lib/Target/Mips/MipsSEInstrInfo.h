@@ -48,21 +48,19 @@ public:
 
   void storeRegToStack(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MI,
-                       Register SrcReg, bool isKill, int FrameIndex,
+                       unsigned SrcReg, bool isKill, int FrameIndex,
                        const TargetRegisterClass *RC,
                        const TargetRegisterInfo *TRI,
                        int64_t Offset) const override;
 
   void loadRegFromStack(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator MI,
-                        Register DestReg, int FrameIndex,
+                        unsigned DestReg, int FrameIndex,
                         const TargetRegisterClass *RC,
                         const TargetRegisterInfo *TRI,
                         int64_t Offset) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
-
-  bool isBranchWithImm(unsigned Opc) const override;
 
   unsigned getOppositeBranchOpc(unsigned Opc) const override;
 

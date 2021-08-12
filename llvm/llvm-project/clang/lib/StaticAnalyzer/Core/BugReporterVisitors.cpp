@@ -45,6 +45,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -357,7 +358,7 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
 
 public:
   NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
-      : RegionOfInterest(R), MmrMgr(R->getMemRegionManager()),
+      : RegionOfInterest(R), MmrMgr(*R->getMemRegionManager()),
         SM(MmrMgr.getContext().getSourceManager()),
         PP(MmrMgr.getContext().getPrintingPolicy()), TKind(TKind) {}
 
@@ -812,7 +813,7 @@ public:
     const SourceManager &SMgr = BRC.getSourceManager();
     if (auto Loc = matchAssignment(N)) {
       if (isFunctionMacroExpansion(*Loc, SMgr)) {
-        std::string MacroName = std::string(getMacroName(*Loc, BRC));
+        std::string MacroName = getMacroName(*Loc, BRC);
         SourceLocation BugLoc = BugPoint->getStmt()->getBeginLoc();
         if (!BugLoc.isMacroID() || getMacroName(BugLoc, BRC) != MacroName)
           BR.markInvalid(getTag(), MacroName.c_str());
@@ -1734,9 +1735,10 @@ constructDebugPieceForTrackedCondition(const Expr *Cond,
       !BRC.getAnalyzerOptions().ShouldTrackConditionsDebug)
     return nullptr;
 
-  std::string ConditionText = std::string(Lexer::getSourceText(
+  std::string ConditionText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(Cond->getSourceRange()),
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts()));
+                                     BRC.getSourceManager(),
+                                     BRC.getASTContext().getLangOpts());
 
   return std::make_shared<PathDiagnosticEventPiece>(
       PathDiagnosticLocation::createBegin(
@@ -2492,7 +2494,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     Out << WillBeUsedForACondition;
 
   // Convert 'field ...' to 'Field ...' if it is a MemberExpr.
-  std::string Message = std::string(Out.str());
+  std::string Message = Out.str();
   Message[0] = toupper(Message[0]);
 
   // If we know the value create a pop-up note to the value part of 'BExpr'.

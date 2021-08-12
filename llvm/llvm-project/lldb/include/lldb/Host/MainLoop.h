@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_MAINLOOP_H
-#define LLDB_HOST_MAINLOOP_H
+#ifndef lldb_Host_MainLoop_h_
+#define lldb_Host_MainLoop_h_
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoopBase.h"
@@ -86,8 +86,7 @@ private:
     int m_signo;
 
     friend class MainLoop;
-    SignalHandle(const SignalHandle &) = delete;
-    const SignalHandle &operator=(const SignalHandle &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(SignalHandle);
   };
 
   struct SignalInfo {
@@ -109,4 +108,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_MAINLOOP_H
+#endif // lldb_Host_MainLoop_h_

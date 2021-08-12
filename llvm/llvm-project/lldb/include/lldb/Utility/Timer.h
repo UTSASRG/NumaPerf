@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_TIMER_H
-#define LLDB_UTILITY_TIMER_H
+#ifndef liblldb_Timer_h_
+#define liblldb_Timer_h_
 
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
@@ -34,8 +34,7 @@ public:
     std::atomic<uint64_t> m_count;
     std::atomic<Category *> m_next;
 
-    Category(const Category &) = delete;
-    const Category &operator=(const Category &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(Category);
   };
 
   /// Default constructor.
@@ -67,10 +66,9 @@ protected:
   static std::atomic<unsigned> g_display_depth;
 
 private:
-  Timer(const Timer &) = delete;
-  const Timer &operator=(const Timer &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_TIMER_H
+#endif // liblldb_Timer_h_

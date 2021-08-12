@@ -62,8 +62,14 @@ public:
     size_t
     GetSize();
 
-    void
-    Print (const char* str);
+    // wrapping the variadic Printf() with a plain Print()
+    // because it is hard to support varargs in SWIG bridgings
+    %extend {
+        void Print (const char* str)
+        {
+            self->Printf("%s", str);
+        }
+    }
 
     void
     RedirectToFile (const char *path, bool append);

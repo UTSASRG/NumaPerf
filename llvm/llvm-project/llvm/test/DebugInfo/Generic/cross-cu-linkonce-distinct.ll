@@ -1,3 +1,5 @@
+; REQUIRES: object-emission
+
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; Testing that two distinct (distinct by writing them in separate files, while

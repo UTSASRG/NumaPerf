@@ -38,8 +38,7 @@ function(libomp_check_linker_flag flag boolean)
 
   if(try_compile_result)
     foreach(regex IN LISTS failed_regexes)
-      # Ignore the warning about the newer or unknown CUDA version.
-      if(("${OUTPUT}" MATCHES ${regex}) AND NOT ("${OUTPUT}" MATCHES "Unknown CUDA version"))
+      if("${OUTPUT}" MATCHES ${regex})
         set(retval FALSE)
       endif()
     endforeach()

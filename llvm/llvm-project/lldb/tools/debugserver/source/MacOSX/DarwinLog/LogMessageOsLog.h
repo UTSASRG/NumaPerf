@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGMESSAGEOSLOG_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGMESSAGEOSLOG_H
+#ifndef LogMessageOsLog_h
+#define LogMessageOsLog_h
 
 #include "DarwinLogInterfaces.h"
 
@@ -53,4 +53,4 @@ private:
   mutable std::string m_message;
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGMESSAGEOSLOG_H
+#endif /* LogMessageOsLog_h */

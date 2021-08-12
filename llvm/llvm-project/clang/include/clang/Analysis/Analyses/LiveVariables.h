@@ -70,8 +70,8 @@ public:
   ~LiveVariables() override;
 
   /// Compute the liveness information for a given CFG.
-  static std::unique_ptr<LiveVariables>
-  computeLiveness(AnalysisDeclContext &analysisContext, bool killAtAssign);
+  static LiveVariables *computeLiveness(AnalysisDeclContext &analysisContext,
+                                        bool killAtAssign);
 
   /// Return true if a variable is live at the end of a
   /// specified block.
@@ -97,8 +97,7 @@ public:
 
   void runOnAllBlocks(Observer &obs);
 
-  static std::unique_ptr<LiveVariables>
-  create(AnalysisDeclContext &analysisContext) {
+  static LiveVariables *create(AnalysisDeclContext &analysisContext) {
     return computeLiveness(analysisContext, true);
   }
 
@@ -111,8 +110,7 @@ private:
 
 class RelaxedLiveVariables : public LiveVariables {
 public:
-  static std::unique_ptr<LiveVariables>
-  create(AnalysisDeclContext &analysisContext) {
+  static LiveVariables *create(AnalysisDeclContext &analysisContext) {
     return computeLiveness(analysisContext, false);
   }
 

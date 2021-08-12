@@ -12,7 +12,6 @@
 #include "DefinitionsInHeadersCheck.h"
 #include "MisplacedConstCheck.h"
 #include "NewDeleteOverloadsCheck.h"
-#include "NoRecursionCheck.h"
 #include "NonCopyableObjects.h"
 #include "NonPrivateMemberVariablesInClassesCheck.h"
 #include "RedundantExpressionCheck.h"
@@ -36,7 +35,6 @@ public:
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
-    CheckFactories.registerCheck<NoRecursionCheck>("misc-no-recursion");
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(
         "misc-non-copyable-objects");
     CheckFactories.registerCheck<NonPrivateMemberVariablesInClassesCheck>(

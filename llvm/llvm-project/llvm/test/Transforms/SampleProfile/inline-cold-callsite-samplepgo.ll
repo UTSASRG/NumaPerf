@@ -5,12 +5,12 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -profile-sample-accurate -inline -S -inline-cold-callsite-threshold=0 | FileCheck %s --check-prefix ACCURATE
 
 declare void @extern()
-define void @callee() #1 {
+define void @callee() {
   call void @extern()
   ret void
 }
 
-define void @caller(i32 %y1) #1 {
+define void @caller(i32 %y1) {
 ; CHECK-LABEL: @caller
 ; CHECK-NOT: call void @callee
 ; ACCURATE-LABEL: @caller
@@ -28,5 +28,4 @@ define void @caller_accurate(i32 %y1) #0 {
   ret void
 }
 
-attributes #0 = { "profile-sample-accurate" "use-sample-profile" }
-attributes #1 = { "use-sample-profile" }
+attributes #0 = { "profile-sample-accurate" }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_BREAKPOINTRESOLVERNAME_H
-#define LLDB_BREAKPOINT_BREAKPOINTRESOLVERNAME_H
+#ifndef liblldb_BreakpointResolverName_h_
+#define liblldb_BreakpointResolverName_h_
 
 #include <string>
 #include <vector>
@@ -23,41 +23,39 @@ namespace lldb_private {
 
 class BreakpointResolverName : public BreakpointResolver {
 public:
-  BreakpointResolverName(const lldb::BreakpointSP &bkpt, const char *name,
+  BreakpointResolverName(Breakpoint *bkpt, const char *name,
                          lldb::FunctionNameType name_type_mask,
                          lldb::LanguageType language,
                          Breakpoint::MatchType type, lldb::addr_t offset,
                          bool skip_prologue);
 
   // This one takes an array of names.  It is always MatchType = Exact.
-  BreakpointResolverName(const lldb::BreakpointSP &bkpt, const char *names[],
+  BreakpointResolverName(Breakpoint *bkpt, const char *names[],
                          size_t num_names,
                          lldb::FunctionNameType name_type_mask,
                          lldb::LanguageType language, lldb::addr_t offset,
                          bool skip_prologue);
 
   // This one takes a C++ array of names.  It is always MatchType = Exact.
-  BreakpointResolverName(const lldb::BreakpointSP &bkpt,
-                         std::vector<std::string> names,
+  BreakpointResolverName(Breakpoint *bkpt, std::vector<std::string> names,
                          lldb::FunctionNameType name_type_mask,
                          lldb::LanguageType language, lldb::addr_t offset,
                          bool skip_prologue);
 
   // Creates a function breakpoint by regular expression.  Takes over control
   // of the lifespan of func_regex.
-  BreakpointResolverName(const lldb::BreakpointSP &bkpt,
-                         RegularExpression func_regex,
+  BreakpointResolverName(Breakpoint *bkpt, RegularExpression func_regex,
                          lldb::LanguageType language, lldb::addr_t offset,
                          bool skip_prologue);
 
   static BreakpointResolver *
-  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
+  CreateFromStructuredData(Breakpoint *bkpt,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
-  ~BreakpointResolverName() override = default;
+  ~BreakpointResolverName() override;
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                           SymbolContext &context,
@@ -75,8 +73,7 @@ public:
     return V->getResolverID() == BreakpointResolver::NameResolver;
   }
 
-  lldb::BreakpointResolverSP
-  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
+  lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
 
 protected:
   BreakpointResolverName(const BreakpointResolverName &rhs);
@@ -94,4 +91,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_BREAKPOINTRESOLVERNAME_H
+#endif // liblldb_BreakpointResolverName_h_

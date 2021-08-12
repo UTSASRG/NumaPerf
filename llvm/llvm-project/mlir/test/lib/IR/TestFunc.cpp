@@ -1,6 +1,6 @@
 //===- TestFunctionLike.cpp - Pass to test helpers on FunctionLike --------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,10 +13,9 @@ using namespace mlir;
 
 namespace {
 /// This is a test pass for verifying FuncOp's eraseArgument method.
-struct TestFuncEraseArg
-    : public PassWrapper<TestFuncEraseArg, OperationPass<ModuleOp>> {
-  void runOnOperation() override {
-    auto module = getOperation();
+struct TestFuncEraseArg : public ModulePass<TestFuncEraseArg> {
+  void runOnModule() override {
+    auto module = getModule();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
       SmallVector<unsigned, 4> indicesToErase;
@@ -37,10 +36,9 @@ struct TestFuncEraseArg
 };
 
 /// This is a test pass for verifying FuncOp's setType method.
-struct TestFuncSetType
-    : public PassWrapper<TestFuncSetType, OperationPass<ModuleOp>> {
-  void runOnOperation() override {
-    auto module = getOperation();
+struct TestFuncSetType : public ModulePass<TestFuncSetType> {
+  void runOnModule() override {
+    auto module = getModule();
     SymbolTable symbolTable(module);
 
     for (FuncOp func : module.getOps<FuncOp>()) {
@@ -53,12 +51,8 @@ struct TestFuncSetType
 };
 } // end anonymous namespace
 
-namespace mlir {
-void registerTestFunc() {
-  PassRegistration<TestFuncEraseArg> pass("test-func-erase-arg",
-                                          "Test erasing func args.");
+static PassRegistration<TestFuncEraseArg> pass("test-func-erase-arg",
+                                               "Test erasing func args.");
 
-  PassRegistration<TestFuncSetType> pass2("test-func-set-type",
-                                          "Test FuncOp::setType.");
-}
-} // namespace mlir
+static PassRegistration<TestFuncSetType> pass2("test-func-set-type",
+                                               "Test FuncOp::setType.");

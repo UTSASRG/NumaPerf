@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBBROADCASTER_H
-#define LLDB_API_SBBROADCASTER_H
+#ifndef LLDB_SBBroadcaster_h_
+#define LLDB_SBBroadcaster_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -81,4 +81,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBBROADCASTER_H
+#endif // LLDB_SBBroadcaster_h_

@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   support
   BitstreamReader
-  FrontendOpenMP
   )
 
 add_clang_library(clangDoc

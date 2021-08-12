@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H
-#define LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H
+#ifndef liblldb_UnwindAssemblyInstEmulation_h_
+#define liblldb_UnwindAssemblyInstEmulation_h_
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -151,4 +151,4 @@ private:
   uint32_t m_forward_branch_offset;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H
+#endif // liblldb_UnwindAssemblyInstEmulation_h_

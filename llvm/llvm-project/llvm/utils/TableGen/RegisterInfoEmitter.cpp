@@ -173,7 +173,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     std::string Namespace = SubRegIndices.front().getNamespace();
     if (!Namespace.empty())
       OS << "namespace " << Namespace << " {\n";
-    OS << "enum : uint16_t {\n  NoSubRegister,\n";
+    OS << "enum {\n  NoSubRegister,\n";
     unsigned i = 0;
     for (const auto &Idx : SubRegIndices)
       OS << "  " << Idx.getName() << ",\t// " << ++i << "\n";
@@ -181,20 +181,6 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     if (!Namespace.empty())
       OS << "} // end namespace " << Namespace << "\n\n";
   }
-
-  OS << "// Register pressure sets enum.\n";
-  if (!Namespace.empty())
-    OS << "namespace " << Namespace << " {\n";
-  OS << "enum RegisterPressureSets {\n";
-  unsigned NumSets = Bank.getNumRegPressureSets();
-  for (unsigned i = 0; i < NumSets; ++i ) {
-    const RegUnitSet &RegUnits = Bank.getRegSetAt(i);
-    OS << "  " << RegUnits.Name << " = " << i << ",\n";
-  }
-  OS << "};\n";
-  if (!Namespace.empty())
-    OS << "} // end namespace " << Namespace << '\n';
-  OS << '\n';
 
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_ENUM\n\n";
@@ -216,13 +202,13 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
      << "  static const RegClassWeight RCWeightTable[] = {\n";
   for (const auto &RC : RegBank.getRegClasses()) {
     const CodeGenRegister::Vec &Regs = RC.getMembers();
-    OS << "    {" << RC.getWeight(RegBank) << ", ";
     if (Regs.empty() || RC.Artificial)
-      OS << '0';
+      OS << "    {0, 0";
     else {
       std::vector<unsigned> RegUnits;
       RC.buildRegUnitSet(RegBank, RegUnits);
-      OS << RegBank.getRegUnitSetWeight(RegUnits);
+      OS << "    {" << (*Regs.begin())->getWeight(RegBank)
+         << ", " << RegBank.getRegUnitSetWeight(RegUnits);
     }
     OS << "},  \t// " << RC.getName() << "\n";
   }
@@ -911,7 +897,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   unsigned i = 0;
   for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I, ++i) {
     const auto &Reg = *I;
-    RegStrings.add(std::string(Reg.getName()));
+    RegStrings.add(Reg.getName());
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister*> SR;
@@ -977,7 +963,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "namespace llvm {\n\n";
 
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName();
 
   // Emit the shared table of differential lists.
   OS << "extern const MCPhysReg " << TargetName << "RegDiffLists[] = {\n";
@@ -1006,8 +992,9 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the string table.
   RegStrings.layout();
-  RegStrings.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
-                                          "RegStrings[]");
+  OS << "extern const char " << TargetName << "RegStrings[] = {\n";
+  RegStrings.emit(OS, printChar);
+  OS << "};\n\n";
 
   OS << "extern const MCRegisterDesc " << TargetName
      << "RegDesc[] = { // Descriptors\n";
@@ -1016,7 +1003,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the register descriptors now.
   i = 0;
   for (const auto &Reg : Regs) {
-    OS << "  { " << RegStrings.get(std::string(Reg.getName())) << ", "
+    OS << "  { " << RegStrings.get(Reg.getName()) << ", "
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (DiffSeqs.get(RegUnitLists[i]) * 16 + RegUnitInitScale[i]) << ", "
@@ -1078,8 +1065,9 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "} // end anonymous namespace\n\n";
 
   RegClassStrings.layout();
-  RegClassStrings.emitStringLiteralDef(
-      OS, Twine("extern const char ") + TargetName + "RegClassStrings[]");
+  OS << "extern const char " << TargetName << "RegClassStrings[] = {\n";
+  RegClassStrings.emit(OS, printChar);
+  OS << "};\n\n";
 
   OS << "extern const MCRegisterClass " << TargetName
      << "MCRegisterClasses[] = {\n";
@@ -1146,7 +1134,7 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
   OS << "\n#ifdef GET_REGINFO_HEADER\n";
   OS << "#undef GET_REGINFO_HEADER\n\n";
 
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName();
   std::string ClassName = TargetName + "GenRegisterInfo";
 
   OS << "#include \"llvm/CodeGen/TargetRegisterInfo.h\"\n\n";
@@ -1442,7 +1430,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "} // end anonymous namespace\n";
 
   // Emit extra information about registers.
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName();
   OS << "\nstatic const TargetRegisterInfoDesc "
      << TargetName << "RegInfoDesc[] = { // Extra Descriptors\n";
   OS << "  { 0, false },\n";

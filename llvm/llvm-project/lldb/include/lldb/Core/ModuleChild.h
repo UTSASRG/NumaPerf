@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_MODULECHILD_H
-#define LLDB_CORE_MODULECHILD_H
+#ifndef liblldb_ModuleChild_h_
+#define liblldb_ModuleChild_h_
 
 #include "lldb/lldb-forward.h"
 
@@ -58,4 +58,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_MODULECHILD_H
+#endif // liblldb_ModuleChild_h_

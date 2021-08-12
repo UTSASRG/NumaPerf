@@ -26,10 +26,10 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
 
-SymbolTable *elf::symtab;
+namespace lld {
+namespace elf {
+SymbolTable *symtab;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Swap symbols as instructed by -wrap.
@@ -40,18 +40,12 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   idx2 = idx1;
   idx1 = idx3;
 
-  if (real->exportDynamic)
-    sym->exportDynamic = true;
-
-  // Now renaming is complete, and no one refers to real. We drop real from
-  // .symtab and .dynsym. If real is undefined, it is important that we don't
-  // leave it in .dynsym, because otherwise it might lead to an undefined symbol
-  // error in a subsequent link. If real is defined, we could emit real as an
-  // alias for sym, but that could degrade the user experience of some tools
-  // that can print out only one symbol for each location: sym is a preferred
-  // name than real, but they might print out real instead.
+  // Now renaming is complete. No one refers Real symbol. We could leave
+  // Real as-is, but if Real is written to the symbol table, that may
+  // contain irrelevant values. So, we copy all values from Sym to Real.
+  StringRef s = real->getName();
   memcpy(real, sym, sizeof(SymbolUnion));
-  real->isUsedInRegularObj = false;
+  real->setName(s);
 }
 
 // Find an existing symbol or create a new one.
@@ -109,13 +103,6 @@ Symbol *SymbolTable::find(StringRef name) {
   return sym;
 }
 
-// A version script/dynamic list is only meaningful for a Defined symbol.
-// A CommonSymbol will be converted to a Defined in replaceCommonSymbols().
-// A lazy symbol may be made Defined if an LTO libcall fetches it.
-static bool canBeVersioned(const Symbol &sym) {
-  return sym.isDefined() || sym.isCommon() || sym.isLazy();
-}
-
 // Initialize demangledSyms with a map from demangled symbols to symbol
 // objects. Used to handle "extern C++" directive in version scripts.
 //
@@ -132,9 +119,11 @@ static bool canBeVersioned(const Symbol &sym) {
 StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
   if (!demangledSyms) {
     demangledSyms.emplace();
-    for (Symbol *sym : symVector)
-      if (canBeVersioned(*sym))
-        (*demangledSyms)[demangleItanium(sym->getName())].push_back(sym);
+    for (Symbol *sym : symVector) {
+      if (!sym->isDefined() && !sym->isCommon())
+        continue;
+      (*demangledSyms)[demangleItanium(sym->getName())].push_back(sym);
+    }
   }
   return *demangledSyms;
 }
@@ -142,15 +131,15 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
 std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion ver) {
   if (ver.isExternCpp)
     return getDemangledSyms().lookup(ver.name);
-  if (Symbol *sym = find(ver.name))
-    if (canBeVersioned(*sym))
-      return {sym};
+  if (Symbol *b = find(ver.name))
+    if (b->isDefined() || b->isCommon())
+      return {b};
   return {};
 }
 
 std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion ver) {
   std::vector<Symbol *> res;
-  SingleStringMatcher m(ver.name);
+  StringMatcher m(ver.name);
 
   if (ver.isExternCpp) {
     for (auto &p : getDemangledSyms())
@@ -160,7 +149,7 @@ std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion ver) {
   }
 
   for (Symbol *sym : symVector)
-    if (canBeVersioned(*sym) && m.match(sym->getName()))
+    if ((sym->isDefined() || sym->isCommon()) && m.match(sym->getName()))
       res.push_back(sym);
   return res;
 }
@@ -275,3 +264,6 @@ void SymbolTable::scanVersionScript() {
   // --dynamic-list.
   handleDynamicList();
 }
+
+} // namespace elf
+} // namespace lld

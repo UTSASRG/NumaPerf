@@ -869,26 +869,6 @@ def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
 
-// Multiply
-def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;
-
-// Add
-def : Pat<(add (mul v8i16:$vA, v8i16:$vB), v8i16:$vC), (VMLADDUHM $vA, $vB, $vC)>;
-
-// Saturating adds/subtracts.
-def : Pat<(v16i8 (saddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDSBS $vA, $vB))>;
-def : Pat<(v16i8 (uaddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDUBS $vA, $vB))>;
-def : Pat<(v8i16 (saddsat v8i16:$vA, v8i16:$vB)), (v8i16 (VADDSHS $vA, $vB))>;
-def : Pat<(v8i16 (uaddsat v8i16:$vA, v8i16:$vB)), (v8i16 (VADDUHS $vA, $vB))>;
-def : Pat<(v4i32 (saddsat v4i32:$vA, v4i32:$vB)), (v4i32 (VADDSWS $vA, $vB))>;
-def : Pat<(v4i32 (uaddsat v4i32:$vA, v4i32:$vB)), (v4i32 (VADDUWS $vA, $vB))>;
-def : Pat<(v16i8 (ssubsat v16i8:$vA, v16i8:$vB)), (v16i8 (VSUBSBS $vA, $vB))>;
-def : Pat<(v16i8 (usubsat v16i8:$vA, v16i8:$vB)), (v16i8 (VSUBUBS $vA, $vB))>;
-def : Pat<(v8i16 (ssubsat v8i16:$vA, v8i16:$vB)), (v8i16 (VSUBSHS $vA, $vB))>;
-def : Pat<(v8i16 (usubsat v8i16:$vA, v8i16:$vB)), (v8i16 (VSUBUHS $vA, $vB))>;
-def : Pat<(v4i32 (ssubsat v4i32:$vA, v4i32:$vB)), (v4i32 (VSUBSWS $vA, $vB))>;
-def : Pat<(v4i32 (usubsat v4i32:$vA, v4i32:$vB)), (v4i32 (VSUBUWS $vA, $vB))>;
-
 // Loads.
 def : Pat<(v4i32 (load xoaddr:$src)), (LVX xoaddr:$src)>;
 
@@ -1023,6 +1003,14 @@ def : Pat<(and v4i32:$A, (vnot_ppc v4i32:$B)),
 def : Pat<(fmul v4f32:$vA, v4f32:$vB),
           (VMADDFP $vA, $vB,
              (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>; 
+
+// Fused multiply add and multiply sub for packed float.  These are represented
+// separately from the real instructions above, for operations that must have
+// the additional precision, such as Newton-Rhapson (used by divide, sqrt)
+def : Pat<(PPCvmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
+          (VMADDFP $A, $B, $C)>;
+def : Pat<(PPCvnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
+          (VNMSUBFP $A, $B, $C)>;
 
 def : Pat<(int_ppc_altivec_vmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
           (VMADDFP $A, $B, $C)>;
@@ -1353,10 +1341,6 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 // The following altivec instructions were introduced in Power ISA 3.0
 def HasP9Altivec : Predicate<"PPCSubTarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
-
-// Vector Multiply-Sum
-def VMSUMUDM : VA1a_Int_Ty3<35, "vmsumudm", int_ppc_altivec_vmsumudm,
-                            v1i128, v2i64, v1i128>;
 
 // i8 element comparisons.
 def VCMPNEB   : VCMP   <  7, "vcmpneb $vD, $vA, $vB"  , v16i8>;

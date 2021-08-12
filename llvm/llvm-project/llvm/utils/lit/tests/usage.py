@@ -1,7 +1,6 @@
-# Basic sanity check for `--help` and `--version` options.
+# Basic sanity check that usage works.
 #
-# RUN: %{lit} --help         | FileCheck %s --check-prefix=HELP
-# RUN: %{lit} --version 2>&1 | FileCheck %s --check-prefix=VERSION
+# RUN: %{lit} --help > %t.out
+# RUN: FileCheck < %t.out %s
 #
-# HELP: usage: lit [-h]
-# VERSION: lit {{[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9]*}}
+# CHECK: usage: lit.py [-h]

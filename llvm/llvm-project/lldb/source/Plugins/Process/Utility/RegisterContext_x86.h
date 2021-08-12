@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_X86_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_X86_H
+#ifndef liblldb_RegisterContext_x86_H_
+#define liblldb_RegisterContext_x86_H_
 
 #include <cstddef>
 #include <cstdint>

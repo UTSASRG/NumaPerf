@@ -1,13 +1,14 @@
 //===- LoopCoalescing.cpp - Pass transforming loop nests into single loops-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -19,16 +20,17 @@
 using namespace mlir;
 
 namespace {
-struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
+class LoopCoalescingPass : public FunctionPass<LoopCoalescingPass> {
+public:
   void runOnFunction() override {
     FuncOp func = getFunction();
 
-    func.walk([](scf::ForOp op) {
+    func.walk([](loop::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentOfType<scf::ForOp>())
+      if (op.getParentOfType<loop::ForOp>())
         return;
 
-      SmallVector<scf::ForOp, 4> loops;
+      SmallVector<loop::ForOp, 4> loops;
       getPerfectlyNestedLoops(loops, op);
       LLVM_DEBUG(llvm::dbgs()
                  << "found a perfect nest of depth " << loops.size() << '\n');
@@ -85,6 +87,10 @@ struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopCoalescingPass() {
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }
+
+static PassRegistration<LoopCoalescingPass>
+    reg(PASS_NAME,
+        "coalesce nested loops with independent bounds into a single loop");

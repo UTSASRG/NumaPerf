@@ -23,9 +23,7 @@ namespace clangd {
 
 // Calls addDocument and then blockUntilIdleForTest.
 void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
-                    StringRef Version = "null",
-                    WantDiagnostics WantDiags = WantDiagnostics::Auto,
-                    bool ForceRebuild = false);
+                    WantDiagnostics WantDiags = WantDiagnostics::Auto);
 
 llvm::Expected<CodeCompleteResult>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
@@ -41,8 +39,7 @@ llvm::Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos);
 
 llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
-                                    Position Pos, StringRef NewName,
-                                    const clangd::RenameOptions &RenameOpts);
+                                    Position Pos, StringRef NewName);
 
 std::string runDumpAST(ClangdServer &Server, PathRef File);
 
@@ -56,9 +53,8 @@ SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query);
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req);
 RefSlab getRefs(const SymbolIndex &Index, SymbolID ID);
 
-llvm::Expected<std::vector<SelectionRange>>
-runSemanticRanges(ClangdServer &Server, PathRef File,
-                  const std::vector<Position> &Pos);
+llvm::Expected<std::vector<Range>>
+runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos);
 
 llvm::Expected<llvm::Optional<clangd::Path>>
 runSwitchHeaderSource(ClangdServer &Server, PathRef File);

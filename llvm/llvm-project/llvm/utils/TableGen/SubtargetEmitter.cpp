@@ -128,8 +128,8 @@ class SubtargetEmitter {
 
 public:
   SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT)
-      : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
-        Target(TGT.getName()) {}
+    : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
+      Target(TGT.getName()) {}
 
   void run(raw_ostream &o);
 };
@@ -396,8 +396,8 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
        << "namespace " << Name << "FU {\n";
 
     for (unsigned j = 0, FUN = FUs.size(); j < FUN; ++j)
-      OS << "  const InstrStage::FuncUnits " << FUs[j]->getName()
-         << " = 1ULL << " << j << ";\n";
+      OS << "  const unsigned " << FUs[j]->getName()
+         << " = 1 << " << j << ";\n";
 
     OS << "} // end namespace " << Name << "FU\n";
 
@@ -460,8 +460,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
       std::string ItinStageString;
       unsigned NStages = 0;
       if (ItinData)
-        FormItineraryStageString(std::string(Name), ItinData, ItinStageString,
-                                 NStages);
+        FormItineraryStageString(Name, ItinData, ItinStageString, NStages);
 
       // Get string and operand cycle count
       std::string ItinOperandCycleString;
@@ -471,7 +470,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
         FormItineraryOperandCycleString(ItinData, ItinOperandCycleString,
                                         NOperandCycles);
 
-        FormItineraryBypassString(std::string(Name), ItinData, ItinBypassString,
+        FormItineraryBypassString(Name, ItinData, ItinBypassString,
                                   NOperandCycles);
       }
 

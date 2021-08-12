@@ -3,7 +3,7 @@
  * RUN: %t/executable
  * RUN: %ocamlopt -g -w +A -package llvm.executionengine -linkpkg %t/executionengine.ml -o %t/executable
  * RUN: %t/executable
- * REQUIRES: native
+ * REQUIRES: native, object-emission
  * XFAIL: vg_leak
  *)
 

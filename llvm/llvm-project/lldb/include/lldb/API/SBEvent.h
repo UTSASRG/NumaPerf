@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBEVENT_H
-#define LLDB_API_SBEVENT_H
+#ifndef LLDB_SBEvent_h_
+#define LLDB_SBEvent_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -84,4 +84,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBEVENT_H
+#endif // LLDB_SBEvent_h_

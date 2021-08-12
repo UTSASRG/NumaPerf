@@ -38,12 +38,12 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
   // standard sections don't require the '.section'
-  if (ShouldOmitSectionDirective(getName(), MAI)) {
-    OS << '\t' << getName() << '\n';
+  if (ShouldOmitSectionDirective(SectionName, MAI)) {
+    OS << '\t' << getSectionName() << '\n';
     return;
   }
 
-  OS << "\t.section\t" << getName() << ",\"";
+  OS << "\t.section\t" << getSectionName() << ",\"";
   if (getCharacteristics() & COFF::IMAGE_SCN_CNT_INITIALIZED_DATA)
     OS << 'd';
   if (getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
@@ -61,7 +61,7 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_SHARED)
     OS << 's';
   if ((getCharacteristics() & COFF::IMAGE_SCN_MEM_DISCARDABLE) &&
-      !isImplicitlyDiscardable(getName()))
+      !isImplicitlyDiscardable(SectionName))
     OS << 'D';
   OS << '"';
 
@@ -110,8 +110,4 @@ bool MCSectionCOFF::UseCodeAlign() const {
 
 bool MCSectionCOFF::isVirtualSection() const {
   return getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
-}
-
-StringRef MCSectionCOFF::getVirtualSectionKind() const {
-  return "IMAGE_SCN_CNT_UNINITIALIZED_DATA";
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
-#define LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
+#ifndef liblldb_OptionGroupWatchpoint_h_
+#define liblldb_OptionGroupWatchpoint_h_
 
 #include "lldb/Interpreter/Options.h"
 
@@ -46,11 +46,9 @@ public:
   bool watch_type_specified;
 
 private:
-  OptionGroupWatchpoint(const OptionGroupWatchpoint &) = delete;
-  const OptionGroupWatchpoint &
-  operator=(const OptionGroupWatchpoint &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(OptionGroupWatchpoint);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
+#endif // liblldb_OptionGroupWatchpoint_h_

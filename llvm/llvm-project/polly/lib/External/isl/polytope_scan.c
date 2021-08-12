@@ -48,17 +48,14 @@ error:
 	return isl_stat_error;
 }
 
-static __isl_give isl_mat *isl_basic_set_scan_samples(
-	__isl_take isl_basic_set *bset)
+static struct isl_mat *isl_basic_set_scan_samples(struct isl_basic_set *bset)
 {
 	isl_ctx *ctx;
-	isl_size dim;
+	unsigned dim;
 	struct scan_samples ss;
 
 	ctx = isl_basic_set_get_ctx(bset);
-	dim = isl_basic_set_dim(bset, isl_dim_all);
-	if (dim < 0)
-		goto error;
+	dim = isl_basic_set_total_dim(bset);
 	ss.callback.add = scan_samples_add_sample;
 	ss.samples = isl_mat_alloc(ctx, 0, 1 + dim);
 	if (!ss.samples)

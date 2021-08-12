@@ -36,7 +36,10 @@ void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(namespaceDecl().bind("namespace"), this);
+  // Only register the matchers for C++; the functionality currently does not
+  // provide any benefit to other languages, despite being benign.
+  if (getLangOpts().CPlusPlus)
+    Finder->addMatcher(namespaceDecl().bind("namespace"), this);
 }
 
 static bool locationsInSameFile(const SourceManager &Sources,
@@ -69,7 +72,7 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
       if (T->is(tok::raw_identifier)) {
         StringRef ID = T->getRawIdentifier();
         if (ID != "namespace" && ID != "inline")
-          Result.append(std::string(ID));
+          Result.append(ID);
       } else if (T->is(tok::coloncolon)) {
         Result.append("::");
       } else { // Any other kind of token is unexpected here.
@@ -102,7 +105,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation Loc = AfterRBrace;
   SourceLocation LBraceLoc = ND->getBeginLoc();
 
-  // Currently for nested namespace (n1::n2::...) the AST matcher will match foo
+  // Currently for nested namepsace (n1::n2::...) the AST matcher will match foo
   // then bar instead of a single match. So if we got a nested namespace we have
   // to skip the next ones.
   for (const auto &EndOfNameLocation : Ends) {

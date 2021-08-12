@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM64_EMULATEINSTRUCTIONARM64_H
-#define LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM64_EMULATEINSTRUCTIONARM64_H
+#ifndef EmulateInstructionARM64_h_
+#define EmulateInstructionARM64_h_
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -152,9 +152,6 @@ public:
   } ProcState;
 
 protected:
-  static uint64_t AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bool carry_in,
-                               EmulateInstructionARM64::ProcState &proc_state);
-
   typedef struct {
     uint32_t mask;
     uint32_t value;
@@ -192,4 +189,4 @@ protected:
   bool m_ignore_conditions;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM64_EMULATEINSTRUCTIONARM64_H
+#endif // EmulateInstructionARM64_h_

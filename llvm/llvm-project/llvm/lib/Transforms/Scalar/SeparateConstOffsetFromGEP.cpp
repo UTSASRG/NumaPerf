@@ -431,10 +431,8 @@ private:
   bool reuniteExts(Instruction *I);
 
   /// Find the closest dominator of <Dominatee> that is equivalent to <Key>.
-  Instruction *findClosestMatchingDominator(
-      const SCEV *Key, Instruction *Dominatee,
-      DenseMap<const SCEV *, SmallVector<Instruction *, 2>> &DominatingExprs);
-
+  Instruction *findClosestMatchingDominator(const SCEV *Key,
+                                            Instruction *Dominatee);
   /// Verify F is free of dead code.
   void verifyNoDeadCode(Function &F);
 
@@ -458,8 +456,7 @@ private:
   /// multiple GEPs with a single index.
   bool LowerGEP;
 
-  DenseMap<const SCEV *, SmallVector<Instruction *, 2>> DominatingAdds;
-  DenseMap<const SCEV *, SmallVector<Instruction *, 2>> DominatingSubs;
+  DenseMap<const SCEV *, SmallVector<Instruction *, 2>> DominatingExprs;
 };
 
 } // end anonymous namespace
@@ -522,7 +519,7 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
     //   sext(a + b) = sext(a) + sext(b)
     // even if the addition is not marked nsw.
     //
-    // Leveraging this invariant, we can trace into an sext'ed inbound GEP
+    // Leveraging this invarient, we can trace into an sext'ed inbound GEP
     // index if the constant offset is non-negative.
     //
     // Verified in @sext_add in split-gep.ll.
@@ -552,9 +549,6 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
 APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
                                                    bool SignExtended,
                                                    bool ZeroExtended) {
-  // Save off the current height of the chain, in case we need to restore it.
-  size_t ChainLength = UserChain.size();
-
   // BO being non-negative does not shed light on whether its operands are
   // non-negative. Clear the NonNegative flag here.
   APInt ConstantOffset = find(BO->getOperand(0), SignExtended, ZeroExtended,
@@ -565,22 +559,12 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   // However, such cases are probably already handled by -instcombine,
   // given this pass runs after the standard optimizations.
   if (ConstantOffset != 0) return ConstantOffset;
-
-  // Reset the chain back to where it was when we started exploring this node,
-  // since visiting the LHS didn't pan out.
-  UserChain.resize(ChainLength);
-
   ConstantOffset = find(BO->getOperand(1), SignExtended, ZeroExtended,
                         /* NonNegative */ false);
   // If U is a sub operator, negate the constant offset found in the right
   // operand.
   if (BO->getOpcode() == Instruction::Sub)
     ConstantOffset = -ConstantOffset;
-
-  // If RHS wasn't a suitable candidate either, reset the chain again.
-  if (ConstantOffset == 0)
-    UserChain.resize(ChainLength);
-
   return ConstantOffset;
 }
 
@@ -704,7 +688,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);
-  assert((BO->use_empty() || BO->hasOneUse()) &&
+  assert(BO->getNumUses() <= 1 &&
          "distributeExtsAndCloneChain clones each BinaryOperator in "
          "UserChain, so no one should be used more than "
          "once");
@@ -1157,8 +1141,7 @@ bool SeparateConstOffsetFromGEP::runOnFunction(Function &F) {
 }
 
 Instruction *SeparateConstOffsetFromGEP::findClosestMatchingDominator(
-    const SCEV *Key, Instruction *Dominatee,
-    DenseMap<const SCEV *, SmallVector<Instruction *, 2>> &DominatingExprs) {
+    const SCEV *Key, Instruction *Dominatee) {
   auto Pos = DominatingExprs.find(Key);
   if (Pos == DominatingExprs.end())
     return nullptr;
@@ -1186,23 +1169,12 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
   // If Dom can't sign overflow and Dom dominates I, optimize I to sext(Dom).
   // TODO: handle zext
   Value *LHS = nullptr, *RHS = nullptr;
-  if (match(I, m_Add(m_SExt(m_Value(LHS)), m_SExt(m_Value(RHS))))) {
+  if (match(I, m_Add(m_SExt(m_Value(LHS)), m_SExt(m_Value(RHS)))) ||
+      match(I, m_Sub(m_SExt(m_Value(LHS)), m_SExt(m_Value(RHS))))) {
     if (LHS->getType() == RHS->getType()) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
-      if (auto *Dom = findClosestMatchingDominator(Key, I, DominatingAdds)) {
-        Instruction *NewSExt = new SExtInst(Dom, I->getType(), "", I);
-        NewSExt->takeName(I);
-        I->replaceAllUsesWith(NewSExt);
-        RecursivelyDeleteTriviallyDeadInstructions(I);
-        return true;
-      }
-    }
-  } else if (match(I, m_Sub(m_SExt(m_Value(LHS)), m_SExt(m_Value(RHS))))) {
-    if (LHS->getType() == RHS->getType()) {
-      const SCEV *Key =
-          SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
-      if (auto *Dom = findClosestMatchingDominator(Key, I, DominatingSubs)) {
+      if (auto *Dom = findClosestMatchingDominator(Key, I)) {
         Instruction *NewSExt = new SExtInst(Dom, I->getType(), "", I);
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
@@ -1213,17 +1185,12 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
   }
 
   // Add I to DominatingExprs if it's an add/sub that can't sign overflow.
-  if (match(I, m_NSWAdd(m_Value(LHS), m_Value(RHS)))) {
-    if (programUndefinedIfPoison(I)) {
+  if (match(I, m_NSWAdd(m_Value(LHS), m_Value(RHS))) ||
+      match(I, m_NSWSub(m_Value(LHS), m_Value(RHS)))) {
+    if (programUndefinedIfFullPoison(I)) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
-      DominatingAdds[Key].push_back(I);
-    }
-  } else if (match(I, m_NSWSub(m_Value(LHS), m_Value(RHS)))) {
-    if (programUndefinedIfPoison(I)) {
-      const SCEV *Key =
-          SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
-      DominatingSubs[Key].push_back(I);
+      DominatingExprs[Key].push_back(I);
     }
   }
   return false;
@@ -1231,8 +1198,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
 
 bool SeparateConstOffsetFromGEP::reuniteExts(Function &F) {
   bool Changed = false;
-  DominatingAdds.clear();
-  DominatingSubs.clear();
+  DominatingExprs.clear();
   for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
     for (auto I = BB->begin(); I != BB->end(); ) {

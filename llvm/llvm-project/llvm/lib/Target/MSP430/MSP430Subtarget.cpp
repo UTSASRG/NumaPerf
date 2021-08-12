@@ -43,7 +43,7 @@ MSP430Subtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   ExtendedInsts = false;
   HWMultMode = NoHWMult;
 
-  StringRef CPUName = CPU;
+  std::string CPUName = CPU;
   if (CPUName.empty())
     CPUName = "msp430";
 

@@ -176,6 +176,6 @@ void ento::registerMacOSXAPIChecker(CheckerManager &mgr) {
   mgr.registerChecker<MacOSXAPIChecker>();
 }
 
-bool ento::shouldRegisterMacOSXAPIChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterMacOSXAPIChecker(const LangOptions &LO) {
   return true;
 }

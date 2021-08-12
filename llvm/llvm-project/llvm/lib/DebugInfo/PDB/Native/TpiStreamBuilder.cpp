@@ -44,9 +44,6 @@ void TpiStreamBuilder::setVersionHeader(PdbRaw_TpiVer Version) {
 void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record,
                                      Optional<uint32_t> Hash) {
   // If we just crossed an 8KB threshold, add a type index offset.
-  assert(((Record.size() & 3) == 0) &&
-         "The type record's size is not a multiple of 4 bytes which will "
-         "cause misalignment in the output TPI stream!");
   size_t NewSize = TypeRecordBytes + Record.size();
   constexpr size_t EightKB = 8 * 1024;
   if (NewSize / EightKB > TypeRecordBytes / EightKB || TypeRecords.empty()) {
@@ -156,11 +153,8 @@ Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
     return EC;
 
   for (auto Rec : TypeRecords) {
-    assert(!Rec.empty() && "Attempting to write an empty type record shifts "
-                           "all offsets in the TPI stream!");
-    assert(((Rec.size() & 3) == 0) &&
-           "The type record's size is not a multiple of 4 bytes which will "
-           "cause misalignment in the output TPI stream!");
+    assert(!Rec.empty()); // An empty record will not write anything, but it
+                          // would shift all offsets from here on.
     if (auto EC = Writer.writeBytes(Rec))
       return EC;
   }

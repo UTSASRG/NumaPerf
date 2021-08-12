@@ -21,13 +21,13 @@ using namespace llvm;
 class MachODumper {
 
   template <typename StructType>
-  Expected<const char *> processLoadCommandData(
+  const char *processLoadCommandData(
       MachOYAML::LoadCommand &LC,
       const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd);
 
   const object::MachOObjectFile &Obj;
   void dumpHeader(std::unique_ptr<MachOYAML::Object> &Y);
-  Error dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpBindOpcodes(std::vector<MachOYAML::BindOpcode> &BindOpcodes,
@@ -40,13 +40,11 @@ class MachODumper {
                         std::unique_ptr<MachOYAML::Object> &Y);
 
   template <typename SectionType>
-  Expected<MachOYAML::Section> constructSectionCommon(SectionType Sec,
-                                                      size_t SecIndex);
+  MachOYAML::Section constructSectionCommon(SectionType Sec);
   template <typename SectionType>
-  Expected<MachOYAML::Section> constructSection(SectionType Sec,
-                                                size_t SecIndex);
+  MachOYAML::Section constructSection(SectionType Sec);
   template <typename SectionType, typename SegmentType>
-  Expected<const char *>
+  const char *
   extractSections(const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd,
                   std::vector<MachOYAML::Section> &Sections);
 
@@ -61,16 +59,11 @@ public:
            sizeof(MachO::LCStruct));                                           \
     if (Obj.isLittleEndian() != sys::IsLittleEndianHost)                       \
       MachO::swapStruct(LC.Data.LCStruct##_data);                              \
-    if (Expected<const char *> ExpectedEndPtr =                                \
-            processLoadCommandData<MachO::LCStruct>(LC, LoadCmd))              \
-      EndPtr = *ExpectedEndPtr;                                                \
-    else                                                                       \
-      return ExpectedEndPtr.takeError();                                       \
+    EndPtr = processLoadCommandData<MachO::LCStruct>(LC, LoadCmd);             \
     break;
 
 template <typename SectionType>
-Expected<MachOYAML::Section>
-MachODumper::constructSectionCommon(SectionType Sec, size_t SecIndex) {
+MachOYAML::Section MachODumper::constructSectionCommon(SectionType Sec) {
   MachOYAML::Section TempSec;
   memcpy(reinterpret_cast<void *>(&TempSec.sectname[0]), &Sec.sectname[0], 16);
   memcpy(reinterpret_cast<void *>(&TempSec.segname[0]), &Sec.segname[0], 16);
@@ -87,80 +80,52 @@ MachODumper::constructSectionCommon(SectionType Sec, size_t SecIndex) {
   if (!MachO::isVirtualSection(Sec.flags & MachO::SECTION_TYPE))
     TempSec.content =
         yaml::BinaryRef(Obj.getSectionContents(Sec.offset, Sec.size));
-
-  if (Expected<object::SectionRef> SecRef = Obj.getSection(SecIndex)) {
-    TempSec.relocations.reserve(TempSec.nreloc);
-    for (const object::RelocationRef &Reloc : SecRef->relocations()) {
-      const object::DataRefImpl Rel = Reloc.getRawDataRefImpl();
-      const MachO::any_relocation_info RE = Obj.getRelocation(Rel);
-      MachOYAML::Relocation R;
-      R.address = Obj.getAnyRelocationAddress(RE);
-      R.is_pcrel = Obj.getAnyRelocationPCRel(RE);
-      R.length = Obj.getAnyRelocationLength(RE);
-      R.type = Obj.getAnyRelocationType(RE);
-      R.is_scattered = Obj.isRelocationScattered(RE);
-      R.symbolnum = (R.is_scattered ? 0 : Obj.getPlainRelocationSymbolNum(RE));
-      R.is_extern =
-          (R.is_scattered ? false : Obj.getPlainRelocationExternal(RE));
-      R.value = (R.is_scattered ? Obj.getScatteredRelocationValue(RE) : 0);
-      TempSec.relocations.push_back(R);
-    }
-  } else {
-    return SecRef.takeError();
-  }
   return TempSec;
 }
 
 template <>
-Expected<MachOYAML::Section> MachODumper::constructSection(MachO::section Sec,
-                                                           size_t SecIndex) {
-  Expected<MachOYAML::Section> TempSec = constructSectionCommon(Sec, SecIndex);
-  if (TempSec)
-    TempSec->reserved3 = 0;
+MachOYAML::Section MachODumper::constructSection(MachO::section Sec) {
+  MachOYAML::Section TempSec = constructSectionCommon(Sec);
+  TempSec.reserved3 = 0;
   return TempSec;
 }
 
 template <>
-Expected<MachOYAML::Section>
-MachODumper::constructSection(MachO::section_64 Sec, size_t SecIndex) {
-  Expected<MachOYAML::Section> TempSec = constructSectionCommon(Sec, SecIndex);
-  if (TempSec)
-    TempSec->reserved3 = Sec.reserved3;
+MachOYAML::Section MachODumper::constructSection(MachO::section_64 Sec) {
+  MachOYAML::Section TempSec = constructSectionCommon(Sec);
+  TempSec.reserved3 = Sec.reserved3;
   return TempSec;
 }
 
 template <typename SectionType, typename SegmentType>
-Expected<const char *> MachODumper::extractSections(
+const char *MachODumper::extractSections(
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd,
     std::vector<MachOYAML::Section> &Sections) {
   auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
   const SectionType *Curr =
       reinterpret_cast<const SectionType *>(LoadCmd.Ptr + sizeof(SegmentType));
   for (; reinterpret_cast<const void *>(Curr) < End; Curr++) {
-    SectionType Sec;
-    memcpy((void *)&Sec, Curr, sizeof(SectionType));
-    if (Obj.isLittleEndian() != sys::IsLittleEndianHost)
+    if (Obj.isLittleEndian() != sys::IsLittleEndianHost) {
+      SectionType Sec;
+      memcpy((void *)&Sec, Curr, sizeof(SectionType));
       MachO::swapStruct(Sec);
-    // For MachO section indices start from 1.
-    if (Expected<MachOYAML::Section> S =
-            constructSection(Sec, Sections.size() + 1))
-      Sections.push_back(std::move(*S));
-    else
-      return S.takeError();
+      Sections.push_back(constructSection(Sec));
+    } else {
+      Sections.push_back(constructSection(*Curr));
+    }
   }
   return reinterpret_cast<const char *>(Curr);
 }
 
 template <typename StructType>
-Expected<const char *> MachODumper::processLoadCommandData(
+const char *MachODumper::processLoadCommandData(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   return LoadCmd.Ptr + sizeof(StructType);
 }
 
 template <>
-Expected<const char *>
-MachODumper::processLoadCommandData<MachO::segment_command>(
+const char *MachODumper::processLoadCommandData<MachO::segment_command>(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   return extractSections<MachO::section, MachO::segment_command>(LoadCmd,
@@ -168,8 +133,7 @@ MachODumper::processLoadCommandData<MachO::segment_command>(
 }
 
 template <>
-Expected<const char *>
-MachODumper::processLoadCommandData<MachO::segment_command_64>(
+const char *MachODumper::processLoadCommandData<MachO::segment_command_64>(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   return extractSections<MachO::section_64, MachO::segment_command_64>(
@@ -188,32 +152,28 @@ readString(MachOYAML::LoadCommand &LC,
 }
 
 template <>
-Expected<const char *>
-MachODumper::processLoadCommandData<MachO::dylib_command>(
+const char *MachODumper::processLoadCommandData<MachO::dylib_command>(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   return readString<MachO::dylib_command>(LC, LoadCmd);
 }
 
 template <>
-Expected<const char *>
-MachODumper::processLoadCommandData<MachO::dylinker_command>(
+const char *MachODumper::processLoadCommandData<MachO::dylinker_command>(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   return readString<MachO::dylinker_command>(LC, LoadCmd);
 }
 
 template <>
-Expected<const char *>
-MachODumper::processLoadCommandData<MachO::rpath_command>(
+const char *MachODumper::processLoadCommandData<MachO::rpath_command>(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   return readString<MachO::rpath_command>(LC, LoadCmd);
 }
 
 template <>
-Expected<const char *>
-MachODumper::processLoadCommandData<MachO::build_version_command>(
+const char *MachODumper::processLoadCommandData<MachO::build_version_command>(
     MachOYAML::LoadCommand &LC,
     const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
   auto Start = LoadCmd.Ptr + sizeof(MachO::build_version_command);
@@ -233,13 +193,12 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = std::make_unique<MachOYAML::Object>();
   Y->IsLittleEndian = Obj.isLittleEndian();
   dumpHeader(Y);
-  if (Error Err = dumpLoadCommands(Y))
-    return std::move(Err);
+  dumpLoadCommands(Y);
   dumpLinkEdit(Y);
 
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   if (auto Err = dwarf2yaml(*DICtx, Y->DWARF))
-    return std::move(Err);
+    return errorCodeToError(Err);
   return std::move(Y);
 }
 
@@ -254,7 +213,7 @@ void MachODumper::dumpHeader(std::unique_ptr<MachOYAML::Object> &Y) {
   Y->Header.reserved = 0;
 }
 
-Error MachODumper::dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y) {
+void MachODumper::dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y) {
   for (auto LoadCmd : Obj.load_commands()) {
     MachOYAML::LoadCommand LC;
     const char *EndPtr = LoadCmd.Ptr;
@@ -264,11 +223,7 @@ Error MachODumper::dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y) {
              sizeof(MachO::load_command));
       if (Obj.isLittleEndian() != sys::IsLittleEndianHost)
         MachO::swapStruct(LC.Data.load_command_data);
-      if (Expected<const char *> ExpectedEndPtr =
-              processLoadCommandData<MachO::load_command>(LC, LoadCmd))
-        EndPtr = *ExpectedEndPtr;
-      else
-        return ExpectedEndPtr.takeError();
+      EndPtr = processLoadCommandData<MachO::load_command>(LC, LoadCmd);
       break;
 #include "llvm/BinaryFormat/MachO.def"
     }
@@ -282,7 +237,6 @@ Error MachODumper::dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y) {
     LC.ZeroPadBytes = RemainingBytes;
     Y->LoadCommands.push_back(std::move(LC));
   }
-  return Error::success();
 }
 
 void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -589,20 +543,20 @@ Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj) {
   return Error::success();
 }
 
-Error macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
+std::error_code macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
   if (const auto *MachOObj = dyn_cast<object::MachOUniversalBinary>(&Binary)) {
     if (auto Err = macho2yaml(Out, *MachOObj)) {
-      return Err;
+      return errorToErrorCode(std::move(Err));
     }
-    return Error::success();
+    return obj2yaml_error::success;
   }
 
   if (const auto *MachOObj = dyn_cast<object::MachOObjectFile>(&Binary)) {
     if (auto Err = macho2yaml(Out, *MachOObj)) {
-      return Err;
+      return errorToErrorCode(std::move(Err));
     }
-    return Error::success();
+    return obj2yaml_error::success;
   }
 
-  return errorCodeToError(obj2yaml_error::unsupported_obj_file_format);
+  return obj2yaml_error::unsupported_obj_file_format;
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_COMMANDOPTIONVALIDATORS_H
-#define LLDB_INTERPRETER_COMMANDOPTIONVALIDATORS_H
+#ifndef liblldb_CommandOptionValidators_h_
+#define liblldb_CommandOptionValidators_h_
 
 #include "lldb/lldb-private-types.h"
 
@@ -25,4 +25,4 @@ class PosixPlatformCommandOptionValidator : public OptionValidator {
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_COMMANDOPTIONVALIDATORS_H
+#endif // liblldb_CommandOptionValidators_h_

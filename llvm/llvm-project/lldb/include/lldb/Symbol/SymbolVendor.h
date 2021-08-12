@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_SYMBOLVENDOR_H
-#define LLDB_SYMBOL_SYMBOLVENDOR_H
+#ifndef liblldb_SymbolVendor_h_
+#define liblldb_SymbolVendor_h_
 
 #include <vector>
 
@@ -52,10 +52,9 @@ protected:
 
 private:
   // For SymbolVendor only
-  SymbolVendor(const SymbolVendor &) = delete;
-  const SymbolVendor &operator=(const SymbolVendor &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SymbolVendor);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_SYMBOLVENDOR_H
+#endif // liblldb_SymbolVendor_h_

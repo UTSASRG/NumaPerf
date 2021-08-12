@@ -17,6 +17,9 @@ namespace tidy {
 namespace cppcoreguidelines {
 
 void ProTypeConstCastCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   Finder->addMatcher(cxxConstCastExpr().bind("cast"), this);
 }
 

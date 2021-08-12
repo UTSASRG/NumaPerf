@@ -120,6 +120,6 @@ void ento::registerUndefinedAssignmentChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedAssignmentChecker>();
 }
 
-bool ento::shouldRegisterUndefinedAssignmentChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterUndefinedAssignmentChecker(const LangOptions &LO) {
   return true;
 }

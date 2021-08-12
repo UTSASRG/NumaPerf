@@ -12,5 +12,6 @@
 .globl _start
 _start:
 
+.globl w
 .weak w
 call w@PLT

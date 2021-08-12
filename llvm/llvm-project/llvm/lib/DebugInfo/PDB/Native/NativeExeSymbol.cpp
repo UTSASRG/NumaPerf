@@ -73,7 +73,7 @@ uint32_t NativeExeSymbol::getAge() const {
 }
 
 std::string NativeExeSymbol::getSymbolsFileName() const {
-  return std::string(Session.getPDBFile().getFilePath());
+  return Session.getPDBFile().getFilePath();
 }
 
 codeview::GUID NativeExeSymbol::getGuid() const {

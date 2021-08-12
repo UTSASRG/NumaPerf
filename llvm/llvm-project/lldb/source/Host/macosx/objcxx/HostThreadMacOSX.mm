@@ -44,8 +44,7 @@ protected:
   NSAutoreleasePool *m_pool;
 
 private:
-  MacOSXDarwinThread(const MacOSXDarwinThread &) = delete;
-  const MacOSXDarwinThread &operator=(const MacOSXDarwinThread &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(MacOSXDarwinThread);
 };
 
 void InitThreadCreated() {

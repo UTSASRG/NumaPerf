@@ -22,7 +22,6 @@
 
 #include "AVR.h"
 #include "AVRInstrInfo.h"
-#include "AVRMachineFunctionInfo.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
@@ -35,21 +34,19 @@ AVRRegisterInfo::AVRRegisterInfo() : AVRGenRegisterInfo(0) {}
 
 const uint16_t *
 AVRRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  const AVRMachineFunctionInfo *AFI = MF->getInfo<AVRMachineFunctionInfo>();
+  CallingConv::ID CC = MF->getFunction().getCallingConv();
 
-  return AFI->isInterruptOrSignalHandler()
+  return ((CC == CallingConv::AVR_INTR || CC == CallingConv::AVR_SIGNAL)
               ? CSR_Interrupts_SaveList
-              : CSR_Normal_SaveList;
+              : CSR_Normal_SaveList);
 }
 
 const uint32_t *
 AVRRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CC) const {
-  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
-
-  return AFI->isInterruptOrSignalHandler()
+  return ((CC == CallingConv::AVR_INTR || CC == CallingConv::AVR_SIGNAL)
               ? CSR_Interrupts_RegMask
-              : CSR_Normal_RegMask;
+              : CSR_Normal_RegMask);
 }
 
 BitVector AVRRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
@@ -98,8 +95,7 @@ AVRRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 /// Fold a frame offset shared between two add instructions into a single one.
-static void foldFrameOffset(MachineBasicBlock::iterator &II, int &Offset,
-                            Register DstReg) {
+static void foldFrameOffset(MachineBasicBlock::iterator &II, int &Offset, unsigned DstReg) {
   MachineInstr &MI = *II;
   int Opcode = MI.getOpcode();
 
@@ -268,12 +264,13 @@ AVRRegisterInfo::getPointerRegClass(const MachineFunction &MF,
   return &AVR::PTRDISPREGSRegClass;
 }
 
-void AVRRegisterInfo::splitReg(Register Reg, Register &LoReg,
-                               Register &HiReg) const {
-  assert(AVR::DREGSRegClass.contains(Reg) && "can only split 16-bit registers");
+void AVRRegisterInfo::splitReg(unsigned Reg,
+                               unsigned &LoReg,
+                               unsigned &HiReg) const {
+    assert(AVR::DREGSRegClass.contains(Reg) && "can only split 16-bit registers");
 
-  LoReg = getSubReg(Reg, AVR::sub_lo);
-  HiReg = getSubReg(Reg, AVR::sub_hi);
+    LoReg = getSubReg(Reg, AVR::sub_lo);
+    HiReg = getSubReg(Reg, AVR::sub_hi);
 }
 
 bool AVRRegisterInfo::shouldCoalesce(MachineInstr *MI,

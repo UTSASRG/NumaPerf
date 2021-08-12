@@ -4,7 +4,8 @@ template <typename T>
 struct X {};
 auto b = []() {
   struct S {
-    static typename X<decltype(int)>::type Run(){}; // expected-error {{expected '('}}
+    static typename X<decltype(int)>::type Run(){};
+    // expected-error@-1 4{{}}
   };
   return 5;
 }();
@@ -15,5 +16,6 @@ class PC {
 
 template <typename T>
 class P {
-  static typename PC<T, Invalid>::Type Foo(); // expected-error {{undeclared identifier 'Invalid'}}
+  static typename PC<T, Invalid>::Type Foo();
+  // expected-error@-1 4{{}}
 };

@@ -32,7 +32,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include <limits>
@@ -51,15 +50,8 @@ STATISTIC(RISCVNumInstrsCompressed,
 namespace {
 struct RISCVOperand;
 
-struct ParserOptionsSet {
-  bool IsPicEnabled;
-};
-
 class RISCVAsmParser : public MCTargetAsmParser {
   SmallVector<FeatureBitset, 4> FeatureBitStack;
-
-  SmallVector<ParserOptionsSet, 4> ParserOptionsStack;
-  ParserOptionsSet ParserOptions;
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
@@ -82,8 +74,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -148,13 +138,11 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
   OperandMatchResultTy parseBareSymbol(OperandVector &Operands);
   OperandMatchResultTy parseCallSymbol(OperandVector &Operands);
-  OperandMatchResultTy parsePseudoJumpSymbol(OperandVector &Operands);
   OperandMatchResultTy parseJALOffset(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
   bool parseDirectiveOption();
-  bool parseDirectiveAttribute();
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().getFeatureBits()[Feature])) {
@@ -162,10 +150,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
     }
-  }
-
-  bool getFeatureBits(uint64_t Feature) {
-    return getSTI().getFeatureBits()[Feature];
   }
 
   void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
@@ -177,15 +161,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
   }
 
   void pushFeatureBits() {
-    assert(FeatureBitStack.size() == ParserOptionsStack.size() &&
-           "These two stacks must be kept synchronized");
     FeatureBitStack.push_back(getSTI().getFeatureBits());
-    ParserOptionsStack.push_back(ParserOptions);
   }
 
   bool popFeatureBits() {
-    assert(FeatureBitStack.size() == ParserOptionsStack.size() &&
-           "These two stacks must be kept synchronized");
     if (FeatureBitStack.empty())
       return true;
 
@@ -193,11 +172,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
     copySTI().setFeatureBits(FeatureBits);
     setAvailableFeatures(ComputeAvailableFeatures(FeatureBits));
 
-    ParserOptions = ParserOptionsStack.pop_back_val();
-
     return false;
   }
-
 public:
   enum RISCVMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
@@ -231,9 +207,6 @@ public:
                 "doesn't support the D instruction set extension (ignoring "
                 "target-abi)\n";
     }
-
-    const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
-    ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
   }
 };
 
@@ -364,16 +337,6 @@ public:
             VK == RISCVMCExpr::VK_RISCV_CALL_PLT);
   }
 
-  bool isPseudoJumpSymbol() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    // Must be of 'immediate' type but not a constant.
-    if (!isImm() || evaluateConstantImm(getImm(), Imm, VK))
-      return false;
-    return RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm) &&
-           VK == RISCVMCExpr::VK_RISCV_CALL;
-  }
-
   bool isTPRelAddSymbol() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -463,17 +426,6 @@ public:
     return (isRV64() && isUInt<6>(Imm)) || isUInt<5>(Imm);
   }
 
-  bool isUImmLog2XLenHalf() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    if (!evaluateConstantImm(getImm(), Imm, VK) ||
-        VK != RISCVMCExpr::VK_RISCV_None)
-      return false;
-    return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
-  }
-
   bool isUImm5() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -500,7 +452,7 @@ public:
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isInt<6>(Imm) &&
-	    VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -934,10 +886,6 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
-  case Match_InvalidUImmLog2XLenHalf:
-    if (isRV64())
-      return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidSImm6:
@@ -1028,10 +976,6 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a bare symbol name");
   }
-  case Match_InvalidPseudoJumpSymbol: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be a valid jump target");
-  }
   case Match_InvalidCallSymbol: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a bare symbol name");
@@ -1066,25 +1010,17 @@ static bool matchRegisterNameHelper(bool IsRV32E, Register &RegNo,
 
 bool RISCVAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                    SMLoc &EndLoc) {
-  if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
-    return Error(StartLoc, "invalid register name");
-  return false;
-}
-
-OperandMatchResultTy RISCVAsmParser::tryParseRegister(unsigned &RegNo,
-                                                      SMLoc &StartLoc,
-                                                      SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   RegNo = 0;
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (matchRegisterNameHelper(isRV32E(), (Register &)RegNo, Name))
-    return MatchOperand_NoMatch;
+  if (matchRegisterNameHelper(isRV32E(), (Register&)RegNo, Name))
+    return Error(StartLoc, "invalid register name");
 
   getParser().Lex(); // Eat identifier token.
-  return MatchOperand_Success;
+  return false;
 }
 
 OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
@@ -1177,8 +1113,6 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       return MatchOperand_ParseFail;
 
     auto SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
-    if (!SysReg)
-      SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
     // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
       if (!SysReg->haveRequiredFeatures(getSTI().getFeatureBits())) {
@@ -1349,27 +1283,6 @@ OperandMatchResultTy RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
   Res = RISCVMCExpr::create(Res, Kind, getContext());
-  Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
-  return MatchOperand_Success;
-}
-
-OperandMatchResultTy
-RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
-  const MCExpr *Res;
-
-  if (getParser().parseExpression(Res))
-    return MatchOperand_ParseFail;
-
-  if (Res->getKind() != MCExpr::ExprKind::SymbolRef ||
-      cast<MCSymbolRefExpr>(Res)->getKind() ==
-          MCSymbolRefExpr::VariantKind::VK_PLT) {
-    Error(S, "operand must be a valid jump target");
-    return MatchOperand_ParseFail;
-  }
-
-  Res = RISCVMCExpr::create(Res, RISCVMCExpr::VK_RISCV_CALL, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return MatchOperand_Success;
 }
@@ -1620,8 +1533,6 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".option")
     return parseDirectiveOption();
-  else if (IDVal == ".attribute")
-    return parseDirectiveAttribute();
 
   return true;
 }
@@ -1688,30 +1599,6 @@ bool RISCVAsmParser::parseDirectiveOption() {
     return false;
   }
 
-  if (Option == "pic") {
-    getTargetStreamer().emitDirectiveOptionPIC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
-    ParserOptions.IsPicEnabled = true;
-    return false;
-  }
-
-  if (Option == "nopic") {
-    getTargetStreamer().emitDirectiveOptionNoPIC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
-    ParserOptions.IsPicEnabled = false;
-    return false;
-  }
-
   if (Option == "relax") {
     getTargetStreamer().emitDirectiveOptionRelax();
 
@@ -1744,157 +1631,12 @@ bool RISCVAsmParser::parseDirectiveOption() {
   return false;
 }
 
-/// parseDirectiveAttribute
-///  ::= .attribute expression ',' ( expression | "string" )
-///  ::= .attribute identifier ',' ( expression | "string" )
-bool RISCVAsmParser::parseDirectiveAttribute() {
-  MCAsmParser &Parser = getParser();
-  int64_t Tag;
-  SMLoc TagLoc;
-  TagLoc = Parser.getTok().getLoc();
-  if (Parser.getTok().is(AsmToken::Identifier)) {
-    StringRef Name = Parser.getTok().getIdentifier();
-    Optional<unsigned> Ret =
-        ELFAttrs::attrTypeFromString(Name, RISCVAttrs::RISCVAttributeTags);
-    if (!Ret.hasValue()) {
-      Error(TagLoc, "attribute name not recognised: " + Name);
-      return false;
-    }
-    Tag = Ret.getValue();
-    Parser.Lex();
-  } else {
-    const MCExpr *AttrExpr;
-
-    TagLoc = Parser.getTok().getLoc();
-    if (Parser.parseExpression(AttrExpr))
-      return true;
-
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(AttrExpr);
-    if (check(!CE, TagLoc, "expected numeric constant"))
-      return true;
-
-    Tag = CE->getValue();
-  }
-
-  if (Parser.parseToken(AsmToken::Comma, "comma expected"))
-    return true;
-
-  StringRef StringValue;
-  int64_t IntegerValue = 0;
-  bool IsIntegerValue = true;
-
-  // RISC-V attributes have a string value if the tag number is odd
-  // and an integer value if the tag number is even.
-  if (Tag % 2)
-    IsIntegerValue = false;
-
-  SMLoc ValueExprLoc = Parser.getTok().getLoc();
-  if (IsIntegerValue) {
-    const MCExpr *ValueExpr;
-    if (Parser.parseExpression(ValueExpr))
-      return true;
-
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ValueExpr);
-    if (!CE)
-      return Error(ValueExprLoc, "expected numeric constant");
-    IntegerValue = CE->getValue();
-  } else {
-    if (Parser.getTok().isNot(AsmToken::String))
-      return Error(Parser.getTok().getLoc(), "expected string constant");
-
-    StringValue = Parser.getTok().getStringContents();
-    Parser.Lex();
-  }
-
-  if (Parser.parseToken(AsmToken::EndOfStatement,
-                        "unexpected token in '.attribute' directive"))
-    return true;
-
-  if (Tag == RISCVAttrs::ARCH) {
-    StringRef Arch = StringValue;
-    if (Arch.consume_front("rv32"))
-      clearFeatureBits(RISCV::Feature64Bit, "64bit");
-    else if (Arch.consume_front("rv64"))
-      setFeatureBits(RISCV::Feature64Bit, "64bit");
-    else
-      return Error(ValueExprLoc, "bad arch string " + Arch);
-
-    while (!Arch.empty()) {
-      if (Arch[0] == 'i')
-        clearFeatureBits(RISCV::FeatureRV32E, "e");
-      else if (Arch[0] == 'e')
-        setFeatureBits(RISCV::FeatureRV32E, "e");
-      else if (Arch[0] == 'g') {
-        clearFeatureBits(RISCV::FeatureRV32E, "e");
-        setFeatureBits(RISCV::FeatureStdExtM, "m");
-        setFeatureBits(RISCV::FeatureStdExtA, "a");
-        setFeatureBits(RISCV::FeatureStdExtF, "f");
-        setFeatureBits(RISCV::FeatureStdExtD, "d");
-      } else if (Arch[0] == 'm')
-        setFeatureBits(RISCV::FeatureStdExtM, "m");
-      else if (Arch[0] == 'a')
-        setFeatureBits(RISCV::FeatureStdExtA, "a");
-      else if (Arch[0] == 'f')
-        setFeatureBits(RISCV::FeatureStdExtF, "f");
-      else if (Arch[0] == 'd') {
-        setFeatureBits(RISCV::FeatureStdExtF, "f");
-        setFeatureBits(RISCV::FeatureStdExtD, "d");
-      } else if (Arch[0] == 'c') {
-        setFeatureBits(RISCV::FeatureStdExtC, "c");
-      } else
-        return Error(ValueExprLoc, "bad arch string " + Arch);
-
-      Arch = Arch.drop_front(1);
-      int major = 0;
-      int minor = 0;
-      Arch.consumeInteger(10, major);
-      Arch.consume_front("p");
-      Arch.consumeInteger(10, minor);
-      if (major != 0 || minor != 0) {
-        Arch = Arch.drop_until([](char c) { return c == '_' || c == '"'; });
-        Arch = Arch.drop_while([](char c) { return c == '_'; });
-      }
-    }
-  }
-
-  if (IsIntegerValue)
-    getTargetStreamer().emitAttribute(Tag, IntegerValue);
-  else {
-    if (Tag != RISCVAttrs::ARCH) {
-      getTargetStreamer().emitTextAttribute(Tag, StringValue);
-    } else {
-      std::string formalArchStr = "rv32";
-      if (getFeatureBits(RISCV::Feature64Bit))
-        formalArchStr = "rv64";
-      if (getFeatureBits(RISCV::FeatureRV32E))
-        formalArchStr = (Twine(formalArchStr) + "e1p9").str();
-      else
-        formalArchStr = (Twine(formalArchStr) + "i2p0").str();
-
-      if (getFeatureBits(RISCV::FeatureStdExtM))
-        formalArchStr = (Twine(formalArchStr) + "_m2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtA))
-        formalArchStr = (Twine(formalArchStr) + "_a2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtF))
-        formalArchStr = (Twine(formalArchStr) + "_f2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtD))
-        formalArchStr = (Twine(formalArchStr) + "_d2p0").str();
-      if (getFeatureBits(RISCV::FeatureStdExtC))
-        formalArchStr = (Twine(formalArchStr) + "_c2p0").str();
-
-      getTargetStreamer().emitTextAttribute(Tag, formalArchStr);
-    }
-  }
-
-  return false;
-}
-
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
   if (Res)
     ++RISCVNumInstrsCompressed;
-  S.emitInstruction((Res ? CInst : Inst), getSTI());
+  S.EmitInstruction((Res ? CInst : Inst), getSTI());
 }
 
 void RISCVAsmParser::emitLoadImm(Register DestReg, int64_t Value,
@@ -1930,7 +1672,7 @@ void RISCVAsmParser::emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
 
   MCSymbol *TmpLabel = Ctx.createTempSymbol(
       "pcrel_hi", /* AlwaysAddSuffix */ true, /* CanBeUnnamed */ false);
-  Out.emitLabel(TmpLabel);
+  Out.EmitLabel(TmpLabel);
 
   const RISCVMCExpr *SymbolHi = RISCVMCExpr::create(Symbol, VKHi, Ctx);
   emitToStreamer(
@@ -1975,7 +1717,8 @@ void RISCVAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned SecondOpcode;
   RISCVMCExpr::VariantKind VKHi;
-  if (ParserOptions.IsPicEnabled) {
+  // FIXME: Should check .option (no)pic when implemented
+  if (getContext().getObjectFileInfo()->isPositionIndependent()) {
     SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
     VKHi = RISCVMCExpr::VK_RISCV_GOT_HI;
   } else {

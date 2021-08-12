@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_TIMEOUT_H
-#define LLDB_UTILITY_TIMEOUT_H
+#ifndef liblldb_Timeout_h_
+#define liblldb_Timeout_h_
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
@@ -67,4 +67,4 @@ struct format_provider<lldb_private::Timeout<Ratio>, void> {
 };
 }
 
-#endif // LLDB_UTILITY_TIMEOUT_H
+#endif // liblldb_Timeout_h_

@@ -27,13 +27,16 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
   // Flag all operators +, -, +=, -=, ++, -- that result in a pointer
   Finder->addMatcher(
       binaryOperator(
-          hasAnyOperatorName("+", "-", "+=", "-="), AllPointerTypes,
+          anyOf(hasOperatorName("+"), hasOperatorName("-"),
+                hasOperatorName("+="), hasOperatorName("-=")),
+          AllPointerTypes,
           unless(hasLHS(ignoringImpCasts(declRefExpr(to(isImplicit()))))))
           .bind("expr"),
       this);
 
   Finder->addMatcher(
-      unaryOperator(hasAnyOperatorName("++", "--"), hasType(pointerType()))
+      unaryOperator(anyOf(hasOperatorName("++"), hasOperatorName("--")),
+                    hasType(pointerType()))
           .bind("expr"),
       this);
 

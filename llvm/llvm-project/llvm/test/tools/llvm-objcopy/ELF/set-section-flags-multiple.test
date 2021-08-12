@@ -1,7 +1,7 @@
-# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj %s > %t
 
 # RUN: llvm-objcopy --set-section-flags=.foo=alloc --set-section-flags=.bar=code %t %t.2
-# RUN: llvm-readobj --sections %t.2 | FileCheck %s
+# RUN: llvm-readobj --sections %t.2 | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
 
 !ELF
 FileHeader:

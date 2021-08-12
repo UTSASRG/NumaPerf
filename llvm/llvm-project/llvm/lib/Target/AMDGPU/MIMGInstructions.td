@@ -1,4 +1,4 @@
-//===-- MIMGInstructions.td - MIMG Instruction Definitions ----------------===//
+//===-- MIMGInstructions.td - MIMG Instruction Defintions -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -132,6 +132,7 @@ class MIMG_Base <dag outs, string dns = "">
 
   let DecoderNamespace = dns;
   let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
+  let usesCustomInserter = 1;
 }
 
 class MIMG <dag outs, string dns = "">
@@ -237,9 +238,9 @@ class MIMG_NoSampler_gfx10<int op, string opcode,
   : MIMG_gfx10<op, (outs DataRC:$vdata), dns> {
   let InOperandList = !con((ins AddrRC:$vaddr0, SReg_256:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, DLC:$dlc, GLC:$glc,
-                                SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe),
+                                SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$a16$tfe$lwe"
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -250,9 +251,9 @@ class MIMG_NoSampler_nsa_gfx10<int op, string opcode,
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, DLC:$dlc, GLC:$glc,
-                                SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe),
+                                SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$a16$tfe$lwe"
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -330,9 +331,9 @@ class MIMG_Store_gfx10<int op, string opcode,
   : MIMG_gfx10<op, (outs), dns> {
   let InOperandList = !con((ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256:$srsrc,
                                 DMask:$dmask, Dim:$dim, UNorm:$unorm, DLC:$dlc,
-                                GLC:$glc, SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe),
+                                GLC:$glc, SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$a16$tfe$lwe"
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -344,9 +345,9 @@ class MIMG_Store_nsa_gfx10<int op, string opcode,
                            AddrIns,
                            (ins SReg_256:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, DLC:$dlc, GLC:$glc,
-                                SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe),
+                                SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$a16$tfe$lwe"
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -435,8 +436,8 @@ class MIMG_Atomic_gfx10<mimg op, string opcode,
 
   let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, DLC:$dlc,
-                           GLC:$glc, SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe);
-  let AsmString = opcode#" $vdst, $vaddr0, $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$a16$tfe$lwe";
+                           GLC:$glc, SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe);
+  let AsmString = opcode#" $vdst, $vaddr0, $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$tfe$lwe";
 }
 
 class MIMG_Atomic_nsa_gfx10<mimg op, string opcode,
@@ -451,8 +452,8 @@ class MIMG_Atomic_nsa_gfx10<mimg op, string opcode,
                            AddrIns,
                            (ins SReg_256:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, DLC:$dlc, GLC:$glc,
-                                SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$a16$tfe$lwe";
+                                SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$dlc$glc$slc$r128$tfe$lwe";
 }
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimg op, string asm,
@@ -521,10 +522,10 @@ class MIMG_Sampler_gfx10<int op, string opcode,
   : MIMG_gfx10<op, (outs DataRC:$vdata), dns> {
   let InOperandList = !con((ins AddrRC:$vaddr0, SReg_256:$srsrc, SReg_128:$ssamp,
                                 DMask:$dmask, Dim:$dim, UNorm:$unorm, DLC:$dlc,
-                                GLC:$glc, SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe),
+                                GLC:$glc, SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = opcode#" $vdata, $vaddr0, $srsrc, $ssamp$dmask$dim$unorm"
-                    #"$dlc$glc$slc$r128$a16$tfe$lwe"
+                    #"$dlc$glc$slc$r128$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -535,10 +536,10 @@ class MIMG_Sampler_nsa_gfx10<int op, string opcode,
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$srsrc, SReg_128:$ssamp, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, DLC:$dlc, GLC:$glc,
-                                SLC:$slc, R128A16:$r128, GFX10A16:$a16, TFE:$tfe, LWE:$lwe),
+                                SLC:$slc, R128A16:$r128, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc, $ssamp$dmask$dim$unorm"
-                    #"$dlc$glc$slc$r128$a16$tfe$lwe"
+                    #"$dlc$glc$slc$r128$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -814,11 +815,6 @@ def ImageDimIntrinsicTable : GenericTable {
   let PrimaryKey = ["Intr"];
   let PrimaryKeyName = "getImageDimIntrinsicInfo";
   let PrimaryKeyEarlyOut = 1;
-}
-
-def getImageDimInstrinsicByBaseOpcode : SearchIndex {
-  let Table = ImageDimIntrinsicTable;
-  let Key = ["BaseOpcode", "Dim"];
 }
 
 foreach intr = !listconcat(AMDGPUImageDimIntrinsics,

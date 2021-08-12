@@ -189,7 +189,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
               ? static_cast<const NamedDecl *>(Init->getAnyMember())
               : Init->getBaseClass()->getAsCXXRecordDecl();
 
-      // Add all fields between current field up until the next initializer.
+      // Add all fields between current field up until the next intializer.
       for (; Decl != std::end(OrderedDecls) && *Decl != InitDecl; ++Decl) {
         if (const auto *D = dyn_cast<T>(*Decl)) {
           if (DeclsToInit.count(D) > 0)
@@ -254,6 +254,9 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
       UseAssignment(Options.getLocalOrGlobal("UseAssignment", false)) {}
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   auto IsUserProvidedNonDelegatingConstructor =
       allOf(isUserProvided(),
             unless(anyOf(isInstantiated(), isDelegatingConstructor())));
@@ -454,9 +457,9 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
       return;
     // Don't suggest fixes for enums because we don't know a good default.
     // Don't suggest fixes for bitfields because in-class initialization is not
-    // possible until C++20.
+    // possible until C++2a.
     if (F->getType()->isEnumeralType() ||
-        (!getLangOpts().CPlusPlus20 && F->isBitField()))
+        (!getLangOpts().CPlusPlus2a && F->isBitField()))
       return;
     if (!F->getParent()->isUnion() || UnionsSeen.insert(F->getParent()).second)
       FieldsToFix.insert(F);

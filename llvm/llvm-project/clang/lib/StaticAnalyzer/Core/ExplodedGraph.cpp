@@ -50,8 +50,9 @@ ExplodedGraph::~ExplodedGraph() = default;
 bool ExplodedGraph::isInterestingLValueExpr(const Expr *Ex) {
   if (!Ex->isLValue())
     return false;
-  return isa<DeclRefExpr>(Ex) || isa<MemberExpr>(Ex) ||
-         isa<ObjCIvarRefExpr>(Ex) || isa<ArraySubscriptExpr>(Ex);
+  return isa<DeclRefExpr>(Ex) ||
+         isa<MemberExpr>(Ex) ||
+         isa<ObjCIvarRefExpr>(Ex);
 }
 
 bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {

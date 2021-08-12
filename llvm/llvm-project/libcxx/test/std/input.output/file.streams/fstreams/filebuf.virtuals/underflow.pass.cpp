@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: locale.en_US.UTF-8
-// FILE_DEPENDENCIES: underflow.dat, underflow_utf8.dat
 
 // <fstream>
 

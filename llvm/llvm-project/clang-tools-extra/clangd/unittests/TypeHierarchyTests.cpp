@@ -71,6 +71,8 @@ int main() {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
 
+  ASSERT_TRUE(AST.getDiagnostics().empty());
+
   for (Position Pt : Source.points()) {
     const CXXRecordDecl *RD = findRecordTypeAt(AST, Pt);
     EXPECT_EQ(&findDecl(AST, "Child2"), static_cast<const NamedDecl *>(RD));
@@ -93,6 +95,8 @@ int main() {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
 
+  ASSERT_TRUE(AST.getDiagnostics().empty());
+
   for (Position Pt : Source.points()) {
     const CXXRecordDecl *RD = findRecordTypeAt(AST, Pt);
     EXPECT_EQ(&findDecl(AST, "Child2"), static_cast<const NamedDecl *>(RD));
@@ -113,6 +117,8 @@ int main() {
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
+
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   for (Position Pt : Source.points()) {
     const CXXRecordDecl *RD = findRecordTypeAt(AST, Pt);
@@ -140,6 +146,8 @@ struct Child2 : Child1 {
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
+
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   const CXXRecordDecl *Parent =
       dyn_cast<CXXRecordDecl>(&findDecl(AST, "Parent"));
@@ -175,6 +183,8 @@ struct Child : Parent1, Parent3 {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
 
+  ASSERT_TRUE(AST.getDiagnostics().empty());
+
   const CXXRecordDecl *Parent1 =
       dyn_cast<CXXRecordDecl>(&findDecl(AST, "Parent1"));
   const CXXRecordDecl *Parent2 =
@@ -199,6 +209,8 @@ struct Child : Parent {};
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
+
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   const CXXRecordDecl *Parent =
       dyn_cast<CXXRecordDecl>(&findDecl(AST, "Parent"));
@@ -248,6 +260,8 @@ struct Child2 : Parent<int> {};
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
 
+  ASSERT_TRUE(AST.getDiagnostics().empty());
+
   const CXXRecordDecl *Parent =
       dyn_cast<ClassTemplateDecl>(&findDecl(AST, "Parent"))->getTemplatedDecl();
   const CXXRecordDecl *ParentSpec =
@@ -274,6 +288,8 @@ struct Child<int> : Parent {};
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
+
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   const CXXRecordDecl *Parent =
       dyn_cast<CXXRecordDecl>(&findDecl(AST, "Parent"));
@@ -303,6 +319,8 @@ struct Child3 : T {};
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
+
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   const CXXRecordDecl *Parent =
       dyn_cast<ClassTemplateDecl>(&findDecl(AST, "Parent"))->getTemplatedDecl();
@@ -379,7 +397,7 @@ TEST(TypeHierarchy, RecursiveHierarchyUnbounded) {
   template <int N>
   struct $SDef[[S]] : S<N + 1> {};
 
-  S^<0> s; // error-ok
+  S^<0> s;
   )cpp");
 
   TestTU TU = TestTU::withCode(Source.code());
@@ -426,6 +444,8 @@ TEST(TypeHierarchy, RecursiveHierarchyBounded) {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
 
+  ASSERT_TRUE(AST.getDiagnostics().empty());
+
   // Make sure getTypeHierarchy() doesn't get into an infinite recursion
   // for either a concrete starting point or a dependent starting point.
   llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
@@ -462,6 +482,7 @@ TEST(TypeHierarchy, DeriveFromImplicitSpec) {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
   auto Index = TU.index();
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
       AST, Source.points()[0], 2, TypeHierarchyDirection::Children, Index.get(),
@@ -486,6 +507,7 @@ TEST(TypeHierarchy, DeriveFromPartialSpec) {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
   auto Index = TU.index();
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
       AST, Source.points()[0], 2, TypeHierarchyDirection::Children, Index.get(),
@@ -509,6 +531,7 @@ TEST(TypeHierarchy, DeriveFromTemplate) {
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
   auto Index = TU.index();
+  ASSERT_TRUE(AST.getDiagnostics().empty());
 
   // FIXME: We'd like this to return the implicit specialization Child<int>,
   //        but currently libIndex does not expose relationships between
@@ -527,7 +550,7 @@ SymbolID findSymbolIDByName(SymbolIndex *Index, llvm::StringRef Name,
                             llvm::StringRef TemplateArgs = "") {
   SymbolID Result;
   FuzzyFindRequest Request;
-  Request.Query = std::string(Name);
+  Request.Query = Name;
   Request.AnyScope = true;
   bool GotResult = false;
   Index->fuzzyFind(Request, [&](const Symbol &S) {

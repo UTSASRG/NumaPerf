@@ -308,7 +308,7 @@ bool InterleavedAccess::lowerInterleavedLoad(
 
   unsigned Factor, Index;
 
-  unsigned NumLoadElements = cast<VectorType>(LI->getType())->getNumElements();
+  unsigned NumLoadElements = LI->getType()->getVectorNumElements();
   // Check if the first shufflevector is DE-interleave shuffle.
   if (!isDeInterleaveMask(Shuffles[0]->getShuffleMask(), Factor, Index,
                           MaxFactor, NumLoadElements))
@@ -426,8 +426,7 @@ bool InterleavedAccess::lowerInterleavedStore(
 
   // Check if the shufflevector is RE-interleave shuffle.
   unsigned Factor;
-  unsigned OpNumElts =
-      cast<VectorType>(SVI->getOperand(0)->getType())->getNumElements();
+  unsigned OpNumElts = SVI->getOperand(0)->getType()->getVectorNumElements();
   if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor, OpNumElts))
     return false;
 

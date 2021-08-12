@@ -18,7 +18,7 @@ namespace modernize {
 
 UseTransparentFunctorsCheck::UseTransparentFunctorsCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), SafeMode(Options.get("SafeMode", false)) {}
+    : ClangTidyCheck(Name, Context), SafeMode(Options.get("SafeMode", 0)) {}
 
 void UseTransparentFunctorsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -26,6 +26,9 @@ void UseTransparentFunctorsCheck::storeOptions(
 }
 
 void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus14)
+    return;
+
   const auto TransparentFunctors =
       classTemplateSpecializationDecl(
           unless(hasAnyTemplateArgument(refersToType(voidType()))),

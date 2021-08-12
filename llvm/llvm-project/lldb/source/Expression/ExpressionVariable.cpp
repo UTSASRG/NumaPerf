@@ -1,4 +1,4 @@
-//===-- ExpressionVariable.cpp --------------------------------------------===//
+//===-- ExpressionVariable.cpp ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,10 +69,20 @@ void PersistentExpressionState::RegisterExecutionUnit(
       // of the demangled name will find the mangled one (needed for looking up
       // metadata pointers.)
       Mangled mangler(global_var.m_name);
-      mangler.GetDemangledName();
+      mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
       m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;
       LLDB_LOGF(log, "  Symbol: %s at 0x%" PRIx64 ".",
                 global_var.m_name.GetCString(), global_var.m_remote_addr);
     }
   }
+}
+
+ConstString PersistentExpressionState::GetNextPersistentVariableName(
+    Target &target, llvm::StringRef Prefix) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    os << Prefix << target.GetNextPersistentVariableIndex();
+  }
+  return ConstString(name);
 }

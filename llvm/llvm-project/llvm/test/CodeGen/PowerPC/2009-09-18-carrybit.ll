@@ -6,9 +6,9 @@ target triple = "powerpc-unknown-linux-gnu.6"
 define i64 @foo(i64 %r.0.ph, i64 %q.0.ph, i32 %sr1.1.ph) nounwind {
 entry:
 ; CHECK-LABEL: foo:
-; CHECK: subc
+; CHECK: subfc
 ; CHECK: subfe
-; CHECK: subc
+; CHECK: subfc
 ; CHECK: subfe
   %tmp0 = add i64 %r.0.ph, -1                           ; <i64> [#uses=1]
   br label %bb40

@@ -118,9 +118,7 @@ def SmallStringSummaryProvider(valobj, internal_dict):
     num_elements = valobj.GetNumChildren()
     res = "\""
     for i in range(0, num_elements):
-        c = valobj.GetChildAtIndex(i).GetValue()
-        if c:
-            res += c.strip("'")
+      res += valobj.GetChildAtIndex(i).GetValue().strip("'")
     res += "\""
     return res
 

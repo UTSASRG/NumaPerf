@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_I386_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_I386_H
+#ifndef liblldb_RegisterContextDarwin_i386_h_
+#define liblldb_RegisterContextDarwin_i386_h_
 
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
@@ -205,4 +205,4 @@ protected:
   static const lldb_private::RegisterInfo *GetRegisterInfos();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_I386_H
+#endif // liblldb_RegisterContextDarwin_i386_h_

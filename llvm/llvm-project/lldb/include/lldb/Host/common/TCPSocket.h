@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_COMMON_TCPSOCKET_H
-#define LLDB_HOST_COMMON_TCPSOCKET_H
+#ifndef liblldb_TCPSocket_h_
+#define liblldb_TCPSocket_h_
 
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
@@ -57,4 +57,4 @@ private:
 };
 }
 
-#endif // LLDB_HOST_COMMON_TCPSOCKET_H
+#endif // ifndef liblldb_TCPSocket_h_

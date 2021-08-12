@@ -1,4 +1,4 @@
-; Test SystemZInstrInfo::analyzeBranch and SystemZInstrInfo::insertBranch.
+; Test SystemZInstrInfo::AnalyzeBranch and SystemZInstrInfo::InsertBranch.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 

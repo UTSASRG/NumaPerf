@@ -1,4 +1,4 @@
-//===-- SocketTestUtilities.cpp -------------------------------------------===//
+//===----------------- SocketTestUtilities.cpp ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,10 +33,10 @@ void lldb_private::CreateConnectedSockets(
   Status error;
   std::unique_ptr<SocketType> listen_socket_up(
       new SocketType(true, child_processes_inherit));
-  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  EXPECT_FALSE(error.Fail());
   error = listen_socket_up->Listen(listen_remote_address, 5);
-  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
-  ASSERT_TRUE(listen_socket_up->IsValid());
+  EXPECT_FALSE(error.Fail());
+  EXPECT_TRUE(listen_socket_up->IsValid());
 
   Status accept_error;
   Socket *accept_socket;
@@ -47,19 +47,21 @@ void lldb_private::CreateConnectedSockets(
   std::string connect_remote_address = get_connect_addr(*listen_socket_up);
   std::unique_ptr<SocketType> connect_socket_up(
       new SocketType(true, child_processes_inherit));
-  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  EXPECT_FALSE(error.Fail());
   error = connect_socket_up->Connect(connect_remote_address);
-  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
-  ASSERT_TRUE(connect_socket_up->IsValid());
+  EXPECT_FALSE(error.Fail());
+  EXPECT_TRUE(connect_socket_up->IsValid());
 
   a_up->swap(connect_socket_up);
-  ASSERT_TRUE((*a_up)->IsValid());
+  EXPECT_TRUE(error.Success());
+  EXPECT_NE(nullptr, a_up->get());
+  EXPECT_TRUE((*a_up)->IsValid());
 
   accept_thread.join();
   b_up->reset(static_cast<SocketType *>(accept_socket));
-  ASSERT_THAT_ERROR(accept_error.ToError(), llvm::Succeeded());
-  ASSERT_NE(nullptr, b_up->get());
-  ASSERT_TRUE((*b_up)->IsValid());
+  EXPECT_TRUE(accept_error.Success());
+  EXPECT_NE(nullptr, b_up->get());
+  EXPECT_TRUE((*b_up)->IsValid());
 
   listen_socket_up.reset();
 }
@@ -91,37 +93,13 @@ void lldb_private::CreateDomainConnectedSockets(
 }
 #endif
 
-static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
-  llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(
-      Addr, /*child_processes_inherit=*/false, /*predicate=*/nullptr);
-  if (Sock)
-    return true;
-  llvm::Error Err = Sock.takeError();
-  GTEST_LOG_(WARNING) << llvm::formatv(
-                             "Creating a canary {0} TCP socket failed: {1}.",
-                             Proto, Err)
-                             .str();
-  bool HasAddrNotAvail = false;
-  handleAllErrors(std::move(Err), [&](std::unique_ptr<llvm::ECError> ECErr) {
-    if (ECErr->convertToErrorCode() ==
-        std::make_error_code(std::errc::address_not_available))
-      HasAddrNotAvail = true;
-  });
-  if (HasAddrNotAvail) {
-    GTEST_LOG_(WARNING)
-        << llvm::formatv(
-               "Assuming the host does not support {0}. Skipping test.", Proto)
-               .str();
-    return false;
-  }
-  GTEST_LOG_(WARNING) << "Continuing anyway. The test will probably fail.";
-  return true;
+bool lldb_private::IsAddressFamilySupported(std::string ip) {
+  auto addresses = lldb_private::SocketAddress::GetAddressInfo(
+      ip.c_str(), NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+  return addresses.size() > 0;
 }
 
-bool lldb_private::HostSupportsIPv4() {
-  return CheckIPSupport("IPv4", "127.0.0.1:0");
-}
-
-bool lldb_private::HostSupportsIPv6() {
-  return CheckIPSupport("IPv6", "[::1]:0");
+bool lldb_private::IsIPv4(std::string ip) {
+  struct sockaddr_in sock_addr;
+  return inet_pton(AF_INET, ip.c_str(), &(sock_addr.sin_addr)) != 0;
 }

@@ -353,6 +353,6 @@ void ento::registerPaddingChecker(CheckerManager &Mgr) {
         Checker, "AllowedPad", "a non-negative value");
 }
 
-bool ento::shouldRegisterPaddingChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterPaddingChecker(const LangOptions &LO) {
   return true;
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_DWARFCALLFRAMEINFO_H
-#define LLDB_SYMBOL_DWARFCALLFRAMEINFO_H
+#ifndef liblldb_DWARFCallFrameInfo_h_
+#define liblldb_DWARFCallFrameInfo_h_
 
 #include <map>
 #include <mutex>
@@ -166,4 +166,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_DWARFCALLFRAMEINFO_H
+#endif // liblldb_DWARFCallFrameInfo_h_

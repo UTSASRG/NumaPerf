@@ -19,6 +19,9 @@
 namespace llvm {
 class FunctionPass;
 class LanaiTargetMachine;
+class MachineFunctionPass;
+class TargetMachine;
+class formatted_raw_ostream;
 
 // createLanaiISelDag - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.

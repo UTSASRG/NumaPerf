@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTER_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTER_H
+#ifndef LogFilter_h
+#define LogFilter_h
 
 #include "DarwinLogInterfaces.h"
 
@@ -26,4 +26,4 @@ private:
   bool m_matches_accept;
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTER_H
+#endif /* LogFilter_h */

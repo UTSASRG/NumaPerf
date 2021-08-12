@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Can a noexcept function pointer be caught by a non-noexcept catch clause?
-// UNSUPPORTED: no-exceptions, libcxxabi-no-noexcept-function-type
+// UNSUPPORTED: libcxxabi-no-exceptions, libcxxabi-no-noexcept-function-type
 
 #include <cassert>
 

@@ -86,8 +86,6 @@ public:
   }
 
   const char *getClobbers() const override { return ""; }
-
-  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

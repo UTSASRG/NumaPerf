@@ -406,14 +406,12 @@ bool MachineCombiner::preservesResourceLen(
                     << ResLenBeforeCombine
                     << " and after: " << ResLenAfterCombine << "\n";);
   LLVM_DEBUG(
-      ResLenAfterCombine <=
-      ResLenBeforeCombine + TII->getExtendResourceLenLimit()
+      ResLenAfterCombine <= ResLenBeforeCombine
           ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
           : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
                       "Length\n");
 
-  return ResLenAfterCombine <=
-         ResLenBeforeCombine + TII->getExtendResourceLenLimit();
+  return ResLenAfterCombine <= ResLenBeforeCombine;
 }
 
 /// \returns true when new instruction sequence should be generated

@@ -11,7 +11,6 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
-#include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -24,7 +23,6 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include <mutex>
 
 using namespace llvm;
@@ -240,10 +238,6 @@ void MCJIT::finalizeLoadedModules() {
 
   // Resolve any outstanding relocations.
   Dyld.resolveRelocations();
-
-  // Check for Dyld error.
-  if (Dyld.hasError())
-    ErrMsg = Dyld.getErrorString().str();
 
   OwnedModules.markAllLoadedModulesAsFinalized();
 
@@ -615,7 +609,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
 
 void *MCJIT::getPointerToNamedFunction(StringRef Name, bool AbortOnFailure) {
   if (!isSymbolSearchingDisabled()) {
-    if (auto Sym = Resolver.findSymbol(std::string(Name))) {
+    if (auto Sym = Resolver.findSymbol(Name)) {
       if (auto AddrOrErr = Sym.getAddress())
         return reinterpret_cast<void*>(
                  static_cast<uintptr_t>(*AddrOrErr));
@@ -625,7 +619,7 @@ void *MCJIT::getPointerToNamedFunction(StringRef Name, bool AbortOnFailure) {
 
   /// If a LazyFunctionCreator is installed, use it to get/create the function.
   if (LazyFunctionCreator)
-    if (void *RP = LazyFunctionCreator(std::string(Name)))
+    if (void *RP = LazyFunctionCreator(Name))
       return RP;
 
   if (AbortOnFailure) {

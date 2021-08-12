@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTYPEFORMAT_H
-#define LLDB_API_SBTYPEFORMAT_H
+#ifndef LLDB_SBTypeFormat_h_
+#define LLDB_SBTypeFormat_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -75,4 +75,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBTYPEFORMAT_H
+#endif // LLDB_SBTypeFormat_h_

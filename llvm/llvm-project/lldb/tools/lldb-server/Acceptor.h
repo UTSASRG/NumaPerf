@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLDB_TOOLS_LLDB_SERVER_ACCEPTOR_H
-#define LLDB_TOOLS_LLDB_SERVER_ACCEPTOR_H
+#ifndef lldb_server_Acceptor_h_
+#define lldb_server_Acceptor_h_
 
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Connection.h"
@@ -57,4 +57,4 @@ private:
 } // namespace lldb_server
 } // namespace lldb_private
 
-#endif // LLDB_TOOLS_LLDB_SERVER_ACCEPTOR_H
+#endif // lldb_server_Acceptor_h_

@@ -20,6 +20,8 @@
 
 namespace llvm {
 
+class TargetInstrInfo;
+
 struct XCoreRegisterInfo : public XCoreGenRegisterInfo {
 public:
   XCoreRegisterInfo();
@@ -31,6 +33,8 @@ public:
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
+
+  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
 
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 

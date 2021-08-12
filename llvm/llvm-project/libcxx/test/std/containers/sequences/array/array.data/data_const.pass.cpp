@@ -21,19 +21,10 @@
 #include "disable_missing_braces_warning.h"
 
 struct NoDefault {
-    TEST_CONSTEXPR NoDefault(int) { }
+  NoDefault(int) {}
 };
 
-#if TEST_STD_VER < 11
-struct natural_alignment {
-    long t1;
-    long long t2;
-    double t3;
-    long double t4;
-};
-#endif
-
-TEST_CONSTEXPR_CXX17 bool tests()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -49,44 +40,36 @@ TEST_CONSTEXPR_CXX17 bool tests()
         typedef std::array<T, 0> C;
         const C c = {};
         const T* p = c.data();
-        (void)p;
+        (void)p; // to placate scan-build
     }
     {
-        typedef NoDefault T;
-        typedef std::array<T, 0> C;
-        const C c = {};
-        const T* p = c.data();
-        (void)p;
+      typedef NoDefault T;
+      typedef std::array<T, 0> C;
+      const C c = {};
+      const T* p = c.data();
+      LIBCPP_ASSERT(p != nullptr);
     }
     {
-        std::array<int, 5> const c = {0, 1, 2, 3, 4};
-        assert(c.data() == &c[0]);
-        assert(*c.data() == c[0]);
+      typedef std::max_align_t T;
+      typedef std::array<T, 0> C;
+      const C c = {};
+      const T* p = c.data();
+      LIBCPP_ASSERT(p != nullptr);
+      std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
+      assert(pint % TEST_ALIGNOF(std::max_align_t) == 0);
     }
+#if TEST_STD_VER > 14
+    {
+        typedef std::array<int, 5> C;
+        constexpr C c1{0,1,2,3,4};
+        constexpr const C c2{0,1,2,3,4};
 
-    return true;
-}
-
-int main(int, char**)
-{
-    tests();
-#if TEST_STD_VER >= 17
-    static_assert(tests(), "");
+        static_assert (  c1.data()  == &c1[0], "");
+        static_assert ( *c1.data()  ==  c1[0], "");
+        static_assert (  c2.data()  == &c2[0], "");
+        static_assert ( *c2.data()  ==  c2[0], "");
+    }
 #endif
 
-    // Test the alignment of data()
-    {
-#if TEST_STD_VER < 11
-        typedef natural_alignment T;
-#else
-        typedef std::max_align_t T;
-#endif
-        typedef std::array<T, 0> C;
-        const C c = {};
-        const T* p = c.data();
-        std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
-        assert(pint % TEST_ALIGNOF(T) == 0);
-    }
-
-    return 0;
+  return 0;
 }

@@ -1,12 +1,9 @@
-add_subdirectory(ML)
-
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
   AliasAnalysisSummary.cpp
   AliasSetTracker.cpp
   Analysis.cpp
-  AssumeBundleQueries.cpp
   AssumptionCache.cpp
   BasicAliasAnalysis.cpp
   BlockFrequencyInfo.cpp
@@ -37,12 +34,10 @@ add_llvm_component_library(LLVMAnalysis
   EHPersonalities.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp
-  HeatUtils.cpp
   IVDescriptors.cpp
   IVUsers.cpp
   IndirectCallPromotionAnalysis.cpp
   InlineCost.cpp
-  InlineAdvisor.cpp
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
@@ -58,7 +53,6 @@ add_llvm_component_library(LLVMAnalysis
   LoopAccessAnalysis.cpp
   LoopAnalysisManager.cpp
   LoopCacheAnalysis.cpp
-  LoopNestAnalysis.cpp
   LoopUnrollAnalyzer.cpp
   LoopInfo.cpp
   LoopPass.cpp
@@ -76,6 +70,7 @@ add_llvm_component_library(LLVMAnalysis
   ObjCARCAnalysisUtils.cpp
   ObjCARCInstKind.cpp
   OptimizationRemarkEmitter.cpp
+  OrderedBasicBlock.cpp
   OrderedInstructions.cpp
   PHITransAddr.cpp
   PhiValues.cpp
@@ -87,6 +82,7 @@ add_llvm_component_library(LLVMAnalysis
   RegionPrinter.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp
+  ScalarEvolutionExpander.cpp
   ScalarEvolutionNormalization.cpp
   StackSafetyAnalysis.cpp
   SyncDependenceAnalysis.cpp

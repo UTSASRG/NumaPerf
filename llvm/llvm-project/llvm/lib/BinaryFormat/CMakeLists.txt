@@ -1,7 +1,6 @@
 add_llvm_component_library(LLVMBinaryFormat
   AMDGPUMetadataVerifier.cpp
   Dwarf.cpp
-  MachO.cpp
   Magic.cpp
   Minidump.cpp
   MsgPackDocument.cpp

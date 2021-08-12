@@ -22,12 +22,12 @@ auto va = A() <=> A(); // expected-note {{required here}}
 
 #pragma clang module import compare.other
 
-// expected-note@std-compare.h:* 2+{{not reachable}}
+// expected-note@std-compare.h:* 2+{{previous definition}}
 
-void b() { void(0 <=> 0); } // expected-error 1+{{missing '#include "std-compare.h"'; 'strong_ordering' must be defined}}
+void b() { void(0 <=> 0); } // expected-error 1+{{definition of 'strong_ordering' must be imported}}
 
 struct B {
-  CC operator<=>(const B&) const = default; // expected-error 1+{{missing '#include "std-compare.h"'; 'strong_ordering' must be defined}}
+  CC operator<=>(const B&) const = default; // expected-error 1+{{definition of 'strong_ordering' must be imported}}
 };
 auto vb = B() <=> B(); // expected-note {{required here}}
 

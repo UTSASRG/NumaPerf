@@ -3,7 +3,7 @@
 # RUN: lld-link -entry:main -nodefaultlib %t.obj -out:%t.exe
 # RUN: llvm-readobj %t.exe -sections -section-data | FileCheck %s
 
-# Section relocations against absolute symbols resolve to the last real output
+# Section relocations against absolute symbols resolve to the last real ouput
 # section index plus one.
 
 .text

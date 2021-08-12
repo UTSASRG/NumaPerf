@@ -26,8 +26,7 @@ struct RegisterInfo;
 
 class RegisterValue {
 public:
-  // big enough to support up to 256 byte AArch64 SVE
-  enum { kMaxRegisterByteSize = 256u };
+  enum { kMaxRegisterByteSize = 64u };
 
   enum Type {
     eTypeInvalid,
@@ -262,7 +261,7 @@ protected:
   struct {
     uint8_t bytes[kMaxRegisterByteSize]; // This must be big enough to hold any
                                          // register for any supported target.
-    uint16_t length;
+    uint8_t length;
     lldb::ByteOrder byte_order;
   } buffer;
 };

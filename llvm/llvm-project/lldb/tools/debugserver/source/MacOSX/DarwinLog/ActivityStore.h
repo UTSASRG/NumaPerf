@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_ACTIVITYSTORE_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_ACTIVITYSTORE_H
+#ifndef ActivityStore_h
+#define ActivityStore_h
 
 #include <string>
 
@@ -26,4 +26,4 @@ protected:
   ActivityStore();
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_ACTIVITYSTORE_H
+#endif /* ActivityStore_h */

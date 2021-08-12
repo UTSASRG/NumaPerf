@@ -14,7 +14,7 @@
   li 3,55
   sc
 
-// CHECK:      Format: elf64-powerpc
+// CHECK:Format: ELF64-ppc64
 // LE-NEXT:    Arch: powerpc64le
 // BE-NEXT:    Arch: powerpc64{{$}}
 // CHECK-NEXT: AddressSize: 64bit

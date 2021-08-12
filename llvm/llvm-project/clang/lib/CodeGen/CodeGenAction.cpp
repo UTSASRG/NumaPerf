@@ -32,8 +32,8 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
@@ -86,15 +86,15 @@ namespace clang {
                                    const CodeGenOptions CodeGenOpts) {
     handleAllErrors(
         std::move(E),
-      [&](const LLVMRemarkSetupFileError &E) {
+      [&](const RemarkSetupFileError &E) {
           Diags.Report(diag::err_cannot_open_file)
               << CodeGenOpts.OptRecordFile << E.message();
         },
-      [&](const LLVMRemarkSetupPatternError &E) {
+      [&](const RemarkSetupPatternError &E) {
           Diags.Report(diag::err_drv_optimization_remark_pattern)
               << E.message() << CodeGenOpts.OptRecordPasses;
         },
-      [&](const LLVMRemarkSetupFormatError &E) {
+      [&](const RemarkSetupFormatError &E) {
           Diags.Report(diag::err_drv_optimization_remark_format)
               << CodeGenOpts.OptRecordFormat;
         });
@@ -246,7 +246,7 @@ namespace clang {
       for (auto &LM : LinkModules) {
         if (LM.PropagateAttrs)
           for (Function &F : *LM.Module)
-            Gen->CGM().addDefaultFunctionDefinitionAttributes(F);
+            Gen->CGM().AddDefaultFnAttrs(F);
 
         CurLinkModule = LM.Module.get();
 
@@ -309,7 +309,7 @@ namespace clang {
         CodeGenOpts, this));
 
       Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
-          setupLLVMOptimizationRemarks(
+          setupOptimizationRemarks(
               Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
               CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
               CodeGenOpts.DiagnosticsHotnessThreshold);
@@ -633,9 +633,8 @@ const FullSourceLoc BackendConsumer::getBestLocationFromDebugLoc(
 
 void BackendConsumer::UnsupportedDiagHandler(
     const llvm::DiagnosticInfoUnsupported &D) {
-  // We only support warnings or errors.
-  assert(D.getSeverity() == llvm::DS_Error ||
-         D.getSeverity() == llvm::DS_Warning);
+  // We only support errors.
+  assert(D.getSeverity() == llvm::DS_Error);
 
   StringRef Filename;
   unsigned Line, Column;
@@ -653,11 +652,7 @@ void BackendConsumer::UnsupportedDiagHandler(
     DiagnosticPrinterRawOStream DP(MsgStream);
     D.print(DP);
   }
-
-  auto DiagType = D.getSeverity() == llvm::DS_Error
-                      ? diag::err_fe_backend_unsupported
-                      : diag::warn_fe_backend_unsupported;
-  Diags.Report(Loc, DiagType) << MsgStream.str();
+  Diags.Report(Loc, diag::err_fe_backend_unsupported) << MsgStream.str();
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information
@@ -999,7 +994,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
       BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
       CI.getPreprocessorOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
-      CI.getLangOpts(), CI.getFrontendOpts().ShowTimers, std::string(InFile),
+      CI.getLangOpts(), CI.getFrontendOpts().ShowTimers, InFile,
       std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
 
@@ -1158,7 +1153,7 @@ void CodeGenAction::ExecuteAction() {
         std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
 
     Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
-        setupLLVMOptimizationRemarks(
+        setupOptimizationRemarks(
             Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
             CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
             CodeGenOpts.DiagnosticsHotnessThreshold);

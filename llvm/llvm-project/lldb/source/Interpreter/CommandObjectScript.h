@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_INTERPRETER_COMMANDOBJECTSCRIPT_H
-#define LLDB_SOURCE_INTERPRETER_COMMANDOBJECTSCRIPT_H
+#ifndef liblldb_CommandObjectScript_h_
+#define liblldb_CommandObjectScript_h_
 
 #include "lldb/Interpreter/CommandObject.h"
 
@@ -28,4 +28,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_INTERPRETER_COMMANDOBJECTSCRIPT_H
+#endif // liblldb_CommandObjectScript_h_

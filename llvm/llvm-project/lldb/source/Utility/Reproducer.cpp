@@ -1,4 +1,4 @@
-//===-- Reproducer.cpp ----------------------------------------------------===//
+//===-- Reproducer.cpp ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,15 +18,6 @@ using namespace lldb_private::repro;
 using namespace llvm;
 using namespace llvm::yaml;
 
-static llvm::Optional<bool> GetEnv(const char *var) {
-  std::string val = llvm::StringRef(getenv(var)).lower();
-  if (val == "0" || val == "off")
-    return false;
-  if (val == "1" || val == "on")
-    return true;
-  return {};
-}
-
 Reproducer &Reproducer::Instance() { return *InstanceImpl(); }
 
 llvm::Error Reproducer::Initialize(ReproducerMode mode,
@@ -36,12 +27,12 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
 
   // The environment can override the capture mode.
   if (mode != ReproducerMode::Replay) {
-    if (llvm::Optional<bool> override = GetEnv("LLDB_CAPTURE_REPRODUCER")) {
-      if (*override)
-        mode = ReproducerMode::Capture;
-      else
-        mode = ReproducerMode::Off;
-    }
+    std::string env =
+        llvm::StringRef(getenv("LLDB_CAPTURE_REPRODUCER")).lower();
+    if (env == "0" || env == "off")
+      mode = ReproducerMode::Off;
+    else if (env == "1" || env == "on")
+      mode = ReproducerMode::Capture;
   }
 
   switch (mode) {
@@ -62,9 +53,7 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
     return Instance().SetCapture(root);
   } break;
   case ReproducerMode::Replay:
-    return Instance().SetReplay(root, /*passive*/ false);
-  case ReproducerMode::PassiveReplay:
-    return Instance().SetReplay(root, /*passive*/ true);
+    return Instance().SetReplay(root);
   case ReproducerMode::Off:
     break;
   };
@@ -129,7 +118,7 @@ llvm::Error Reproducer::SetCapture(llvm::Optional<FileSpec> root) {
   return Error::success();
 }
 
-llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root, bool passive) {
+llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root) {
   std::lock_guard<std::mutex> guard(m_mutex);
 
   if (root && m_generator)
@@ -142,7 +131,7 @@ llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root, bool passive) {
     return Error::success();
   }
 
-  m_loader.emplace(*root, passive);
+  m_loader.emplace(*root);
   if (auto e = m_loader->LoadIndex())
     return e;
 
@@ -169,12 +158,8 @@ Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
 }
 
 Generator::~Generator() {
-  if (!m_done) {
-    if (m_auto_generate)
-      Keep();
-    else
-      Discard();
-  }
+  if (!m_done)
+    Discard();
 }
 
 ProviderBase *Generator::Register(std::unique_ptr<ProviderBase> provider) {
@@ -205,10 +190,6 @@ void Generator::Discard() {
   llvm::sys::fs::remove_directories(m_root.GetPath());
 }
 
-void Generator::SetAutoGenerate(bool b) { m_auto_generate = b; }
-
-bool Generator::IsAutoGenerate() const { return m_auto_generate; }
-
 const FileSpec &Generator::GetRoot() const { return m_root; }
 
 void Generator::AddProvidersToIndex() {
@@ -229,9 +210,8 @@ void Generator::AddProvidersToIndex() {
   yout << files;
 }
 
-Loader::Loader(FileSpec root, bool passive)
-    : m_root(MakeAbsolute(std::move(root))), m_loaded(false),
-      m_passive_replay(passive) {}
+Loader::Loader(FileSpec root)
+    : m_root(MakeAbsolute(std::move(root))), m_loaded(false) {}
 
 llvm::Error Loader::LoadIndex() {
   if (m_loaded)
@@ -322,11 +302,6 @@ void WorkingDirectoryProvider::Keep() {
   if (ec)
     return;
   os << m_cwd << "\n";
-}
-
-void FileProvider::recordInterestingDirectory(const llvm::Twine &dir) {
-  if (m_collector)
-    m_collector->addDirectory(dir);
 }
 
 void ProviderBase::anchor() {}

@@ -1,4 +1,4 @@
-//===-- SBFrame.cpp -------------------------------------------------------===//
+//===-- SBFrame.cpp ---------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1225,7 +1225,8 @@ const char *SBFrame::GetFunctionName() const {
           if (inlined_block) {
             const InlineFunctionInfo *inlined_info =
                 inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetName().AsCString();
+            name =
+                inlined_info->GetName(sc.function->GetLanguage()).AsCString();
           }
         }
 
@@ -1268,7 +1269,8 @@ const char *SBFrame::GetDisplayFunctionName() {
           if (inlined_block) {
             const InlineFunctionInfo *inlined_info =
                 inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetDisplayName().AsCString();
+            name = inlined_info->GetDisplayName(sc.function->GetLanguage())
+                       .AsCString();
           }
         }
 

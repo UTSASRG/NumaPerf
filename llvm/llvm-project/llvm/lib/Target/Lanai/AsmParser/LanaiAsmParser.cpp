@@ -47,7 +47,7 @@ struct LanaiOperand;
 
 class LanaiAsmParser : public MCTargetAsmParser {
   // Parse operands
-  std::unique_ptr<LanaiOperand> parseRegister(bool RestoreOnFailure = false);
+  std::unique_ptr<LanaiOperand> parseRegister();
 
   std::unique_ptr<LanaiOperand> parseImmediate();
 
@@ -67,8 +67,6 @@ class LanaiAsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseRegister(unsigned &RegNum, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
 
   bool MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -659,7 +657,7 @@ bool LanaiAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
-    Out.emitInstruction(Inst, SubtargetInfo);
+    Out.EmitInstruction(Inst, SubtargetInfo);
     Opcode = Inst.getOpcode();
     return false;
   case Match_MissingFeature:
@@ -689,30 +687,21 @@ bool LanaiAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
 // backwards compatible with GCC and the different ways inline assembly is
 // handled.
 // TODO: see if there isn't a better way to do this.
-std::unique_ptr<LanaiOperand>
-LanaiAsmParser::parseRegister(bool RestoreOnFailure) {
+std::unique_ptr<LanaiOperand> LanaiAsmParser::parseRegister() {
   SMLoc Start = Parser.getTok().getLoc();
   SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Optional<AsmToken> PercentTok;
 
   unsigned RegNum;
   // Eat the '%'.
-  if (Lexer.getKind() == AsmToken::Percent) {
-    PercentTok = Parser.getTok();
+  if (Lexer.getKind() == AsmToken::Percent)
     Parser.Lex();
-  }
   if (Lexer.getKind() == AsmToken::Identifier) {
     RegNum = MatchRegisterName(Lexer.getTok().getIdentifier());
-    if (RegNum == 0) {
-      if (PercentTok.hasValue() && RestoreOnFailure)
-        Lexer.UnLex(PercentTok.getValue());
+    if (RegNum == 0)
       return nullptr;
-    }
     Parser.Lex(); // Eat identifier token
     return LanaiOperand::createReg(RegNum, Start, End);
   }
-  if (PercentTok.hasValue() && RestoreOnFailure)
-    Lexer.UnLex(PercentTok.getValue());
   return nullptr;
 }
 
@@ -721,23 +710,10 @@ bool LanaiAsmParser::ParseRegister(unsigned &RegNum, SMLoc &StartLoc,
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  std::unique_ptr<LanaiOperand> Op = parseRegister(/*RestoreOnFailure=*/false);
+  std::unique_ptr<LanaiOperand> Op = parseRegister();
   if (Op != nullptr)
     RegNum = Op->getReg();
   return (Op == nullptr);
-}
-
-OperandMatchResultTy LanaiAsmParser::tryParseRegister(unsigned &RegNum,
-                                                      SMLoc &StartLoc,
-                                                      SMLoc &EndLoc) {
-  const AsmToken &Tok = getParser().getTok();
-  StartLoc = Tok.getLoc();
-  EndLoc = Tok.getEndLoc();
-  std::unique_ptr<LanaiOperand> Op = parseRegister(/*RestoreOnFailure=*/true);
-  if (Op == nullptr)
-    return MatchOperand_NoMatch;
-  RegNum = Op->getReg();
-  return MatchOperand_Success;
 }
 
 std::unique_ptr<LanaiOperand> LanaiAsmParser::parseIdentifier() {

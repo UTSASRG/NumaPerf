@@ -48,62 +48,19 @@ extern const SubtargetFeatureKV AMDGPUFeatureKV[AMDGPU::NumSubtargetFeatures-1];
 
 namespace {
 
-// Target features to propagate.
-static constexpr const FeatureBitset TargetFeatures = {
-  AMDGPU::FeatureWavefrontSize16,
-  AMDGPU::FeatureWavefrontSize32,
-  AMDGPU::FeatureWavefrontSize64
-};
-
-// Attributes to propagate.
-static constexpr const char* AttributeNames[] = {
-  "amdgpu-waves-per-eu"
-};
-
-static constexpr unsigned NumAttr =
-  sizeof(AttributeNames) / sizeof(AttributeNames[0]);
-
 class AMDGPUPropagateAttributes {
-
-  class FnProperties {
-  private:
-    explicit FnProperties(const FeatureBitset &&FB) : Features(FB) {}
-
-  public:
-    explicit FnProperties(const TargetMachine &TM, const Function &F) {
-      Features = TM.getSubtargetImpl(F)->getFeatureBits();
-
-      for (unsigned I = 0; I < NumAttr; ++I)
-        if (F.hasFnAttribute(AttributeNames[I]))
-          Attributes[I] = F.getFnAttribute(AttributeNames[I]);
-    }
-
-    bool operator == (const FnProperties &Other) const {
-      if ((Features & TargetFeatures) != (Other.Features & TargetFeatures))
-        return false;
-      for (unsigned I = 0; I < NumAttr; ++I)
-        if (Attributes[I] != Other.Attributes[I])
-          return false;
-      return true;
-    }
-
-    FnProperties adjustToCaller(const FnProperties &CallerProps) const {
-      FnProperties New((Features & ~TargetFeatures) | CallerProps.Features);
-      for (unsigned I = 0; I < NumAttr; ++I)
-        New.Attributes[I] = CallerProps.Attributes[I];
-      return New;
-    }
-
-    FeatureBitset Features;
-    Optional<Attribute> Attributes[NumAttr];
+  const FeatureBitset TargetFeatures = {
+    AMDGPU::FeatureWavefrontSize16,
+    AMDGPU::FeatureWavefrontSize32,
+    AMDGPU::FeatureWavefrontSize64
   };
 
-  class Clone {
+  class Clone{
   public:
-    Clone(const FnProperties &Props, Function *OrigF, Function *NewF) :
-      Properties(Props), OrigF(OrigF), NewF(NewF) {}
+    Clone(FeatureBitset FeatureMask, Function *OrigF, Function *NewF) :
+      FeatureMask(FeatureMask), OrigF(OrigF), NewF(NewF) {}
 
-    FnProperties Properties;
+    FeatureBitset FeatureMask;
     Function *OrigF;
     Function *NewF;
   };
@@ -120,18 +77,16 @@ class AMDGPUPropagateAttributes {
   SmallVector<Clone, 32> Clones;
 
   // Find a clone with required features.
-  Function *findFunction(const FnProperties &PropsNeeded,
+  Function *findFunction(const FeatureBitset &FeaturesNeeded,
                          Function *OrigF);
 
-  // Clone function \p F and set \p NewProps on the clone.
+  // Clone function F and set NewFeatures on the clone.
   // Cole takes the name of original function.
-  Function *cloneWithProperties(Function &F, const FnProperties &NewProps);
+  Function *cloneWithFeatures(Function &F,
+                              const FeatureBitset &NewFeatures);
 
   // Set new function's features in place.
   void setFeatures(Function &F, const FeatureBitset &NewFeatures);
-
-  // Set new function's attributes in place.
-  void setAttributes(Function &F, const ArrayRef<Optional<Attribute>> NewAttrs);
 
   std::string getFeatureString(const FeatureBitset &Features) const;
 
@@ -200,11 +155,11 @@ INITIALIZE_PASS(AMDGPUPropagateAttributesLate,
                 false, false)
 
 Function *
-AMDGPUPropagateAttributes::findFunction(const FnProperties &PropsNeeded,
+AMDGPUPropagateAttributes::findFunction(const FeatureBitset &FeaturesNeeded,
                                         Function *OrigF) {
   // TODO: search for clone's clones.
   for (Clone &C : Clones)
-    if (C.OrigF == OrigF && PropsNeeded == C.Properties)
+    if (C.OrigF == OrigF && FeaturesNeeded == C.FeatureMask)
       return C.NewF;
 
   return nullptr;
@@ -237,12 +192,12 @@ bool AMDGPUPropagateAttributes::process() {
     NewRoots.clear();
 
     for (auto &F : M.functions()) {
-      if (F.isDeclaration())
+      if (F.isDeclaration() || Roots.count(&F) || Roots.count(&F))
         continue;
 
-      const FnProperties CalleeProps(*TM, F);
+      const FeatureBitset &CalleeBits =
+        TM->getSubtargetImpl(F)->getFeatureBits();
       SmallVector<std::pair<CallBase *, Function *>, 32> ToReplace;
-      SmallSet<CallBase *, 32> Visited;
 
       for (User *U : F.users()) {
         Instruction *I = dyn_cast<Instruction>(U);
@@ -252,36 +207,36 @@ bool AMDGPUPropagateAttributes::process() {
         if (!CI)
           continue;
         Function *Caller = CI->getCaller();
-        if (!Caller || !Visited.insert(CI).second)
+        if (!Caller)
           continue;
-        if (!Roots.count(Caller) && !NewRoots.count(Caller))
+        if (!Roots.count(Caller))
           continue;
 
-        const FnProperties CallerProps(*TM, *Caller);
+        const FeatureBitset &CallerBits =
+          TM->getSubtargetImpl(*Caller)->getFeatureBits() & TargetFeatures;
 
-        if (CalleeProps == CallerProps) {
-          if (!Roots.count(&F))
-            NewRoots.insert(&F);
+        if (CallerBits == (CalleeBits  & TargetFeatures)) {
+          NewRoots.insert(&F);
           continue;
         }
 
-        Function *NewF = findFunction(CallerProps, &F);
+        Function *NewF = findFunction(CallerBits, &F);
         if (!NewF) {
-          const FnProperties NewProps = CalleeProps.adjustToCaller(CallerProps);
+          FeatureBitset NewFeatures((CalleeBits & ~TargetFeatures) |
+                                    CallerBits);
           if (!AllowClone) {
             // This may set different features on different iteartions if
             // there is a contradiction in callers' attributes. In this case
             // we rely on a second pass running on Module, which is allowed
             // to clone.
-            setFeatures(F, NewProps.Features);
-            setAttributes(F, NewProps.Attributes);
+            setFeatures(F, NewFeatures);
             NewRoots.insert(&F);
             Changed = true;
             break;
           }
 
-          NewF = cloneWithProperties(F, NewProps);
-          Clones.push_back(Clone(CallerProps, &F, NewF));
+          NewF = cloneWithFeatures(F, NewFeatures);
+          Clones.push_back(Clone(CallerBits, &F, NewF));
           NewRoots.insert(NewF);
         }
 
@@ -303,30 +258,28 @@ bool AMDGPUPropagateAttributes::process() {
       F->eraseFromParent();
   }
 
-  Roots.clear();
-  Clones.clear();
-
   return Changed;
 }
 
 Function *
-AMDGPUPropagateAttributes::cloneWithProperties(Function &F,
-                                               const FnProperties &NewProps) {
+AMDGPUPropagateAttributes::cloneWithFeatures(Function &F,
+                                             const FeatureBitset &NewFeatures) {
   LLVM_DEBUG(dbgs() << "Cloning " << F.getName() << '\n');
 
   ValueToValueMapTy dummy;
   Function *NewF = CloneFunction(&F, dummy);
-  setFeatures(*NewF, NewProps.Features);
-  setAttributes(*NewF, NewProps.Attributes);
-  NewF->setVisibility(GlobalValue::DefaultVisibility);
-  NewF->setLinkage(GlobalValue::InternalLinkage);
+  setFeatures(*NewF, NewFeatures);
 
   // Swap names. If that is the only clone it will retain the name of now
-  // dead value. Preserve original name for externally visible functions.
-  if (F.hasName() && F.hasLocalLinkage()) {
-    std::string NewName = std::string(NewF->getName());
+  // dead value.
+  if (F.hasName()) {
+    std::string NewName = NewF->getName();
     NewF->takeName(&F);
     F.setName(NewName);
+
+    // Name has changed, it does not need an external symbol.
+    F.setVisibility(GlobalValue::DefaultVisibility);
+    F.setLinkage(GlobalValue::InternalLinkage);
   }
 
   return NewF;
@@ -342,18 +295,6 @@ void AMDGPUPropagateAttributes::setFeatures(Function &F,
 
   F.removeFnAttr("target-features");
   F.addFnAttr("target-features", NewFeatureStr);
-}
-
-void AMDGPUPropagateAttributes::setAttributes(Function &F,
-    const ArrayRef<Optional<Attribute>> NewAttrs) {
-  LLVM_DEBUG(dbgs() << "Set attributes on " << F.getName() << ":\n");
-  for (unsigned I = 0; I < NumAttr; ++I) {
-    F.removeFnAttr(AttributeNames[I]);
-    if (NewAttrs[I]) {
-      LLVM_DEBUG(dbgs() << '\t' << NewAttrs[I]->getAsString() << '\n');
-      F.addFnAttr(*NewAttrs[I]);
-    }
-  }
 }
 
 std::string

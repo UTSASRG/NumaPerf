@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCDATA_H
-#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCDATA_H
+#ifndef CoreFoundationCPP_CFData_h_
+#define CoreFoundationCPP_CFData_h_
 
 #include "CFCReleaser.h"
 
@@ -27,4 +27,4 @@ protected:
   // Classes that inherit from CFCData can see and modify these
 };
 
-#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCDATA_H
+#endif // #ifndef CoreFoundationCPP_CFData_h_

@@ -71,7 +71,6 @@ entry:
 }
 
 ; CHECK: [[OUTLINED_INDIRECT]]:
-; CHECK-SAME: // @[[OUTLINED_INDIRECT]] Thunk
 ; CHECK:        // %bb.0:
 ; CHECK-NEXT:   mov     x8, x0
 ; CHECK-NEXT:   mov     w0, #1
@@ -81,7 +80,6 @@ entry:
 ; CHECK-NEXT:   br      x8
 
 ; CHECK: [[OUTLINED_DIRECT]]:
-; CHECK-SAME: // @[[OUTLINED_DIRECT]] Thunk
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov     w0, #1
 ; CHECK-NEXT:    mov     w1, #2

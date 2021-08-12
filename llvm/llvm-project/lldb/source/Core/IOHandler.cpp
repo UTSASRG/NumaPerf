@@ -1,4 +1,4 @@
-//===-- IOHandler.cpp -----------------------------------------------------===//
+//===-- IOHandler.cpp -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -125,8 +125,6 @@ void IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_top)
       m_top->PrintAsync(stream, s, len);
-    else
-      stream->Write(s, len);
   }
 }
 
@@ -289,19 +287,12 @@ void IOHandlerEditline::Deactivate() {
   m_delegate.IOHandlerDeactivated(*this);
 }
 
-void IOHandlerEditline::TerminalSizeChanged() {
-#if LLDB_ENABLE_LIBEDIT
-  m_editline_up->TerminalSizeChanged();
-#endif
-}
-
 // Split out a line from the buffer, if there is a full one to get.
 static Optional<std::string> SplitLine(std::string &line_buffer) {
   size_t pos = line_buffer.find('\n');
   if (pos == std::string::npos)
     return None;
-  std::string line =
-      std::string(StringRef(line_buffer.c_str(), pos).rtrim("\n\r"));
+  std::string line = StringRef(line_buffer.c_str(), pos).rtrim("\n\r");
   line_buffer = line_buffer.substr(pos + 1);
   return line;
 }
@@ -452,7 +443,7 @@ const char *IOHandlerEditline::GetPrompt() {
 }
 
 bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
-  m_prompt = std::string(prompt);
+  m_prompt = prompt;
 
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)
@@ -467,7 +458,7 @@ const char *IOHandlerEditline::GetContinuationPrompt() {
 }
 
 void IOHandlerEditline::SetContinuationPrompt(llvm::StringRef prompt) {
-  m_continuation_prompt = std::string(prompt);
+  m_continuation_prompt = prompt;
 
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up)

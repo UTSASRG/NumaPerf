@@ -1,4 +1,4 @@
-//===-- ThreadPlanPython.cpp ----------------------------------------------===//
+//===-- ThreadPlanPython.cpp ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -55,16 +55,15 @@ bool ThreadPlanPython::ValidatePlan(Stream *error) {
   return true;
 }
 
-ScriptInterpreter *ThreadPlanPython::GetScriptInterpreter() {
-  return m_process.GetTarget().GetDebugger().GetScriptInterpreter();
-}
-
 void ThreadPlanPython::DidPush() {
   // We set up the script side in DidPush, so that it can push other plans in
   // the constructor, and doesn't have to care about the details of DidPush.
   m_did_push = true;
   if (!m_class_name.empty()) {
-    ScriptInterpreter *script_interp = GetScriptInterpreter();
+    ScriptInterpreter *script_interp = m_thread.GetProcess()
+                                           ->GetTarget()
+                                           .GetDebugger()
+                                           .GetScriptInterpreter();
     if (script_interp) {
       m_implementation_sp = script_interp->CreateScriptedThreadPlan(
           m_class_name.c_str(), m_args_data, m_error_str, 
@@ -80,7 +79,10 @@ bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
 
   bool should_stop = true;
   if (m_implementation_sp) {
-    ScriptInterpreter *script_interp = GetScriptInterpreter();
+    ScriptInterpreter *script_interp = m_thread.GetProcess()
+                                           ->GetTarget()
+                                           .GetDebugger()
+                                           .GetScriptInterpreter();
     if (script_interp) {
       bool script_error;
       should_stop = script_interp->ScriptedThreadPlanShouldStop(
@@ -99,7 +101,10 @@ bool ThreadPlanPython::IsPlanStale() {
 
   bool is_stale = true;
   if (m_implementation_sp) {
-    ScriptInterpreter *script_interp = GetScriptInterpreter();
+    ScriptInterpreter *script_interp = m_thread.GetProcess()
+                                           ->GetTarget()
+                                           .GetDebugger()
+                                           .GetScriptInterpreter();
     if (script_interp) {
       bool script_error;
       is_stale = script_interp->ScriptedThreadPlanIsStale(m_implementation_sp,
@@ -118,7 +123,10 @@ bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
 
   bool explains_stop = true;
   if (m_implementation_sp) {
-    ScriptInterpreter *script_interp = GetScriptInterpreter();
+    ScriptInterpreter *script_interp = m_thread.GetProcess()
+                                           ->GetTarget()
+                                           .GetDebugger()
+                                           .GetScriptInterpreter();
     if (script_interp) {
       bool script_error;
       explains_stop = script_interp->ScriptedThreadPlanExplainsStop(
@@ -151,7 +159,10 @@ lldb::StateType ThreadPlanPython::GetPlanRunState() {
             m_class_name.c_str());
   lldb::StateType run_state = eStateRunning;
   if (m_implementation_sp) {
-    ScriptInterpreter *script_interp = GetScriptInterpreter();
+    ScriptInterpreter *script_interp = m_thread.GetProcess()
+                                           ->GetTarget()
+                                           .GetDebugger()
+                                           .GetScriptInterpreter();
     if (script_interp) {
       bool script_error;
       run_state = script_interp->ScriptedThreadPlanGetRunState(

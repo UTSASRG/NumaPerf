@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUEARCH_H
-#define LLDB_INTERPRETER_OPTIONVALUEARCH_H
+#ifndef liblldb_OptionValueArch_h_
+#define liblldb_OptionValueArch_h_
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -81,4 +81,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUEARCH_H
+#endif // liblldb_OptionValueArch_h_

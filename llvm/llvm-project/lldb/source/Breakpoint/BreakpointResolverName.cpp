@@ -1,4 +1,4 @@
-//===-- BreakpointResolverName.cpp ----------------------------------------===//
+//===-- BreakpointResolverName.cpp ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,8 +23,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
-    const char *name_cstr, FunctionNameType name_type_mask,
+BreakpointResolverName::BreakpointResolverName(
+    Breakpoint *bkpt, const char *name_cstr, FunctionNameType name_type_mask,
     LanguageType language, Breakpoint::MatchType type, lldb::addr_t offset,
     bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
@@ -45,7 +45,7 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
 }
 
 BreakpointResolverName::BreakpointResolverName(
-    const BreakpointSP &bkpt, const char *names[], size_t num_names,
+    Breakpoint *bkpt, const char *names[], size_t num_names,
     FunctionNameType name_type_mask, LanguageType language, lldb::addr_t offset,
     bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
@@ -56,7 +56,7 @@ BreakpointResolverName::BreakpointResolverName(
   }
 }
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
+BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
                                                std::vector<std::string> names,
                                                FunctionNameType name_type_mask,
                                                LanguageType language,
@@ -70,7 +70,7 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
   }
 }
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
+BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
                                                RegularExpression func_regex,
                                                lldb::LanguageType language,
                                                lldb::addr_t offset,
@@ -80,16 +80,18 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
       m_match_type(Breakpoint::Regexp), m_language(language),
       m_skip_prologue(skip_prologue) {}
 
+BreakpointResolverName::~BreakpointResolverName() = default;
+
 BreakpointResolverName::BreakpointResolverName(
     const BreakpointResolverName &rhs)
-    : BreakpointResolver(rhs.GetBreakpoint(), BreakpointResolver::NameResolver,
-                         rhs.GetOffset()),
+    : BreakpointResolver(rhs.m_breakpoint, BreakpointResolver::NameResolver,
+                         rhs.m_offset),
       m_lookups(rhs.m_lookups), m_class_name(rhs.m_class_name),
       m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
       m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
 
 BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
+    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
     Status &error) {
   LanguageType language = eLanguageTypeUnknown;
   llvm::StringRef language_name;
@@ -171,7 +173,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
         error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
         return nullptr;
       }
-      names.push_back(std::string(name));
+      names.push_back(name);
       name_masks.push_back(static_cast<FunctionNameType>(fnt));
     }
 
@@ -197,7 +199,7 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     StructuredData::ArraySP name_masks_sp(new StructuredData::Array());
     for (auto lookup : m_lookups) {
       names_sp->AddItem(StructuredData::StringSP(
-          new StructuredData::String(lookup.GetName().GetStringRef())));
+          new StructuredData::String(lookup.GetName().AsCString())));
       name_masks_sp->AddItem(StructuredData::IntegerSP(
           new StructuredData::Integer(lookup.GetNameTypeMask())));
     }
@@ -249,6 +251,14 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
 Searcher::CallbackReturn
 BreakpointResolverName::SearchCallback(SearchFilter &filter,
                                        SymbolContext &context, Address *addr) {
+  SymbolContextList func_list;
+  // SymbolContextList sym_list;
+
+  uint32_t i;
+  bool new_location;
+  Address break_addr;
+  assert(m_breakpoint != nullptr);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
   if (m_class_name) {
@@ -256,8 +266,6 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       log->Warning("Class/method function specification not supported yet.\n");
     return Searcher::eCallbackReturnStop;
   }
-
-  SymbolContextList func_list;
   bool filter_by_cu =
       (filter.GetFilterRequiredItems() & eSymbolContextCompUnit) != 0;
   bool filter_by_language = (m_language != eLanguageTypeUnknown);
@@ -270,9 +278,8 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       for (const auto &lookup : m_lookups) {
         const size_t start_func_idx = func_list.GetSize();
         context.module_sp->FindFunctions(
-            lookup.GetLookupName(), CompilerDeclContext(),
-            lookup.GetNameTypeMask(), include_symbols, include_inlines,
-            func_list);
+            lookup.GetLookupName(), nullptr, lookup.GetNameTypeMask(),
+            include_symbols, include_inlines, func_list);
 
         const size_t end_func_idx = func_list.GetSize();
 
@@ -326,70 +333,64 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     }
   }
 
-  BreakpointSP breakpoint_sp = GetBreakpoint();
-  Breakpoint &breakpoint = *breakpoint_sp;
-  Address break_addr;
-
   // Remove any duplicates between the function list and the symbol list
   SymbolContext sc;
-  if (!func_list.GetSize())
-    return Searcher::eCallbackReturnContinue;
+  if (func_list.GetSize()) {
+    for (i = 0; i < func_list.GetSize(); i++) {
+      if (func_list.GetContextAtIndex(i, sc)) {
+        bool is_reexported = false;
 
-  for (uint32_t i = 0; i < func_list.GetSize(); i++) {
-    if (!func_list.GetContextAtIndex(i, sc))
-      continue;
+        if (sc.block && sc.block->GetInlinedFunctionInfo()) {
+          if (!sc.block->GetStartAddress(break_addr))
+            break_addr.Clear();
+        } else if (sc.function) {
+          break_addr = sc.function->GetAddressRange().GetBaseAddress();
+          if (m_skip_prologue && break_addr.IsValid()) {
+            const uint32_t prologue_byte_size =
+                sc.function->GetPrologueByteSize();
+            if (prologue_byte_size)
+              break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+          }
+        } else if (sc.symbol) {
+          if (sc.symbol->GetType() == eSymbolTypeReExported) {
+            const Symbol *actual_symbol =
+                sc.symbol->ResolveReExportedSymbol(m_breakpoint->GetTarget());
+            if (actual_symbol) {
+              is_reexported = true;
+              break_addr = actual_symbol->GetAddress();
+            }
+          } else {
+            break_addr = sc.symbol->GetAddress();
+          }
 
-    bool is_reexported = false;
-
-    if (sc.block && sc.block->GetInlinedFunctionInfo()) {
-      if (!sc.block->GetStartAddress(break_addr))
-        break_addr.Clear();
-    } else if (sc.function) {
-      break_addr = sc.function->GetAddressRange().GetBaseAddress();
-      if (m_skip_prologue && break_addr.IsValid()) {
-        const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
-        if (prologue_byte_size)
-          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
-      }
-    } else if (sc.symbol) {
-      if (sc.symbol->GetType() == eSymbolTypeReExported) {
-        const Symbol *actual_symbol =
-            sc.symbol->ResolveReExportedSymbol(breakpoint.GetTarget());
-        if (actual_symbol) {
-          is_reexported = true;
-          break_addr = actual_symbol->GetAddress();
+          if (m_skip_prologue && break_addr.IsValid()) {
+            const uint32_t prologue_byte_size =
+                sc.symbol->GetPrologueByteSize();
+            if (prologue_byte_size)
+              break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+            else {
+              const Architecture *arch =
+                  m_breakpoint->GetTarget().GetArchitecturePlugin();
+              if (arch)
+                arch->AdjustBreakpointAddress(*sc.symbol, break_addr);
+            }
+          }
         }
-      } else {
-        break_addr = sc.symbol->GetAddress();
-      }
 
-      if (m_skip_prologue && break_addr.IsValid()) {
-        const uint32_t prologue_byte_size = sc.symbol->GetPrologueByteSize();
-        if (prologue_byte_size)
-          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
-        else {
-          const Architecture *arch =
-              breakpoint.GetTarget().GetArchitecturePlugin();
-          if (arch)
-            arch->AdjustBreakpointAddress(*sc.symbol, break_addr);
+        if (break_addr.IsValid()) {
+          if (filter.AddressPasses(break_addr)) {
+            BreakpointLocationSP bp_loc_sp(
+                AddLocation(break_addr, &new_location));
+            bp_loc_sp->SetIsReExported(is_reexported);
+            if (bp_loc_sp && new_location && !m_breakpoint->IsInternal()) {
+              if (log) {
+                StreamString s;
+                bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
+                LLDB_LOGF(log, "Added location: %s\n", s.GetData());
+              }
+            }
+          }
         }
-      }
-    }
-
-    if (!break_addr.IsValid())
-      continue;
-
-    if (!filter.AddressPasses(break_addr))
-      continue;
-
-    bool new_location;
-    BreakpointLocationSP bp_loc_sp(AddLocation(break_addr, &new_location));
-    bp_loc_sp->SetIsReExported(is_reexported);
-    if (bp_loc_sp && new_location && !breakpoint.IsInternal()) {
-      if (log) {
-        StreamString s;
-        bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
-        LLDB_LOGF(log, "Added location: %s\n", s.GetData());
       }
     }
   }
@@ -425,8 +426,8 @@ void BreakpointResolverName::GetDescription(Stream *s) {
 void BreakpointResolverName::Dump(Stream *s) const {}
 
 lldb::BreakpointResolverSP
-BreakpointResolverName::CopyForBreakpoint(BreakpointSP &breakpoint) {
+BreakpointResolverName::CopyForBreakpoint(Breakpoint &breakpoint) {
   lldb::BreakpointResolverSP ret_sp(new BreakpointResolverName(*this));
-  ret_sp->SetBreakpoint(breakpoint);
+  ret_sp->SetBreakpoint(&breakpoint);
   return ret_sp;
 }

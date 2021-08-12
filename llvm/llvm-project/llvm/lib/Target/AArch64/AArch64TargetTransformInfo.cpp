@@ -57,8 +57,7 @@ int AArch64TTIImpl::getIntImmCost(int64_t Val) {
 }
 
 /// Calculate the cost of materializing the given constant.
-int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind) {
+int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -83,8 +82,7 @@ int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 }
 
 int AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                      const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind) {
+                                      const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -141,17 +139,16 @@ int AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
   if (Idx == ImmIdx) {
     int NumConstants = (BitSize + 63) / 64;
-    int Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+    int Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)
                : Cost;
   }
-  return AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+  return AArch64TTIImpl::getIntImmCost(Imm, Ty);
 }
 
 int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                        const APInt &Imm, Type *Ty,
-                                        TTI::TargetCostKind CostKind) {
+                                        const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -164,7 +161,7 @@ int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   // selected instruction, so we compute the materialization cost for the
   // immediate directly.
   if (IID >= Intrinsic::aarch64_addg && IID <= Intrinsic::aarch64_udiv)
-    return AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+    return AArch64TTIImpl::getIntImmCost(Imm, Ty);
 
   switch (IID) {
   default:
@@ -177,7 +174,7 @@ int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   case Intrinsic::umul_with_overflow:
     if (Idx == 1) {
       int NumConstants = (BitSize + 63) / 64;
-      int Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+      int Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty);
       return (Cost <= NumConstants * TTI::TCC_Basic)
                  ? static_cast<int>(TTI::TCC_Free)
                  : Cost;
@@ -193,7 +190,7 @@ int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   }
-  return AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+  return AArch64TTIImpl::getIntImmCost(Imm, Ty);
 }
 
 TargetTransformInfo::PopcntSupportKind
@@ -211,8 +208,8 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // A helper that returns a vector type from the given type. The number of
   // elements in type Ty determine the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
-    return FixedVectorType::get(ArgTy->getScalarType(),
-                                cast<VectorType>(DstTy)->getNumElements());
+    return VectorType::get(ArgTy->getScalarType(),
+                           DstTy->getVectorNumElements());
   };
 
   // Exit early if DstTy is not a vector type whose elements are at least
@@ -254,7 +251,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 
   // Legalize the source type and ensure it can be used in a widening
   // operation.
-  auto *SrcTy = toVectorTy(Extend->getSrcTy());
+  Type *SrcTy = toVectorTy(Extend->getSrcTy());
   auto SrcTyL = TLI->getTypeLegalizationCost(DL, SrcTy);
   unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
   if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())
@@ -270,7 +267,6 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 }
 
 int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                                     TTI::TargetCostKind CostKind,
                                      const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
@@ -295,18 +291,11 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
 
-  // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](int Cost) {
-    if (CostKind != TTI::TCK_RecipThroughput)
-      return Cost == 0 ? 0 : 1;
-    return Cost;
-  };
-
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
+    return BaseT::getCastInstrCost(Opcode, Dst, Src);
 
   static const TypeConversionCostTblEntry
   ConversionTbl[] = {
@@ -408,9 +397,9 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
                                                  DstTy.getSimpleVT(),
                                                  SrcTy.getSimpleVT()))
-    return AdjustCost(Entry->Cost);
+    return Entry->Cost;
 
-  return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
+  return BaseT::getCastInstrCost(Opcode, Dst, Src);
 }
 
 int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
@@ -436,18 +425,17 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
   auto VecLT = TLI->getTypeLegalizationCost(DL, VecTy);
   auto DstVT = TLI->getValueType(DL, Dst);
   auto SrcVT = TLI->getValueType(DL, Src);
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   // If the resulting type is still a vector and the destination type is legal,
   // we may get the extension for free. If not, get the default cost for the
   // extend.
   if (!VecLT.second.isVector() || !TLI->isTypeLegal(DstVT))
-    return Cost + getCastInstrCost(Opcode, Dst, Src, CostKind);
+    return Cost + getCastInstrCost(Opcode, Dst, Src);
 
   // The destination type should be larger than the element type. If not, get
   // the default cost for the extend.
   if (DstVT.getSizeInBits() < SrcVT.getSizeInBits())
-    return Cost + getCastInstrCost(Opcode, Dst, Src, CostKind);
+    return Cost + getCastInstrCost(Opcode, Dst, Src);
 
   switch (Opcode) {
   default:
@@ -466,7 +454,7 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
   }
 
   // If we are unable to perform the extend for free, get the default cost.
-  return Cost + getCastInstrCost(Opcode, Dst, Src, CostKind);
+  return Cost + getCastInstrCost(Opcode, Dst, Src);
 }
 
 int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
@@ -495,8 +483,7 @@ int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 int AArch64TTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
+    unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
@@ -517,8 +504,7 @@ int AArch64TTIImpl::getArithmeticInstrCost(
 
   switch (ISD) {
   default:
-    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
+    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
                                                 Opd1PropInfo, Opd2PropInfo);
   case ISD::SDIV:
     if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -527,20 +513,16 @@ int AArch64TTIImpl::getArithmeticInstrCost(
       // normally expanded to the sequence ADD + CMP + SELECT + SRA.
       // The OperandValue properties many not be same as that of previous
       // operation; conservatively assume OP_None.
-      Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
+      Cost += getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info, Opd2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, Opd1Info, Opd2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Select, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
+      Cost += getArithmeticInstrCost(Instruction::Select, Ty, Opd1Info, Opd2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
+      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, Opd1Info, Opd2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
       return Cost;
@@ -553,34 +535,31 @@ int AArch64TTIImpl::getArithmeticInstrCost(
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
         // to MULHS + SUB + SRL + ADD + SRL.
-        int MulCost = getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                             Opd1Info, Opd2Info,
+        int MulCost = getArithmeticInstrCost(Instruction::Mul, Ty, Opd1Info,
+                                             Opd2Info,
                                              TargetTransformInfo::OP_None,
                                              TargetTransformInfo::OP_None);
-        int AddCost = getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
-                                             Opd1Info, Opd2Info,
+        int AddCost = getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info,
+                                             Opd2Info,
                                              TargetTransformInfo::OP_None,
                                              TargetTransformInfo::OP_None);
-        int ShrCost = getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                             Opd1Info, Opd2Info,
+        int ShrCost = getArithmeticInstrCost(Instruction::AShr, Ty, Opd1Info,
+                                             Opd2Info,
                                              TargetTransformInfo::OP_None,
                                              TargetTransformInfo::OP_None);
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
 
-    Cost += BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                          Opd2Info,
+    Cost += BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
                                           Opd1PropInfo, Opd2PropInfo);
     if (Ty->isVectorTy()) {
       // On AArch64, vector divisions are not supported natively and are
       // expanded into scalar divisions of each pair of elements.
-      Cost += getArithmeticInstrCost(Instruction::ExtractElement, Ty, CostKind,
-                                     Opd1Info, Opd2Info, Opd1PropInfo,
-                                     Opd2PropInfo);
-      Cost += getArithmeticInstrCost(Instruction::InsertElement, Ty, CostKind,
-                                     Opd1Info, Opd2Info, Opd1PropInfo,
-                                     Opd2PropInfo);
+      Cost += getArithmeticInstrCost(Instruction::ExtractElement, Ty, Opd1Info,
+                                     Opd2Info, Opd1PropInfo, Opd2PropInfo);
+      Cost += getArithmeticInstrCost(Instruction::InsertElement, Ty, Opd1Info,
+                                     Opd2Info, Opd1PropInfo, Opd2PropInfo);
       // TODO: if one of the arguments is scalar, then it's not necessary to
       // double the cost of handling the vector elements.
       Cost += Cost;
@@ -617,9 +596,7 @@ int AArch64TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
 }
 
 int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                       Type *CondTy,
-                                       TTI::TargetCostKind CostKind,
-                                       const Instruction *I) {
+                                       Type *CondTy, const Instruction *I) {
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
@@ -646,18 +623,13 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         return Entry->Cost;
     }
   }
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
 AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  if (ST->requiresStrictAlign()) {
-    // TODO: Add cost modeling for strict align. Misaligned loads expand to
-    // a bunch of instructions when strict align is enabled.
-    return Options;
-  }
-  Options.AllowOverlappingLoads = true;
+  Options.AllowOverlappingLoads = !ST->requiresStrictAlign();
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   // TODO: Though vector loads usually perform well on AArch64, in some targets
@@ -669,7 +641,6 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
 int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                     MaybeAlign Alignment, unsigned AddressSpace,
-                                    TTI::TargetCostKind CostKind,
                                     const Instruction *I) {
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -685,8 +656,7 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return LT.first * 2 * AmortizationCost;
   }
 
-  if (Ty->isVectorTy() &&
-      cast<VectorType>(Ty)->getElementType()->isIntegerTy(8)) {
+  if (Ty->isVectorTy() && Ty->getVectorElementType()->isIntegerTy(8)) {
     unsigned ProfitableNumElements;
     if (Opcode == Instruction::Store)
       // We use a custom trunc store lowering so v.4b should be profitable.
@@ -696,8 +666,8 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       // have to promote the elements to v.2.
       ProfitableNumElements = 8;
 
-    if (cast<VectorType>(Ty)->getNumElements() < ProfitableNumElements) {
-      unsigned NumVecElts = cast<VectorType>(Ty)->getNumElements();
+    if (Ty->getVectorNumElements() < ProfitableNumElements) {
+      unsigned NumVecElts = Ty->getVectorNumElements();
       unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
       // We generate 2 instructions per vector element.
       return NumVectorizableInstsToAmortize * NumVecElts * 2;
@@ -712,15 +682,14 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                                ArrayRef<unsigned> Indices,
                                                unsigned Alignment,
                                                unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind,
                                                bool UseMaskForCond,
                                                bool UseMaskForGaps) {
   assert(Factor >= 2 && "Invalid interleave factor");
-  auto *VecVTy = cast<VectorType>(VecTy);
+  assert(isa<VectorType>(VecTy) && "Expect a vector type");
 
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    unsigned NumElts = VecVTy->getNumElements();
+    unsigned NumElts = VecTy->getVectorNumElements();
     auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
@@ -732,19 +701,18 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                           Alignment, AddressSpace, CostKind,
+                                           Alignment, AddressSpace,
                                            UseMaskForCond, UseMaskForGaps);
 }
 
 int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
   int Cost = 0;
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   for (auto *I : Tys) {
     if (!I->isVectorTy())
       continue;
-    if (I->getScalarSizeInBits() * cast<VectorType>(I)->getNumElements() == 128)
-      Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
-              getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
+    if (I->getScalarSizeInBits() * I->getVectorNumElements() == 128)
+      Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0) +
+              getMemoryOpCost(Instruction::Load, I, Align(128), 0);
   }
   return Cost;
 }
@@ -934,7 +902,7 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
 
 bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                            TTI::ReductionFlags Flags) const {
-  auto *VTy = cast<VectorType>(Ty);
+  assert(isa<VectorType>(Ty) && "Expected Ty to be a vector type");
   unsigned ScalarBits = Ty->getScalarSizeInBits();
   switch (Opcode) {
   case Instruction::FAdd:
@@ -945,9 +913,10 @@ bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   case Instruction::Mul:
     return false;
   case Instruction::Add:
-    return ScalarBits * VTy->getNumElements() >= 128;
+    return ScalarBits * Ty->getVectorNumElements() >= 128;
   case Instruction::ICmp:
-    return (ScalarBits < 64) && (ScalarBits * VTy->getNumElements() >= 128);
+    return (ScalarBits < 64) &&
+           (ScalarBits * Ty->getVectorNumElements() >= 128);
   case Instruction::FCmp:
     return Flags.NoNaN;
   default:
@@ -956,14 +925,11 @@ bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   return false;
 }
 
-int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
-                                               VectorType *ValTy,
-                                               bool IsPairwiseForm,
-                                               TTI::TargetCostKind CostKind) {
+int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
+                                               bool IsPairwiseForm) {
 
   if (IsPairwiseForm)
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
-                                             CostKind);
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
 
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
   MVT MTy = LT.second;
@@ -984,12 +950,11 @@ int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
   if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
     return LT.first * Entry->Cost;
 
-  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
-                                           CostKind);
+  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
 }
 
-int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                   int Index, VectorType *SubTp) {
+int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
+                                   Type *SubTp) {
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc) {
     static const CostTblEntry ShuffleTbl[] = {

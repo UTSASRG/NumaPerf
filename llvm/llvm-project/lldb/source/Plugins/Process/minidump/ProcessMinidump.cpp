@@ -1,4 +1,4 @@
-//===-- ProcessMinidump.cpp -----------------------------------------------===//
+//===-- ProcessMinidump.cpp -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,8 +40,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
-
-LLDB_PLUGIN_DEFINE(ProcessMinidump)
 
 namespace {
 
@@ -228,10 +226,8 @@ Status ProcessMinidump::DoLoadCore() {
 
   llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
   if (!pid) {
-    GetTarget().GetDebugger().GetAsyncErrorStream()->PutCString(
-        "Unable to retrieve process ID from minidump file, setting process ID "
-        "to 1.\n");
-    pid = 1;
+    error.SetErrorString("failed to parse PID");
+    return error;
   }
   SetID(pid.getValue());
 
@@ -257,7 +253,7 @@ void ProcessMinidump::RefreshStateAfterStop() {
 
     // TODO: The definition and use of this "dump requested" constant
     // in Breakpad are actually Linux-specific, and for similar use
-    // cases on Mac/Windows it defines different constants, referring
+    // cases on Mac/Windows it defines differnt constants, referring
     // to them as "simulated" exceptions; consider moving this check
     // down to the OS-specific paths and checking each OS for its own
     // constant.

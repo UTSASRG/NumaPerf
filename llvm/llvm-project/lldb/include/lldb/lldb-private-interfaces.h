@@ -6,23 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
-#define LLDB_LLDB_PRIVATE_INTERFACES_H
+#ifndef liblldb_lldb_private_interfaces_h_
+#define liblldb_lldb_private_interfaces_h_
 
 #if defined(__cplusplus)
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
-#include <memory>
+
+#include "lldb/lldb-private-enumerations.h"
+
 #include <set>
 
 namespace lldb_private {
-typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
-                                         const ArchSpec &arch);
-typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
-    const ArchSpec &arch);
+typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp, const ArchSpec &arch);
 typedef Disassembler *(*DisassemblerCreateInstance)(const ArchSpec &arch,
                                                     const char *flavor);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,
@@ -109,4 +107,4 @@ typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 
 #endif // #if defined(__cplusplus)
 
-#endif // LLDB_LLDB_PRIVATE_INTERFACES_H
+#endif // liblldb_lldb_private_interfaces_h_

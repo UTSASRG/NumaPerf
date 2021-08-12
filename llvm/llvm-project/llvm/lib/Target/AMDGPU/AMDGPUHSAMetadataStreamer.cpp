@@ -47,7 +47,7 @@ void MetadataStreamerV2::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
   HSAMD::Metadata FromHSAMetadataString;
-  if (fromString(std::string(HSAMetadataString), FromHSAMetadataString)) {
+  if (fromString(HSAMetadataString, FromHSAMetadataString)) {
     errs() << "FAIL\n";
     return;
   }
@@ -152,8 +152,8 @@ ValueType MetadataStreamerV2::getValueType(Type *Ty, StringRef TypeName) const {
     return ValueType::F64;
   case Type::PointerTyID:
     return getValueType(Ty->getPointerElementType(), TypeName);
-  case Type::FixedVectorTyID:
-    return getValueType(cast<VectorType>(Ty)->getElementType(), TypeName);
+  case Type::VectorTyID:
+    return getValueType(Ty->getVectorElementType(), TypeName);
   default:
     return ValueType::Struct;
   }
@@ -185,10 +185,10 @@ std::string MetadataStreamerV2::getTypeName(Type *Ty, bool Signed) const {
     return "float";
   case Type::DoubleTyID:
     return "double";
-  case Type::FixedVectorTyID: {
-    auto VecTy = cast<FixedVectorType>(Ty);
+  case Type::VectorTyID: {
+    auto VecTy = cast<VectorType>(Ty);
     auto ElTy = VecTy->getElementType();
-    auto NumElements = VecTy->getNumElements();
+    auto NumElements = VecTy->getVectorNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
   }
   default:
@@ -259,8 +259,7 @@ void MetadataStreamerV2::emitPrintf(const Module &Mod) {
 
   for (auto Op : Node->operands())
     if (Op->getNumOperands())
-      Printf.push_back(
-          std::string(cast<MDString>(Op->getOperand(0))->getString()));
+      Printf.push_back(cast<MDString>(Op->getOperand(0))->getString());
 }
 
 void MetadataStreamerV2::emitKernelLanguage(const Function &Func) {
@@ -368,8 +367,8 @@ void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
   HSAMetadata.mKernels.back().mArgs.push_back(Kernel::Arg::Metadata());
   auto &Arg = HSAMetadata.mKernels.back().mArgs.back();
 
-  Arg.mName = std::string(Name);
-  Arg.mTypeName = std::string(TypeName);
+  Arg.mName = Name;
+  Arg.mTypeName = TypeName;
   Arg.mSize = DL.getTypeAllocSize(Ty);
   Arg.mAlign = DL.getABITypeAlignment(Ty);
   Arg.mValueKind = ValueKind;
@@ -480,7 +479,7 @@ void MetadataStreamerV2::emitKernel(const MachineFunction &MF,
   HSAMetadata.mKernels.push_back(Kernel::Metadata());
   auto &Kernel = HSAMetadata.mKernels.back();
 
-  Kernel.mName = std::string(Func.getName());
+  Kernel.mName = Func.getName();
   Kernel.mSymbolName = (Twine(Func.getName()) + Twine("@kd")).str();
   emitKernelLanguage(Func);
   emitKernelAttrs(Func);
@@ -599,8 +598,8 @@ StringRef MetadataStreamerV3::getValueType(Type *Ty, StringRef TypeName) const {
     return "f64";
   case Type::PointerTyID:
     return getValueType(Ty->getPointerElementType(), TypeName);
-  case Type::FixedVectorTyID:
-    return getValueType(cast<VectorType>(Ty)->getElementType(), TypeName);
+  case Type::VectorTyID:
+    return getValueType(Ty->getVectorElementType(), TypeName);
   default:
     return "struct";
   }
@@ -632,10 +631,10 @@ std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
     return "float";
   case Type::DoubleTyID:
     return "double";
-  case Type::FixedVectorTyID: {
-    auto VecTy = cast<FixedVectorType>(Ty);
+  case Type::VectorTyID: {
+    auto VecTy = cast<VectorType>(Ty);
     auto ElTy = VecTy->getElementType();
-    auto NumElements = VecTy->getNumElements();
+    auto NumElements = VecTy->getVectorNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
   }
   default:

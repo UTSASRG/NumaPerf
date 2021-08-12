@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -86,6 +85,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+  unsigned StackAlign = TFI->getStackAlignment();
   DA = DAG->getDivergenceAnalysis();
 
   // Check whether the function can return without sret-demotion.
@@ -130,31 +130,19 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
   // them.
-  const Align StackAlign = TFI->getStackAlign();
   for (const BasicBlock &BB : *Fn) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Type *Ty = AI->getAllocatedType();
-        Align TyPrefAlign = MF->getDataLayout().getPrefTypeAlign(Ty);
-        // The "specified" alignment is the alignment written on the alloca,
-        // or the preferred alignment of the type if none is specified.
-        //
-        // (Unspecified alignment on allocas will be going away soon.)
-        Align SpecifiedAlign = AI->getAlign();
-
-        // If the preferred alignment of the type is higher than the specified
-        // alignment of the alloca, promote the alignment, as long as it doesn't
-        // require realigning the stack.
-        //
-        // FIXME: Do we really want to second-guess the IR in isel?
-        Align Alignment =
-            std::max(std::min(TyPrefAlign, StackAlign), SpecifiedAlign);
+        unsigned Align =
+          std::max((unsigned)MF->getDataLayout().getPrefTypeAlignment(Ty),
+                   AI->getAlignment());
 
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't
         // do this if there is an extra alignment requirement.
         if (AI->isStaticAlloca() &&
-            (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
+            (TFI->isStackRealignable() || (Align <= StackAlign))) {
           const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
           uint64_t TySize =
               MF->getDataLayout().getTypeAllocSize(Ty).getKnownMinSize();
@@ -166,15 +154,15 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {
             FrameIndex = MF->getFrameInfo().CreateFixedObject(
                 TySize, 0, /*IsImmutable=*/false, /*isAliased=*/true);
-            MF->getFrameInfo().setObjectAlignment(FrameIndex, Alignment);
+            MF->getFrameInfo().setObjectAlignment(FrameIndex, Align);
           } else {
-            FrameIndex = MF->getFrameInfo().CreateStackObject(TySize, Alignment,
-                                                              false, AI);
+            FrameIndex =
+                MF->getFrameInfo().CreateStackObject(TySize, Align, false, AI);
           }
 
           // Scalable vectors may need a special StackID to distinguish
           // them from other (fixed size) stack objects.
-          if (isa<ScalableVectorType>(Ty))
+          if (Ty->isVectorTy() && Ty->getVectorIsScalable())
             MF->getFrameInfo().setStackID(FrameIndex,
                                           TFI->getStackIDForScalableVectors());
 
@@ -188,20 +176,21 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           // FIXME: Overaligned static allocas should be grouped into
           // a single dynamic allocation instead of using a separate
           // stack allocation for each one.
+          if (Align <= StackAlign)
+            Align = 0;
           // Inform the Frame Information that we have variable-sized objects.
-          MF->getFrameInfo().CreateVariableSizedObject(
-              Alignment <= StackAlign ? 0 : Alignment.value(), AI);
+          MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, AI);
         }
       }
 
       // Look for inline asm that clobbers the SP register.
-      if (auto *Call = dyn_cast<CallBase>(&I)) {
-        if (Call->isInlineAsm()) {
+      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+        ImmutableCallSite CS(&I);
+        if (isa<InlineAsm>(CS.getCalledValue())) {
           unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =
-              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI,
-                                    *Call);
+              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI, CS);
           for (TargetLowering::AsmOperandInfo &Op : Ops) {
             if (Op.Type == InlineAsm::isClobber) {
               // Clobbers don't have SDValue operands, hence SDValue().
@@ -365,7 +354,7 @@ void FunctionLoweringInfo::clear() {
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
-Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
+unsigned FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
   return RegInfo->createVirtualRegister(
       MF->getSubtarget().getTargetLowering()->getRegClassFor(VT, isDivergent));
 }
@@ -377,29 +366,29 @@ Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
 /// In the case that the given value has struct or array type, this function
 /// will assign registers for each member or element.
 ///
-Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
+unsigned FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
 
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
-  Register FirstReg;
+  unsigned FirstReg = 0;
   for (unsigned Value = 0, e = ValueVTs.size(); Value != e; ++Value) {
     EVT ValueVT = ValueVTs[Value];
     MVT RegisterVT = TLI->getRegisterType(Ty->getContext(), ValueVT);
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
-      Register R = CreateReg(RegisterVT, isDivergent);
+      unsigned R = CreateReg(RegisterVT, isDivergent);
       if (!FirstReg) FirstReg = R;
     }
   }
   return FirstReg;
 }
 
-Register FunctionLoweringInfo::CreateRegs(const Value *V) {
-  return CreateRegs(V->getType(), DA && DA->isDivergent(V) &&
-                    !TLI->requiresUniformRegister(*MF, V));
+unsigned FunctionLoweringInfo::CreateRegs(const Value *V) {
+  return CreateRegs(V->getType(), DA && !TLI->requiresUniformRegister(*MF, V) &&
+                                      DA->isDivergent(V));
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
@@ -408,7 +397,7 @@ Register FunctionLoweringInfo::CreateRegs(const Value *V) {
 /// the larger bit width by zero extension. The bit width must be no smaller
 /// than the LiveOutInfo's existing bit width.
 const FunctionLoweringInfo::LiveOutInfo *
-FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
+FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
   if (!LiveOutRegInfo.inBounds(Reg))
     return nullptr;
 
@@ -418,7 +407,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
 
   if (BitWidth > LOI->Known.getBitWidth()) {
     LOI->NumSignBits = 1;
-    LOI->Known = LOI->Known.anyext(BitWidth);
+    LOI->Known = LOI->Known.zext(BitWidth, false /* => any extend */);
   }
 
   return LOI;
@@ -442,7 +431,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   IntVT = TLI->getTypeToTransformTo(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
-  Register DestReg = ValueMap[PN];
+  unsigned DestReg = ValueMap[PN];
   if (!Register::isVirtualRegister(DestReg))
     return;
   LiveOutRegInfo.grow(DestReg);
@@ -463,7 +452,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   } else {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
                                 "CopyToReg node was created.");
-    Register SrcReg = ValueMap[V];
+    unsigned SrcReg = ValueMap[V];
     if (!Register::isVirtualRegister(SrcReg)) {
       DestLOI.IsValid = false;
       return;
@@ -498,8 +487,8 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
 
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
                                 "its CopyToReg node was created.");
-    Register SrcReg = ValueMap[V];
-    if (!SrcReg.isVirtual()) {
+    unsigned SrcReg = ValueMap[V];
+    if (!Register::isVirtualRegister(SrcReg)) {
       DestLOI.IsValid = false;
       return;
     }
@@ -533,11 +522,11 @@ int FunctionLoweringInfo::getArgumentFrameIndex(const Argument *A) {
   return INT_MAX;
 }
 
-Register FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
+unsigned FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
     const Value *CPI, const TargetRegisterClass *RC) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   auto I = CatchPadExceptionPointers.insert({CPI, 0});
-  Register &VReg = I.first->second;
+  unsigned &VReg = I.first->second;
   if (I.second)
     VReg = MRI.createVirtualRegister(RC);
   assert(VReg && "null vreg in exception pointer table!");
@@ -545,7 +534,7 @@ Register FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
 }
 
 const Value *
-FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
+FunctionLoweringInfo::getValueFromVirtualReg(unsigned Vreg) {
   if (VirtReg2Value.empty()) {
     SmallVector<EVT, 4> ValueVTs;
     for (auto &P : ValueMap) {

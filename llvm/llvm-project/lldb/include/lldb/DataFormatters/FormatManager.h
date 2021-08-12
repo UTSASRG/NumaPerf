@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_FORMATMANAGER_H
-#define LLDB_DATAFORMATTERS_FORMATMANAGER_H
+#ifndef lldb_FormatManager_h_
+#define lldb_FormatManager_h_
 
 #include <atomic>
 #include <initializer_list>
@@ -170,6 +170,7 @@ public:
   GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
     FormattersMatchVector matches;
     GetPossibleMatches(valobj, valobj.GetCompilerType(),
+                       lldb_private::eFormatterChoiceCriterionDirectChoice,
                        use_dynamic, matches, false, false, false, true);
     return matches;
   }
@@ -183,7 +184,7 @@ public:
 
 private:
   static void GetPossibleMatches(ValueObject &valobj,
-                                 CompilerType compiler_type,
+                                 CompilerType compiler_type, uint32_t reason,
                                  lldb::DynamicValueType use_dynamic,
                                  FormattersMatchVector &entries,
                                  bool did_strip_ptr, bool did_strip_ref,
@@ -223,4 +224,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_FORMATMANAGER_H
+#endif // lldb_FormatManager_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBHOSTOS_H
-#define LLDB_API_SBHOSTOS_H
+#ifndef LLDB_SBHostOS_h_
+#define LLDB_SBHostOS_h_
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFileSpec.h"
@@ -41,4 +41,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBHOSTOS_H
+#endif // LLDB_SBHostOS_h_

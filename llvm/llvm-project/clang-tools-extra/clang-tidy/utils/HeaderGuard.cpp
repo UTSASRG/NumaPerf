@@ -21,7 +21,7 @@ namespace utils {
 static std::string cleanPath(StringRef Path) {
   SmallString<256> Result = Path;
   llvm::sys::path::remove_dots(Result, true);
-  return std::string(Result.str());
+  return Result.str();
 }
 
 namespace {
@@ -186,7 +186,7 @@ public:
           CPPVar));
       return CPPVar;
     }
-    return std::string(CurHeaderGuard);
+    return CurHeaderGuard;
   }
 
   /// Checks the comment after the #endif of a header guard and fixes it
@@ -273,13 +273,13 @@ void HeaderGuardCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {
-  return utils::isFileExtension(FileName, HeaderFileExtensions);
+  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
 }
 
 bool HeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) { return true; }
 
 bool HeaderGuardCheck::shouldSuggestToAddHeaderGuard(StringRef FileName) {
-  return utils::isFileExtension(FileName, HeaderFileExtensions);
+  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
 }
 
 std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {

@@ -119,7 +119,7 @@ std::string RISCVToolChain::computeSysRoot() const {
   if (!llvm::sys::fs::exists(SysRootDir))
     return std::string();
 
-  return std::string(SysRootDir.str());
+  return SysRootDir.str();
 }
 
 void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -142,7 +142,7 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("elf32lriscv");
   }
 
-  std::string Linker = getToolChain().GetLinkerPath();
+  std::string Linker = getToolChain().GetProgramPath(getShortName());
 
   bool WantCRTs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);

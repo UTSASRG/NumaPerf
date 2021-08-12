@@ -15,8 +15,9 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
-using namespace lld;
-using namespace lld::coff;
+
+namespace lld {
+namespace coff {
 
 AutoExporter::AutoExporter() {
   excludeLibs = {
@@ -146,7 +147,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   return !excludeObjects.count(fileName);
 }
 
-void lld::coff::writeDefFile(StringRef name) {
+void writeDefFile(StringRef name) {
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
@@ -164,3 +165,6 @@ void lld::coff::writeDefFile(StringRef name) {
     os << "\n";
   }
 }
+
+} // namespace coff
+} // namespace lld

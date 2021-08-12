@@ -83,17 +83,13 @@ Value::~Value() {
   // reference and something is wrong.  This code is here to print out where
   // the value is still being referenced.
   //
-  // Note that use_empty() cannot be called here, as it eventually downcasts
-  // 'this' to GlobalValue (derived class of Value), but GlobalValue has already
-  // been destructed, so accessing it is UB.
-  //
-  if (!materialized_use_empty()) {
+  if (!use_empty()) {
     dbgs() << "While deleting: " << *VTy << " %" << getName() << "\n";
     for (auto *U : users())
       dbgs() << "Use still stuck around after Def is destroyed:" << *U << "\n";
   }
 #endif
-  assert(materialized_use_empty() && "Uses remain when a value is destroyed!");
+  assert(use_empty() && "Uses remain when a value is destroyed!");
 
   // If this value is named, destroy the name.  This should not be in a symtab
   // at this point.
@@ -128,10 +124,8 @@ void Value::deleteValue() {
 
 void Value::destroyValueName() {
   ValueName *Name = getValueName();
-  if (Name) {
-    MallocAllocator Allocator;
-    Name->Destroy(Allocator);
-  }
+  if (Name)
+    Name->Destroy();
   setValueName(nullptr);
 }
 
@@ -141,51 +135,6 @@ bool Value::hasNUses(unsigned N) const {
 
 bool Value::hasNUsesOrMore(unsigned N) const {
   return hasNItemsOrMore(use_begin(), use_end(), N);
-}
-
-static bool isUnDroppableUser(const User *U) { return !U->isDroppable(); }
-
-Use *Value::getSingleUndroppableUse() {
-  Use *Result = nullptr;
-  for (Use &U : uses()) {
-    if (!U.getUser()->isDroppable()) {
-      if (Result)
-        return nullptr;
-      Result = &U;
-    }
-  }
-  return Result;
-}
-
-bool Value::hasNUndroppableUses(unsigned int N) const {
-  return hasNItems(user_begin(), user_end(), N, isUnDroppableUser);
-}
-
-bool Value::hasNUndroppableUsesOrMore(unsigned int N) const {
-  return hasNItemsOrMore(user_begin(), user_end(), N, isUnDroppableUser);
-}
-
-void Value::dropDroppableUses(
-    llvm::function_ref<bool(const Use *)> ShouldDrop) {
-  SmallVector<Use *, 8> ToBeEdited;
-  for (Use &U : uses())
-    if (U.getUser()->isDroppable() && ShouldDrop(&U))
-      ToBeEdited.push_back(&U);
-  for (Use *U : ToBeEdited) {
-    U->removeFromList();
-    if (auto *Assume = dyn_cast<IntrinsicInst>(U->getUser())) {
-      assert(Assume->getIntrinsicID() == Intrinsic::assume);
-      unsigned OpNo = U->getOperandNo();
-      if (OpNo == 0)
-        Assume->setOperand(0, ConstantInt::getTrue(Assume->getContext()));
-      else {
-        Assume->setOperand(OpNo, UndefValue::get(U->get()->getType()));
-        CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
-        BOI.Tag = getContext().pImpl->getOrInsertBundleTag("ignore");
-      }
-    } else
-      llvm_unreachable("unkown droppable use");
-  }
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
@@ -314,8 +263,7 @@ void Value::setNameImpl(const Twine &NewName) {
     destroyValueName();
 
     // Create the new name.
-    MallocAllocator Allocator;
-    setValueName(ValueName::Create(NameRef, Allocator));
+    setValueName(ValueName::Create(NameRef));
     getValueName()->setValue(this);
     return;
   }
@@ -599,9 +547,9 @@ const Value *Value::stripPointerCastsAndInvariantGroups() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndInvariantGroups>(this);
 }
 
-const Value *Value::stripAndAccumulateConstantOffsets(
-    const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
-    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
+const Value *
+Value::stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
+                                         bool AllowNonInbounds) const {
   if (!getType()->isPtrOrPtrVectorTy())
     return this;
 
@@ -627,7 +575,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // of GEP's pointer type rather than the size of the original
       // pointer type.
       APInt GEPOffset(DL.getIndexTypeSizeInBits(V->getType()), 0);
-      if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+      if (!GEP->accumulateConstantOffset(DL, GEPOffset))
         return V;
 
       // Stop traversal if the pointer offset wouldn't fit in the bit-width
@@ -636,20 +584,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       if (GEPOffset.getMinSignedBits() > BitWidth)
         return V;
 
-      // External Analysis can return a result higher/lower than the value
-      // represents. We need to detect overflow/underflow.
-      APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
-      if (!ExternalAnalysis) {
-        Offset += GEPOffsetST;
-      } else {
-        bool Overflow = false;
-        APInt OldOffset = Offset;
-        Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
-        if (Overflow) {
-          Offset = OldOffset;
-          return V;
-        }
-      }
+      Offset += GEPOffset.sextOrTrunc(BitWidth);
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
@@ -682,7 +617,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     if (DerefBytes == 0 && (A->hasByValAttr() || A->hasStructRetAttr())) {
       Type *PT = cast<PointerType>(A->getType())->getElementType();
       if (PT->isSized())
-        DerefBytes = DL.getTypeStoreSize(PT).getKnownMinSize();
+        DerefBytes = DL.getTypeStoreSize(PT);
     }
     if (DerefBytes == 0) {
       DerefBytes = A->getDereferenceableOrNullBytes();
@@ -723,31 +658,30 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
     if (!AI->isArrayAllocation()) {
-      DerefBytes =
-          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinSize();
+      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType());
       CanBeNull = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
     if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {
       // TODO: Don't outright reject hasExternalWeakLinkage but set the
       // CanBeNull flag.
-      DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedSize();
+      DerefBytes = DL.getTypeStoreSize(GV->getValueType());
       CanBeNull = false;
     }
   }
   return DerefBytes;
 }
 
-Align Value::getPointerAlignment(const DataLayout &DL) const {
+MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
   if (auto *GO = dyn_cast<GlobalObject>(this)) {
     if (isa<Function>(GO)) {
-      Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
+      const MaybeAlign FunctionPtrAlign = DL.getFunctionPtrAlign();
       switch (DL.getFunctionPtrAlignType()) {
       case DataLayout::FunctionPtrAlignType::Independent:
         return FunctionPtrAlign;
       case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-        return std::max(FunctionPtrAlign, GO->getAlign().valueOrOne());
+        return std::max(FunctionPtrAlign, MaybeAlign(GO->getAlignment()));
       }
       llvm_unreachable("Unhandled FunctionPtrAlignType");
     }
@@ -760,47 +694,43 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
           // it the preferred alignment. Otherwise, we have to assume that it
           // may only have the minimum ABI alignment.
           if (GVar->isStrongDefinitionForLinker())
-            return Align(DL.getPreferredAlignment(GVar));
+            return MaybeAlign(DL.getPreferredAlignment(GVar));
           else
-            return DL.getABITypeAlign(ObjectType);
+            return Align(DL.getABITypeAlignment(ObjectType));
         }
       }
     }
-    return Alignment.valueOrOne();
+    return Alignment;
   } else if (const Argument *A = dyn_cast<Argument>(this)) {
-    const MaybeAlign Alignment = A->getParamAlign();
+    const MaybeAlign Alignment(A->getParamAlignment());
     if (!Alignment && A->hasStructRetAttr()) {
       // An sret parameter has at least the ABI alignment of the return type.
       Type *EltTy = cast<PointerType>(A->getType())->getElementType();
       if (EltTy->isSized())
-        return DL.getABITypeAlign(EltTy);
+        return Align(DL.getABITypeAlignment(EltTy));
     }
-    return Alignment.valueOrOne();
+    return Alignment;
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
-    return AI->getAlign();
+    const MaybeAlign Alignment(AI->getAlignment());
+    if (!Alignment) {
+      Type *AllocatedType = AI->getAllocatedType();
+      if (AllocatedType->isSized())
+        return MaybeAlign(DL.getPrefTypeAlignment(AllocatedType));
+    }
+    return Alignment;
   } else if (const auto *Call = dyn_cast<CallBase>(this)) {
-    MaybeAlign Alignment = Call->getRetAlign();
+    const MaybeAlign Alignment(Call->getRetAlignment());
     if (!Alignment && Call->getCalledFunction())
-      Alignment = Call->getCalledFunction()->getAttributes().getRetAlignment();
-    return Alignment.valueOrOne();
+      return MaybeAlign(
+          Call->getCalledFunction()->getAttributes().getRetAlignment());
+    return Alignment;
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
-      return Align(CI->getLimitedValue());
-    }
-  } else if (auto *CstPtr = dyn_cast<Constant>(this)) {
-    if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
-            const_cast<Constant *>(CstPtr), DL.getIntPtrType(getType()),
-            /*OnlyIfReduced=*/true))) {
-      size_t TrailingZeros = CstInt->getValue().countTrailingZeros();
-      // While the actual alignment may be large, elsewhere we have
-      // an arbitrary upper alignmet limit, so let's clamp to it.
-      return Align(TrailingZeros < Value::MaxAlignmentExponent
-                       ? uint64_t(1) << TrailingZeros
-                       : Value::MaximumAlignment);
+      return MaybeAlign(CI->getLimitedValue());
     }
   }
-  return Align(1);
+  return llvm::None;
 }
 
 const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
@@ -824,12 +754,12 @@ void Value::reverseUseList() {
   while (Current) {
     Use *Next = Current->Next;
     Current->Next = Head;
-    Head->Prev = &Current->Next;
+    Head->setPrev(&Current->Next);
     Head = Current;
     Current = Next;
   }
   UseList = Head;
-  Head->Prev = &UseList;
+  Head->setPrev(&UseList);
 }
 
 bool Value::isSwiftError() const {

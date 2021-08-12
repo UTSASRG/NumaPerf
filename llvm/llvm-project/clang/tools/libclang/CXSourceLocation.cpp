@@ -10,14 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CXSourceLocation.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "CIndexer.h"
 #include "CLog.h"
 #include "CXLoadedDiagnostic.h"
+#include "CXSourceLocation.h"
 #include "CXString.h"
 #include "CXTranslationUnit.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Frontend/ASTUnit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 

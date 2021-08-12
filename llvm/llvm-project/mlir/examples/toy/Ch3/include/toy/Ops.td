@@ -1,6 +1,6 @@
 //===- Ops.td - Toy dialect operation definitions ----------*- tablegen -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,7 +13,7 @@
 #ifndef TOY_OPS
 #define TOY_OPS
 
-include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpBase.td"
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.
@@ -47,8 +47,9 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
     to the operation as an attribute. For example:
 
     ```mlir
-      %0 = toy.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]>
-                        : tensor<2x3xf64>
+      %0 = "toy.constant"()
+         { value = dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64> }
+        : () -> tensor<2x3xf64>
     ```
   }];
 
@@ -58,22 +59,18 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   // The constant operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseConstantOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
-
   // Add custom build methods for the constant operation. These method populates
   // the `state` that MLIR uses to create operations, i.e. these are used when
   // using `builder.create<ConstantOp>(...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
+    OpBuilder<"Builder *builder, OperationState &state, "
               "DenseElementsAttr value", [{
       build(builder, state, value.getType(), value);
     }]>,
 
     // Build a constant with a given constant floating-point value.
-    OpBuilder<"OpBuilder &builder, OperationState &state, double value">
+    OpBuilder<"Builder *builder, OperationState &state, double value">
   ];
 
   // Invoke a static verify method to verify this constant operation.
@@ -90,13 +87,9 @@ def AddOp : Toy_Op<"add", [NoSideEffect]> {
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseBinaryOp(parser, result); }];
-  let printer = [{ return ::printBinaryOp(p, *this); }];
-
   // Allow building an AddOp with from the two input operands.
   let builders = [
-    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -109,7 +102,7 @@ def GenericCallOp : Toy_Op<"generic_call"> {
     arguments expected by the callee. For example:
 
     ```mlir
-     %4 = toy.generic_call @my_func(%1, %3)
+     %4 = "toy.generic_call"(%1, %3) {callee = @my_func}
            : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64>
     ```
 
@@ -124,14 +117,9 @@ def GenericCallOp : Toy_Op<"generic_call"> {
   // The generic call operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
-  // Specialize assembly printing and parsing using a declarative format.
-  let assemblyFormat = [{
-    $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)
-  }];
-
   // Add custom build methods for the generic call operation.
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
+    OpBuilder<"Builder *builder, OperationState &state, "
               "StringRef callee, ArrayRef<Value> arguments">
   ];
 }
@@ -146,13 +134,9 @@ def MulOp : Toy_Op<"mul", [NoSideEffect]> {
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseBinaryOp(parser, result); }];
-  let printer = [{ return ::printBinaryOp(p, *this); }];
-
   // Allow building a MulOp with from the two input operands.
   let builders = [
-    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -165,8 +149,6 @@ def PrintOp : Toy_Op<"print"> {
 
   // The print operation takes an input tensor to print.
   let arguments = (ins F64Tensor:$input);
-
-  let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
 def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
@@ -176,25 +158,20 @@ def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
     the same number of elements but different shapes. For example:
 
     ```mlir
-       %0 = toy.reshape (%arg1 : tensor<10xf64>) to tensor<5x2xf64>
+       %0 = "toy.reshape"(%arg1) : (tensor<10xf64>) -> tensor<5x2xf64>
     ```
   }];
 
   let arguments = (ins F64Tensor:$input);
 
+  // Enabled registering canonicalization patterns with this operation.
+  let hasCanonicalizer = 1;
+
   // We expect that the reshape operation returns a statically shaped tensor.
   let results = (outs StaticShapeTensorOf<[F64]>);
-
-  let assemblyFormat = [{
-    `(` $input `:` type($input) `)` attr-dict `to` type(results)
-  }];
-
-  // Enable registering canonicalization patterns with this operation.
-  let hasCanonicalizer = 1;
 }
 
-def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
-                                 Terminator]> {
+def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.
@@ -214,12 +191,9 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   // value must match the return type of the enclosing function.
   let arguments = (ins Variadic<F64Tensor>:$input);
 
-  // The return operation only emits the input in the format if it is present.
-  let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
-
   // Allow building a ReturnOp with no return operand.
   let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &state", [{ build(b, state, llvm::None); }]
+    "Builder *b, OperationState &state", [{ build(b, state, llvm::None); }]
   >];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -237,16 +211,12 @@ def TransposeOp : Toy_Op<"transpose", [NoSideEffect]> {
   let arguments = (ins F64Tensor:$input);
   let results = (outs F64Tensor);
 
-  let assemblyFormat = [{
-    `(` $input `:` type($input) `)` attr-dict `to` type(results)
-  }];
-
-  // Enable registering canonicalization patterns with this operation.
+  // Enabled registering canonicalization patterns with this operation.
   let hasCanonicalizer = 1;
 
   // Allow building a TransposeOp with from the input operand.
   let builders = [
-    OpBuilder<"OpBuilder &b, OperationState &state, Value input">
+    OpBuilder<"Builder *b, OperationState &state, Value input">
   ];
 
   // Invoke a static verify method to verify this transpose operation.

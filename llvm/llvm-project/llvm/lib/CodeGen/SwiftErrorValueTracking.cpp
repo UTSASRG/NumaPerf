@@ -264,10 +264,11 @@ void SwiftErrorValueTracking::preassignVRegs(
 
   // Iterator over instructions and assign vregs to swifterror defs and uses.
   for (auto It = Begin; It != End; ++It) {
-    if (auto *CB = dyn_cast<CallBase>(&*It)) {
+    ImmutableCallSite CS(&*It);
+    if (CS) {
       // A call-site with a swifterror argument is both use and def.
       const Value *SwiftErrorAddr = nullptr;
-      for (auto &Arg : CB->args()) {
+      for (auto &Arg : CS.args()) {
         if (!Arg->isSwiftError())
           continue;
         // Use of swifterror.

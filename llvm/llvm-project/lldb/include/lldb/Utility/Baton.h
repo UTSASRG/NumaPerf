@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_BATON_H
-#define LLDB_UTILITY_BATON_H
+#ifndef lldb_Baton_h_
+#define lldb_Baton_h_
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
@@ -76,4 +76,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_BATON_H
+#endif // lldb_Baton_h_

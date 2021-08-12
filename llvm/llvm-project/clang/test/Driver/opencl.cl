@@ -32,10 +32,7 @@
 // CHECK-FAST-RELAXED-MATH: "-cc1" {{.*}} "-cl-fast-relaxed-math"
 // CHECK-MAD-ENABLE: "-cc1" {{.*}} "-cl-mad-enable"
 // CHECK-NO-SIGNED-ZEROS: "-cc1" {{.*}} "-cl-no-signed-zeros"
-
-// This is not forwarded
-// CHECK-DENORMS-ARE-ZERO-NOT: "-cl-denorms-are-zero"
-
+// CHECK-DENORMS-ARE-ZERO: "-cc1" {{.*}} "-cl-denorms-are-zero"
 // CHECK-ROUND-DIV: "-cc1" {{.*}} "-cl-fp32-correctly-rounded-divide-sqrt"
 // CHECK-UNIFORM-WG: "-cc1" {{.*}} "-cl-uniform-work-group-size"
 // CHECK-C99: error: invalid value 'c99' in '-cl-std=c99'

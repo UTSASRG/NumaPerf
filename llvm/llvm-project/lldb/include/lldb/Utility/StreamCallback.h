@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_STREAMCALLBACK_H
-#define LLDB_UTILITY_STREAMCALLBACK_H
+#ifndef liblldb_StreamCallback_h_
+#define liblldb_StreamCallback_h_
 
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,4 +32,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_STREAMCALLBACK_H
+#endif // liblldb_StreamCallback_h

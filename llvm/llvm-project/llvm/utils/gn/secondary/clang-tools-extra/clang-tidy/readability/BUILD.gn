@@ -50,6 +50,5 @@ static_library("readability") {
     "StringCompareCheck.cpp",
     "UniqueptrDeleteReleaseCheck.cpp",
     "UppercaseLiteralSuffixCheck.cpp",
-    "UseAnyOfAllOfCheck.cpp",
   ]
 }

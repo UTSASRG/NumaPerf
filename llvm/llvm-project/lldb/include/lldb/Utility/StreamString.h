@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_STREAMSTRING_H
-#define LLDB_UTILITY_STREAMSTRING_H
+#ifndef liblldb_StreamString_h_
+#define liblldb_StreamString_h_
 
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
@@ -51,4 +51,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_STREAMSTRING_H
+#endif // liblldb_StreamString_h_

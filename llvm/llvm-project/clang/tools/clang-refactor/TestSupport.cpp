@@ -14,7 +14,6 @@
 
 #include "TestSupport.h"
 #include "clang/Basic/DiagnosticError.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
@@ -191,7 +190,7 @@ bool TestRefactoringResultConsumer::handleAllResults() {
               const PartialDiagnosticAt &Diag = Err.getDiagnostic();
               llvm::SmallString<100> DiagText;
               Diag.second.EmitToString(getDiags(), DiagText);
-              ErrorMessage = std::string(DiagText);
+              ErrorMessage = DiagText.str().str();
             });
       }
       if (!CanonicalResult && !CanonicalErrorMessage) {

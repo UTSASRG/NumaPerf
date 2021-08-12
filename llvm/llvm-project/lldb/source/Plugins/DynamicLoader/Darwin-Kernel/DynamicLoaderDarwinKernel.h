@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_DARWIN_KERNEL_DYNAMICLOADERDARWINKERNEL_H
-#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_DARWIN_KERNEL_DYNAMICLOADERDARWINKERNEL_H
+#ifndef liblldb_DynamicLoaderDarwinKernel_h_
+#define liblldb_DynamicLoaderDarwinKernel_h_
 
 #include <mutex>
 #include <string>
@@ -296,9 +296,7 @@ protected:
   lldb::user_id_t m_break_id;
 
 private:
-  DynamicLoaderDarwinKernel(const DynamicLoaderDarwinKernel &) = delete;
-  const DynamicLoaderDarwinKernel &
-  operator=(const DynamicLoaderDarwinKernel &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderDarwinKernel);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_DARWIN_KERNEL_DYNAMICLOADERDARWINKERNEL_H
+#endif // liblldb_DynamicLoaderDarwinKernel_h_

@@ -9,6 +9,5 @@ static_library("ASTMatchers") {
   sources = [
     "ASTMatchFinder.cpp",
     "ASTMatchersInternal.cpp",
-    "GtestMatchers.cpp",
   ]
 }

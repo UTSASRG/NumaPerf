@@ -1,4 +1,4 @@
-//===-- TypeMap.cpp -------------------------------------------------------===//
+//===-- TypeMap.cpp --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -121,9 +121,9 @@ bool TypeMap::Remove(const lldb::TypeSP &type_sp) {
   return false;
 }
 
-void TypeMap::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
+void TypeMap::Dump(Stream *s, bool show_context) {
   for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    pos->second->Dump(s, show_context, level);
+    pos->second->Dump(s, show_context);
   }
 }
 
@@ -137,8 +137,7 @@ void TypeMap::RemoveMismatchedTypes(const char *qualified_typename,
     type_basename = qualified_typename;
     type_scope = "";
   }
-  return RemoveMismatchedTypes(std::string(type_scope),
-                               std::string(type_basename), type_class,
+  return RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                exact_match);
 }
 

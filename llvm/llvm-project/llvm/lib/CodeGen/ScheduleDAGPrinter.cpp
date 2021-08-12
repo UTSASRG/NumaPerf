@@ -28,7 +28,7 @@ namespace llvm {
   DOTGraphTraits (bool isSimple=false) : DefaultDOTGraphTraits(isSimple) {}
 
     static std::string getGraphName(const ScheduleDAG *G) {
-      return std::string(G->MF.getName());
+      return G->MF.getName();
     }
 
     static bool renderGraphFromBottomUp() {

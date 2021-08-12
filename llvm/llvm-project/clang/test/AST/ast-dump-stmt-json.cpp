@@ -1461,24 +1461,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:     "end": {}
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ReturnsNonNullAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "AllocSizeAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -1531,33 +1513,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:     "end": {}
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ReturnsNonNullAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "AllocSizeAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "AllocAlignAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -1593,24 +1548,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VisibilityAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ReturnsNonNullAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "AllocSizeAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {}
@@ -1663,33 +1600,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VisibilityAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ReturnsNonNullAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "AllocSizeAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "AllocAlignAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {}

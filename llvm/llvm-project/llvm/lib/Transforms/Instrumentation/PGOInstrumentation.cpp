@@ -52,7 +52,6 @@
 #include "ValueProfileCollector.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -64,13 +63,13 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -377,7 +376,6 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 };
 
@@ -406,7 +404,6 @@ private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 };
 
@@ -439,7 +436,6 @@ INITIALIZE_PASS_BEGIN(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
                       "PGO instrumentation.", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
                     "PGO instrumentation.", false, false)
 
@@ -471,7 +467,7 @@ INITIALIZE_PASS(PGOInstrumentationGenCreateVarLegacyPass,
 
 ModulePass *
 llvm::createPGOInstrumentationGenCreateVarLegacyPass(StringRef CSInstrName) {
-  return new PGOInstrumentationGenCreateVarLegacyPass(std::string(CSInstrName));
+  return new PGOInstrumentationGenCreateVarLegacyPass(CSInstrName);
 }
 
 namespace {
@@ -569,11 +565,11 @@ public:
   }
 
   FuncPGOInstrumentation(
-      Function &Func, TargetLibraryInfo &TLI,
+      Function &Func,
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
       BlockFrequencyInfo *BFI = nullptr, bool IsCS = false)
-      : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers), VPC(Func, TLI),
+      : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers), VPC(Func),
         ValueSites(IPVK_Last + 1), SIVisitor(Func), MST(F, BPI, BFI) {
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
@@ -803,50 +799,18 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   return canInstrument(InstrBB);
 }
 
-// When generating value profiling calls on Windows routines that make use of
-// handler funclets for exception processing an operand bundle needs to attached
-// to the called function. This routine will set \p OpBundles to contain the
-// funclet information, if any is needed, that should be placed on the generated
-// value profiling call for the value profile candidate call.
-static void
-populateEHOperandBundle(VPCandidateInfo &Cand,
-                        DenseMap<BasicBlock *, ColorVector> &BlockColors,
-                        SmallVectorImpl<OperandBundleDef> &OpBundles) {
-  auto *OrigCall = dyn_cast<CallBase>(Cand.AnnotatedInst);
-  if (OrigCall && !isa<IntrinsicInst>(OrigCall)) {
-    // The instrumentation call should belong to the same funclet as a
-    // non-intrinsic call, so just copy the operand bundle, if any exists.
-    Optional<OperandBundleUse> ParentFunclet =
-        OrigCall->getOperandBundle(LLVMContext::OB_funclet);
-    if (ParentFunclet)
-      OpBundles.emplace_back(OperandBundleDef(*ParentFunclet));
-  } else {
-    // Intrinsics or other instructions do not get funclet information from the
-    // front-end. Need to use the BlockColors that was computed by the routine
-    // colorEHFunclets to determine whether a funclet is needed.
-    if (!BlockColors.empty()) {
-      const ColorVector &CV = BlockColors.find(OrigCall->getParent())->second;
-      assert(CV.size() == 1 && "non-unique color for block!");
-      Instruction *EHPad = CV.front()->getFirstNonPHI();
-      if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
-    }
-  }
-}
-
 // Visit all edge and instrument the edges not in MST, and do value profiling.
 // Critical edges will be split.
 static void instrumentOneFunc(
-    Function &F, Module *M, TargetLibraryInfo &TLI, BranchProbabilityInfo *BPI,
-    BlockFrequencyInfo *BFI,
+    Function &F, Module *M, BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFI,
     std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
     bool IsCS) {
   // Split indirectbr critical edges here before computing the MST rather than
   // later in getInstrBB() to avoid invalidating it.
   SplitIndirectBrCriticalEdges(F, BPI, BFI);
 
-  FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(F, TLI, ComdatMembers, true,
-                                                   BPI, BFI, IsCS);
+  FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(F, ComdatMembers, true, BPI,
+                                                   BFI, IsCS);
   std::vector<BasicBlock *> InstrumentBBs;
   FuncInfo.getInstrumentBBs(InstrumentBBs);
   unsigned NumCounters =
@@ -875,15 +839,6 @@ static void instrumentOneFunc(
 
   NumOfPGOICall += FuncInfo.ValueSites[IPVK_IndirectCallTarget].size();
 
-  // Intrinsic function calls do not have funclet operand bundles needed for
-  // Windows exception handling attached to them. However, if value profiling is
-  // inserted for one of these calls, then a funclet value will need to be set
-  // on the instrumentation call based on the funclet coloring.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
-  if (F.hasPersonalityFn() &&
-      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
-    BlockColors = colorEHFunclets(F);
-
   // For each VP Kind, walk the VP candidates and instrument each one.
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
     unsigned SiteIndex = 0;
@@ -905,14 +860,11 @@ static void instrumentOneFunc(
         ToProfile = Builder.CreatePtrToInt(Cand.V, Builder.getInt64Ty());
       assert(ToProfile && "value profiling Value is of unexpected type");
 
-      SmallVector<OperandBundleDef, 1> OpBundles;
-      populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
           {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
            Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
-           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
-          OpBundles);
+           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)});
     }
   } // IPVK_First <= Kind <= IPVK_Last
 }
@@ -1001,12 +953,12 @@ namespace {
 
 class PGOUseFunc {
 public:
-  PGOUseFunc(Function &Func, Module *Modu, TargetLibraryInfo &TLI,
+  PGOUseFunc(Function &Func, Module *Modu,
              std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
              BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFIin,
              ProfileSummaryInfo *PSI, bool IsCS)
       : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
-        FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS),
+        FuncInfo(Func, ComdatMembers, false, BPI, BFIin, IsCS),
         FreqAttr(FFA_Normal), IsCS(IsCS) {}
 
   // Read counts for the instrumented BB from profile.
@@ -1508,8 +1460,7 @@ static void collectComdatMembers(
 }
 
 static bool InstrumentAllFunctions(
-    Module &M, function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
-    function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
+    Module &M, function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI, bool IsCS) {
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
@@ -1521,10 +1472,9 @@ static bool InstrumentAllFunctions(
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
     auto *BFI = LookupBFI(F);
-    instrumentOneFunc(F, &M, TLI, BPI, BFI, ComdatMembers, IsCS);
+    instrumentOneFunc(F, &M, BPI, BFI, ComdatMembers, IsCS);
   }
   return true;
 }
@@ -1540,32 +1490,27 @@ bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
-  auto LookupTLI = [this](Function &F) -> TargetLibraryInfo & {
-    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  };
   auto LookupBPI = [this](Function &F) {
     return &this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
   };
   auto LookupBFI = [this](Function &F) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
-  return InstrumentAllFunctions(M, LookupTLI, LookupBPI, LookupBFI, IsCS);
+  return InstrumentAllFunctions(M, LookupBPI, LookupBFI, IsCS);
 }
 
 PreservedAnalyses PGOInstrumentationGen::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto LookupTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
   auto LookupBPI = [&FAM](Function &F) {
     return &FAM.getResult<BranchProbabilityAnalysis>(F);
   };
+
   auto LookupBFI = [&FAM](Function &F) {
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
-  if (!InstrumentAllFunctions(M, LookupTLI, LookupBPI, LookupBFI, IsCS))
+  if (!InstrumentAllFunctions(M, LookupBPI, LookupBFI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -1573,7 +1518,6 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
 
 static bool annotateAllFunctions(
     Module &M, StringRef ProfileFileName, StringRef ProfileRemappingFileName,
-    function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
     ProfileSummaryInfo *PSI, bool IsCS) {
@@ -1613,7 +1557,6 @@ static bool annotateAllFunctions(
   M.setProfileSummary(PGOReader->getSummary(IsCS).getMD(M.getContext()),
                       IsCS ? ProfileSummary::PSK_CSInstr
                            : ProfileSummary::PSK_Instr);
-  PSI->refresh();
 
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
@@ -1622,13 +1565,12 @@ static bool annotateAllFunctions(
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
     auto *BFI = LookupBFI(F);
     // Split indirectbr critical edges here before computing the MST rather than
     // later in getInstrBB() to avoid invalidating it.
     SplitIndirectBrCriticalEdges(F, BPI, BFI);
-    PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS);
+    PGOUseFunc Func(F, &M, ComdatMembers, BPI, BFI, PSI, IsCS);
     bool AllZeros = false;
     if (!Func.readCounters(PGOReader.get(), AllZeros))
       continue;
@@ -1709,12 +1651,10 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
                                              ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto LookupTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
   auto LookupBPI = [&FAM](Function &F) {
     return &FAM.getResult<BranchProbabilityAnalysis>(F);
   };
+
   auto LookupBFI = [&FAM](Function &F) {
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
@@ -1722,7 +1662,7 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   auto *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName,
-                            LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
+                            LookupBPI, LookupBFI, PSI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -1732,9 +1672,6 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
-  auto LookupTLI = [this](Function &F) -> TargetLibraryInfo & {
-    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  };
   auto LookupBPI = [this](Function &F) {
     return &this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
   };
@@ -1743,13 +1680,13 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
   };
 
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  return annotateAllFunctions(M, ProfileFileName, "", LookupTLI, LookupBPI,
-                              LookupBFI, PSI, IsCS);
+  return annotateAllFunctions(M, ProfileFileName, "", LookupBPI, LookupBFI, PSI,
+                              IsCS);
 }
 
 static std::string getSimpleNodeName(const BasicBlock *Node) {
   if (!Node->getName().empty())
-    return std::string(Node->getName());
+    return Node->getName();
 
   std::string SimpleNodeName;
   raw_string_ostream OS(SimpleNodeName);
@@ -1813,7 +1750,7 @@ void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count) {
 
 template <> struct GraphTraits<PGOUseFunc *> {
   using NodeRef = const BasicBlock *;
-  using ChildIteratorType = const_succ_iterator;
+  using ChildIteratorType = succ_const_iterator;
   using nodes_iterator = pointer_iterator<Function::const_iterator>;
 
   static NodeRef getEntryNode(const PGOUseFunc *G) {
@@ -1840,7 +1777,7 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
       : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const PGOUseFunc *G) {
-    return std::string(G->getFunc().getName());
+    return G->getFunc().getName();
   }
 
   std::string getNodeLabel(const BasicBlock *Node, const PGOUseFunc *Graph) {

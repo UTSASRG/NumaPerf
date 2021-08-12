@@ -112,8 +112,7 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   commonEmitCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
                                     ImplicitParamTy, CE, Args, nullptr);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                  ReturnValueSlot(), Args, nullptr,
-                  CE ? CE->getExprLoc() : SourceLocation{});
+                  ReturnValueSlot(), Args);
 }
 
 RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
@@ -381,7 +380,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           IsArrow ? Base->getType()->getPointeeType() : Base->getType();
       EmitCXXDestructorCall(GD, Callee, This.getPointer(*this), ThisTy,
                             /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), CE);
+                            /*ImplicitParamTy=*/QualType(), nullptr);
     }
     return RValue::get(nullptr);
   }

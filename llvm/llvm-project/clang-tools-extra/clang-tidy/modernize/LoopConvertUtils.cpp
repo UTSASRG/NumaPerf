@@ -668,7 +668,7 @@ bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
 }
 
 /// If we encounter an array with IndexVar as the index of an
-/// ArraySubscriptExpression, note it as a consistent usage and prune the
+/// ArraySubsriptExpression, note it as a consistent usage and prune the
 /// AST traversal.
 ///
 /// For example, given
@@ -851,20 +851,20 @@ std::string VariableNamer::createIndexName() {
 
   size_t Len = ContainerName.size();
   if (Len > 1 && ContainerName.endswith(Style == NS_UpperCase ? "S" : "s")) {
-    IteratorName = std::string(ContainerName.substr(0, Len - 1));
+    IteratorName = ContainerName.substr(0, Len - 1);
     // E.g.: (auto thing : things)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
   if (Len > 2 && ContainerName.endswith(Style == NS_UpperCase ? "S_" : "s_")) {
-    IteratorName = std::string(ContainerName.substr(0, Len - 2));
+    IteratorName = ContainerName.substr(0, Len - 2);
     // E.g.: (auto thing : things_)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
-  return std::string(OldIndex->getName());
+  return OldIndex->getName();
 }
 
 /// Determines whether or not the name \a Symbol conflicts with
@@ -899,7 +899,7 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   // of DeclContext::lookup()). Why is this?
 
   // Finally, determine if the symbol was used in the loop or a child context.
-  DeclFinderASTVisitor DeclFinder(std::string(Symbol), GeneratedDecls);
+  DeclFinderASTVisitor DeclFinder(Symbol, GeneratedDecls);
   return DeclFinder.findUsages(SourceStmt);
 }
 

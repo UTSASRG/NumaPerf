@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_QUEUE_H
-#define LLDB_TARGET_QUEUE_H
+#ifndef liblldb_Queue_h_
+#define liblldb_Queue_h_
 
 #include <string>
 #include <vector>
@@ -144,10 +144,9 @@ private:
                                         // dispatch_queue_t for this Queue
   lldb::QueueKind m_kind;
 
-  Queue(const Queue &) = delete;
-  const Queue &operator=(const Queue &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Queue);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_QUEUE_H
+#endif // liblldb_Queue_h_

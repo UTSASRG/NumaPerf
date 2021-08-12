@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMIOSSIMULATOR_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMIOSSIMULATOR_H
+#ifndef liblldb_PlatformiOSSimulator_h_
+#define liblldb_PlatformiOSSimulator_h_
 
 #include <mutex>
 #include <string>
@@ -71,7 +71,7 @@ public:
   AddClangModuleCompilationOptions(lldb_private::Target *target,
                                    std::vector<std::string> &options) override {
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-        target, options, lldb_private::XcodeSDK::Type::iPhoneSimulator);
+        target, options, PlatformDarwin::SDKType::iPhoneSimulator);
   }
 
 protected:
@@ -82,8 +82,7 @@ protected:
   const char *GetSDKDirectoryAsCString();
 
 private:
-  PlatformiOSSimulator(const PlatformiOSSimulator &) = delete;
-  const PlatformiOSSimulator &operator=(const PlatformiOSSimulator &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformiOSSimulator);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMIOSSIMULATOR_H
+#endif // liblldb_PlatformiOSSimulator_h_

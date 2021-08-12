@@ -16,7 +16,7 @@
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
-#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -392,20 +392,20 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrDestructFunction(
       !isInSanitizerBlacklist(SanitizerKind::ShadowCallStack, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::ShadowCallStack);
 
-  auto RASignKind = getLangOpts().getSignReturnAddressScope();
-  if (RASignKind != LangOptions::SignReturnAddressScopeKind::None) {
+  auto RASignKind = getCodeGenOpts().getSignReturnAddress();
+  if (RASignKind != CodeGenOptions::SignReturnAddressScope::None) {
     Fn->addFnAttr("sign-return-address",
-                  RASignKind == LangOptions::SignReturnAddressScopeKind::All
+                  RASignKind == CodeGenOptions::SignReturnAddressScope::All
                       ? "all"
                       : "non-leaf");
-    auto RASignKey = getLangOpts().getSignReturnAddressKey();
+    auto RASignKey = getCodeGenOpts().getSignReturnAddressKey();
     Fn->addFnAttr("sign-return-address-key",
-                  RASignKey == LangOptions::SignReturnAddressKeyKind::AKey
+                  RASignKey == CodeGenOptions::SignReturnAddressKeyValue::AKey
                       ? "a_key"
                       : "b_key");
   }
 
-  if (getLangOpts().BranchTargetEnforcement)
+  if (getCodeGenOpts().BranchTargetEnforcement)
     Fn->addFnAttr("branch-target-enforcement");
 
   return Fn;

@@ -7,24 +7,18 @@ class Attr<string S> {
 /// Enum attribute.
 class EnumAttr<string S> : Attr<S>;
 
-/// Int attribute.
-class IntAttr<string S> : Attr<S>;
-
 /// StringBool attribute.
 class StrBoolAttr<string S> : Attr<S>;
-
-/// Type attribute.
-class TypeAttr<string S> : Attr<S>;
 
 /// Target-independent enum attributes.
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
 /// 0 means unaligned (different from align(1)).
-def Alignment : IntAttr<"align">;
+def Alignment : EnumAttr<"align">;
 
 /// The result of the function is guaranteed to point to a number of bytes that
 /// we can determine if we know the value of the function's arguments.
-def AllocSize : IntAttr<"allocsize">;
+def AllocSize : EnumAttr<"allocsize">;
 
 /// inline=always.
 def AlwaysInline : EnumAttr<"alwaysinline">;
@@ -37,7 +31,7 @@ def ArgMemOnly : EnumAttr<"argmemonly">;
 def Builtin : EnumAttr<"builtin">;
 
 /// Pass structure by value.
-def ByVal : TypeAttr<"byval">;
+def ByVal : EnumAttr<"byval">;
 
 /// Marks function as being in a cold path.
 def Cold : EnumAttr<"cold">;
@@ -46,10 +40,10 @@ def Cold : EnumAttr<"cold">;
 def Convergent : EnumAttr<"convergent">;
 
 /// Pointer is known to be dereferenceable.
-def Dereferenceable : IntAttr<"dereferenceable">;
+def Dereferenceable : EnumAttr<"dereferenceable">;
 
 /// Pointer is either null or dereferenceable.
-def DereferenceableOrNull : IntAttr<"dereferenceable_or_null">;
+def DereferenceableOrNull : EnumAttr<"dereferenceable_or_null">;
 
 /// Function may only access memory that is inaccessible from IR.
 def InaccessibleMemOnly : EnumAttr<"inaccessiblememonly">;
@@ -103,9 +97,6 @@ def NoInline : EnumAttr<"noinline">;
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind">;
 
-/// Disable merging for call sites
-def NoMerge : EnumAttr<"nomerge">;
-
 /// Pointer is known to be not null.
 def NonNull : EnumAttr<"nonnull">;
 
@@ -127,9 +118,6 @@ def NoCfCheck : EnumAttr<"nocf_check">;
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind">;
 
-/// Null pointer in address space zero is valid.
-def NullPointerIsValid : EnumAttr<"null_pointer_is_valid">;
-
 /// Select optimizations for best fuzzing signal.
 def OptForFuzzing : EnumAttr<"optforfuzzing">;
 
@@ -138,9 +126,6 @@ def OptimizeForSize : EnumAttr<"optsize">;
 
 /// Function must not be optimized.
 def OptimizeNone : EnumAttr<"optnone">;
-
-/// Similar to byval but without a copy.
-def Preallocated : TypeAttr<"preallocated">;
 
 /// Function does not access memory.
 def ReadNone : EnumAttr<"readnone">;
@@ -168,7 +153,7 @@ def SExt : EnumAttr<"signext">;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack">;
+def StackAlignment : EnumAttr<"alignstack">;
 
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable">;
@@ -237,7 +222,6 @@ def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
-def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 
 class CompatRule<string F> {
   // The name of the function called to check the attribute of the caller and
@@ -256,7 +240,6 @@ def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
-def : CompatRule<"isEqual<UseSampleProfileAttr>">;
 
 class MergeRule<string F> {
   // The name of the function called to merge the attributes of the caller and

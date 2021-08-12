@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_JITLOADERLIST_H
-#define LLDB_TARGET_JITLOADERLIST_H
+#ifndef liblldb_JITLoaderList_h_
+#define liblldb_JITLoaderList_h_
 
 #include <mutex>
 #include <vector>
@@ -45,4 +45,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_JITLOADERLIST_H
+#endif // liblldb_JITLoaderList_h_

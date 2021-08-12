@@ -19,6 +19,7 @@
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
 #include "llvm/Analysis/SparsePropagation.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -71,7 +72,8 @@ public:
   CVPLatticeVal(CVPLatticeStateTy LatticeState) : LatticeState(LatticeState) {}
   CVPLatticeVal(std::vector<Function *> &&Functions)
       : LatticeState(FunctionSet), Functions(std::move(Functions)) {
-    assert(llvm::is_sorted(this->Functions, Compare()));
+    assert(std::is_sorted(this->Functions.begin(), this->Functions.end(),
+                          Compare()));
   }
 
   /// Get a reference to the functions held by this lattice value. The number
@@ -171,8 +173,9 @@ public:
       SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) override {
     switch (I.getOpcode()) {
     case Instruction::Call:
+      return visitCallSite(cast<CallInst>(&I), ChangedValues, SS);
     case Instruction::Invoke:
-      return visitCallBase(cast<CallBase>(I), ChangedValues, SS);
+      return visitCallSite(cast<InvokeInst>(&I), ChangedValues, SS);
     case Instruction::Load:
       return visitLoad(*cast<LoadInst>(&I), ChangedValues, SS);
     case Instruction::Ret:
@@ -214,13 +217,13 @@ public:
 
   /// We collect a set of indirect calls when visiting call sites. This method
   /// returns a reference to that set.
-  SmallPtrSetImpl<CallBase *> &getIndirectCalls() { return IndirectCalls; }
+  SmallPtrSetImpl<Instruction *> &getIndirectCalls() { return IndirectCalls; }
 
 private:
   /// Holds the indirect calls we encounter during the analysis. We will attach
   /// metadata to these calls after the analysis indicating the functions the
   /// calls can possibly target.
-  SmallPtrSet<CallBase *, 32> IndirectCalls;
+  SmallPtrSet<Instruction *, 32> IndirectCalls;
 
   /// Compute a new lattice value for the given constant. The constant, after
   /// stripping any pointer casts, should be a Function. We ignore null
@@ -252,22 +255,23 @@ private:
   /// the merge of the argument state with the call sites corresponding actual
   /// argument state. The call site state is the merge of the call site state
   /// with the returned value state of the called function.
-  void visitCallBase(CallBase &CB,
+  void visitCallSite(CallSite CS,
                      DenseMap<CVPLatticeKey, CVPLatticeVal> &ChangedValues,
                      SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
-    Function *F = CB.getCalledFunction();
-    auto RegI = CVPLatticeKey(&CB, IPOGrouping::Register);
+    Function *F = CS.getCalledFunction();
+    Instruction *I = CS.getInstruction();
+    auto RegI = CVPLatticeKey(I, IPOGrouping::Register);
 
     // If this is an indirect call, save it so we can quickly revisit it when
     // attaching metadata.
     if (!F)
-      IndirectCalls.insert(&CB);
+      IndirectCalls.insert(I);
 
     // If we can't track the function's return values, there's nothing to do.
     if (!F || !canTrackReturnsInterprocedurally(F)) {
       // Void return, No need to create and update CVPLattice state as no one
       // can use it.
-      if (CB.getType()->isVoidTy())
+      if (I->getType()->isVoidTy())
         return;
       ChangedValues[RegI] = getOverdefinedVal();
       return;
@@ -280,14 +284,14 @@ private:
     for (Argument &A : F->args()) {
       auto RegFormal = CVPLatticeKey(&A, IPOGrouping::Register);
       auto RegActual =
-          CVPLatticeKey(CB.getArgOperand(A.getArgNo()), IPOGrouping::Register);
+          CVPLatticeKey(CS.getArgument(A.getArgNo()), IPOGrouping::Register);
       ChangedValues[RegFormal] =
           MergeValues(SS.getValueState(RegFormal), SS.getValueState(RegActual));
     }
 
     // Void return, No need to create and update CVPLattice state as no one can
     // use it.
-    if (CB.getType()->isVoidTy())
+    if (I->getType()->isVoidTy())
       return;
 
     ChangedValues[RegI] =
@@ -384,8 +388,9 @@ static bool runCVP(Module &M) {
   // the set of functions they can possibly target.
   bool Changed = false;
   MDBuilder MDB(M.getContext());
-  for (CallBase *C : Lattice.getIndirectCalls()) {
-    auto RegI = CVPLatticeKey(C->getCalledOperand(), IPOGrouping::Register);
+  for (Instruction *C : Lattice.getIndirectCalls()) {
+    CallSite CS(C);
+    auto RegI = CVPLatticeKey(CS.getCalledValue(), IPOGrouping::Register);
     CVPLatticeVal LV = Solver.getExistingValueState(RegI);
     if (!LV.isFunctionSet() || LV.getFunctions().empty())
       continue;

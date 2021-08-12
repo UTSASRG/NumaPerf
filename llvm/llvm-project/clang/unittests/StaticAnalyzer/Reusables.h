@@ -56,10 +56,9 @@ protected:
 
 public:
   ExprEngineConsumer(CompilerInstance &C)
-      : C(C),
-        ChkMgr(C.getASTContext(), *C.getAnalyzerOpts(), C.getPreprocessor()),
-        CTU(C), Consumers(),
-        AMgr(C.getASTContext(), C.getPreprocessor(), Consumers,
+      : C(C), ChkMgr(C.getASTContext(), *C.getAnalyzerOpts()), CTU(C),
+        Consumers(),
+        AMgr(C.getASTContext(), Consumers,
              CreateRegionStoreManager, CreateRangeConstraintManager, &ChkMgr,
              *C.getAnalyzerOpts()),
         VisitedCallees(), FS(),

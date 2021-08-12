@@ -27,7 +27,7 @@ class MultiwayPathsCoveredCheck : public ClangTidyCheck {
 public:
   MultiwayPathsCoveredCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        WarnOnMissingElse(Options.get("WarnOnMissingElse", false)) {}
+        WarnOnMissingElse(Options.get("WarnOnMissingElse", 0)) {}
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

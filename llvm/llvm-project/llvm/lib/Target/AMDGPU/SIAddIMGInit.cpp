@@ -111,6 +111,10 @@ bool SIAddIMGInit::runOnMachineFunction(MachineFunction &MF) {
           unsigned ActiveLanes =
               TII->isGather4(Opcode) ? 4 : countPopulation(dmask);
 
+          // Subreg indices are counted from 1
+          // When D16 then we want next whole VGPR after write data.
+          static_assert(AMDGPU::sub0 == 1 && AMDGPU::sub4 == 5, "Subreg indices different from expected");
+
           bool Packed = !ST.hasUnpackedD16VMem();
 
           unsigned InitIdx =
@@ -133,7 +137,7 @@ bool SIAddIMGInit::runOnMachineFunction(MachineFunction &MF) {
           // all the result registers to 0, otherwise just the error indication
           // register (VGPRn+1)
           unsigned SizeLeft = ST.usePRTStrictNull() ? InitIdx : 1;
-          unsigned CurrIdx = ST.usePRTStrictNull() ? 0 : (InitIdx - 1);
+          unsigned CurrIdx = ST.usePRTStrictNull() ? 1 : InitIdx;
 
           if (DstSize == 1) {
             // In this case we can just initialize the result directly
@@ -154,7 +158,7 @@ bool SIAddIMGInit::runOnMachineFunction(MachineFunction &MF) {
               BuildMI(MBB, I, DL, TII->get(TargetOpcode::INSERT_SUBREG), NewDst)
                   .addReg(PrevDst)
                   .addReg(SubReg)
-                  .addImm(SIRegisterInfo::getSubRegFromChannel(CurrIdx));
+                  .addImm(CurrIdx);
 
               PrevDst = NewDst;
             }

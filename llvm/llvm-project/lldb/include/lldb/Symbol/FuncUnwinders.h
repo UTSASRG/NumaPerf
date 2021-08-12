@@ -1,5 +1,5 @@
-#ifndef LLDB_SYMBOL_FUNCUNWINDERS_H
-#define LLDB_SYMBOL_FUNCUNWINDERS_H
+#ifndef liblldb_FuncUnwinders_h
+#define liblldb_FuncUnwinders_h
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -149,11 +149,10 @@ private:
 
   Address m_first_non_prologue_insn;
 
-  FuncUnwinders(const FuncUnwinders &) = delete;
-  const FuncUnwinders &operator=(const FuncUnwinders &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(FuncUnwinders);
 
 }; // class FuncUnwinders
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_FUNCUNWINDERS_H
+#endif // liblldb_FuncUnwinders_h

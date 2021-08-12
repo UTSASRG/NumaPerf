@@ -36,9 +36,6 @@ public:
   bool operator==(const SymbolID &Sym) const {
     return HashValue == Sym.HashValue;
   }
-  bool operator!=(const SymbolID &Sym) const {
-    return !(*this == Sym);
-  }
   bool operator<(const SymbolID &Sym) const {
     return HashValue < Sym.HashValue;
   }

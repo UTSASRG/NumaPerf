@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_COMMON_NATIVEREGISTERCONTEXT_H
-#define LLDB_HOST_COMMON_NATIVEREGISTERCONTEXT_H
+#ifndef liblldb_NativeRegisterContext_h_
+#define liblldb_NativeRegisterContext_h_
 
 #include "lldb/Host/common/NativeWatchpointList.h"
 #include "lldb/lldb-private.h"
@@ -170,11 +170,9 @@ protected:
 
 private:
   // For RegisterContext only
-  NativeRegisterContext(const NativeRegisterContext &) = delete;
-  const NativeRegisterContext &
-  operator=(const NativeRegisterContext &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(NativeRegisterContext);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_COMMON_NATIVEREGISTERCONTEXT_H
+#endif // liblldb_NativeRegisterContext_h_

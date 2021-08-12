@@ -8,7 +8,10 @@
 
 // <array>
 
-// reference at (size_type); // constexpr in C++17
+// reference operator[] (size_type)
+// const_reference operator[] (size_type); // constexpr in C++14
+// reference at (size_type)
+// const_reference at (size_type); // constexpr in C++14
 
 #include <array>
 #include <cassert>
@@ -23,91 +26,100 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
+#if TEST_STD_VER > 14
+constexpr bool check_idx( size_t idx, double val )
+{
+    std::array<double, 3> arr = {1, 2, 3.5};
+    return arr.at(idx) == val;
+}
+#endif
 
-TEST_CONSTEXPR_CXX17 bool tests()
+int main(int, char**)
 {
     {
         typedef double T;
         typedef std::array<T, 3> C;
         C c = {1, 2, 3.5};
-        typename C::reference r1 = c.at(0);
+        C::reference r1 = c.at(0);
         assert(r1 == 1);
         r1 = 5.5;
-        assert(c[0] == 5.5);
+        assert(c.front() == 5.5);
 
-        typename C::reference r2 = c.at(2);
+        C::reference r2 = c.at(2);
         assert(r2 == 3.5);
         r2 = 7.5;
-        assert(c[2] == 7.5);
-    }
-    return true;
-}
+        assert(c.back() == 7.5);
 
-void test_exceptions()
-{
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try
+        {
+            TEST_IGNORE_NODISCARD  c.at(3);
+            assert(false);
+        }
+        catch (const std::out_of_range &) {}
+#endif
+    }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        std::array<int, 4> array = {1, 2, 3, 4};
-
-        try {
-            TEST_IGNORE_NODISCARD array.at(4);
-            assert(false);
-        } catch (std::out_of_range const&) {
-            // pass
-        } catch (...) {
-            assert(false);
-        }
-
-        try {
-            TEST_IGNORE_NODISCARD array.at(5);
-            assert(false);
-        } catch (std::out_of_range const&) {
-            // pass
-        } catch (...) {
+        typedef double T;
+        typedef std::array<T, 0> C;
+        C c = {};
+        C const& cc = c;
+        try
+        {
+            TEST_IGNORE_NODISCARD  c.at(0);
             assert(false);
         }
-
-        try {
-            TEST_IGNORE_NODISCARD array.at(6);
-            assert(false);
-        } catch (std::out_of_range const&) {
-            // pass
-        } catch (...) {
+        catch (const std::out_of_range &) {}
+        try
+        {
+            TEST_IGNORE_NODISCARD  cc.at(0);
             assert(false);
         }
-
-        try {
-            TEST_IGNORE_NODISCARD array.at(-1);
-            assert(false);
-        } catch (std::out_of_range const&) {
-            // pass
-        } catch (...) {
-            assert(false);
-        }
+        catch (const std::out_of_range &) {}
     }
-
+#endif
     {
-        std::array<int, 0> array = {};
+        typedef double T;
+        typedef std::array<T, 3> C;
+        const C c = {1, 2, 3.5};
+        C::const_reference r1 = c.at(0);
+        assert(r1 == 1);
 
-        try {
-            TEST_IGNORE_NODISCARD array.at(0);
-            assert(false);
-        } catch (std::out_of_range const&) {
-            // pass
-        } catch (...) {
+        C::const_reference r2 = c.at(2);
+        assert(r2 == 3.5);
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try
+        {
+            TEST_IGNORE_NODISCARD  c.at(3);
             assert(false);
         }
+        catch (const std::out_of_range &) {}
+#endif
+    }
+
+#if TEST_STD_VER > 11
+    {
+        typedef double T;
+        typedef std::array<T, 3> C;
+        constexpr C c = {1, 2, 3.5};
+
+        constexpr T t1 = c.at(0);
+        static_assert (t1 == 1, "");
+
+        constexpr T t2 = c.at(2);
+        static_assert (t2 == 3.5, "");
     }
 #endif
-}
 
-int main(int, char**)
-{
-    tests();
-    test_exceptions();
-
-#if TEST_STD_VER >= 17
-    static_assert(tests(), "");
+#if TEST_STD_VER > 14
+    {
+        static_assert (check_idx(0, 1), "");
+        static_assert (check_idx(1, 2), "");
+        static_assert (check_idx(2, 3.5), "");
+    }
 #endif
-    return 0;
+
+  return 0;
 }

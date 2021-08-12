@@ -13,6 +13,7 @@ block1:
   %s1 = sext i64 %l1 to i128
   br label %block2
 
+; CHECK-LABEL: block2:
 ; CHECK-NEXT: sext
 ; CHECK-NEXT: load
 ; CHECK-NEXT: sext
@@ -33,6 +34,7 @@ block1:
   %l1 = load i32, i32* %mem1
   br label %block2
 
+; CHECK-LABEL: block2:
 ; CHECK-NEXT: load
 ; CHECK-NEXT: sext
 block2:

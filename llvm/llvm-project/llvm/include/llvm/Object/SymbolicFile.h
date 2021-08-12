@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cinttypes>
@@ -128,7 +129,7 @@ public:
   Error printName(raw_ostream &OS) const;
 
   /// Get symbol flags (bitwise OR of SymbolRef::Flags)
-  Expected<uint32_t> getFlags() const;
+  uint32_t getFlags() const;
 
   DataRefImpl getRawDataRefImpl() const;
   const SymbolicFile *getObject() const;
@@ -146,7 +147,7 @@ public:
 
   virtual Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const = 0;
 
-  virtual Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const = 0;
+  virtual uint32_t getSymbolFlags(DataRefImpl Symb) const = 0;
 
   virtual basic_symbol_iterator symbol_begin() const = 0;
 
@@ -195,7 +196,7 @@ inline Error BasicSymbolRef::printName(raw_ostream &OS) const {
   return OwningObject->printSymbolName(OS, SymbolPimpl);
 }
 
-inline Expected<uint32_t> BasicSymbolRef::getFlags() const {
+inline uint32_t BasicSymbolRef::getFlags() const {
   return OwningObject->getSymbolFlags(SymbolPimpl);
 }
 

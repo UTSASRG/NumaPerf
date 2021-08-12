@@ -49,15 +49,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "insert-gcov-profiling"
 
-static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("408*"), cl::Hidden,
-                                               cl::ValueRequired);
+static cl::opt<std::string>
+DefaultGCOVVersion("default-gcov-version", cl::init("402*"), cl::Hidden,
+                   cl::ValueRequired);
+static cl::opt<bool> DefaultExitBlockBeforeBody("gcov-exit-block-before-body",
+                                                cl::init(false), cl::Hidden);
 
 GCOVOptions GCOVOptions::getDefault() {
   GCOVOptions Options;
   Options.EmitNotes = true;
   Options.EmitData = true;
+  Options.UseCfgChecksum = false;
   Options.NoRedZone = false;
+  Options.FunctionNamesInData = true;
+  Options.ExitBlockBeforeBody = DefaultExitBlockBeforeBody;
 
   if (DefaultGCOVVersion.size() != 4) {
     llvm::report_fatal_error(std::string("Invalid -default-gcov-version: ") +
@@ -110,8 +115,7 @@ private:
   // list.
   Function *
   insertCounterWriteout(ArrayRef<std::pair<GlobalVariable *, MDNode *>>);
-  Function *insertReset(ArrayRef<std::pair<GlobalVariable *, MDNode *>>);
-  Function *insertFlush(Function *ResetF);
+  Function *insertFlush(ArrayRef<std::pair<GlobalVariable *, MDNode *>>);
 
   void AddFlushBeforeForkAndExec();
 
@@ -264,7 +268,8 @@ namespace {
         write(Lines[i]);
     }
 
-    GCOVLines(StringRef F, raw_ostream *os) : Filename(std::string(F)) {
+    GCOVLines(StringRef F, raw_ostream *os)
+      : Filename(F) {
       this->os = os;
     }
 
@@ -532,8 +537,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
         MDString *DataFile = dyn_cast<MDString>(N->getOperand(1));
         if (!NotesFile || !DataFile)
           continue;
-        return std::string(Notes ? NotesFile->getString()
-                                 : DataFile->getString());
+        return Notes ? NotesFile->getString() : DataFile->getString();
       }
 
       MDString *GCovFile = dyn_cast<MDString>(N->getOperand(0));
@@ -542,7 +546,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 
       SmallString<128> Filename = GCovFile->getString();
       sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
-      return std::string(Filename.str());
+      return Filename.str();
     }
   }
 
@@ -550,10 +554,9 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
   StringRef FName = sys::path::filename(Filename);
   SmallString<128> CurPath;
-  if (sys::fs::current_path(CurPath))
-    return std::string(FName);
+  if (sys::fs::current_path(CurPath)) return FName;
   sys::path::append(CurPath, FName);
-  return std::string(CurPath.str());
+  return CurPath.str();
 }
 
 bool GCOVProfiler::runOnModule(
@@ -627,76 +630,35 @@ static bool shouldKeepInEntry(BasicBlock::iterator It) {
 }
 
 void GCOVProfiler::AddFlushBeforeForkAndExec() {
-  SmallVector<CallInst *, 2> Forks;
-  SmallVector<CallInst *, 2> Execs;
+  SmallVector<Instruction *, 2> ForkAndExecs;
   for (auto &F : M->functions()) {
     auto *TLI = &GetTLI(F);
     for (auto &I : instructions(F)) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         if (Function *Callee = CI->getCalledFunction()) {
           LibFunc LF;
-          if (TLI->getLibFunc(*Callee, LF)) {
-            if (LF == LibFunc_fork) {
-#if !defined(_WIN32)
-              Forks.push_back(CI);
-#endif
-            } else if (LF == LibFunc_execl || LF == LibFunc_execle ||
-                       LF == LibFunc_execlp || LF == LibFunc_execv ||
-                       LF == LibFunc_execvp || LF == LibFunc_execve ||
-                       LF == LibFunc_execvpe || LF == LibFunc_execvP) {
-              Execs.push_back(CI);
-            }
+          if (TLI->getLibFunc(*Callee, LF) &&
+              (LF == LibFunc_fork || LF == LibFunc_execl ||
+               LF == LibFunc_execle || LF == LibFunc_execlp ||
+               LF == LibFunc_execv || LF == LibFunc_execvp ||
+               LF == LibFunc_execve || LF == LibFunc_execvpe ||
+               LF == LibFunc_execvP)) {
+            ForkAndExecs.push_back(&I);
           }
         }
       }
     }
   }
 
-  for (auto F : Forks) {
-    IRBuilder<> Builder(F);
-    BasicBlock *Parent = F->getParent();
-    auto NextInst = ++F->getIterator();
-
-    // We've a fork so just reset the counters in the child process
-    FunctionType *FTy = FunctionType::get(Builder.getInt32Ty(), {}, false);
-    FunctionCallee GCOVFork = M->getOrInsertFunction("__gcov_fork", FTy);
-    F->setCalledFunction(GCOVFork);
-
-    // We split just after the fork to have a counter for the lines after
-    // Anyway there's a bug:
-    // void foo() { fork(); }
-    // void bar() { foo(); blah(); }
-    // then "blah();" will be called 2 times but showed as 1
-    // because "blah()" belongs to the same block as "foo();"
-    Parent->splitBasicBlock(NextInst);
-
-    // back() is a br instruction with a debug location
-    // equals to the one from NextAfterFork
-    // So to avoid to have two debug locs on two blocks just change it
-    DebugLoc Loc = F->getDebugLoc();
-    Parent->back().setDebugLoc(Loc);
-  }
-
-  for (auto E : Execs) {
-    IRBuilder<> Builder(E);
-    BasicBlock *Parent = E->getParent();
-    auto NextInst = ++E->getIterator();
-
-    // Since the process is replaced by a new one we need to write out gcdas
-    // No need to reset the counters since they'll be lost after the exec**
+  // We need to split the block after the fork/exec call
+  // because else the counters for the lines after will be
+  // the same as before the call.
+  for (auto I : ForkAndExecs) {
+    IRBuilder<> Builder(I);
     FunctionType *FTy = FunctionType::get(Builder.getVoidTy(), {}, false);
-    FunctionCallee WriteoutF =
-        M->getOrInsertFunction("llvm_writeout_files", FTy);
-    Builder.CreateCall(WriteoutF);
-
-    DebugLoc Loc = E->getDebugLoc();
-    Builder.SetInsertPoint(&*NextInst);
-    // If the exec** fails we must reset the counters since they've been
-    // dumped
-    FunctionCallee ResetF = M->getOrInsertFunction("llvm_reset_counters", FTy);
-    Builder.CreateCall(ResetF)->setDebugLoc(Loc);
-    Parent->splitBasicBlock(NextInst);
-    Parent->back().setDebugLoc(Loc);
+    FunctionCallee GCOVFlush = M->getOrInsertFunction("__gcov_flush", FTy);
+    Builder.CreateCall(GCOVFlush);
+    I->getParent()->splitBasicBlock(I);
   }
 }
 
@@ -743,10 +705,9 @@ void GCOVProfiler::emitProfileNotes() {
         ++It;
       EntryBlock.splitBasicBlock(It);
 
-      bool UseCfgChecksum = strncmp(Options.Version, "407", 3) >= 0;
-      bool ExitBlockBeforeBody = strncmp(Options.Version, "408", 3) >= 0;
-      Funcs.push_back(std::make_unique<GCOVFunction>(
-          SP, &F, &out, FunctionIdent++, UseCfgChecksum, ExitBlockBeforeBody));
+      Funcs.push_back(std::make_unique<GCOVFunction>(SP, &F, &out, FunctionIdent++,
+                                                Options.UseCfgChecksum,
+                                                Options.ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();
 
       // Add the function line number to the lines of the entry block
@@ -889,8 +850,7 @@ bool GCOVProfiler::emitProfileArcs() {
     }
 
     Function *WriteoutF = insertCounterWriteout(CountersBySP);
-    Function *ResetF = insertReset(CountersBySP);
-    Function *FlushF = insertFlush(ResetF);
+    Function *FlushF = insertFlush(CountersBySP);
 
     // Create a small bit of code that registers the "__llvm_gcov_writeout" to
     // be executed at exit and the "__llvm_gcov_flush" function to be executed
@@ -908,14 +868,16 @@ bool GCOVProfiler::emitProfileArcs() {
     IRBuilder<> Builder(BB);
 
     FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-    Type *Params[] = {PointerType::get(FTy, 0), PointerType::get(FTy, 0),
-                      PointerType::get(FTy, 0)};
+    Type *Params[] = {
+      PointerType::get(FTy, 0),
+      PointerType::get(FTy, 0)
+    };
     FTy = FunctionType::get(Builder.getVoidTy(), Params, false);
 
-    // Initialize the environment and register the local writeout, flush and
-    // reset functions.
+    // Initialize the environment and register the local writeout and flush
+    // functions.
     FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
-    Builder.CreateCall(GCOVInit, {WriteoutF, FlushF, ResetF});
+    Builder.CreateCall(GCOVInit, {WriteoutF, FlushF});
     Builder.CreateRetVoid();
 
     appendToGlobalCtors(*M, F, 0);
@@ -941,15 +903,18 @@ FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
 FunctionCallee GCOVProfiler::getEmitFunctionFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
     Type::getInt32Ty(*Ctx),    // uint32_t ident
+    Type::getInt8PtrTy(*Ctx),  // const char *function_name
     Type::getInt32Ty(*Ctx),    // uint32_t func_checksum
+    Type::getInt8Ty(*Ctx),     // uint8_t use_extra_checksum
     Type::getInt32Ty(*Ctx),    // uint32_t cfg_checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   AttributeList AL;
   if (auto AK = TLI->getExtAttrForI32Param(false)) {
     AL = AL.addParamAttribute(*Ctx, 0, AK);
-    AL = AL.addParamAttribute(*Ctx, 1, AK);
     AL = AL.addParamAttribute(*Ctx, 2, AK);
+    AL = AL.addParamAttribute(*Ctx, 3, AK);
+    AL = AL.addParamAttribute(*Ctx, 4, AK);
   }
   return M->getOrInsertFunction("llvm_gcda_emit_function", FTy);
 }
@@ -1010,7 +975,8 @@ Function *GCOVProfiler::insertCounterWriteout(
   StructType *StartFileCallArgsTy = StructType::create(
       {Builder.getInt8PtrTy(), Builder.getInt8PtrTy(), Builder.getInt32Ty()});
   StructType *EmitFunctionCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()});
+      {Builder.getInt32Ty(), Builder.getInt8PtrTy(), Builder.getInt32Ty(),
+       Builder.getInt8Ty(), Builder.getInt32Ty()});
   StructType *EmitArcsCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()});
   StructType *FileInfoTy =
@@ -1040,11 +1006,16 @@ Function *GCOVProfiler::insertCounterWriteout(
     SmallVector<Constant *, 8> EmitFunctionCallArgsArray;
     SmallVector<Constant *, 8> EmitArcsCallArgsArray;
     for (int j : llvm::seq<int>(0, CountersBySP.size())) {
+      auto *SP = cast_or_null<DISubprogram>(CountersBySP[j].second);
       uint32_t FuncChecksum = Funcs.empty() ? 0 : Funcs[j]->getFuncChecksum();
       EmitFunctionCallArgsArray.push_back(ConstantStruct::get(
           EmitFunctionCallArgsTy,
           {Builder.getInt32(j),
+           Options.FunctionNamesInData
+               ? Builder.CreateGlobalStringPtr(getFunctionName(SP))
+               : Constant::getNullValue(Builder.getInt8PtrTy()),
            Builder.getInt32(FuncChecksum),
+           Builder.getInt8(Options.UseCfgChecksum),
            Builder.getInt32(CfgChecksum)}));
 
       GlobalVariable *GV = CountersBySP[j].first;
@@ -1173,12 +1144,19 @@ Function *GCOVProfiler::insertCounterWriteout(
                                                   EmitFunctionCallArgsPtr, 1)),
        Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(2),
                           Builder.CreateStructGEP(EmitFunctionCallArgsTy,
+                                                  EmitFunctionCallArgsPtr, 2)),
+       Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(3),
+                          Builder.CreateStructGEP(EmitFunctionCallArgsTy,
+                                                  EmitFunctionCallArgsPtr, 3)),
+       Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(4),
+                          Builder.CreateStructGEP(EmitFunctionCallArgsTy,
                                                   EmitFunctionCallArgsPtr,
-                                                  2))});
+                                                  4))});
   if (auto AK = TLI->getExtAttrForI32Param(false)) {
     EmitFunctionCall->addParamAttr(0, AK);
-    EmitFunctionCall->addParamAttr(1, AK);
     EmitFunctionCall->addParamAttr(2, AK);
+    EmitFunctionCall->addParamAttr(3, AK);
+    EmitFunctionCall->addParamAttr(4, AK);
   }
   auto *EmitArcsCallArgsPtr =
       Builder.CreateInBoundsGEP(EmitArcsCallArgsTy, EmitArcsCallArgsArray, JV);
@@ -1212,43 +1190,8 @@ Function *GCOVProfiler::insertCounterWriteout(
   return WriteoutF;
 }
 
-Function *GCOVProfiler::insertReset(
-    ArrayRef<std::pair<GlobalVariable *, MDNode *>> CountersBySP) {
-  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  Function *ResetF = M->getFunction("__llvm_gcov_reset");
-  if (!ResetF)
-    ResetF = Function::Create(FTy, GlobalValue::InternalLinkage,
-                              "__llvm_gcov_reset", M);
-  else
-    ResetF->setLinkage(GlobalValue::InternalLinkage);
-  ResetF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  ResetF->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone)
-    ResetF->addFnAttr(Attribute::NoRedZone);
-
-  BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", ResetF);
-  IRBuilder<> Builder(Entry);
-
-  // Zero out the counters.
-  for (const auto &I : CountersBySP) {
-    GlobalVariable *GV = I.first;
-    Constant *Null = Constant::getNullValue(GV->getValueType());
-    Builder.CreateStore(Null, GV);
-  }
-
-  Type *RetTy = ResetF->getReturnType();
-  if (RetTy->isVoidTy())
-    Builder.CreateRetVoid();
-  else if (RetTy->isIntegerTy())
-    // Used if __llvm_gcov_reset was implicitly declared.
-    Builder.CreateRet(ConstantInt::get(RetTy, 0));
-  else
-    report_fatal_error("invalid return type for __llvm_gcov_reset");
-
-  return ResetF;
-}
-
-Function *GCOVProfiler::insertFlush(Function *ResetF) {
+Function *GCOVProfiler::
+insertFlush(ArrayRef<std::pair<GlobalVariable*, MDNode*> > CountersBySP) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
   Function *FlushF = M->getFunction("__llvm_gcov_flush");
   if (!FlushF)
@@ -1269,10 +1212,16 @@ Function *GCOVProfiler::insertFlush(Function *ResetF) {
 
   IRBuilder<> Builder(Entry);
   Builder.CreateCall(WriteoutF, {});
-  Builder.CreateCall(ResetF, {});
+
+  // Zero out the counters.
+  for (const auto &I : CountersBySP) {
+    GlobalVariable *GV = I.first;
+    Constant *Null = Constant::getNullValue(GV->getValueType());
+    Builder.CreateStore(Null, GV);
+  }
 
   Type *RetTy = FlushF->getReturnType();
-  if (RetTy->isVoidTy())
+  if (RetTy == Type::getVoidTy(*Ctx))
     Builder.CreateRetVoid();
   else if (RetTy->isIntegerTy())
     // Used if __llvm_gcov_flush was implicitly declared.

@@ -15,7 +15,6 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTCONSTRAINTMANAGER_H
 
 #include "clang/Basic/JsonSupport.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 
@@ -31,9 +30,8 @@ class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
   mutable llvm::SMTSolverRef Solver = llvm::CreateZ3Solver();
 
 public:
-  SMTConstraintManager(clang::ento::ExprEngine *EE,
-                       clang::ento::SValBuilder &SB)
-      : SimpleConstraintManager(EE, SB) {}
+  SMTConstraintManager(clang::ento::SubEngine *SE, clang::ento::SValBuilder &SB)
+      : SimpleConstraintManager(SE, SB) {}
   virtual ~SMTConstraintManager() = default;
 
   //===------------------------------------------------------------------===//

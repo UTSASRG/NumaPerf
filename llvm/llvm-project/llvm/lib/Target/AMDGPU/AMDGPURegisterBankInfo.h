@@ -76,10 +76,6 @@ public:
   applyMappingImage(MachineInstr &MI,
                     const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
-  bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
-
-  bool applyMappingBFEIntrinsic(const OperandsMapper &OpdMapper,
-                                bool Signed) const;
 
   void lowerScalarMinMax(MachineIRBuilder &B, MachineInstr &MI) const;
 
@@ -94,9 +90,6 @@ public:
 
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
-
-  const ValueMapping *getValueMappingForPtr(const MachineRegisterInfo &MRI,
-                                            Register Ptr) const;
 
   const RegisterBankInfo::InstructionMapping &
   getInstrMappingForLoad(const MachineInstr &MI) const;

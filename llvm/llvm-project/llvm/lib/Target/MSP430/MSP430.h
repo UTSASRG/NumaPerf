@@ -36,6 +36,7 @@ namespace MSP430CC {
 namespace llvm {
   class MSP430TargetMachine;
   class FunctionPass;
+  class formatted_raw_ostream;
 
   FunctionPass *createMSP430ISelDag(MSP430TargetMachine &TM,
                                     CodeGenOpt::Level OptLevel);

@@ -14,6 +14,8 @@
 #ifndef LLVM_TOOLS_OPT_PASSPRINTERS_H
 #define LLVM_TOOLS_OPT_PASSPRINTERS_H
 
+#include "llvm/IR/PassManager.h"
+
 namespace llvm {
 
 class CallGraphSCCPass;
@@ -23,6 +25,7 @@ class LoopPass;
 class PassInfo;
 class raw_ostream;
 class RegionPass;
+class Module;
 
 FunctionPass *createFunctionPassPrinter(const PassInfo *PI, raw_ostream &out,
                                         bool Quiet);

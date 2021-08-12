@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREADLIST_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREADLIST_H
+#ifndef __MachThreadList_h__
+#define __MachThreadList_h__
 
 #include "MachThread.h"
 #include "ThreadInfo.h"
@@ -83,16 +83,6 @@ protected:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  enum class HardwareBreakpointAction {
-    EnableWatchpoint,
-    DisableWatchpoint,
-    EnableBreakpoint,
-    DisableBreakpoint,
-  };
-
-  uint32_t DoHardwareBreakpointAction(const DNBBreakpoint *bp,
-                                      HardwareBreakpointAction action) const;
-
   uint32_t UpdateThreadList(MachProcess *process, bool update,
                             collection *num_threads = NULL);
   //  const_iterator  FindThreadByID (thread_t tid) const;
@@ -103,4 +93,4 @@ protected:
   bool m_is_64_bit;
 };
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREADLIST_H
+#endif // #ifndef __MachThreadList_h__

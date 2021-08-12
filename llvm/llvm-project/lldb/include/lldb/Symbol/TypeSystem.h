@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_TYPESYSTEM_H
-#define LLDB_SYMBOL_TYPESYSTEM_H
+#ifndef liblldb_TypeSystem_h_
+#define liblldb_TypeSystem_h_
 
 #include <functional>
 #include <map>
@@ -129,11 +129,6 @@ public:
                                               void *other_opaque_decl_ctx) = 0;
 
   // Tests
-#ifndef NDEBUG
-  /// Verify the integrity of the type to catch CompilerTypes that mix
-  /// and match invalid TypeSystem/Opaque type pairs.
-  virtual bool Verify(lldb::opaque_compiler_type_t type) = 0;
-#endif
 
   virtual bool IsArrayType(lldb::opaque_compiler_type_t type,
                            CompilerType *element_type, uint64_t *size,
@@ -204,8 +199,6 @@ public:
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
-
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
               CompilerType *pointee_or_element_compiler_type) = 0;
@@ -259,12 +252,9 @@ public:
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
-  /// \param opaque_payload      The m_payload field of Type, which may
-  /// carry TypeSystem-specific extra information.
   virtual CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
                                      const char *name,
-                                     const CompilerDeclContext &decl_ctx,
-                                     uint32_t opaque_payload);
+                                     const CompilerDeclContext &decl_ctx);
 
   // Exploring the type
 
@@ -374,18 +364,11 @@ public:
                              uint32_t bitfield_bit_offset,
                              ExecutionContextScope *exe_scope) = 0;
 
-  /// Dump the type to stdout.
-  virtual void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+  virtual void
+  DumpTypeDescription(lldb::opaque_compiler_type_t type) = 0; // Dump to stdout
 
-  /// Print a description of the type to a stream. The exact implementation
-  /// varies, but the expectation is that eDescriptionLevelFull returns a
-  /// source-like representation of the type, whereas eDescriptionLevelVerbose
-  /// does a dump of the underlying AST if applicable.
-  virtual void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, Stream *s,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+  virtual void DumpTypeDescription(lldb::opaque_compiler_type_t type,
+                                   Stream *s) = 0;
 
   // TODO: These methods appear unused. Should they be removed?
 
@@ -397,7 +380,7 @@ public:
                            lldb::offset_t data_offset,
                            size_t data_byte_size) = 0;
 
-  // TODO: Determine if these methods should move to TypeSystemClang.
+  // TODO: Determine if these methods should move to ClangASTContext.
 
   virtual bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                         CompilerType *pointee_type) = 0;
@@ -526,4 +509,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_TYPESYSTEM_H
+#endif // liblldb_TypeSystem_h_

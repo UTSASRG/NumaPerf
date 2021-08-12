@@ -1076,7 +1076,7 @@ void ento::registerSecuritySyntaxChecker(CheckerManager &mgr) {
   mgr.registerChecker<SecuritySyntaxChecker>();
 }
 
-bool ento::shouldRegisterSecuritySyntaxChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterSecuritySyntaxChecker(const LangOptions &LO) {
   return true;
 }
 
@@ -1087,7 +1087,7 @@ bool ento::shouldRegisterSecuritySyntaxChecker(const CheckerManager &mgr) {
     checker->filter.checkName_##name = mgr.getCurrentCheckerName();            \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
 REGISTER_CHECKER(bcmp)
 REGISTER_CHECKER(bcopy)

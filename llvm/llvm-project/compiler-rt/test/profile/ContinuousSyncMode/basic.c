@@ -1,5 +1,3 @@
-// REQUIRES: darwin
-
 // RUN: %clang -fprofile-instr-generate -fcoverage-mapping -o %t.exe %s
 // RUN: echo "garbage" > %t.profraw
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe

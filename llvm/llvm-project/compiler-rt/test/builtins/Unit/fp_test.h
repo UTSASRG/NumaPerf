@@ -211,23 +211,23 @@ static inline char *expectedStr(enum EXPECTED_RESULT expected)
     return "";
 }
 
-static inline uint16_t makeQNaN16(void)
+static inline uint16_t makeQNaN16()
 {
     return fromRep16(0x7e00U);
 }
 
-static inline float makeQNaN32(void)
+static inline float makeQNaN32()
 {
     return fromRep32(0x7fc00000U);
 }
 
-static inline double makeQNaN64(void)
+static inline double makeQNaN64()
 {
     return fromRep64(0x7ff8000000000000UL);
 }
 
 #if __LDBL_MANT_DIG__ == 113
-static inline long double makeQNaN128(void)
+static inline long double makeQNaN128()
 {
     return fromRep128(0x7fff800000000000UL, 0x0UL);
 }
@@ -255,23 +255,23 @@ static inline long double makeNaN128(uint64_t rand)
 }
 #endif
 
-static inline uint16_t makeInf16(void)
+static inline uint16_t makeInf16()
 {
     return fromRep16(0x7c00U);
 }
 
-static inline float makeInf32(void)
+static inline float makeInf32()
 {
     return fromRep32(0x7f800000U);
 }
 
-static inline double makeInf64(void)
+static inline double makeInf64()
 {
     return fromRep64(0x7ff0000000000000UL);
 }
 
 #if __LDBL_MANT_DIG__ == 113
-static inline long double makeInf128(void)
+static inline long double makeInf128()
 {
     return fromRep128(0x7fff000000000000UL, 0x0UL);
 }

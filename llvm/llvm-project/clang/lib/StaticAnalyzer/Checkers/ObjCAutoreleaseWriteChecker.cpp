@@ -30,7 +30,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/ADT/Twine.h"
@@ -45,7 +44,6 @@ const char *ProblematicWriteBind = "problematicwrite";
 const char *CapturedBind = "capturedbind";
 const char *ParamBind = "parambind";
 const char *IsMethodBind = "ismethodbind";
-const char *IsARPBind = "isautoreleasepoolbind";
 
 class ObjCAutoreleaseWriteChecker : public Checker<check::ASTCodeBody> {
 public:
@@ -102,7 +100,8 @@ static inline std::vector<llvm::StringRef> toRefs(std::vector<std::string> V) {
   return std::vector<llvm::StringRef>(V.begin(), V.end());
 }
 
-static decltype(auto) callsNames(std::vector<std::string> FunctionNames) {
+static auto callsNames(std::vector<std::string> FunctionNames)
+    -> decltype(callee(functionDecl())) {
   return callee(functionDecl(hasAnyName(toRefs(FunctionNames))));
 }
 
@@ -130,39 +129,21 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
   SourceRange Range = MarkedStmt->getSourceRange();
   PathDiagnosticLocation Location = PathDiagnosticLocation::createBegin(
       MarkedStmt, BR.getSourceManager(), ADC);
-
   bool IsMethod = Match.getNodeAs<ObjCMethodDecl>(IsMethodBind) != nullptr;
-  const char *FunctionDescription = IsMethod ? "method" : "function";
-  bool IsARP = Match.getNodeAs<ObjCAutoreleasePoolStmt>(IsARPBind) != nullptr;
+  const char *Name = IsMethod ? "method" : "function";
 
-  llvm::SmallString<128> BugNameBuf;
-  llvm::raw_svector_ostream BugName(BugNameBuf);
-  BugName << ActionMsg
-          << " autoreleasing out parameter inside autorelease pool";
-
-  llvm::SmallString<128> BugMessageBuf;
-  llvm::raw_svector_ostream BugMessage(BugMessageBuf);
-  BugMessage << ActionMsg << " autoreleasing out parameter ";
-  if (IsCapture)
-    BugMessage << "'" + PVD->getName() + "' ";
-
-  BugMessage << "inside ";
-  if (IsARP)
-    BugMessage << "locally-scoped autorelease pool;";
-  else
-    BugMessage << "autorelease pool that may exit before "
-               << FunctionDescription << " returns;";
-
-  BugMessage << " consider writing first to a strong local variable"
-                " declared outside ";
-  if (IsARP)
-    BugMessage << "of the autorelease pool";
-  else
-    BugMessage << "of the block";
-
-  BR.EmitBasicReport(ADC->getDecl(), Checker, BugName.str(),
-                     categories::MemoryRefCount, BugMessage.str(), Location,
-                     Range);
+  BR.EmitBasicReport(
+      ADC->getDecl(), Checker,
+      /*Name=*/(llvm::Twine(ActionMsg)
+                + " autoreleasing out parameter inside autorelease pool").str(),
+      /*BugCategory=*/"Memory",
+      (llvm::Twine(ActionMsg) + " autoreleasing out parameter " +
+       (IsCapture ? "'" + PVD->getName() + "'" + " " : "") + "inside " +
+       "autorelease pool that may exit before " + Name + " returns; consider "
+       "writing first to a strong local variable declared outside of the block")
+          .str(),
+      Location,
+      Range);
 }
 
 void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
@@ -208,16 +189,9 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
        WritesOrCapturesInBlockM))
   ));
 
-  // WritesIntoM happens inside an explicit @autoreleasepool.
-  auto WritesOrCapturesInPoolM =
-      autoreleasePoolStmt(
-          forEachDescendant(stmt(anyOf(WritesIntoM, CapturedInParamM))))
-          .bind(IsARPBind);
-
-  auto HasParamAndWritesInMarkedFuncM =
-      allOf(hasAnyParameter(DoublePointerParamM),
-            anyOf(forEachDescendant(BlockPassedToMarkedFuncM),
-                  forEachDescendant(WritesOrCapturesInPoolM)));
+  auto HasParamAndWritesInMarkedFuncM = allOf(
+      hasAnyParameter(DoublePointerParamM),
+      forEachDescendant(BlockPassedToMarkedFuncM));
 
   auto MatcherM = decl(anyOf(
       objcMethodDecl(HasParamAndWritesInMarkedFuncM).bind(IsMethodBind),
@@ -233,6 +207,6 @@ void ento::registerAutoreleaseWriteChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCAutoreleaseWriteChecker>();
 }
 
-bool ento::shouldRegisterAutoreleaseWriteChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterAutoreleaseWriteChecker(const LangOptions &LO) {
   return true;
 }

@@ -13,22 +13,29 @@
 using namespace lld;
 using namespace llvm;
 
-ScopedTimer::ScopedTimer(Timer &t) : t(&t) {
-  startTime = std::chrono::high_resolution_clock::now();
-}
+ScopedTimer::ScopedTimer(Timer &t) : t(&t) { t.start(); }
 
 void ScopedTimer::stop() {
   if (!t)
     return;
-  t->addToTotal(std::chrono::high_resolution_clock::now() - startTime);
+  t->stop();
   t = nullptr;
 }
 
 ScopedTimer::~ScopedTimer() { stop(); }
 
-Timer::Timer(llvm::StringRef name) : name(std::string(name)) {}
-Timer::Timer(llvm::StringRef name, Timer &parent) : name(std::string(name)) {
-  parent.children.push_back(this);
+Timer::Timer(llvm::StringRef name) : name(name), parent(nullptr) {}
+Timer::Timer(llvm::StringRef name, Timer &parent)
+    : name(name), parent(&parent) {}
+
+void Timer::start() {
+  if (parent && total.count() == 0)
+    parent->children.push_back(this);
+  startTime = std::chrono::high_resolution_clock::now();
+}
+
+void Timer::stop() {
+  total += (std::chrono::high_resolution_clock::now() - startTime);
 }
 
 Timer &Timer::root() {
@@ -42,8 +49,7 @@ void Timer::print() {
   // We want to print the grand total under all the intermediate phases, so we
   // print all children first, then print the total under that.
   for (const auto &child : children)
-    if (child->total > 0)
-      child->print(1, totalDuration);
+    child->print(1, totalDuration);
 
   message(std::string(49, '-'));
 
@@ -52,7 +58,7 @@ void Timer::print() {
 
 double Timer::millis() const {
   return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(
-             std::chrono::nanoseconds(total))
+             total)
       .count();
 }
 
@@ -68,7 +74,6 @@ void Timer::print(int depth, double totalDuration, bool recurse) const {
 
   if (recurse) {
     for (const auto &child : children)
-      if (child->total > 0)
-        child->print(depth + 1, totalDuration);
+      child->print(depth + 1, totalDuration);
   }
 }

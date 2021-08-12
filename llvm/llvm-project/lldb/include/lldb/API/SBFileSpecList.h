@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBFILESPECLIST_H
-#define LLDB_API_SBFILESPECLIST_H
+#ifndef LLDB_SBFileSpecList_h_
+#define LLDB_SBFileSpecList_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -54,4 +54,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBFILESPECLIST_H
+#endif // LLDB_SBFileSpecList_h_

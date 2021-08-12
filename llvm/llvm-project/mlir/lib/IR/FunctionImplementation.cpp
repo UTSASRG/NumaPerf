@@ -1,6 +1,6 @@
 //===- FunctionImplementation.cpp - Utilities for function-like ops -------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -17,7 +17,8 @@ static ParseResult
 parseArgumentList(OpAsmParser &parser, bool allowVariadic,
                   SmallVectorImpl<Type> &argTypes,
                   SmallVectorImpl<OpAsmParser::OperandType> &argNames,
-                  SmallVectorImpl<NamedAttrList> &argAttrs, bool &isVariadic) {
+                  SmallVectorImpl<SmallVector<NamedAttribute, 2>> &argAttrs,
+                  bool &isVariadic) {
   if (parser.parseLParen())
     return failure();
 
@@ -53,7 +54,7 @@ parseArgumentList(OpAsmParser &parser, bool allowVariadic,
     argTypes.push_back(argumentType);
 
     // Parse any argument attributes.
-    NamedAttrList attrs;
+    SmallVector<NamedAttribute, 2> attrs;
     if (parser.parseOptionalAttrDict(attrs))
       return failure();
     argAttrs.push_back(attrs);
@@ -89,9 +90,9 @@ parseArgumentList(OpAsmParser &parser, bool allowVariadic,
 ///   function-result-list-no-parens ::= function-result (`,` function-result)*
 ///   function-result ::= type attribute-dict?
 ///
-static ParseResult
-parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
-                        SmallVectorImpl<NamedAttrList> &resultAttrs) {
+static ParseResult parseFunctionResultList(
+    OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<SmallVector<NamedAttribute, 2>> &resultAttrs) {
   if (failed(parser.parseOptionalLParen())) {
     // We already know that there is no `(`, so parse a type.
     // Because there is no `(`, it cannot be a function type.
@@ -126,9 +127,10 @@ parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
 ParseResult mlir::impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
-    SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<NamedAttrList> &resultAttrs) {
+    SmallVectorImpl<Type> &argTypes,
+    SmallVectorImpl<SmallVector<NamedAttribute, 2>> &argAttrs, bool &isVariadic,
+    SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<SmallVector<NamedAttribute, 2>> &resultAttrs) {
   if (parseArgumentList(parser, allowVariadic, argTypes, argNames, argAttrs,
                         isVariadic))
     return failure();
@@ -137,9 +139,10 @@ ParseResult mlir::impl::parseFunctionSignature(
   return success();
 }
 
-void mlir::impl::addArgAndResultAttrs(Builder &builder, OperationState &result,
-                                      ArrayRef<NamedAttrList> argAttrs,
-                                      ArrayRef<NamedAttrList> resultAttrs) {
+void mlir::impl::addArgAndResultAttrs(
+    Builder &builder, OperationState &result,
+    ArrayRef<SmallVector<NamedAttribute, 2>> argAttrs,
+    ArrayRef<SmallVector<NamedAttribute, 2>> resultAttrs) {
   // Add the attributes to the function arguments.
   SmallString<8> attrNameBuf;
   for (unsigned i = 0, e = argAttrs.size(); i != e; ++i)
@@ -161,8 +164,8 @@ mlir::impl::parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
                                 bool allowVariadic,
                                 mlir::impl::FuncTypeBuilder funcTypeBuilder) {
   SmallVector<OpAsmParser::OperandType, 4> entryArgs;
-  SmallVector<NamedAttrList, 4> argAttrs;
-  SmallVector<NamedAttrList, 4> resultAttrs;
+  SmallVector<SmallVector<NamedAttribute, 2>, 4> argAttrs;
+  SmallVector<SmallVector<NamedAttribute, 2>, 4> resultAttrs;
   SmallVector<Type, 4> argTypes;
   SmallVector<Type, 4> resultTypes;
   auto &builder = parser.getBuilder();
@@ -213,12 +216,11 @@ static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
       types.size() > 1 || types[0].isa<FunctionType>() || !attrs[0].empty();
   if (needsParens)
     os << '(';
-  llvm::interleaveComma(
-      llvm::zip(types, attrs), os,
-      [&](const std::tuple<Type, ArrayRef<NamedAttribute>> &t) {
-        p.printType(std::get<0>(t));
-        p.printOptionalAttrDict(std::get<1>(t));
-      });
+  interleaveComma(llvm::zip(types, attrs), os,
+                  [&](const std::tuple<Type, ArrayRef<NamedAttribute>> &t) {
+                    p.printType(std::get<0>(t));
+                    p.printOptionalAttrDict(std::get<1>(t));
+                  });
   if (needsParens)
     os << ')';
 }

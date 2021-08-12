@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_FORMATTERSHELPERS_H
-#define LLDB_DATAFORMATTERS_FORMATTERSHELPERS_H
+#ifndef lldb_FormattersHelpers_h_
+#define lldb_FormattersHelpers_h_
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -55,8 +55,6 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
 size_t ExtractIndexFromString(const char *item_name);
 
 lldb::addr_t GetArrayAddressOrPointerValue(ValueObject &valobj);
-
-lldb::ValueObjectSP GetValueOfLibCXXCompressedPair(ValueObject &pair);
 
 time_t GetOSXEpoch();
 
@@ -186,4 +184,4 @@ private:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_FORMATTERSHELPERS_H
+#endif // lldb_FormattersHelpers_h_

@@ -80,43 +80,19 @@ LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx,
   };
 }
 
-LegalityPredicate LegalityPredicates::elementTypeIs(unsigned TypeIdx,
-                                                    LLT EltTy) {
-  return [=](const LegalityQuery &Query) {
-    const LLT QueryTy = Query.Types[TypeIdx];
-    return QueryTy.isVector() && QueryTy.getElementType() == EltTy;
-  };
-}
-
-LegalityPredicate LegalityPredicates::scalarNarrowerThan(unsigned TypeIdx,
-                                                         unsigned Size) {
+LegalityPredicate LegalityPredicates::narrowerThan(unsigned TypeIdx,
+                                                   unsigned Size) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && QueryTy.getSizeInBits() < Size;
   };
 }
 
-LegalityPredicate LegalityPredicates::scalarWiderThan(unsigned TypeIdx,
-                                                      unsigned Size) {
+LegalityPredicate LegalityPredicates::widerThan(unsigned TypeIdx,
+                                                unsigned Size) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && QueryTy.getSizeInBits() > Size;
-  };
-}
-
-LegalityPredicate LegalityPredicates::smallerThan(unsigned TypeIdx0,
-                                                  unsigned TypeIdx1) {
-  return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx0].getSizeInBits() <
-           Query.Types[TypeIdx1].getSizeInBits();
-  };
-}
-
-LegalityPredicate LegalityPredicates::largerThan(unsigned TypeIdx0,
-                                                  unsigned TypeIdx1) {
-  return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx0].getSizeInBits() >
-           Query.Types[TypeIdx1].getSizeInBits();
   };
 }
 
@@ -147,12 +123,6 @@ LegalityPredicate LegalityPredicates::sizeNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && !isPowerOf2_32(QueryTy.getSizeInBits());
-  };
-}
-
-LegalityPredicate LegalityPredicates::sizeIs(unsigned TypeIdx, unsigned Size) {
-  return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx].getSizeInBits() == Size;
   };
 }
 

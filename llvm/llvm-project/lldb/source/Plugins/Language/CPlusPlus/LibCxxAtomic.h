@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXATOMIC_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXATOMIC_H
+#ifndef liblldb_LibCxxAtomic_h_
+#define liblldb_LibCxxAtomic_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -30,4 +30,4 @@ LibcxxAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXATOMIC_H
+#endif // liblldb_LibCxxAtomic_h_

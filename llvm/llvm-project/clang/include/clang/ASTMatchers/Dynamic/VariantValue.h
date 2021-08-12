@@ -1,5 +1,4 @@
-//===--- VariantValue.h - Polymorphic value type ----------------*- C++ -*-===//
-//
+//===--- VariantValue.h - Polymorphic value type -*- C++ -*-===/
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -44,10 +43,11 @@ class ArgKind {
   ArgKind(Kind K) : K(K) { assert(K != AK_Matcher); }
 
   /// Constructor for matcher types.
-  ArgKind(ASTNodeKind MatcherKind) : K(AK_Matcher), MatcherKind(MatcherKind) {}
+  ArgKind(ast_type_traits::ASTNodeKind MatcherKind)
+      : K(AK_Matcher), MatcherKind(MatcherKind) {}
 
   Kind getArgKind() const { return K; }
-  ASTNodeKind getMatcherKind() const {
+  ast_type_traits::ASTNodeKind getMatcherKind() const {
     assert(K == AK_Matcher);
     return MatcherKind;
   }
@@ -71,7 +71,7 @@ class ArgKind {
 
 private:
   Kind K;
-  ASTNodeKind MatcherKind;
+  ast_type_traits::ASTNodeKind MatcherKind;
 };
 
 using ast_matchers::internal::DynTypedMatcher;
@@ -93,7 +93,7 @@ class VariantMatcher {
   /// Methods that depend on T from hasTypedMatcher/getTypedMatcher.
   class MatcherOps {
   public:
-    MatcherOps(ASTNodeKind NodeKind) : NodeKind(NodeKind) {}
+    MatcherOps(ast_type_traits::ASTNodeKind NodeKind) : NodeKind(NodeKind) {}
 
     bool canConstructFrom(const DynTypedMatcher &Matcher,
                           bool &IsExactMatch) const;
@@ -114,7 +114,7 @@ class VariantMatcher {
     ~MatcherOps() = default;
 
   private:
-    ASTNodeKind NodeKind;
+    ast_type_traits::ASTNodeKind NodeKind;
   };
 
   /// Payload interface to be specialized by each matcher type.
@@ -127,7 +127,7 @@ class VariantMatcher {
     virtual std::string getTypeAsString() const = 0;
     virtual llvm::Optional<DynTypedMatcher>
     getTypedMatcher(const MatcherOps &Ops) const = 0;
-    virtual bool isConvertibleTo(ASTNodeKind Kind,
+    virtual bool isConvertibleTo(ast_type_traits::ASTNodeKind Kind,
                                  unsigned *Specificity) const = 0;
   };
 
@@ -184,7 +184,8 @@ public:
   ///
   /// \param Specificity value corresponding to the "specificity" of the
   ///   conversion.
-  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const {
+  bool isConvertibleTo(ast_type_traits::ASTNodeKind Kind,
+                       unsigned *Specificity) const {
     if (Value)
       return Value->isConvertibleTo(Kind, Specificity);
     return false;
@@ -222,7 +223,8 @@ private:
 
 template <typename T>
 struct VariantMatcher::TypedMatcherOps final : VariantMatcher::MatcherOps {
-  TypedMatcherOps() : MatcherOps(ASTNodeKind::getFromNodeKind<T>()) {}
+  TypedMatcherOps()
+      : MatcherOps(ast_type_traits::ASTNodeKind::getFromNodeKind<T>()) {}
   typedef ast_matchers::internal::Matcher<T> MatcherT;
 
   DynTypedMatcher

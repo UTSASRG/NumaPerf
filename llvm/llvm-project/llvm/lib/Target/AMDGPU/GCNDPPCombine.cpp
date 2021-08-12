@@ -168,9 +168,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   }
 
   auto DPPInst = BuildMI(*OrigMI.getParent(), OrigMI,
-                         OrigMI.getDebugLoc(), TII->get(DPPOp))
-    .setMIFlags(OrigMI.getFlags());
-
+                         OrigMI.getDebugLoc(), TII->get(DPPOp));
   bool Fail = false;
   do {
     auto *Dst = TII->getNamedOperand(OrigMI, AMDGPU::OpName::vdst);

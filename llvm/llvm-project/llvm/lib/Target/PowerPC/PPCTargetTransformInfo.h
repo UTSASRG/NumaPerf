@@ -33,8 +33,7 @@ class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
 
   const PPCSubtarget *getST() const { return ST; }
   const PPCTargetLowering *getTLI() const { return TLI; }
-  bool mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
-                   SmallPtrSetImpl<const Value *> &Visited);
+  bool mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo);
 
 public:
   explicit PPCTTIImpl(const PPCTargetMachine *TM, const Function &F)
@@ -45,16 +44,14 @@ public:
   /// @{
 
   using BaseT::getIntImmCost;
-  int getIntImmCost(const APInt &Imm, Type *Ty,
-                    TTI::TargetCostKind CostKind);
+  int getIntImmCost(const APInt &Imm, Type *Ty);
 
   int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                        Type *Ty, TTI::TargetCostKind CostKind);
+                        Type *Ty);
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty, TTI::TargetCostKind CostKind);
+                          Type *Ty);
 
-  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                       TTI::TargetCostKind CostKind);
+  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
@@ -66,8 +63,6 @@ public:
                   TargetLibraryInfo *LibInfo);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
-  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
-                     TargetTransformInfo::LSRCost &C2);
 
   /// @}
 
@@ -92,7 +87,6 @@ public:
   int vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1, Type *Ty2);
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -101,26 +95,24 @@ public:
       const Instruction *CxtI = nullptr);
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                         TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
   int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace,
-                      TTI::TargetCostKind CostKind,
-                      const Instruction *I = nullptr);
+                      unsigned AddressSpace, const Instruction *I = nullptr);
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                  unsigned Factor,
                                  ArrayRef<unsigned> Indices,
                                  unsigned Alignment,
                                  unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
                                  bool UseMaskForCond = false,
                                  bool UseMaskForGaps = false);
-  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                 TTI::TargetCostKind CostKind);
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+            ArrayRef<Value*> Args, FastMathFlags FMF, unsigned VF);
+  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+            ArrayRef<Type*> Tys, FastMathFlags FMF,
+            unsigned ScalarizationCostPassed = UINT_MAX);
 
   /// @}
 };

@@ -14,5 +14,5 @@ void f(struct a *p);
 // "compatible types" rule.
 void g(struct b *p);
 
-struct b b; // expected-error {{'b' must be defined before it is used}}
+struct b b; // expected-error {{definition of 'b' must be imported from module 'X.b' before it is required}}
 // expected-note@b.h:1 {{here}}

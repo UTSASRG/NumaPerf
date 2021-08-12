@@ -231,8 +231,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
     return false;
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
   LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
-  // Update the call site info.
-  if (UseMI->shouldUpdateCallSiteInfo())
+  if (UseMI->isCall())
     UseMI->getMF()->moveCallSiteInfo(UseMI, FoldMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg, nullptr);
@@ -451,7 +450,8 @@ void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
 // Keep track of new virtual registers created via
 // MachineRegisterInfo::createVirtualRegister.
 void
-LiveRangeEdit::MRI_NoteNewVirtualRegister(Register VReg) {
+LiveRangeEdit::MRI_NoteNewVirtualRegister(unsigned VReg)
+{
   if (VRM)
     VRM->grow();
 

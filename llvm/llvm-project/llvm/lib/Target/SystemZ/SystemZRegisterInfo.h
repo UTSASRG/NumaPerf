@@ -58,9 +58,11 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
-  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+  bool getRegAllocationHints(unsigned VirtReg,
+                             ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,
-                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const MachineFunction &MF,
+                             const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
   // Override TargetRegisterInfo.h.
@@ -68,6 +70,9 @@ public:
     return true;
   }
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
+  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override {
     return true;
   }
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;

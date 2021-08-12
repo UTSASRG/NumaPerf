@@ -2,60 +2,67 @@ set(LLVM_OPTIONAL_SOURCES
   null.cpp
 )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  AsmParser
-  )
-
-if(MLIR_INCLUDE_TESTS)
-  set(test_libs
-    MLIRAffineTransformsTestPasses
-    MLIRSPIRVTestPasses
-    MLIRTestDialect
-    MLIRTestIR
-    MLIRTestPass
-    MLIRTestTransforms
-    )
-endif()
-
-set(LIBS
-  ${dialect_libs}
-  ${conversion_libs}
-  ${test_libs}
-  MLIRLoopAnalysis
+set(LIB_LIBS
   MLIRAnalysis
-  MLIRDialect
-  MLIREDSC
-  MLIROptLib
+  MLIRLLVMIR
   MLIRParser
   MLIRPass
   MLIRTransforms
-  MLIRTransformUtils
   MLIRSupport
-  MLIRIR
-  )
-
-# Exclude from libMLIR.so because this has static options intended for
-# opt-like tools only.
-add_mlir_library(MLIRMlirOptMain
+)
+add_llvm_library(MLIRMlirOptLib
   mlir-opt.cpp
+)
+target_link_libraries(MLIRMlirOptLib ${LIB_LIBS})
 
-  EXCLUDE_FROM_LIBMLIR
+set(LIBS
+  MLIRAnalysis
+  MLIRAffineOps
+  MLIRAffineToStandard
+  MLIRLoopsToGPU
+  MLIRLinalgToLLVM
 
-  LINK_LIBS PUBLIC
-  ${LIBS}
+  MLIRLoopToStandard
+  MLIREDSC
+  MLIRFxpMathOps
+  MLIRGPU
+  MLIRGPUtoNVVMTransforms
+  MLIRGPUtoROCDLTransforms
+  MLIRGPUtoSPIRVTransforms
+  MLIRLinalg
+  MLIRLLVMIR
+  MLIRLoopOps
+  MLIRNVVMIR
+  MLIROptMain
+  MLIRParser
+  MLIRPass
+  MLIRQuantizerTransforms
+  MLIRQuantOps
+  MLIRROCDLIR
+  MLIRSPIRV
+  MLIRStandardToSPIRVTransforms
+  MLIRSPIRVTestPasses
+  MLIRSPIRVTransforms
+  MLIRStandardOps
+  MLIRStandardToLLVM
+  MLIRTransforms
+  MLIRTestDialect
+  MLIRTestIR
+  MLIRTestPass
+  MLIRTestTransforms
+  MLIRSupport
+  MLIRVectorOps
+  MLIRVectorToLLVM
+  MLIRVectorToLoops
+)
+if(MLIR_CUDA_CONVERSIONS_ENABLED)
+  list(APPEND LIBS
+    MLIRGPUtoCUDATransforms
   )
-
+endif()
 add_llvm_tool(mlir-opt
-  mlir-opt.cpp
-
-  DEPENDS
-  ${LIBS}
-  )
-target_link_libraries(mlir-opt PRIVATE ${LIBS})
+ mlir-opt.cpp
+)
 llvm_update_compile_flags(mlir-opt)
-
-mlir_check_all_link_libraries(mlir-opt)
+whole_archive_link(mlir-opt ${LIBS})
+target_link_libraries(mlir-opt PRIVATE MLIRIR MLIRMlirOptLib ${LIBS} LLVMSupport)

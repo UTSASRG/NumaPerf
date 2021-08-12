@@ -1,6 +1,6 @@
 //===-- SPIRVCompositeOps.td - MLIR SPIR-V Composite Ops ---*- tablegen -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,7 +15,6 @@
 #define SPIRV_COMPOSITE_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
@@ -44,16 +43,16 @@ def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
     type of the result. When constructing a vector, there must be at least
     two Constituent operands.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     composite-construct-op ::= ssa-id `=` `spv.CompositeConstruct`
                                (ssa-use (`,` ssa-use)* )? `:` composite-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.CompositeConstruct %1, %2, %3 : vector<3xf32>
     ```
   }];
@@ -83,7 +82,7 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
     bounds.  All composite constituents use zero-based numbering, as
     described by their OpType… instruction.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     composite-extract-op ::= ssa-id `=` `spv.CompositeExtract` ssa-use
@@ -91,9 +90,9 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
                              `:` composite-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
     %1 = spv.Load "Function" %0 ["Volatile"] : !spv.array<4x!spv.array<4xf32>>
     %2 = spv.CompositeExtract %1[1 : i32] : !spv.array<4x!spv.array<4xf32>>
@@ -111,7 +110,7 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
   );
 
   let builders = [
-    OpBuilder<[{OpBuilder &builder, OperationState &state,
+    OpBuilder<[{Builder *builder, OperationState &state,
                 Value composite, ArrayRef<int32_t> indices}]>
   ];
 
@@ -138,7 +137,7 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
     numbering, as described by their OpType… instruction. The type of the
     part selected to modify must match the type of Object.
 
-    <!-- End of AutoGen section -->
+    ### Custom assembly form
 
     ```
     composite-insert-op ::= ssa-id `=` `spv.CompositeInsert` ssa-use, ssa-use
@@ -146,9 +145,9 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
                             `:` object-type `into` composite-type
     ```
 
-    #### Example:
+    For example:
 
-    ```mlir
+    ```
     %0 = spv.CompositeInsert %object, %composite[1 : i32] : f32 into !spv.array<4xf32>
     ```
   }];

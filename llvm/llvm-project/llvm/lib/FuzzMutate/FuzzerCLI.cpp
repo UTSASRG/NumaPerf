@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/FuzzMutate/FuzzerCLI.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -37,7 +36,7 @@ void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
 }
 
 void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
-  std::vector<std::string> Args{std::string(ExecName)};
+  std::vector<std::string> Args{ExecName};
 
   auto NameAndArgs = ExecName.split("--");
   if (NameAndArgs.second.empty())
@@ -74,7 +73,7 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
 
 void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
   // TODO: Refactor parts common with the 'handleExecNameEncodedBEOpts'
-  std::vector<std::string> Args{std::string(ExecName)};
+  std::vector<std::string> Args{ExecName};
 
   auto NameAndArgs = ExecName.split("--");
   if (NameAndArgs.second.empty())

@@ -7,6 +7,7 @@
 // The PowerPC ExegesisTarget.
 //===----------------------------------------------------------------------===//
 #include "../Target.h"
+#include "../Latency.h"
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 

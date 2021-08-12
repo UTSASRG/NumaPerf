@@ -66,7 +66,7 @@ public:
   bool isISR() const { return IsISR; }
   void setISR() { IsISR = true; }
   void createISRRegFI();
-  int getISRRegFI(Register Reg) const { return ISRDataRegFI[Reg]; }
+  int getISRRegFI(unsigned Reg) const { return ISRDataRegFI[Reg]; }
   bool isISRRegFI(int FI) const;
 
   /// Create a MachinePointerInfo that has a GlobalValuePseudoSourceValue object
@@ -89,12 +89,12 @@ private:
   /// SRetReturnReg - Some subtargets require that sret lowering includes
   /// returning the value of the returned struct in a register. This field
   /// holds the virtual register into which the sret argument is passed.
-  Register SRetReturnReg;
+  unsigned SRetReturnReg = 0;
 
   /// GlobalBaseReg - keeps track of the virtual register initialized for
   /// use as the global base register. This is used for PIC in some PIC
   /// relocation models.
-  Register GlobalBaseReg;
+  unsigned GlobalBaseReg = 0;
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex = 0;

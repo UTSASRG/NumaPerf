@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_ARMUNWINDINFO_H
-#define LLDB_SYMBOL_ARMUNWINDINFO_H
+#ifndef liblldb_ArmUnwindInfo_h_
+#define liblldb_ArmUnwindInfo_h_
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -65,4 +65,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_ARMUNWINDINFO_H
+#endif // liblldb_ArmUnwindInfo_h_

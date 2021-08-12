@@ -8,7 +8,7 @@
 
 #include "lld/Common/ErrorHandler.h"
 
-#include "llvm/Support/Parallel.h"
+#include "lld/Common/Threads.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -62,11 +62,8 @@ void lld::exitLld(int val) {
   // avoid intermittent crashes on Windows when exiting.
   llvm_shutdown();
 
-  {
-    std::lock_guard<std::mutex> lock(mu);
-    lld::outs().flush();
-    lld::errs().flush();
-  }
+  lld::outs().flush();
+  lld::errs().flush();
   _exit(val);
 }
 
@@ -117,7 +114,7 @@ void lld::checkError(Error e) {
 // extracted from an error message using regexps.
 std::string ErrorHandler::getLocation(const Twine &msg) {
   if (!vsDiagnostics)
-    return std::string(logName);
+    return logName;
 
   static std::regex regexes[] = {
       std::regex(
@@ -149,7 +146,7 @@ std::string ErrorHandler::getLocation(const Twine &msg) {
     return m.str(1) + "(" + m.str(2) + ")";
   }
 
-  return std::string(logName);
+  return logName;
 }
 
 void ErrorHandler::log(const Twine &msg) {
@@ -194,26 +191,20 @@ void ErrorHandler::error(const Twine &msg) {
     }
   }
 
-  bool exit = false;
-  {
-    std::lock_guard<std::mutex> lock(mu);
+  std::lock_guard<std::mutex> lock(mu);
 
-    if (errorLimit == 0 || errorCount < errorLimit) {
-      lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
-                  << "error: " << Colors::RESET << msg << "\n";
-    } else if (errorCount == errorLimit) {
-      lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
-                  << "error: " << Colors::RESET << errorLimitExceededMsg
-                  << "\n";
-      exit = exitEarly;
-    }
-
-    sep = getSeparator(msg);
-    ++errorCount;
+  if (errorLimit == 0 || errorCount < errorLimit) {
+    lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
+                << "error: " << Colors::RESET << msg << "\n";
+  } else if (errorCount == errorLimit) {
+    lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
+                << "error: " << Colors::RESET << errorLimitExceededMsg << "\n";
+    if (exitEarly)
+      exitLld(1);
   }
 
-  if (exit)
-    exitLld(1);
+  sep = getSeparator(msg);
+  ++errorCount;
 }
 
 void ErrorHandler::fatal(const Twine &msg) {

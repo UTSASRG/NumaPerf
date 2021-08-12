@@ -1,4 +1,4 @@
-//===-- SearchFilter.cpp --------------------------------------------------===//
+//===-- SearchFilter.cpp ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -75,8 +75,7 @@ SearchFilter::SearchFilter(const TargetSP &target_sp, unsigned char filterType)
 SearchFilter::~SearchFilter() = default;
 
 SearchFilterSP SearchFilter::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &filter_dict,
+    Target &target, const StructuredData::Dictionary &filter_dict,
     Status &error) {
   SearchFilterSP result_sp;
   if (!filter_dict.IsValid()) {
@@ -110,19 +109,19 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
   switch (filter_type) {
   case Unconstrained:
     result_sp = SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
-        target_sp, *subclass_options, error);
+        target, *subclass_options, error);
     break;
   case ByModule:
     result_sp = SearchFilterByModule::CreateFromStructuredData(
-        target_sp, *subclass_options, error);
+        target, *subclass_options, error);
     break;
   case ByModules:
     result_sp = SearchFilterByModuleList::CreateFromStructuredData(
-        target_sp, *subclass_options, error);
+        target, *subclass_options, error);
     break;
   case ByModulesAndCU:
     result_sp = SearchFilterByModuleListAndCU::CreateFromStructuredData(
-        target_sp, *subclass_options, error);
+        target, *subclass_options, error);
     break;
   case Exception:
     error.SetErrorString("Can't serialize exception breakpoints yet.");
@@ -161,8 +160,9 @@ void SearchFilter::GetDescription(Stream *s) {}
 
 void SearchFilter::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP SearchFilter::CreateCopy(lldb::TargetSP& target_sp) {
-  SearchFilterSP ret_sp = DoCreateCopy();
+lldb::SearchFilterSP SearchFilter::CopyForBreakpoint(Breakpoint &breakpoint) {
+  SearchFilterSP ret_sp = DoCopyForBreakpoint(breakpoint);
+  TargetSP target_sp = breakpoint.GetTargetSP();
   ret_sp->SetTarget(target_sp);
   return ret_sp;
 }
@@ -212,7 +212,7 @@ void SearchFilter::Search(Searcher &searcher) {
     searcher.SearchCallback(*this, empty_sc, nullptr);
     return;
   }
-
+  
   DoModuleIteration(empty_sc, searcher);
 }
 
@@ -362,11 +362,11 @@ Searcher::CallbackReturn SearchFilter::DoFunctionIteration(
 //  Selects a shared library matching a given file spec, consulting the targets
 //  "black list".
 SearchFilterSP SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
+    Target &target, const StructuredData::Dictionary &data_dict,
     Status &error) {
   // No options for an unconstrained search.
-  return std::make_shared<SearchFilterForUnconstrainedSearches>(target_sp);
+  return std::make_shared<SearchFilterForUnconstrainedSearches>(
+      target.shared_from_this());
 }
 
 StructuredData::ObjectSP
@@ -390,7 +390,8 @@ bool SearchFilterForUnconstrainedSearches::ModulePasses(
   return true;
 }
 
-SearchFilterSP SearchFilterForUnconstrainedSearches::DoCreateCopy() {
+lldb::SearchFilterSP SearchFilterForUnconstrainedSearches::DoCopyForBreakpoint(
+    Breakpoint &breakpoint) {
   return std::make_shared<SearchFilterForUnconstrainedSearches>(*this);
 }
 
@@ -414,6 +415,12 @@ bool SearchFilterByModule::ModulePasses(const FileSpec &spec) {
 
 bool SearchFilterByModule::AddressPasses(Address &address) {
   // FIXME: Not yet implemented
+  return true;
+}
+
+bool SearchFilterByModule::CompUnitPasses(FileSpec &fileSpec) { return true; }
+
+bool SearchFilterByModule::CompUnitPasses(CompileUnit &compUnit) {
   return true;
 }
 
@@ -459,13 +466,13 @@ uint32_t SearchFilterByModule::GetFilterRequiredItems() {
 
 void SearchFilterByModule::Dump(Stream *s) const {}
 
-SearchFilterSP SearchFilterByModule::DoCreateCopy() {
+lldb::SearchFilterSP
+SearchFilterByModule::DoCopyForBreakpoint(Breakpoint &breakpoint) {
   return std::make_shared<SearchFilterByModule>(*this);
 }
 
 SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
+    Target &target, const StructuredData::Dictionary &data_dict,
     Status &error) {
   StructuredData::Array *modules_array;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
@@ -490,7 +497,8 @@ SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
   }
   FileSpec module_spec(module);
 
-  return std::make_shared<SearchFilterByModule>(target_sp, module_spec);
+  return std::make_shared<SearchFilterByModule>(target.shared_from_this(),
+                                                module_spec);
 }
 
 StructuredData::ObjectSP SearchFilterByModule::SerializeToStructuredData() {
@@ -534,6 +542,14 @@ bool SearchFilterByModuleList::ModulePasses(const FileSpec &spec) {
 
 bool SearchFilterByModuleList::AddressPasses(Address &address) {
   // FIXME: Not yet implemented
+  return true;
+}
+
+bool SearchFilterByModuleList::CompUnitPasses(FileSpec &fileSpec) {
+  return true;
+}
+
+bool SearchFilterByModuleList::CompUnitPasses(CompileUnit &compUnit) {
   return true;
 }
 
@@ -595,20 +611,20 @@ uint32_t SearchFilterByModuleList::GetFilterRequiredItems() {
 
 void SearchFilterByModuleList::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP SearchFilterByModuleList::DoCreateCopy() {
+lldb::SearchFilterSP
+SearchFilterByModuleList::DoCopyForBreakpoint(Breakpoint &breakpoint) {
   return std::make_shared<SearchFilterByModuleList>(*this);
 }
 
 SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
+    Target &target, const StructuredData::Dictionary &data_dict,
     Status &error) {
   StructuredData::Array *modules_array;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
 
   if (!success)
-    return std::make_shared<SearchFilterByModuleList>(target_sp,
+    return std::make_shared<SearchFilterByModuleList>(target.shared_from_this(),
                                                       FileSpecList{});
   FileSpecList modules;
   size_t num_modules = modules_array->GetSize();
@@ -622,7 +638,8 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
     }
     modules.EmplaceBack(module);
   }
-  return std::make_shared<SearchFilterByModuleList>(target_sp, modules);
+  return std::make_shared<SearchFilterByModuleList>(target.shared_from_this(),
+                                                    modules);
 }
 
 void SearchFilterByModuleList::SerializeUnwrapped(
@@ -650,8 +667,7 @@ SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
 SearchFilterByModuleListAndCU::~SearchFilterByModuleListAndCU() = default;
 
 lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
+    Target &target, const StructuredData::Dictionary &data_dict,
     Status &error) {
   StructuredData::Array *modules_array = nullptr;
   SearchFilterSP result_sp;
@@ -694,7 +710,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   }
 
   return std::make_shared<SearchFilterByModuleListAndCU>(
-      target_sp, modules, cus);
+      target.shared_from_this(), modules, cus);
 }
 
 StructuredData::ObjectSP
@@ -816,6 +832,7 @@ uint32_t SearchFilterByModuleListAndCU::GetFilterRequiredItems() {
 
 void SearchFilterByModuleListAndCU::Dump(Stream *s) const {}
 
-SearchFilterSP SearchFilterByModuleListAndCU::DoCreateCopy() {
+lldb::SearchFilterSP
+SearchFilterByModuleListAndCU::DoCopyForBreakpoint(Breakpoint &breakpoint) {
   return std::make_shared<SearchFilterByModuleListAndCU>(*this);
 }

@@ -238,7 +238,6 @@ defm : SBWriteResPair<WriteFCmp64Y, [SBPort1],  3, [1], 1, 7>;
 defm : SBWriteResPair<WriteFCmp64Z, [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFCom,    [SBPort1],  3>;
-defm : SBWriteResPair<WriteFComX,   [SBPort1],  3>;
 
 defm : SBWriteResPair<WriteFMul,    [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFMulX,   [SBPort0],  5, [1], 1, 6>;
@@ -367,10 +366,8 @@ defm : X86WriteRes<WriteVecStoreX,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreNT,      [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SBPort23,SBPort4], 1, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStoreY, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
 defm : X86WriteRes<WriteVecMove,         [SBPort05], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SBPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SBPort05], 1, [1], 1>;
@@ -484,7 +481,7 @@ def : WriteRes<WritePCmpEStrM, [SBPort015]> {
   let ResourceCycles = [8];
 }
 def : WriteRes<WritePCmpEStrMLd, [SBPort015, SBPort23]> {
-  let Latency = 17;
+  let Latency = 11;
   let ResourceCycles = [7, 1];
 }
 
@@ -506,7 +503,7 @@ def : WriteRes<WritePCmpEStrI, [SBPort015]> {
   let ResourceCycles = [8];
 }
 def : WriteRes<WritePCmpEStrILd, [SBPort015, SBPort23]> {
-  let Latency = 10;
+  let Latency = 4;
   let ResourceCycles = [7, 1];
 }
 
@@ -544,7 +541,7 @@ def : WriteRes<WriteAESKeyGen, [SBPort015]> {
   let ResourceCycles = [11];
 }
 def : WriteRes<WriteAESKeyGenLd, [SBPort015, SBPort23]> {
-  let Latency = 14;
+  let Latency = 8;
   let ResourceCycles = [10, 1];
 }
 
@@ -554,7 +551,7 @@ def : WriteRes<WriteCLMul, [SBPort015]> {
   let ResourceCycles = [18];
 }
 def : WriteRes<WriteCLMulLd, [SBPort015, SBPort23]> {
-  let Latency = 20;
+  let Latency = 14;
   let ResourceCycles = [17, 1];
 }
 
@@ -1108,7 +1105,7 @@ def: InstRW<[SBWriteResGroupVzeroupper], (instrs VZEROUPPER)>;
 
 def: InstRW<[WriteZero], (instrs CLC)>;
 
-// Instruction variants handled by the renamer. These might not need execution
+// Intruction variants handled by the renamer. These might not need execution
 // ports in certain conditions.
 // See Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
 // section "Sandy Bridge and Ivy Bridge Pipeline" > "Register allocation and

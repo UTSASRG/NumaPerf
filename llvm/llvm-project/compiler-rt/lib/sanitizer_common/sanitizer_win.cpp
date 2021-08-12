@@ -94,10 +94,6 @@ uptr internal_getpid() {
   return GetProcessId(GetCurrentProcess());
 }
 
-int internal_dlinfo(void *handle, int request, void *p) {
-  UNIMPLEMENTED();
-}
-
 // In contrast to POSIX, on Windows GetCurrentThreadId()
 // returns a system-unique identifier.
 tid_t GetTid() {
@@ -791,7 +787,7 @@ uptr GetRSS() {
   return counters.WorkingSetSize;
 }
 
-void *internal_start_thread(void *(*func)(void *arg), void *arg) { return 0; }
+void *internal_start_thread(void (*func)(void *arg), void *arg) { return 0; }
 void internal_join_thread(void *th) { }
 
 // ---------------------- BlockingMutex ---------------- {{{1
@@ -1064,8 +1060,7 @@ char **GetEnviron() {
 }
 
 pid_t StartSubprocess(const char *program, const char *const argv[],
-                      const char *const envp[], fd_t stdin_fd, fd_t stdout_fd,
-                      fd_t stderr_fd) {
+                      fd_t stdin_fd, fd_t stdout_fd, fd_t stderr_fd) {
   // FIXME: implement on this platform
   // Should be implemented based on
   // SymbolizerProcess::StarAtSymbolizerSubprocess

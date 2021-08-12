@@ -1,4 +1,4 @@
-//===-- PlatformRemoteGDBServer.cpp ---------------------------------------===//
+//===-- PlatformRemoteGDBServer.cpp -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,8 +34,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_gdb_server;
-
-LLDB_PLUGIN_DEFINE_ADV(PlatformRemoteGDBServer, PlatformGDB)
 
 static bool g_initialized = false;
 
@@ -288,55 +286,40 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
                                    "execute 'platform disconnect' to close the "
                                    "current connection",
                                    GetHostname());
-    return error;
-  }
-
-  if (args.GetArgumentCount() != 1) {
-    error.SetErrorString(
-        "\"platform connect\" takes a single argument: <connect-url>");
-    return error;
-  }
-
-  const char *url = args.GetArgumentAtIndex(0);
-  if (!url)
-    return Status("URL is null.");
-
-  int port;
-  llvm::StringRef scheme, hostname, pathname;
-  if (!UriParser::Parse(url, scheme, hostname, port, pathname))
-    return Status("Invalid URL: %s", url);
-
-  // We're going to reuse the hostname when we connect to the debugserver.
-  m_platform_scheme = std::string(scheme);
-  m_platform_hostname = std::string(hostname);
-
-  m_gdb_client.SetConnection(std::make_unique<ConnectionFileDescriptor>());
-  if (repro::Reproducer::Instance().IsReplaying()) {
-    error = m_gdb_replay_server.Connect(m_gdb_client);
-    if (error.Success())
-      m_gdb_replay_server.StartAsyncThread();
   } else {
-    if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-      repro::GDBRemoteProvider &provider =
-          g->GetOrCreate<repro::GDBRemoteProvider>();
-      m_gdb_client.SetPacketRecorder(provider.GetNewPacketRecorder());
+    if (args.GetArgumentCount() == 1) {
+      m_gdb_client.SetConnection(new ConnectionFileDescriptor());
+      // we're going to reuse the hostname when we connect to the debugserver
+      int port;
+      std::string path;
+      const char *url = args.GetArgumentAtIndex(0);
+      if (!url)
+        return Status("URL is null.");
+      llvm::StringRef scheme, hostname, pathname;
+      if (!UriParser::Parse(url, scheme, hostname, port, pathname))
+        return Status("Invalid URL: %s", url);
+      m_platform_scheme = scheme;
+      m_platform_hostname = hostname;
+      path = pathname;
+
+      const ConnectionStatus status = m_gdb_client.Connect(url, &error);
+      if (status == eConnectionStatusSuccess) {
+        if (m_gdb_client.HandshakeWithServer(&error)) {
+          m_gdb_client.GetHostInfo();
+          // If a working directory was set prior to connecting, send it down
+          // now
+          if (m_working_dir)
+            m_gdb_client.SetWorkingDir(m_working_dir);
+        } else {
+          m_gdb_client.Disconnect();
+          if (error.Success())
+            error.SetErrorString("handshake failed");
+        }
+      }
+    } else {
+      error.SetErrorString(
+          "\"platform connect\" takes a single argument: <connect-url>");
     }
-    m_gdb_client.Connect(url, &error);
-  }
-
-  if (error.Fail())
-    return error;
-
-  if (m_gdb_client.HandshakeWithServer(&error)) {
-    m_gdb_client.GetHostInfo();
-    // If a working directory was set prior to connecting, send it down
-    // now.
-    if (m_working_dir)
-      m_gdb_client.SetWorkingDir(m_working_dir);
-  } else {
-    m_gdb_client.Disconnect();
-    if (error.Success())
-      error.SetErrorString("handshake failed");
   }
   return error;
 }
@@ -742,8 +725,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
       response.GetResponseType() != response.eResponse)
     return m_remote_signals_sp;
 
-  auto object_sp =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
   if (!object_sp || !object_sp->IsValid())
     return m_remote_signals_sp;
 
@@ -790,7 +772,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
         std::string description{""};
         object_sp = dict->GetValueForKey("description");
         if (object_sp && object_sp->IsValid())
-          description = std::string(object_sp->GetStringValue());
+          description = object_sp->GetStringValue();
 
         remote_signals_sp->AddSignal(signo, name.str().c_str(), suppress, stop,
                                      notify, description.c_str());
@@ -829,7 +811,7 @@ std::string PlatformRemoteGDBServer::MakeUrl(const char *scheme,
     result.Printf(":%u", port);
   if (path)
     result.Write(path, strlen(path));
-  return std::string(result.GetString());
+  return result.GetString();
 }
 
 lldb::ProcessSP PlatformRemoteGDBServer::ConnectProcess(

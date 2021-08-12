@@ -14,15 +14,6 @@ class Struct<string name> : NamedType<name> {
   list<Field> Fields;
 }
 
-class EnumNameValue<string name, string value = "__default_enum_value__"> {
-  string Name = name;
-  string Value = value;
-}
-
-class Enum<string name, list<EnumNameValue> enumerations> : NamedType<name> {
-  list<EnumNameValue> Enumerations = enumerations;
-}
-
 class PtrType<Type type> : Type {
   Type PointeeType = type;
 }
@@ -46,20 +37,10 @@ def CharType : NamedType<"char">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;
-def ConstVoidPtr : ConstType<VoidPtr>;
 def SizeTType : NamedType<"size_t">;
-def FloatPtr : PtrType<FloatType>;
-
-// _Noreturn is really not a type, but it is convenient to treat it as a type.
-def NoReturn : NamedType<"_Noreturn void">;
 
 class Macro<string name> {
   string Name = name;
-}
-
-class EnumeratedNameValue<string name, string value = "__default__"> {
-  string Name = name;
-  string Value = value;
 }
 
 class Annotation {}
@@ -82,15 +63,13 @@ class FunctionSpec<string name, RetValSpec return, list<ArgSpec> args> {
 }
 
 class HeaderSpec<string name,
-                list<Macro> macros = [],
-                list<Type> types = [],
-                list<EnumeratedNameValue> enumerations = [],
-                list<FunctionSpec> functions = []> {
+                list<Macro> macros,
+                list<Type> types,
+                list<FunctionSpec> functions> {
   string Name = name;
   list<FunctionSpec> Functions = functions;
   list<Type> Types = types;
   list<Macro> Macros = macros;
-  list<EnumeratedNameValue> Enumerations = enumerations;
 }
 
 class StandardSpec<string name> {

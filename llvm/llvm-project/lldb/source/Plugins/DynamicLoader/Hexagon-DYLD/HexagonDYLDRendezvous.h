@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_HEXAGONDYLDRENDEZVOUS_H
-#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_HEXAGONDYLDRENDEZVOUS_H
+#ifndef liblldb_HexagonDYLDRendezvous_H_
+#define liblldb_HexagonDYLDRendezvous_H_
 
 #include <limits.h>
 #include <list>
@@ -243,4 +243,4 @@ protected:
   bool FindMetadata(const char *name, PThreadField field, uint32_t &value);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_HEXAGONDYLDRENDEZVOUS_H
+#endif // liblldb_HexagonDYLDRendezvous_H_

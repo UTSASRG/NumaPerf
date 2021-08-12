@@ -12,7 +12,6 @@
 #include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
@@ -135,9 +134,7 @@ void Sema::checkContainerDeclVerbatimLine(const BlockCommandComment *Comment) {
   unsigned DiagSelect;
   switch (Comment->getCommandID()) {
     case CommandTraits::KCI_class:
-      DiagSelect =
-          (!isClassOrStructOrTagTypedefDecl() && !isClassTemplateDecl()) ? 1
-                                                                         : 0;
+      DiagSelect = (!isClassOrStructDecl() && !isClassTemplateDecl()) ? 1 : 0;
       // Allow @class command on @interface declarations.
       // FIXME. Currently, \class and @class are indistinguishable. So,
       // \class is also allowed on an @interface declaration
@@ -151,7 +148,7 @@ void Sema::checkContainerDeclVerbatimLine(const BlockCommandComment *Comment) {
       DiagSelect = !isObjCProtocolDecl() ? 3 : 0;
       break;
     case CommandTraits::KCI_struct:
-      DiagSelect = !isClassOrStructOrTagTypedefDecl() ? 4 : 0;
+      DiagSelect = !isClassOrStructDecl() ? 4 : 0;
       break;
     case CommandTraits::KCI_union:
       DiagSelect = !isUnionDecl() ? 5 : 0;
@@ -691,7 +688,7 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
         FD->doesThisDeclarationHaveABody())
       return;
 
-    const LangOptions &LO = FD->getLangOpts();
+    const LangOptions &LO = FD->getASTContext().getLangOpts();
     const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C2x;
     StringRef AttributeSpelling =
         DoubleSquareBracket ? "[[deprecated]]" : "__attribute__((deprecated))";
@@ -938,50 +935,15 @@ bool Sema::isUnionDecl() {
     return RD->isUnion();
   return false;
 }
-static bool isClassOrStructDeclImpl(const Decl *D) {
-  if (auto *record = dyn_cast_or_null<RecordDecl>(D))
-    return !record->isUnion();
-
-  return false;
-}
 
 bool Sema::isClassOrStructDecl() {
   if (!ThisDeclInfo)
     return false;
   if (!ThisDeclInfo->IsFilled)
     inspectThisDecl();
-
-  if (!ThisDeclInfo->CurrentDecl)
-    return false;
-
-  return isClassOrStructDeclImpl(ThisDeclInfo->CurrentDecl);
-}
-
-bool Sema::isClassOrStructOrTagTypedefDecl() {
-  if (!ThisDeclInfo)
-    return false;
-  if (!ThisDeclInfo->IsFilled)
-    inspectThisDecl();
-
-  if (!ThisDeclInfo->CurrentDecl)
-    return false;
-
-  if (isClassOrStructDeclImpl(ThisDeclInfo->CurrentDecl))
-    return true;
-
-  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl)) {
-    auto UnderlyingType = ThisTypedefDecl->getUnderlyingType();
-    if (auto ThisElaboratedType = dyn_cast<ElaboratedType>(UnderlyingType)) {
-      auto DesugaredType = ThisElaboratedType->desugar();
-      if (auto *DesugaredTypePtr = DesugaredType.getTypePtrOrNull()) {
-        if (auto *ThisRecordType = dyn_cast<RecordType>(DesugaredTypePtr)) {
-          return isClassOrStructDeclImpl(ThisRecordType->getAsRecordDecl());
-        }
-      }
-    }
-  }
-
-  return false;
+  return ThisDeclInfo->CurrentDecl &&
+         isa<RecordDecl>(ThisDeclInfo->CurrentDecl) &&
+         !isUnionDecl();
 }
 
 bool Sema::isClassTemplateDecl() {

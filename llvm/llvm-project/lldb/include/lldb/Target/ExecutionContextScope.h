@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_EXECUTIONCONTEXTSCOPE_H
-#define LLDB_TARGET_EXECUTIONCONTEXTSCOPE_H
+#ifndef liblldb_ExecutionContextScope_h_
+#define liblldb_ExecutionContextScope_h_
 
 #include "lldb/lldb-private.h"
 
@@ -55,4 +55,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_EXECUTIONCONTEXTSCOPE_H
+#endif // liblldb_ExecutionContextScope_h_

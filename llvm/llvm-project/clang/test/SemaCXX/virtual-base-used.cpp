@@ -40,7 +40,6 @@ struct B : public virtual A {
   // expected-note@-7 {{destructor of 'B' is implicitly deleted because field 'x' has an inaccessible destructor}}
 #ifdef MSABI
   // expected-note@-9 {{default constructor of 'B' is implicitly deleted because field 'x' has an inaccessible destructor}}
-  // expected-note@-10 {{destructor of 'B' is implicitly deleted}}
 #endif
 #endif
 };
@@ -60,10 +59,6 @@ struct D : public virtual B {
   ~D();
 #if __cplusplus >= 201103L
   //expected-error@-2 {{non-deleted function '~D' cannot override a deleted function}}
-#ifdef MSABI
-//expected-error@-4 {{use a deleted function}}
-#else
-#endif
 #endif
 };
 
@@ -73,7 +68,6 @@ D d;
 // expected-note@-2 2{{implicit default constructor for 'D' first required here}}
 #else
 // expected-error@-4 {{call to implicitly-deleted default constructor of 'D'}}
-// expected-note@-5 {{implicit destructor for 'D' first required here}}
 #endif
 #else
 void D::foo() {
@@ -86,6 +80,7 @@ void D::foo() {
 struct E : public virtual A {
 #if __cplusplus >= 201103L
 // expected-error@-2 {{deleted function '~E' cannot override a non-deleted function}}
+// expected-note@-3 {{overridden virtual function is here}}
 #endif
 
   NoDestroy x;
@@ -98,7 +93,6 @@ struct E : public virtual A {
   // expected-note@-7 {{destructor of 'E' is implicitly deleted because field 'x' has an inaccessible destructor}}
 #ifdef MSABI
   // expected-note@-9 {{default constructor of 'E' is implicitly deleted because field 'x' has an inaccessible destructor}}
-  // expected-note@-10 {{destructor of 'E' is implicitly deleted}}
 #endif
 #endif
 };
@@ -110,10 +104,11 @@ struct F : public E {
 // expected-note@-4 {{implicit default constructor for 'E' first required here}}
 #endif
 #else
-// expected-note@-7 {{overridden virtual function is here}}
+// expected-error@-7 {{non-deleted function '~F' cannot override a deleted function}}
+// expected-note@-8 {{while declaring the implicit destructor for 'F'}}
+// expected-note@-9 {{overridden virtual function is here}}
 #ifdef MSABI
-// expected-note@-9 {{default constructor of 'F' is implicitly deleted because base class 'E' has a deleted default constructor}}
-// expected-note@-10 {{destructor of 'F' is implicitly deleted}}
+// expected-note@-11 {{default constructor of 'F' is implicitly deleted because base class 'E' has a deleted default constructor}}
 #endif
 #endif
 };
@@ -133,9 +128,6 @@ struct G : public virtual F {
   ~G();
 #if __cplusplus >= 201103L
   //expected-error@-2 {{non-deleted function '~G' cannot override a deleted function}}
-#ifdef MSABI
-  //expected-error@-4 {{use a deleted function}}
-#endif
 #endif
 };
 
@@ -145,7 +137,6 @@ G g;
 // expected-note@-2 2{{implicit default constructor for 'G' first required here}}
 #else
 // expected-error@-4 {{call to implicitly-deleted default constructor of 'G'}}
-// expected-note@-5 {{mplicit destructor for 'G' first required here}}
 #endif
 #else
 void G::foo() {
@@ -171,7 +162,6 @@ struct H : public virtual A {
   // expected-note@-7 {{destructor of 'H' is implicitly deleted because field 'x' has an inaccessible destructor}}
 #ifdef MSABI
   // expected-note@-9 {{default constructor of 'H' is implicitly deleted because field 'x' has an inaccessible destructor}}
-  // expected-note@-10 {{destructor of 'H' is implicitly deleted}}
 #endif
 #endif
 };
@@ -201,11 +191,6 @@ struct J : public I {
 
   virtual void foo();
   ~J();
-#ifdef MSABI
-#if __cplusplus >= 201103L
-//expected-error@-3 {{use a deleted function}}
-#endif
-#endif
 };
 
 #ifdef MSABI
@@ -214,7 +199,6 @@ J j;
 // expected-note@-2 2{{implicit default constructor for 'J' first required here}}
 #else
 // expected-error@-4 {{call to implicitly-deleted default constructor of 'J'}}
-// expected-note@-5 {{implicit destructor for 'J' first required here}}
 #endif
 
 #else

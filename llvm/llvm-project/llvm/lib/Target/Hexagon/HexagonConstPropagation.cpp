@@ -2836,9 +2836,6 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   if (MI.isCopy())
     return false;
 
-  MachineFunction *MF = MI.getParent()->getParent();
-  auto &HST = MF->getSubtarget<HexagonSubtarget>();
-
   // Collect all virtual register-def operands.
   SmallVector<unsigned,2> DefRegs;
   for (const MachineOperand &MO : MI.operands()) {
@@ -2926,13 +2923,11 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
             NewMI = BuildMI(B, At, DL, *NewD, NewR)
                       .addImm(Hi)
                       .addImm(Lo);
-          } else if (MF->getFunction().hasOptSize() || !HST.isTinyCore()) {
-            // Disable CONST64 for tiny core since it takes a LD resource.
+          } else {
             NewD = &HII.get(Hexagon::CONST64);
             NewMI = BuildMI(B, At, DL, *NewD, NewR)
                       .addImm(V);
-          } else
-            return false;
+          }
         }
       }
       (void)NewMI;

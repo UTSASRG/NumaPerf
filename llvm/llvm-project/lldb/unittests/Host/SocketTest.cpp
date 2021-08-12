@@ -1,4 +1,4 @@
-//===-- SocketTest.cpp ----------------------------------------------------===//
+//===-- SocketTest.cpp ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -111,8 +111,10 @@ TEST_F(SocketTest, TCPListen0ConnectAccept) {
 TEST_F(SocketTest, TCPGetAddress) {
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
-  if (!HostSupportsIPv4())
+  if (!IsAddressFamilySupported("127.0.0.1")) {
+    GTEST_LOG_(WARNING) << "Skipping test due to missing IPv4 support.";
     return;
+  }
   CreateTCPConnectedSockets("127.0.0.1", &socket_a_up, &socket_b_up);
 
   EXPECT_EQ(socket_a_up->GetLocalPortNumber(),
@@ -126,28 +128,36 @@ TEST_F(SocketTest, TCPGetAddress) {
 }
 
 TEST_F(SocketTest, UDPConnect) {
-  llvm::Expected<std::unique_ptr<UDPSocket>> socket =
-      UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
+  Socket *socket;
 
-  ASSERT_THAT_EXPECTED(socket, llvm::Succeeded());
-  EXPECT_TRUE(socket.get()->IsValid());
+  bool child_processes_inherit = false;
+  auto error = UDPSocket::Connect("127.0.0.1:0", child_processes_inherit,
+                                  socket);
+
+  std::unique_ptr<Socket> socket_up(socket);
+
+  EXPECT_TRUE(error.Success());
+  EXPECT_TRUE(socket_up->IsValid());
 }
 
 TEST_F(SocketTest, TCPListen0GetPort) {
+  Socket *server_socket;
   Predicate<uint16_t> port_predicate;
   port_predicate.SetValue(0, eBroadcastNever);
-  llvm::Expected<std::unique_ptr<TCPSocket>> sock =
-      Socket::TcpListen("10.10.12.3:0", false, &port_predicate);
-  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
-  ASSERT_TRUE(sock.get()->IsValid());
-  EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
+  Status err =
+      Socket::TcpListen("10.10.12.3:0", false, server_socket, &port_predicate);
+  std::unique_ptr<TCPSocket> socket_up((TCPSocket*)server_socket);
+  EXPECT_TRUE(socket_up->IsValid());
+  EXPECT_NE(socket_up->GetLocalPortNumber(), 0);
 }
 
 TEST_F(SocketTest, TCPGetConnectURI) {
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
-  if (!HostSupportsIPv4())
+  if (!IsAddressFamilySupported("127.0.0.1")) {
+    GTEST_LOG_(WARNING) << "Skipping test due to missing IPv4 support.";
     return;
+  }
   CreateTCPConnectedSockets("127.0.0.1", &socket_a_up, &socket_b_up);
 
   llvm::StringRef scheme;
@@ -161,17 +171,20 @@ TEST_F(SocketTest, TCPGetConnectURI) {
 }
 
 TEST_F(SocketTest, UDPGetConnectURI) {
-  if (!HostSupportsIPv4())
+  if (!IsAddressFamilySupported("127.0.0.1")) {
+    GTEST_LOG_(WARNING) << "Skipping test due to missing IPv4 support.";
     return;
-  llvm::Expected<std::unique_ptr<UDPSocket>> socket =
-      UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
-  ASSERT_THAT_EXPECTED(socket, llvm::Succeeded());
+  }
+  Socket *socket;
+  bool child_processes_inherit = false;
+  auto error =
+      UDPSocket::Connect("127.0.0.1:0", child_processes_inherit, socket);
 
   llvm::StringRef scheme;
   llvm::StringRef hostname;
   int port;
   llvm::StringRef path;
-  std::string uri = socket.get()->GetRemoteConnectionURI();
+  std::string uri(socket->GetRemoteConnectionURI());
   EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
   EXPECT_EQ(scheme, "udp");
 }

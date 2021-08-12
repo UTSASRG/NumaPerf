@@ -17,6 +17,9 @@ namespace tidy {
 namespace modernize {
 
 void UnaryStaticAssertCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus17)
+    return;
+
   Finder->addMatcher(staticAssertDecl().bind("static_assert"), this);
 }
 

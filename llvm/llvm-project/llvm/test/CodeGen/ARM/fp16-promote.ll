@@ -665,9 +665,7 @@ define void @test_maxnum(half* %p, half* %q) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL-VFP: vmov.f32 s{{[0-9]+}}, #1.000000e+00
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
-; CHECK-VFP: vcmp.f32
-; CHECK-VFP: vmrs
-; CHECK-VFP: vmovlt.f32
+; CHECK-VFP: vmin.f32
 ; CHECK-NOVFP: bl __aeabi_fcmpge
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
@@ -685,9 +683,7 @@ define void @test_minimum(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL-VFP: vmov.f32 s0, #1.000000e+00
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
-; CHECK-VFP: vcmp.f32
-; CHECK-VFP: vmrs
-; CHECK-VFP: vmovhi.f32
+; CHECK-VFP: vmax.f32
 ; CHECK-NOVFP: bl __aeabi_fcmple
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h

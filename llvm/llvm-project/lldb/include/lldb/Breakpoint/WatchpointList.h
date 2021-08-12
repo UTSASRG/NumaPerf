@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_WATCHPOINTLIST_H
-#define LLDB_BREAKPOINT_WATCHPOINTLIST_H
+#ifndef liblldb_WatchpointList_h_
+#define liblldb_WatchpointList_h_
 
 #include <list>
 #include <mutex>
@@ -203,4 +203,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_WATCHPOINTLIST_H
+#endif // liblldb_WatchpointList_h_

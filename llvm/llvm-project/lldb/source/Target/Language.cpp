@@ -1,4 +1,5 @@
-//===-- Language.cpp ------------------------------------------------------===//
+//===-- Language.cpp -------------------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -137,6 +138,13 @@ std::vector<ConstString>
 Language::GetPossibleFormattersMatches(ValueObject &valobj,
                                        lldb::DynamicValueType use_dynamic) {
   return {};
+}
+
+lldb_private::formatters::StringPrinter::EscapingHelper
+Language::GetStringPrinterEscapingHelper(
+    lldb_private::formatters::StringPrinter::GetPrintableElementType
+        elem_type) {
+  return StringPrinter::GetDefaultEscapingHelper(elem_type);
 }
 
 struct language_name_pair {

@@ -170,11 +170,6 @@ public:
     return true;
   }
 
-  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-    return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
-                                    ParentDC, SymbolRoleSet(), Relations);
-  }
-
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
     const DependentNameType *DNT = TL.getTypePtr();
     const NestedNameSpecifier *NNS = DNT->getQualifier();

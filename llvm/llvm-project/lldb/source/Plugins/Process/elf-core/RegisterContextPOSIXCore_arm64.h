@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
+#ifndef liblldb_RegisterContextCorePOSIX_arm64_h_
+#define liblldb_RegisterContextCorePOSIX_arm64_h_
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -48,7 +48,6 @@ protected:
 private:
   lldb::DataBufferSP m_gpr_buffer;
   lldb_private::DataExtractor m_gpr;
-  lldb_private::DataExtractor m_fpregset;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
+#endif // liblldb_RegisterContextCorePOSIX_arm64_h_

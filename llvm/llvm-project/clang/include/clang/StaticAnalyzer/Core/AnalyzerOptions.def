@@ -306,13 +306,9 @@ ANALYZER_OPTION(bool, ShouldTrackConditionsDebug, "track-conditions-debug",
                 "Whether to place an event at each tracked condition.",
                 false)
 
-ANALYZER_OPTION(bool, ShouldApplyFixIts, "apply-fixits",
-                "Apply the fix-it hints to the files",
+ANALYZER_OPTION(bool, ShouldEmitFixItHintsAsRemarks, "fixits-as-remarks",
+                "Emit fix-it hints as remarks for testing purposes",
                 false)
-
-ANALYZER_OPTION(bool, ShouldDisplayCheckerNameForText, "display-checker-name",
-                "Display the checker name for textual outputs",
-                true)
 
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.

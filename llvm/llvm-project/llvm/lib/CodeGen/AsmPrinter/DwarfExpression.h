@@ -30,7 +30,6 @@ class APInt;
 class DwarfCompileUnit;
 class DIELoc;
 class TargetRegisterInfo;
-class MachineLocation;
 
 /// Holds a DIExpression and keeps track of how many operands have been consumed
 /// so far.
@@ -108,21 +107,8 @@ protected:
   /// Holds information about all subregisters comprising a register location.
   struct Register {
     int DwarfRegNo;
-    unsigned SubRegSize;
+    unsigned Size;
     const char *Comment;
-
-    /// Create a full register, no extra DW_OP_piece operators necessary.
-    static Register createRegister(int RegNo, const char *Comment) {
-      return {RegNo, 0, Comment};
-    }
-
-    /// Create a subregister that needs a DW_OP_piece operator with SizeInBits.
-    static Register createSubRegister(int RegNo, unsigned SizeInBits,
-                                      const char *Comment) {
-      return {RegNo, SizeInBits, Comment};
-    }
-
-    bool isSubRegister() const { return SubRegSize; }
   };
 
   /// Whether we are currently emitting an entry value operation.
@@ -143,31 +129,37 @@ protected:
   /// The kind of location description being produced.
   enum { Unknown = 0, Register, Memory, Implicit };
 
-  /// Additional location flags which may be combined with any location kind.
-  /// Currently, entry values are not supported for the Memory location kind.
-  enum { EntryValue = 1 << 0, Indirect = 1 << 1, CallSiteParamValue = 1 << 2 };
+  /// The flags of location description being produced.
+  enum { EntryValue = 1, CallSiteParamValue };
 
   unsigned LocationKind : 3;
-  unsigned LocationFlags : 3;
+  unsigned LocationFlags : 2;
   unsigned DwarfVersion : 4;
 
 public:
-  /// Set the location (\p Loc) and \ref DIExpression (\p DIExpr) to describe.
-  void setLocation(const MachineLocation &Loc, const DIExpression *DIExpr);
+  bool isUnknownLocation() const {
+    return LocationKind == Unknown;
+  }
 
-  bool isUnknownLocation() const { return LocationKind == Unknown; }
+  bool isMemoryLocation() const {
+    return LocationKind == Memory;
+  }
 
-  bool isMemoryLocation() const { return LocationKind == Memory; }
+  bool isRegisterLocation() const {
+    return LocationKind == Register;
+  }
 
-  bool isRegisterLocation() const { return LocationKind == Register; }
+  bool isImplicitLocation() const {
+    return LocationKind == Implicit;
+  }
 
-  bool isImplicitLocation() const { return LocationKind == Implicit; }
+  bool isEntryValue() const {
+    return LocationFlags & EntryValue;
+  }
 
-  bool isEntryValue() const { return LocationFlags & EntryValue; }
-
-  bool isIndirect() const { return LocationFlags & Indirect; }
-
-  bool isParameterValue() { return LocationFlags & CallSiteParamValue; }
+  bool isParameterValue() {
+    return LocationFlags & CallSiteParamValue;
+  }
 
   Optional<uint8_t> TagOffset;
 
@@ -217,8 +209,7 @@ protected:
 
   /// Return whether the given machine register is the frame register in the
   /// current function.
-  virtual bool isFrameRegister(const TargetRegisterInfo &TRI,
-                               unsigned MachineReg) = 0;
+  virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
 
   /// Emit a DW_OP_reg operation. Note that this is only legal inside a DWARF
   /// register location description.
@@ -303,10 +294,14 @@ public:
   }
 
   /// Lock this down to become an entry value location.
-  void setEntryValueFlags(const MachineLocation &Loc);
+  void setEntryValueFlag() {
+    LocationFlags |= EntryValue;
+  }
 
   /// Lock this down to become a call site parameter location.
-  void setCallSiteParamValueFlag() { LocationFlags |= CallSiteParamValue; }
+  void setCallSiteParamValueFlag() {
+    LocationFlags |= CallSiteParamValue;
+  }
 
   /// Emit a machine register location. As an optimization this may also consume
   /// the prefix of a DwarfExpression if a more efficient representation for
@@ -328,10 +323,6 @@ public:
   /// any operands here.
   void beginEntryValueExpression(DIExpressionCursor &ExprCursor);
 
-  /// Return the index of a base type with the given properties and
-  /// create one if necessary.
-  unsigned getOrCreateBaseType(unsigned BitSize, dwarf::TypeKind Encoding);
-
   /// Emit all remaining operations in the DIExpressionCursor.
   ///
   /// \param FragmentOffsetInBits     If this is one fragment out of multiple
@@ -349,7 +340,7 @@ public:
 
   /// Emit location information expressed via WebAssembly location + offset
   /// The Index is an identifier for locals, globals or operand stack.
-  void addWasmLocation(unsigned Index, uint64_t Offset);
+  void addWasmLocation(unsigned Index, int64_t Offset);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
@@ -383,7 +374,6 @@ class DebugLocDwarfExpression final : public DwarfExpression {
 
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
-
 public:
   DebugLocDwarfExpression(unsigned DwarfVersion, BufferByteStreamer &BS,
                           DwarfCompileUnit &CU)
@@ -413,7 +403,6 @@ class DIEDwarfExpression final : public DwarfExpression {
 
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
-
 public:
   DIEDwarfExpression(const AsmPrinter &AP, DwarfCompileUnit &CU, DIELoc &DIE);
 

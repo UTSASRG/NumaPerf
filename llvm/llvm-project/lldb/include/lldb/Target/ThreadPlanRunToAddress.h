@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANRUNTOADDRESS_H
-#define LLDB_TARGET_THREADPLANRUNTOADDRESS_H
+#ifndef liblldb_ThreadPlanRunToAddress_h_
+#define liblldb_ThreadPlanRunToAddress_h_
 
 #include <vector>
 
@@ -59,11 +59,9 @@ private:
   std::vector<lldb::break_id_t> m_break_ids; // This is the breakpoint we are
                                              // using to stop us at m_address.
 
-  ThreadPlanRunToAddress(const ThreadPlanRunToAddress &) = delete;
-  const ThreadPlanRunToAddress &
-  operator=(const ThreadPlanRunToAddress &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanRunToAddress);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANRUNTOADDRESS_H
+#endif // liblldb_ThreadPlanRunToAddress_h_

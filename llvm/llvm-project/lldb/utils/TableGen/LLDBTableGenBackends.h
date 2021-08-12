@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILS_TABLEGEN_LLDBTABLEGENBACKENDS_H
-#define LLDB_UTILS_TABLEGEN_LLDBTABLEGENBACKENDS_H
+#ifndef LLVM_LLDB_UTILS_TABLEGEN_TABLEGENBACKENDS_H
+#define LLVM_LLDB_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 
 #include "llvm/ADT/StringRef.h"
 

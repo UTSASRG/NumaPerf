@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_DATABUFFER_H
-#define LLDB_UTILITY_DATABUFFER_H
+#ifndef liblldb_DataBuffer_h_
+#define liblldb_DataBuffer_h_
 #if defined(__cplusplus)
 
 #include <stdint.h>
@@ -82,4 +82,4 @@ public:
 } // namespace lldb_private
 
 #endif /// #if defined(__cplusplus)
-#endif // LLDB_UTILITY_DATABUFFER_H
+#endif /// lldb_DataBuffer_h_

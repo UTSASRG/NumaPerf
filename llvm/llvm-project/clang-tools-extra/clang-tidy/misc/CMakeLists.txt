@@ -1,14 +1,10 @@
-set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-  )
+set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyMiscModule
   DefinitionsInHeadersCheck.cpp
   MiscTidyModule.cpp
   MisplacedConstCheck.cpp
   NewDeleteOverloadsCheck.cpp
-  NoRecursionCheck.cpp
   NonCopyableObjects.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
   RedundantExpressionCheck.cpp

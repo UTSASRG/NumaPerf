@@ -186,6 +186,6 @@ void ento::registerObjCUnusedIvarsChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCUnusedIvarsChecker>();
 }
 
-bool ento::shouldRegisterObjCUnusedIvarsChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterObjCUnusedIvarsChecker(const LangOptions &LO) {
   return true;
 }

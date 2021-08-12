@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
+#ifndef liblldb_PlatformMacOSX_h_
+#define liblldb_PlatformMacOSX_h_
 
 #include "PlatformDarwin.h"
 
@@ -73,12 +73,11 @@ public:
   AddClangModuleCompilationOptions(lldb_private::Target *target,
                                    std::vector<std::string> &options) override {
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-        target, options, lldb_private::XcodeSDK::Type::MacOSX);
+        target, options, PlatformDarwin::SDKType::MacOSX);
   }
 
 private:
-  PlatformMacOSX(const PlatformMacOSX &) = delete;
-  const PlatformMacOSX &operator=(const PlatformMacOSX &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformMacOSX);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
+#endif // liblldb_PlatformMacOSX_h_

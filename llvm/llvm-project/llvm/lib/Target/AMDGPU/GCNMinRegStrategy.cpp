@@ -5,13 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file defines and imlements the class GCNMinRegScheduler, which
-/// implements an experimental, simple scheduler whose main goal is to learn
-/// ways about consuming less possible registers for a region.
-///
-//===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"

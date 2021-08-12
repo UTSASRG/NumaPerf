@@ -1,4 +1,4 @@
-//===-- DebugNamesDWARFIndex.cpp ------------------------------------------===//
+//===-- DebugNamesDWARFIndex.cpp -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -20,14 +19,18 @@ using namespace lldb;
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
                              DWARFDataExtractor debug_str,
-                             SymbolFileDWARF &dwarf) {
+                             DWARFDebugInfo *debug_info) {
+  if (!debug_info) {
+    return llvm::make_error<llvm::StringError>("debug info null",
+                                               llvm::inconvertibleErrorCode());
+  }
   auto index_up = std::make_unique<DebugNames>(debug_names.GetAsLLVM(),
                                                 debug_str.GetAsLLVM());
   if (llvm::Error E = index_up->extract())
     return std::move(E);
 
   return std::unique_ptr<DebugNamesDWARFIndex>(new DebugNamesDWARFIndex(
-      module, std::move(index_up), debug_names, debug_str, dwarf));
+      module, std::move(index_up), debug_names, debug_str, *debug_info));
 }
 
 llvm::DenseSet<dw_offset_t>
@@ -50,7 +53,12 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   if (!cu)
     return llvm::None;
 
+  // This initializes the DWO symbol file. It's not possible for
+  // GetDwoSymbolFile to call this automatically because of mutual recursion
+  // between this and DWARFDebugInfoEntry::GetAttributeValue.
+  cu->ExtractUnitDIEIfNeeded();
   cu = &cu->GetNonSkeletonUnit();
+
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
     return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
                   DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
@@ -58,18 +66,10 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   return llvm::None;
 }
 
-bool DebugNamesDWARFIndex::ProcessEntry(
-    const DebugNames::Entry &entry,
-    llvm::function_ref<bool(DWARFDIE die)> callback, llvm::StringRef name) {
-  llvm::Optional<DIERef> ref = ToDIERef(entry);
-  if (!ref)
-    return true;
-  SymbolFileDWARF &dwarf =
-      *llvm::cast<SymbolFileDWARF>(m_module.GetSymbolFile());
-  DWARFDIE die = dwarf.GetDIE(*ref);
-  if (!die)
-    return true;
-  return callback(die);
+void DebugNamesDWARFIndex::Append(const DebugNames::Entry &entry,
+                                  DIEArray &offsets) {
+  if (llvm::Optional<DIERef> ref = ToDIERef(entry))
+    offsets.push_back(*ref);
 }
 
 void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
@@ -83,23 +83,23 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
       ni.getUnitOffset(), name);
 }
 
-void DebugNamesDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetGlobalVariables(ConstString basename,
+                                              DIEArray &offsets) {
+  m_fallback.GetGlobalVariables(basename, offsets);
+
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(basename.GetStringRef())) {
     if (entry.tag() != DW_TAG_variable)
       continue;
 
-    if (!ProcessEntry(entry, callback, basename.GetStringRef()))
-      return;
+    Append(entry, offsets);
   }
-
-  m_fallback.GetGlobalVariables(basename, callback);
 }
 
-void DebugNamesDWARFIndex::GetGlobalVariables(
-    const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
+                                              DIEArray &offsets) {
+  m_fallback.GetGlobalVariables(regex, offsets);
+
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
@@ -111,19 +111,17 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
         if (entry_or->tag() != DW_TAG_variable)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback,
-                          llvm::StringRef(nte.getString())))
-          return;
+        Append(*entry_or, offsets);
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
-
-  m_fallback.GetGlobalVariables(regex, callback);
 }
 
-void DebugNamesDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
+                                              DIEArray &offsets) {
+  m_fallback.GetGlobalVariables(cu, offsets);
+
   uint64_t cu_offset = cu.GetOffset();
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
@@ -135,20 +133,18 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
         if (entry_or->getCUOffset() != cu_offset)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback,
-                          llvm::StringRef(nte.getString())))
-          return;
+        Append(*entry_or, offsets);
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
-
-  m_fallback.GetGlobalVariables(cu, callback);
 }
 
-void DebugNamesDWARFIndex::GetCompleteObjCClass(
-    ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
+                                                bool must_be_implementation,
+                                                DIEArray &offsets) {
+  m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, offsets);
+
   // Keep a list of incomplete types as fallback for when we don't find the
   // complete type.
   DIEArray incomplete_types;
@@ -169,98 +165,84 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
       continue;
     }
 
+    // FIXME: We should return DWARFDIEs so we don't have to resolve it twice.
     DWARFDIE die = m_debug_info.GetDIE(*ref);
-    if (!die) {
-      ReportInvalidDIERef(*ref, class_name.GetStringRef());
+    if (!die)
       continue;
-    }
 
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
-      callback(die);
+      offsets.push_back(*ref);
       return;
+    } else {
+      incomplete_types.push_back(*ref);
     }
-    incomplete_types.push_back(*ref);
   }
 
-  auto dierefcallback = DIERefCallback(callback, class_name.GetStringRef());
-  for (DIERef ref : incomplete_types)
-    if (!dierefcallback(ref))
-      return;
-
-  m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, callback);
+  offsets.insert(offsets.end(), incomplete_types.begin(),
+                 incomplete_types.end());
 }
 
-void DebugNamesDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
+  m_fallback.GetTypes(name, offsets);
+
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    if (isType(entry.tag())) {
-      if (!ProcessEntry(entry, callback, name.GetStringRef()))
-        return;
-    }
+    if (isType(entry.tag()))
+      Append(entry, offsets);
   }
-
-  m_fallback.GetTypes(name, callback);
 }
 
-void DebugNamesDWARFIndex::GetTypes(
-    const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
-  auto name = context[0].name;
-  for (const DebugNames::Entry &entry : m_debug_names_up->equal_range(name)) {
-    if (entry.tag() == context[0].tag) {
-      if (!ProcessEntry(entry, callback, name))
-        return;
-    }
-  }
+void DebugNamesDWARFIndex::GetTypes(const DWARFDeclContext &context,
+                                    DIEArray &offsets) {
+  m_fallback.GetTypes(context, offsets);
 
-  m_fallback.GetTypes(context, callback);
+  for (const DebugNames::Entry &entry :
+       m_debug_names_up->equal_range(context[0].name)) {
+    if (entry.tag() == context[0].tag)
+      Append(entry, offsets);
+  }
 }
 
-void DebugNamesDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
+  m_fallback.GetNamespaces(name, offsets);
+
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    if (entry.tag() == DW_TAG_namespace) {
-      if (!ProcessEntry(entry, callback, name.GetStringRef()))
-        return;
-    }
+    if (entry.tag() == DW_TAG_namespace)
+      Append(entry, offsets);
   }
-
-  m_fallback.GetNamespaces(name, callback);
 }
 
 void DebugNamesDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    std::vector<DWARFDIE> &dies) {
 
-  std::set<DWARFDebugInfoEntry *> seen;
+  std::vector<DWARFDIE> v;
+  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask, v);
+
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     Tag tag = entry.tag();
     if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
       continue;
 
-    if (llvm::Optional<DIERef> ref = ToDIERef(entry)) {
-      if (!ProcessFunctionDIE(name.GetStringRef(), *ref, dwarf, parent_decl_ctx,
-                              name_type_mask, [&](DWARFDIE die) {
-                                if (!seen.insert(die.GetDIE()).second)
-                                  return true;
-                                return callback(die);
-                              }))
-        return;
-    }
+    if (llvm::Optional<DIERef> ref = ToDIERef(entry))
+      ProcessFunctionDIE(name.GetStringRef(), *ref, dwarf, parent_decl_ctx,
+                         name_type_mask, v);
   }
 
-  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask,
-                          callback);
+  std::set<DWARFDebugInfoEntry *> seen;
+  for (DWARFDIE die : v)
+    if (seen.insert(die.GetDIE()).second)
+      dies.push_back(die);
 }
 
-void DebugNamesDWARFIndex::GetFunctions(
-    const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,
+                                        DIEArray &offsets) {
+  m_fallback.GetFunctions(regex, offsets);
+
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
@@ -273,15 +255,11 @@ void DebugNamesDWARFIndex::GetFunctions(
         if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback,
-                          llvm::StringRef(nte.getString())))
-          return;
+        Append(*entry_or, offsets);
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
-
-  m_fallback.GetFunctions(regex, callback);
 }
 
 void DebugNamesDWARFIndex::Dump(Stream &s) {

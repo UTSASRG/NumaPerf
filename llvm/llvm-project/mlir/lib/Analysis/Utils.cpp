@@ -1,6 +1,6 @@
 //===- Utils.cpp ---- Misc utilities for analysis -------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,10 +14,8 @@
 #include "mlir/Analysis/Utils.h"
 
 #include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/IntegerSet.h"
+#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -64,7 +62,8 @@ ComputationSliceState::getAsConstraints(FlatAffineConstraints *cst) {
     assert(cst->containsId(value) && "value expected to be present");
     if (isValidSymbol(value)) {
       // Check if the symbol is a constant.
-      if (auto cOp = value.getDefiningOp<ConstantIndexOp>())
+
+      if (auto cOp = dyn_cast_or_null<ConstantIndexOp>(value.getDefiningOp()))
         cst->setIdToConstant(value, cOp.getValue());
     } else if (auto loop = getForInductionVarOwner(value)) {
       if (failed(cst->addAffineForOpDomain(loop)))
@@ -102,20 +101,6 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
 
   assert(rank == cst.getNumDimIds() && "inconsistent memref region");
 
-  // Use a copy of the region constraints that has upper/lower bounds for each
-  // memref dimension with static size added to guard against potential
-  // over-approximation from projection or union bounding box. We may not add
-  // this on the region itself since they might just be redundant constraints
-  // that will need non-trivials means to eliminate.
-  FlatAffineConstraints cstWithShapeBounds(cst);
-  for (unsigned r = 0; r < rank; r++) {
-    cstWithShapeBounds.addConstantLowerBound(r, 0);
-    int64_t dimSize = memRefType.getDimSize(r);
-    if (ShapedType::isDynamic(dimSize))
-      continue;
-    cstWithShapeBounds.addConstantUpperBound(r, dimSize - 1);
-  }
-
   // Find a constant upper bound on the extent of this memref region along each
   // dimension.
   int64_t numElements = 1;
@@ -123,8 +108,7 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   int64_t lbDivisor;
   for (unsigned d = 0; d < rank; d++) {
     SmallVector<int64_t, 4> lb;
-    Optional<int64_t> diff =
-        cstWithShapeBounds.getConstantBoundOnDimSize(d, &lb, &lbDivisor);
+    Optional<int64_t> diff = cst.getConstantBoundOnDimSize(d, &lb, &lbDivisor);
     if (diff.hasValue()) {
       diffConstant = diff.getValue();
       assert(lbDivisor > 0);
@@ -136,7 +120,7 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
         return None;
       diffConstant = dimSize;
       // Lower bound becomes 0.
-      lb.resize(cstWithShapeBounds.getNumSymbolIds() + 1, 0);
+      lb.resize(cst.getNumSymbolIds() + 1, 0);
       lbDivisor = 1;
     }
     numElements *= diffConstant;
@@ -150,25 +134,6 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
     }
   }
   return numElements;
-}
-
-void MemRefRegion::getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
-                                         AffineMap &ubMap) const {
-  assert(pos < cst.getNumDimIds() && "invalid position");
-  auto memRefType = memref.getType().cast<MemRefType>();
-  unsigned rank = memRefType.getRank();
-
-  assert(rank == cst.getNumDimIds() && "inconsistent memref region");
-
-  auto boundPairs = cst.getLowerAndUpperBound(
-      pos, /*offset=*/0, /*num=*/rank, cst.getNumDimAndSymbolIds(),
-      /*localExprs=*/{}, memRefType.getContext());
-  lbMap = boundPairs.first;
-  ubMap = boundPairs.second;
-  assert(lbMap && "lower bound for a region must exist");
-  assert(ubMap && "upper bound for a region must exist");
-  assert(lbMap.getNumInputs() == cst.getNumDimAndSymbolIds() - rank);
-  assert(ubMap.getNumInputs() == cst.getNumDimAndSymbolIds() - rank);
 }
 
 LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
@@ -196,8 +161,8 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
                                     ComputationSliceState *sliceState,
                                     bool addMemRefDimBounds) {
-  assert((isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op)) &&
-         "affine read/write op expected");
+  assert((isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op)) &&
+         "affine load/store op expected");
 
   MemRefAccess access(op);
   memref = access.memref;
@@ -330,19 +295,20 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (addMemRefDimBounds) {
     auto memRefType = memref.getType().cast<MemRefType>();
     for (unsigned r = 0; r < rank; r++) {
-      cst.addConstantLowerBound(/*pos=*/r, /*lb=*/0);
-      if (memRefType.isDynamicDim(r))
+      cst.addConstantLowerBound(r, 0);
+      int64_t dimSize = memRefType.getDimSize(r);
+      if (ShapedType::isDynamic(dimSize))
         continue;
-      cst.addConstantUpperBound(/*pos=*/r, memRefType.getDimSize(r) - 1);
+      cst.addConstantUpperBound(r, dimSize - 1);
     }
   }
-  cst.removeTrivialRedundancy();
 
   LLVM_DEBUG(llvm::dbgs() << "Memory region:\n");
   LLVM_DEBUG(cst.dump());
   return success();
 }
 
+//  TODO(mlir-team): improve/complete this when we have target data.
 static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
   auto elementType = memRefType.getElementType();
 
@@ -401,17 +367,16 @@ Optional<uint64_t> mlir::getMemRefSizeInBytes(MemRefType memRefType) {
   return sizeInBytes;
 }
 
-template <typename LoadOrStoreOp>
-LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
+template <typename LoadOrStoreOpPointer>
+LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOpPointer loadOrStoreOp,
                                             bool emitError) {
-  static_assert(llvm::is_one_of<LoadOrStoreOp, AffineReadOpInterface,
-                                AffineWriteOpInterface>::value,
-                "argument should be either a AffineReadOpInterface or a "
-                "AffineWriteOpInterface");
+  static_assert(std::is_same<LoadOrStoreOpPointer, AffineLoadOp>::value ||
+                    std::is_same<LoadOrStoreOpPointer, AffineStoreOp>::value,
+                "argument should be either a AffineLoadOp or a AffineStoreOp");
 
-  Operation *op = loadOrStoreOp.getOperation();
-  MemRefRegion region(op->getLoc());
-  if (failed(region.compute(op, /*loopDepth=*/0, /*sliceState=*/nullptr,
+  Operation *opInst = loadOrStoreOp.getOperation();
+  MemRefRegion region(opInst->getLoc());
+  if (failed(region.compute(opInst, /*loopDepth=*/0, /*sliceState=*/nullptr,
                             /*addMemRefDimBounds=*/false)))
     return success();
 
@@ -457,10 +422,10 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 }
 
 // Explicitly instantiate the template so that the compiler knows we need them!
-template LogicalResult
-mlir::boundCheckLoadOrStoreOp(AffineReadOpInterface loadOp, bool emitError);
-template LogicalResult
-mlir::boundCheckLoadOrStoreOp(AffineWriteOpInterface storeOp, bool emitError);
+template LogicalResult mlir::boundCheckLoadOrStoreOp(AffineLoadOp loadOp,
+                                                     bool emitError);
+template LogicalResult mlir::boundCheckLoadOrStoreOp(AffineStoreOp storeOp,
+                                                     bool emitError);
 
 // Returns in 'positions' the Block positions of 'op' in each ancestor
 // Block from the Block containing operation, stopping at 'limitBlock'.
@@ -570,14 +535,14 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
       if (srcAccess.memref != dstAccess.memref)
         continue;
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
-      if ((!isBackwardSlice && loopDepth > getNestingDepth(opsA[i])) ||
-          (isBackwardSlice && loopDepth > getNestingDepth(opsB[j]))) {
-        LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n");
+      if ((!isBackwardSlice && loopDepth > getNestingDepth(*opsA[i])) ||
+          (isBackwardSlice && loopDepth > getNestingDepth(*opsB[j]))) {
+        LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n.");
         return failure();
       }
 
-      bool readReadAccesses = isa<AffineReadOpInterface>(srcAccess.opInst) &&
-                              isa<AffineReadOpInterface>(dstAccess.opInst);
+      bool readReadAccesses = isa<AffineLoadOp>(srcAccess.opInst) &&
+                              isa<AffineLoadOp>(dstAccess.opInst);
       FlatAffineConstraints dependenceConstraints;
       // Check dependence between 'srcAccess' and 'dstAccess'.
       DependenceResult result = checkMemrefAccessDependence(
@@ -585,7 +550,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
           &dependenceConstraints, /*dependenceComponents=*/nullptr,
           /*allowRAR=*/readReadAccesses);
       if (result.value == DependenceResult::Failure) {
-        LLVM_DEBUG(llvm::dbgs() << "Dependence check failed\n");
+        LLVM_DEBUG(llvm::dbgs() << "Dependence check failed\n.");
         return failure();
       }
       if (result.value == DependenceResult::NoDependence)
@@ -602,7 +567,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
         // Initialize 'sliceUnionCst' with the bounds computed in previous step.
         if (failed(tmpSliceState.getAsConstraints(&sliceUnionCst))) {
           LLVM_DEBUG(llvm::dbgs()
-                     << "Unable to compute slice bound constraints\n");
+                     << "Unable to compute slice bound constraints\n.");
           return failure();
         }
         assert(sliceUnionCst.getNumDimAndSymbolIds() > 0);
@@ -613,7 +578,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
       FlatAffineConstraints tmpSliceCst;
       if (failed(tmpSliceState.getAsConstraints(&tmpSliceCst))) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "Unable to compute slice bound constraints\n");
+                   << "Unable to compute slice bound constraints\n.");
         return failure();
       }
 
@@ -646,7 +611,8 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
           tmpSliceCst.getNumLocalIds() > 0 ||
           failed(sliceUnionCst.unionBoundingBox(tmpSliceCst))) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "Unable to compute union bounding box of slice bounds\n");
+                   << "Unable to compute union bounding box of slice bounds."
+                      "\n.");
         return failure();
       }
     }
@@ -665,7 +631,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
   unsigned innermostCommonLoopDepth =
       getInnermostCommonLoopDepth(ops, surroundingLoops);
   if (loopDepth > innermostCommonLoopDepth) {
-    LLVM_DEBUG(llvm::dbgs() << "Exceeds max loop depth\n");
+    LLVM_DEBUG(llvm::dbgs() << "Exceeds max loop depth\n.");
     return failure();
   }
 
@@ -769,8 +735,7 @@ void mlir::getComputationSliceState(
                       : std::prev(srcLoopIVs[loopDepth - 1].getBody()->end());
 
   llvm::SmallDenseSet<Value, 8> sequentialLoops;
-  if (isa<AffineReadOpInterface>(depSourceOp) &&
-      isa<AffineReadOpInterface>(depSinkOp)) {
+  if (isa<AffineLoadOp>(depSourceOp) && isa<AffineLoadOp>(depSinkOp)) {
     // For read-read access pairs, clear any slice bounds on sequential loops.
     // Get sequential loops in loop nest rooted at 'srcLoopIVs[0]'.
     getSequentialLoops(isBackwardSlice ? srcLoopIVs[0] : dstLoopIVs[0],
@@ -867,7 +832,7 @@ mlir::insertBackwardComputationSlice(Operation *srcOpInst, Operation *dstOpInst,
 // Constructs  MemRefAccess populating it with the memref, its indices and
 // opinst from 'loadOrStoreOpInst'.
 MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(loadOrStoreOpInst)) {
+  if (auto loadOp = dyn_cast<AffineLoadOp>(loadOrStoreOpInst)) {
     memref = loadOp.getMemRef();
     opInst = loadOrStoreOpInst;
     auto loadMemrefType = loadOp.getMemRefType();
@@ -876,9 +841,8 @@ MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
       indices.push_back(index);
     }
   } else {
-    assert(isa<AffineWriteOpInterface>(loadOrStoreOpInst) &&
-           "Affine read/write op expected");
-    auto storeOp = cast<AffineWriteOpInterface>(loadOrStoreOpInst);
+    assert(isa<AffineStoreOp>(loadOrStoreOpInst) && "load/store op expected");
+    auto storeOp = dyn_cast<AffineStoreOp>(loadOrStoreOpInst);
     opInst = loadOrStoreOpInst;
     memref = storeOp.getMemRef();
     auto storeMemrefType = storeOp.getMemRefType();
@@ -893,14 +857,12 @@ unsigned MemRefAccess::getRank() const {
   return memref.getType().cast<MemRefType>().getRank();
 }
 
-bool MemRefAccess::isStore() const {
-  return isa<AffineWriteOpInterface>(opInst);
-}
+bool MemRefAccess::isStore() const { return isa<AffineStoreOp>(opInst); }
 
 /// Returns the nesting depth of this statement, i.e., the number of loops
 /// surrounding this statement.
-unsigned mlir::getNestingDepth(Operation *op) {
-  Operation *currOp = op;
+unsigned mlir::getNestingDepth(Operation &op) {
+  Operation *currOp = &op;
   unsigned depth = 0;
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
@@ -952,8 +914,7 @@ static Optional<int64_t> getMemoryFootprintBytes(Block &block,
 
   // Walk this 'affine.for' operation to gather all memory regions.
   auto result = block.walk(start, end, [&](Operation *opInst) -> WalkResult {
-    if (!isa<AffineReadOpInterface>(opInst) &&
-        !isa<AffineWriteOpInterface>(opInst)) {
+    if (!isa<AffineLoadOp>(opInst) && !isa<AffineStoreOp>(opInst)) {
       // Neither load nor a store op.
       return WalkResult::advance();
     }
@@ -962,7 +923,7 @@ static Optional<int64_t> getMemoryFootprintBytes(Block &block,
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
     if (failed(
             region->compute(opInst,
-                            /*loopDepth=*/getNestingDepth(&*block.begin())))) {
+                            /*loopDepth=*/getNestingDepth(*block.begin())))) {
       return opInst->emitError("error obtaining memory region\n");
     }
 
@@ -1012,13 +973,11 @@ void mlir::getSequentialLoops(AffineForOp forOp,
 bool mlir::isLoopParallel(AffineForOp forOp) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
-  auto walkResult = forOp.walk([&](Operation *opInst) -> WalkResult {
-    if (isa<AffineReadOpInterface>(opInst) ||
-        isa<AffineWriteOpInterface>(opInst))
+  auto walkResult = forOp.walk([&](Operation *opInst) {
+    if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
     else if (!isa<AffineForOp>(opInst) && !isa<AffineTerminatorOp>(opInst) &&
-             !isa<AffineIfOp>(opInst) &&
-             !MemoryEffectOpInterface::hasNoEffect(opInst))
+             !isa<AffineIfOp>(opInst) && !opInst->hasNoSideEffect())
       return WalkResult::interrupt();
 
     return WalkResult::advance();
@@ -1029,7 +988,7 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
     return false;
 
   // Dep check depth would be number of enclosing loops + 1.
-  unsigned depth = getNestingDepth(forOp) + 1;
+  unsigned depth = getNestingDepth(*forOp.getOperation()) + 1;
 
   // Check dependences between all pairs of ops in 'loadAndStoreOpInsts'.
   for (auto *srcOpInst : loadAndStoreOpInsts) {
@@ -1045,16 +1004,4 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
     }
   }
   return true;
-}
-
-IntegerSet mlir::simplifyIntegerSet(IntegerSet set) {
-  FlatAffineConstraints fac(set);
-  if (fac.isEmpty())
-    return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
-                                   set.getContext());
-  fac.removeTrivialRedundancy();
-
-  auto simplifiedSet = fac.getAsIntegerSet(set.getContext());
-  assert(simplifiedSet && "guaranteed to succeed while roundtripping");
-  return simplifiedSet;
 }

@@ -354,11 +354,8 @@ void AndroidTestTlsSlot() {}
 #endif
 
 Thread *GetCurrentThread() {
-  uptr *ThreadLongPtr = GetCurrentThreadLongPtr();
-  if (UNLIKELY(*ThreadLongPtr == 0))
-    return nullptr;
-  auto *R = (StackAllocationsRingBuffer *)ThreadLongPtr;
-  return hwasanThreadList().GetThreadByBufferAddress((uptr)R->Next());
+  auto *R = (StackAllocationsRingBuffer *)GetCurrentThreadLongPtr();
+  return hwasanThreadList().GetThreadByBufferAddress((uptr)(R->Next()));
 }
 
 struct AccessInfo {

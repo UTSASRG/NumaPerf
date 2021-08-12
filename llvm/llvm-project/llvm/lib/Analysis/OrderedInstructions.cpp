@@ -18,11 +18,16 @@ bool OrderedInstructions::localDominates(const Instruction *InstA,
   assert(InstA->getParent() == InstB->getParent() &&
          "Instructions must be in the same basic block");
 
-  return InstA->comesBefore(InstB);
+  const BasicBlock *IBB = InstA->getParent();
+  auto OBB = OBBMap.find(IBB);
+  if (OBB == OBBMap.end())
+    OBB = OBBMap.insert({IBB, std::make_unique<OrderedBasicBlock>(IBB)}).first;
+  return OBB->second->dominates(InstA, InstB);
 }
 
-/// Given 2 instructions, check for dominance relation if the instructions are
-/// in the same basic block. Otherwise, use dominator tree.
+/// Given 2 instructions, use OrderedBasicBlock to check for dominance relation
+/// if the instructions are in the same basic block, Otherwise, use dominator
+/// tree.
 bool OrderedInstructions::dominates(const Instruction *InstA,
                                     const Instruction *InstB) const {
   // Use ordered basic block to do dominance check in case the 2 instructions
@@ -42,16 +47,4 @@ bool OrderedInstructions::dfsBefore(const Instruction *InstA,
   DomTreeNode *DA = DT->getNode(InstA->getParent());
   DomTreeNode *DB = DT->getNode(InstB->getParent());
   return DA->getDFSNumIn() < DB->getDFSNumIn();
-}
-
-bool OrderedInstructions::domTreeLevelBefore(const Instruction *InstA,
-                                             const Instruction *InstB) const {
-  // Use ordered basic block in case the 2 instructions are in the same basic
-  // block.
-  if (InstA->getParent() == InstB->getParent())
-    return localDominates(InstA, InstB);
-
-  DomTreeNode *DA = DT->getNode(InstA->getParent());
-  DomTreeNode *DB = DT->getNode(InstB->getParent());
-  return DA->getLevel() < DB->getLevel();
 }

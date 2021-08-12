@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONPARSER_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONPARSER_H
+#ifndef liblldb_ClangExpressionParser_h_
+#define liblldb_ClangExpressionParser_h_
 
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -18,20 +19,13 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
-class LLVMContext;
-}
-
 namespace clang {
-class CodeGenerator;
 class CodeCompleteConsumer;
-class CompilerInstance;
-} // namespace clang
+}
 
 namespace lldb_private {
 
 class IRExecutionUnit;
-class TypeSystemClang;
 
 /// \class ClangExpressionParser ClangExpressionParser.h
 /// "lldb/Expression/ClangExpressionParser.h" Encapsulates an instance of
@@ -177,7 +171,7 @@ private:
   class LLDBPreprocessorCallbacks;
   LLDBPreprocessorCallbacks *m_pp_callbacks; ///< Called when the preprocessor
                                              ///encounters module imports
-  std::unique_ptr<TypeSystemClang> m_ast_context;
+  std::unique_ptr<ClangASTContext> m_ast_context;
 
   std::vector<std::string> m_include_directories;
   /// File name used for the user expression.
@@ -185,4 +179,4 @@ private:
 };
 }
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONPARSER_H
+#endif // liblldb_ClangExpressionParser_h_

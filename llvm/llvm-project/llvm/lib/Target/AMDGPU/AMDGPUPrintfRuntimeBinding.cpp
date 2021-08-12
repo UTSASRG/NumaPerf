@@ -218,10 +218,10 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
         //
         if (ArgSize % DWORD_ALIGN != 0) {
           llvm::Type *ResType = llvm::Type::getInt32Ty(Ctx);
-          auto *LLVMVecType = llvm::dyn_cast<llvm::FixedVectorType>(ArgType);
+          VectorType *LLVMVecType = llvm::dyn_cast<llvm::VectorType>(ArgType);
           int NumElem = LLVMVecType ? LLVMVecType->getNumElements() : 1;
           if (LLVMVecType && NumElem > 1)
-            ResType = llvm::FixedVectorType::get(ResType, NumElem);
+            ResType = llvm::VectorType::get(ResType, NumElem);
           Builder.SetInsertPoint(CI);
           Builder.SetCurrentDebugLocation(CI->getDebugLoc());
           if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
@@ -387,7 +387,9 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
       Value *id_gep_cast =
           new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", Brnch);
 
-      new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, Brnch);
+      StoreInst *stbuff =
+          new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast);
+      stbuff->insertBefore(Brnch); // to Remove unused variable warning
 
       SmallVector<Value *, 2> FourthIdxList;
       ConstantInt *fourInt =
@@ -406,7 +408,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
         Value *Arg = CI->getArgOperand(ArgCount);
         Type *ArgType = Arg->getType();
         SmallVector<Value *, 32> WhatToStore;
-        if (ArgType->isFPOrFPVectorTy() && !isa<VectorType>(ArgType)) {
+        if (ArgType->isFPOrFPVectorTy() &&
+            (ArgType->getTypeID() != Type::VectorTyID)) {
           Type *IType = (ArgType->isFloatTy()) ? Int32Ty : Int64Ty;
           if (OpConvSpecifiers[ArgCount - 1] == 'f') {
             ConstantFP *fpCons = dyn_cast<ConstantFP>(Arg);
@@ -475,14 +478,18 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
             Arg = new PtrToIntInst(Arg, DstType, "PrintArgPtr", Brnch);
             WhatToStore.push_back(Arg);
           }
-        } else if (isa<FixedVectorType>(ArgType)) {
+        } else if (ArgType->getTypeID() == Type::VectorTyID) {
           Type *IType = NULL;
-          uint32_t EleCount = cast<FixedVectorType>(ArgType)->getNumElements();
+          uint32_t EleCount = cast<VectorType>(ArgType)->getNumElements();
           uint32_t EleSize = ArgType->getScalarSizeInBits();
           uint32_t TotalSize = EleCount * EleSize;
           if (EleCount == 3) {
-            ShuffleVectorInst *Shuffle =
-                new ShuffleVectorInst(Arg, Arg, ArrayRef<int>{0, 1, 2, 2});
+            IntegerType *Int32Ty = Type::getInt32Ty(ArgType->getContext());
+            Constant *Indices[4] = {
+                ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 1),
+                ConstantInt::get(Int32Ty, 2), ConstantInt::get(Int32Ty, 2)};
+            Constant *Mask = ConstantVector::get(Indices);
+            ShuffleVectorInst *Shuffle = new ShuffleVectorInst(Arg, Arg, Mask);
             Shuffle->insertBefore(Brnch);
             Arg = Shuffle;
             ArgType = Arg->getType();
@@ -516,7 +523,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
             break;
           }
           if (EleCount > 1) {
-            IType = FixedVectorType::get(IType, EleCount);
+            IType = dyn_cast<Type>(VectorType::get(IType, EleCount));
           }
           Arg = new BitCastInst(Arg, IType, "PrintArgVect", Brnch);
           WhatToStore.push_back(Arg);

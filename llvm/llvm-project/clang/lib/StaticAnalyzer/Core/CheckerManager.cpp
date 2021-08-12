@@ -61,12 +61,12 @@ void CheckerManager::finishedCheckerRegistration() {
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
-    const CheckerBase *C, StringRef OptionName,
-    StringRef ExpectedValueDesc) const {
+    const CheckerBase *C, StringRef OptionName, StringRef ExpectedValueDesc) {
 
-  getDiagnostics().Report(diag::err_analyzer_checker_option_invalid_input)
-      << (llvm::Twine() + C->getTagDescription() + ":" + OptionName).str()
-      << ExpectedValueDesc;
+  Context.getDiagnostics()
+      .Report(diag::err_analyzer_checker_option_invalid_input)
+          << (llvm::Twine() + C->getTagDescription() + ":" + OptionName).str()
+          << ExpectedValueDesc;
 }
 
 //===----------------------------------------------------------------------===//
@@ -243,13 +243,13 @@ void CheckerManager::runCheckersForObjCMessage(ObjCMessageVisitKind visitKind,
                                                const ObjCMethodCall &msg,
                                                ExprEngine &Eng,
                                                bool WasInlined) {
-  const auto &checkers = getObjCMessageCheckers(visitKind);
+  auto &checkers = getObjCMessageCheckers(visitKind);
   CheckObjCMessageContext C(visitKind, checkers, msg, Eng, WasInlined);
   expandGraphWithCheckers(C, Dst, Src);
 }
 
 const std::vector<CheckerManager::CheckObjCMessageFunc> &
-CheckerManager::getObjCMessageCheckers(ObjCMessageVisitKind Kind) const {
+CheckerManager::getObjCMessageCheckers(ObjCMessageVisitKind Kind) {
   switch (Kind) {
   case ObjCMessageVisitKind::Pre:
     return PreObjCMessageCheckers;
@@ -507,38 +507,35 @@ namespace {
     using CheckersTy = std::vector<CheckerManager::CheckNewAllocatorFunc>;
 
     const CheckersTy &Checkers;
-    const CXXAllocatorCall &Call;
+    const CXXNewExpr *NE;
+    SVal Target;
     bool WasInlined;
     ExprEngine &Eng;
 
-    CheckNewAllocatorContext(const CheckersTy &Checkers,
-                             const CXXAllocatorCall &Call, bool WasInlined,
-                             ExprEngine &Eng)
-        : Checkers(Checkers), Call(Call), WasInlined(WasInlined), Eng(Eng) {}
+    CheckNewAllocatorContext(const CheckersTy &Checkers, const CXXNewExpr *NE,
+                             SVal Target, bool WasInlined, ExprEngine &Eng)
+        : Checkers(Checkers), NE(NE), Target(Target), WasInlined(WasInlined),
+          Eng(Eng) {}
 
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckNewAllocatorFunc checkFn,
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
-      ProgramPoint L =
-          PostAllocatorCall(Call.getOriginExpr(), Pred->getLocationContext());
+      ProgramPoint L = PostAllocatorCall(NE, Pred->getLocationContext());
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
-      checkFn(cast<CXXAllocatorCall>(*Call.cloneWithState(Pred->getState())),
-              C);
+      checkFn(NE, Target, C);
     }
   };
 
 } // namespace
 
-void CheckerManager::runCheckersForNewAllocator(const CXXAllocatorCall &Call,
-                                                ExplodedNodeSet &Dst,
-                                                ExplodedNode *Pred,
-                                                ExprEngine &Eng,
-                                                bool WasInlined) {
+void CheckerManager::runCheckersForNewAllocator(
+    const CXXNewExpr *NE, SVal Target, ExplodedNodeSet &Dst, ExplodedNode *Pred,
+    ExprEngine &Eng, bool WasInlined) {
   ExplodedNodeSet Src;
   Src.insert(Pred);
-  CheckNewAllocatorContext C(NewAllocatorCheckers, Call, WasInlined, Eng);
+  CheckNewAllocatorContext C(NewAllocatorCheckers, NE, Target, WasInlined, Eng);
   expandGraphWithCheckers(C, Dst, Src);
 }
 
@@ -654,7 +651,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
                                             const ExplodedNodeSet &Src,
                                             const CallEvent &Call,
                                             ExprEngine &Eng) {
-  for (auto *const Pred : Src) {
+  for (const auto Pred : Src) {
     bool anyEvaluated = false;
 
     ExplodedNodeSet checkDst;
@@ -904,4 +901,9 @@ CheckerManager::getCachedStmtCheckersFor(const Stmt *S, bool isPreVisit) {
     if (Info.IsPreVisit == isPreVisit && Info.IsForStmtFn(S))
       Checkers.push_back(Info.CheckFn);
   return Checkers;
+}
+
+CheckerManager::~CheckerManager() {
+  for (const auto &CheckerDtor : CheckerDtors)
+    CheckerDtor();
 }

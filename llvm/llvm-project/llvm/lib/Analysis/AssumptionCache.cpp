@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -42,7 +41,7 @@ static cl::opt<bool>
                           cl::desc("Enable verification of assumption cache"),
                           cl::init(false));
 
-SmallVector<AssumptionCache::ResultElem, 1> &
+SmallVector<WeakTrackingVH, 1> &
 AssumptionCache::getOrInsertAffectedValues(Value *V) {
   // Try using find_as first to avoid creating extra value handles just for the
   // purpose of doing the lookup.
@@ -51,38 +50,31 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
     return AVI->second;
 
   auto AVIP = AffectedValues.insert(
-      {AffectedValueCallbackVH(V, this), SmallVector<ResultElem, 1>()});
+      {AffectedValueCallbackVH(V, this), SmallVector<WeakTrackingVH, 1>()});
   return AVIP.first->second;
 }
 
-static void
-findAffectedValues(CallInst *CI,
-                   SmallVectorImpl<AssumptionCache::ResultElem> &Affected) {
+static void findAffectedValues(CallInst *CI,
+                               SmallVectorImpl<Value *> &Affected) {
   // Note: This code must be kept in-sync with the code in
   // computeKnownBitsFromAssume in ValueTracking.
 
-  auto AddAffected = [&Affected](Value *V, unsigned Idx =
-                                               AssumptionCache::ExprResultIdx) {
+  auto AddAffected = [&Affected](Value *V) {
     if (isa<Argument>(V)) {
-      Affected.push_back({V, Idx});
+      Affected.push_back(V);
     } else if (auto *I = dyn_cast<Instruction>(V)) {
-      Affected.push_back({I, Idx});
+      Affected.push_back(I);
 
       // Peek through unary operators to find the source of the condition.
       Value *Op;
       if (match(I, m_BitCast(m_Value(Op))) ||
-          match(I, m_PtrToInt(m_Value(Op))) || match(I, m_Not(m_Value(Op)))) {
+          match(I, m_PtrToInt(m_Value(Op))) ||
+          match(I, m_Not(m_Value(Op)))) {
         if (isa<Instruction>(Op) || isa<Argument>(Op))
-          Affected.push_back({Op, Idx});
+          Affected.push_back(Op);
       }
     }
   };
-
-  for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
-    if (CI->getOperandBundleAt(Idx).Inputs.size() > ABA_WasOn &&
-        CI->getOperandBundleAt(Idx).getTagName() != IgnoreBundleTag)
-      AddAffected(CI->getOperandBundleAt(Idx).Inputs[ABA_WasOn], Idx);
-  }
 
   Value *Cond = CI->getArgOperand(0), *A, *B;
   AddAffected(Cond);
@@ -120,44 +112,28 @@ findAffectedValues(CallInst *CI,
 }
 
 void AssumptionCache::updateAffectedValues(CallInst *CI) {
-  SmallVector<AssumptionCache::ResultElem, 16> Affected;
+  SmallVector<Value *, 16> Affected;
   findAffectedValues(CI, Affected);
 
   for (auto &AV : Affected) {
-    auto &AVV = getOrInsertAffectedValues(AV.Assume);
-    if (std::find_if(AVV.begin(), AVV.end(), [&](ResultElem &Elem) {
-          return Elem.Assume == CI && Elem.Index == AV.Index;
-        }) == AVV.end())
-      AVV.push_back({CI, AV.Index});
+    auto &AVV = getOrInsertAffectedValues(AV);
+    if (std::find(AVV.begin(), AVV.end(), CI) == AVV.end())
+      AVV.push_back(CI);
   }
 }
 
 void AssumptionCache::unregisterAssumption(CallInst *CI) {
-  SmallVector<AssumptionCache::ResultElem, 16> Affected;
+  SmallVector<Value *, 16> Affected;
   findAffectedValues(CI, Affected);
 
   for (auto &AV : Affected) {
-    auto AVI = AffectedValues.find_as(AV.Assume);
-    if (AVI == AffectedValues.end())
-      continue;
-    bool Found = false;
-    bool HasNonnull = false;
-    for (ResultElem &Elem : AVI->second) {
-      if (Elem.Assume == CI) {
-        Found = true;
-        Elem.Assume = nullptr;
-      }
-      HasNonnull |= !!Elem.Assume;
-      if (HasNonnull && Found)
-        break;
-    }
-    assert(Found && "already unregistered or incorrect cache state");
-    if (!HasNonnull)
+    auto AVI = AffectedValues.find_as(AV);
+    if (AVI != AffectedValues.end())
       AffectedValues.erase(AVI);
   }
 
   AssumeHandles.erase(
-      remove_if(AssumeHandles, [CI](ResultElem &RE) { return CI == RE; }),
+      remove_if(AssumeHandles, [CI](WeakTrackingVH &VH) { return CI == VH; }),
       AssumeHandles.end());
 }
 
@@ -201,7 +177,7 @@ void AssumptionCache::scanFunction() {
   for (BasicBlock &B : F)
     for (Instruction &II : B)
       if (match(&II, m_Intrinsic<Intrinsic::assume>()))
-        AssumeHandles.push_back({&II, ExprResultIdx});
+        AssumeHandles.push_back(&II);
 
   // Mark the scan as complete.
   Scanned = true;
@@ -220,7 +196,7 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
   if (!Scanned)
     return;
 
-  AssumeHandles.push_back({CI, ExprResultIdx});
+  AssumeHandles.push_back(CI);
 
 #ifndef NDEBUG
   assert(CI->getParent() &&

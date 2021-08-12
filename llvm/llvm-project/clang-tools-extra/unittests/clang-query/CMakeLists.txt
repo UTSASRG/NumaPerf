@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
+  support
   )
 
 include_directories(

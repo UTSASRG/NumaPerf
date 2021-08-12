@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// PR11871
+// XFAIL: with_system_cxx_lib=macosx10.7
 
 // <locale>
 

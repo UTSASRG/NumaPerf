@@ -104,8 +104,6 @@ public:
 
 /// Subclass of DDGNode representing single or multi-instruction nodes.
 class SimpleDDGNode : public DDGNode {
-  friend class DDGBuilder;
-
 public:
   SimpleDDGNode() = delete;
   SimpleDDGNode(Instruction &I);
@@ -284,12 +282,6 @@ public:
     return *Root;
   }
 
-  /// Collect all the data dependency infos coming from any pair of memory
-  /// accesses from \p Src to \p Dst, and store them into \p Deps. Return true
-  /// if a dependence exists, and false otherwise.
-  bool getDependencies(const NodeType &Src, const NodeType &Dst,
-                       DependenceList &Deps) const;
-
 protected:
   // Name of the graph.
   std::string Name;
@@ -396,12 +388,6 @@ public:
     return PiNode->getNodes();
   }
 
-  /// Return true if the two nodes \pSrc and \pTgt are both simple nodes and
-  /// the consecutive instructions after merging belong to the same basic block.
-  bool areNodesMergeable(const DDGNode &Src,
-                         const DDGNode &Tgt) const final override;
-  void mergeNodes(DDGNode &Src, DDGNode &Tgt) final override;
-  bool shouldSimplify() const final override;
   bool shouldCreatePiBlocks() const final override;
 };
 
@@ -436,32 +422,6 @@ public:
 private:
   raw_ostream &OS;
 };
-
-//===--------------------------------------------------------------------===//
-// DependenceGraphInfo Implementation
-//===--------------------------------------------------------------------===//
-
-template <typename NodeType>
-bool DependenceGraphInfo<NodeType>::getDependencies(
-    const NodeType &Src, const NodeType &Dst, DependenceList &Deps) const {
-  assert(Deps.empty() && "Expected empty output list at the start.");
-
-  // List of memory access instructions from src and dst nodes.
-  SmallVector<Instruction *, 8> SrcIList, DstIList;
-  auto isMemoryAccess = [](const Instruction *I) {
-    return I->mayReadOrWriteMemory();
-  };
-  Src.collectInstructions(isMemoryAccess, SrcIList);
-  Dst.collectInstructions(isMemoryAccess, DstIList);
-
-  for (auto *SrcI : SrcIList)
-    for (auto *DstI : DstIList)
-      if (auto Dep =
-              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI, true))
-        Deps.push_back(std::move(Dep));
-
-  return !Deps.empty();
-}
 
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for the DDG

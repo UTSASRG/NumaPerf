@@ -18,7 +18,9 @@ class MCInst;
 class MCOperand;
 class MCSymbol;
 class MachineInstr;
+class MachineModuleInfoMachO;
 class MachineOperand;
+class Mangler;
 
 // LanaiMCInstLower - This class is used to lower an MachineInstr
 // into an MCInst.

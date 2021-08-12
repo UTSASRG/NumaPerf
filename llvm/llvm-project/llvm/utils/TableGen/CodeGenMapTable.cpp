@@ -98,7 +98,7 @@ private:
 
 public:
   InstrMap(Record* MapRec) {
-    Name = std::string(MapRec->getName());
+    Name = MapRec->getName();
 
     // FilterClass - It's used to reduce the search space only to the
     // instructions that define the kind of relationship modeled by

@@ -11,7 +11,6 @@
 #define HEADER
 
 typedef void **omp_allocator_handle_t;
-extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -89,7 +88,7 @@ public:
   void bar() {
     int b, argv, d, c, e, f;
 #pragma omp target
-#pragma omp teams distribute allocate(omp_thread_mem_alloc:argv) default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d) allocate(omp_default_mem_alloc:c) shared(omp_default_mem_alloc, omp_thread_mem_alloc)
+#pragma omp teams distribute allocate(omp_thread_mem_alloc:argv) default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d) allocate(omp_default_mem_alloc:c)
     for (int k = 0; k < a.a; ++k)
       ++a.a;
   }
@@ -99,7 +98,7 @@ public:
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute private(this->a) private(this->a)
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute allocate(omp_thread_mem_alloc: argv) default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d) allocate(omp_default_mem_alloc: c) shared(omp_default_mem_alloc,omp_thread_mem_alloc)
+// CHECK-NEXT: #pragma omp teams distribute allocate(omp_thread_mem_alloc: argv) default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d) allocate(omp_default_mem_alloc: c)
 
 template <class T, int N>
 T tmain(T argc) {

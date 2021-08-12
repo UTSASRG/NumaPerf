@@ -24,9 +24,9 @@
 
 namespace __cxxabiv1 {
 
-//
-// Helper routines and classes
-//
+#if 0
+#pragma mark --Helper routines and classes --
+#endif
 
 namespace {
     inline static size_t __get_element_count ( void *p ) {
@@ -111,9 +111,9 @@ namespace {
     };
 }
 
-//
-// Externally visible routines
-//
+#if 0
+#pragma mark --Externally visible routines--
+#endif
 
 namespace {
 _LIBCXXABI_NORETURN

@@ -669,7 +669,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
 
   if (dt == MODRM_ONEENTRY && decision.instructionIDs[0] == 0) {
     // Empty table.
-    o2 << "{" << stringForDecisionType(dt) << ", 0}";
+    o2 << "{ " << stringForDecisionType(dt) << ", 0 }";
     return;
   }
 
@@ -708,17 +708,18 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
     EntryNumber = ModRMTableNum;
 
     ModRMTableNum += ModRMDecision.size();
-    o1 << "/*Table" << EntryNumber << "*/\n";
+    o1 << "/* Table" << EntryNumber << " */\n";
     i1++;
     for (std::vector<unsigned>::const_iterator I = ModRMDecision.begin(),
            E = ModRMDecision.end(); I != E; ++I) {
-      o1.indent(i1 * 2) << format("0x%hx", *I) << ", /*"
-                        << InstructionSpecifiers[*I].name << "*/\n";
+      o1.indent(i1 * 2) << format("0x%hx", *I) << ", /* "
+                        << InstructionSpecifiers[*I].name << " */\n";
     }
     i1--;
   }
 
-  o2 << "{" << stringForDecisionType(dt) << ", " << EntryNumber << "}";
+  o2 << "{ " << stringForDecisionType(dt) << ", " << EntryNumber << " /* Table"
+     << EntryNumber << " */ }";
 
   switch (dt) {
     default:
@@ -768,10 +769,11 @@ void DisassemblerTables::emitOpcodeDecision(raw_ostream &o1, raw_ostream &o2,
     o2 << "},\n";
   } else {
     o2 << " /* struct OpcodeDecision */ {\n";
+    ++i2;
     for (index = 0; index < 256; ++index) {
       o2.indent(i2);
 
-      o2 << "/*0x" << format("%02hhx", index) << "*/";
+      o2 << "/* 0x" << format("%02hhx", index) << " */ ";
 
       emitModRMDecision(o1, o2, i1, i2, ModRMTableNum,
                         opDecision.modRMDecisions[index]);
@@ -781,6 +783,7 @@ void DisassemblerTables::emitOpcodeDecision(raw_ostream &o1, raw_ostream &o2,
 
       o2 << "\n";
     }
+    --i2;
     o2.indent(i2) << "}\n";
     --i2;
     o2.indent(i2) << "},\n";
@@ -792,20 +795,24 @@ void DisassemblerTables::emitContextDecision(raw_ostream &o1, raw_ostream &o2,
                                              unsigned &ModRMTableNum,
                                              ContextDecision &decision,
                                              const char* name) const {
-  o2.indent(i2) << "static const struct ContextDecision " << name << " = {{/* opcodeDecisions */\n";
+  o2.indent(i2) << "static const struct ContextDecision " << name << " = {\n";
+  i2++;
+  o2.indent(i2) << "{ /* opcodeDecisions */" << "\n";
   i2++;
 
   for (unsigned index = 0; index < IC_max; ++index) {
-    o2.indent(i2) << "/*";
+    o2.indent(i2) << "/* ";
     o2 << stringForContext((InstructionContext)index);
-    o2 << "*/ ";
+    o2 << " */ ";
 
     emitOpcodeDecision(o1, o2, i1, i2, ModRMTableNum,
                        decision.opcodeDecisions[index]);
   }
 
   i2--;
-  o2.indent(i2) << "}};" << "\n";
+  o2.indent(i2) << "}" << "\n";
+  i2--;
+  o2.indent(i2) << "};" << "\n";
 }
 
 void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
@@ -969,7 +976,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
     else
       o << "IC";
 
-    o << ", // " << index << "\n";
+    o << ", /* " << index << " */";
+
+    o << "\n";
   }
 
   i--;
@@ -1012,7 +1021,7 @@ void DisassemblerTables::emit(raw_ostream &o) const {
   std::vector<unsigned> EmptyTable(1, 0);
   ModRMTable[EmptyTable] = ModRMTableNum;
   ModRMTableNum += EmptyTable.size();
-  o1 << "/*EmptyTable*/\n";
+  o1 << "/* EmptyTable */\n";
   o1.indent(i1 * 2) << "0x0,\n";
   i1--;
   emitContextDecisions(o1, o2, i1, i2, ModRMTableNum);

@@ -14,13 +14,15 @@
 #ifndef LLVM_LIB_TARGET_X86_X86SHUFFLEDECODECONSTANTPOOL_H
 #define LLVM_LIB_TARGET_X86_X86SHUFFLEDECODECONSTANTPOOL_H
 
+#include "llvm/ADT/SmallVector.h"
+
 //===----------------------------------------------------------------------===//
 //  Vector Mask Decoding
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
 class Constant;
-template <typename T> class SmallVectorImpl;
+class MVT;
 
 /// Decode a PSHUFB mask from an IR-level vector constant.
 void DecodePSHUFBMask(const Constant *C, unsigned Width,
@@ -31,8 +33,9 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize, unsigned Width,
                         SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPERMILP2 variable mask from an IR-level vector constant.
-void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
-                         unsigned Width, SmallVectorImpl<int> &ShuffleMask);
+void DecodeVPERMIL2PMask(const Constant *C, unsigned MatchImm, unsigned ElSize,
+                         unsigned Width,
+                         SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPPERM variable mask from an IR-level vector constant.
 void DecodeVPPERMMask(const Constant *C, unsigned Width,

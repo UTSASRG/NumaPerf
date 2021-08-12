@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
+#ifndef liblldb_PlatformAndroidRemoteGDBServer_h_
+#define liblldb_PlatformAndroidRemoteGDBServer_h_
 
 #include <map>
 #include <utility>
@@ -54,13 +54,10 @@ protected:
                         std::string &connect_url);
 
 private:
-  PlatformAndroidRemoteGDBServer(const PlatformAndroidRemoteGDBServer &) =
-      delete;
-  const PlatformAndroidRemoteGDBServer &
-  operator=(const PlatformAndroidRemoteGDBServer &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformAndroidRemoteGDBServer);
 };
 
 } // namespace platform_android
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
+#endif // liblldb_PlatformAndroidRemoteGDBServer_h_

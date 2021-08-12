@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTLOG_H
-#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTLOG_H
+#ifndef liblldb_CommandObjectLog_h_
+#define liblldb_CommandObjectLog_h_
+
 
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
@@ -24,10 +25,9 @@ public:
 
 private:
   // For CommandObjectLog only
-  CommandObjectLog(const CommandObjectLog &) = delete;
-  const CommandObjectLog &operator=(const CommandObjectLog &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(CommandObjectLog);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTLOG_H
+#endif // liblldb_CommandObjectLog_h_

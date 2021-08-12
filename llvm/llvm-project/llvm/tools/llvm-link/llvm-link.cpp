@@ -264,10 +264,9 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     Entry.insert(F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
-    return ModuleLoaderCache.takeModule(std::string(Identifier));
+    return ModuleLoaderCache.takeModule(Identifier);
   };
-  FunctionImporter Importer(*Index, CachedModuleLoader,
-                            /*ClearDSOLocalOnDeclarations=*/false);
+  FunctionImporter Importer(*Index, CachedModuleLoader);
   ExitOnErr(Importer.importFunctions(DestModule, ImportList));
 
   return true;
@@ -314,8 +313,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       }
 
       // Promotion
-      if (renameModuleForThinLTO(*M, *Index,
-                                 /*ClearDSOLocalOnDeclarations=*/false))
+      if (renameModuleForThinLTO(*M, *Index))
         return true;
     }
 

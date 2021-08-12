@@ -20,7 +20,6 @@ executable("clang-tblgen") {
     "ClangTypeNodesEmitter.cpp",
     "MveEmitter.cpp",
     "NeonEmitter.cpp",
-    "SveEmitter.cpp",
     "TableGen.cpp",
   ]
 }

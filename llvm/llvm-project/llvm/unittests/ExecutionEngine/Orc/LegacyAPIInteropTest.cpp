@@ -72,7 +72,7 @@ TEST_F(LegacyAPIsStandardTest, LegacyLookupHelpersFn) {
   bool BarMaterialized = false;
   BarSym.setFlags(BarSym.getFlags() | JITSymbolFlags::Weak);
 
-  auto LegacyLookup = [&](StringRef Name) -> JITSymbol {
+  auto LegacyLookup = [&](const std::string &Name) -> JITSymbol {
     if (Name == "foo")
       return FooSym;
 

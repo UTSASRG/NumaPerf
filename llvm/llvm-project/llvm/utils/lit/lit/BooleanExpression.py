@@ -79,10 +79,9 @@ class BooleanExpression:
             raise ValueError("expected: %s\nhave: %s" %
                              (self.quote(t), self.quote(self.token)))
 
-    @staticmethod
-    def isIdentifier(token):
-        if (token is BooleanExpression.END or token == '&&' or token == '||' or
-            token == '!' or token == '(' or token == ')'):
+    def isIdentifier(self, t):
+        if (t is BooleanExpression.END or t == '&&' or t == '||' or
+            t == '!' or t == '(' or t == ')'):
             return False
         return True
 
@@ -93,7 +92,7 @@ class BooleanExpression:
         elif self.accept('('):
             self.parseOR()
             self.expect(')')
-        elif not BooleanExpression.isIdentifier(self.token):
+        elif not self.isIdentifier(self.token):
             raise ValueError("expected: '!' or '(' or identifier\nhave: %s" %
                              self.quote(self.token))
         else:
@@ -192,7 +191,7 @@ class TestBooleanExpression(unittest.TestCase):
                            "actual error was:\n%s\n" +
                            "expected error was:\n%s\n") % (expr, e, error))
         except BaseException as e:
-            self.fail(("expression %r caused the wrong exception; actual " +
+            self.fail(("expression %r caused the wrong exception; actual " + 
                       "exception was: \n%r") % (expr, e))
 
     def test_errors(self):

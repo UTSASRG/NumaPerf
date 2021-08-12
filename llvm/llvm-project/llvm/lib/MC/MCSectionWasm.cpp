@@ -48,8 +48,8 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
 
-  if (shouldOmitSectionDirective(getName(), MAI)) {
-    OS << '\t' << getName();
+  if (shouldOmitSectionDirective(SectionName, MAI)) {
+    OS << '\t' << getSectionName();
     if (Subsection) {
       OS << '\t';
       Subsection->print(OS, &MAI);
@@ -59,7 +59,7 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   OS << "\t.section\t";
-  printName(OS, getName());
+  printName(OS, getSectionName());
   OS << ",\"";
 
   if (IsPassive)

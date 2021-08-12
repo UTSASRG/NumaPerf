@@ -53,8 +53,6 @@ class AVRAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -66,7 +64,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   bool parseOperand(OperandVector &Operands);
   int parseRegisterName(unsigned (*matchFn)(StringRef));
   int parseRegisterName();
-  int parseRegister(bool RestoreOnFailure = false);
+  int parseRegister();
   bool tryParseRegisterOperand(OperandVector &Operands);
   bool tryParseExpression(OperandVector &Operands);
   bool tryParseRelocExpression(OperandVector &Operands);
@@ -309,7 +307,7 @@ bool AVRAsmParser::missingFeature(llvm::SMLoc const &Loc,
 
 bool AVRAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
+  Out.EmitInstruction(Inst, STI);
 
   return false;
 }
@@ -361,24 +359,18 @@ int AVRAsmParser::parseRegisterName() {
   return RegNum;
 }
 
-int AVRAsmParser::parseRegister(bool RestoreOnFailure) {
+int AVRAsmParser::parseRegister() {
   int RegNum = AVR::NoRegister;
 
   if (Parser.getTok().is(AsmToken::Identifier)) {
     // Check for register pair syntax
     if (Parser.getLexer().peekTok().is(AsmToken::Colon)) {
-      AsmToken HighTok = Parser.getTok();
       Parser.Lex();
-      AsmToken ColonTok = Parser.getTok();
       Parser.Lex(); // Eat high (odd) register and colon
 
       if (Parser.getTok().is(AsmToken::Identifier)) {
         // Convert lower (even) register to DREG
         RegNum = toDREG(parseRegisterName());
-      }
-      if (RegNum == AVR::NoRegister && RestoreOnFailure) {
-        getLexer().UnLex(std::move(ColonTok));
-        getLexer().UnLex(std::move(HighTok));
       }
     } else {
       RegNum = parseRegisterName();
@@ -588,22 +580,10 @@ AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
 bool AVRAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/false);
+  RegNo = parseRegister();
   EndLoc = Parser.getTok().getLoc();
 
   return (RegNo == AVR::NoRegister);
-}
-
-OperandMatchResultTy AVRAsmParser::tryParseRegister(unsigned &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
-  StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/true);
-  EndLoc = Parser.getTok().getLoc();
-
-  if (RegNo == AVR::NoRegister)
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
 }
 
 void AVRAsmParser::eatComma() {
@@ -670,7 +650,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Tokens[0].getKind() == AsmToken::Minus &&
       Tokens[1].getKind() == AsmToken::Identifier) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
-    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
+    AVRStreamer.EmitValueForModiferKind(Symbol, SizeInBytes, L,
             AVRMCExpr::VK_AVR_None);
     return false;
   }
@@ -688,7 +668,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     }
     MCSymbol *Symbol =
         getContext().getOrCreateSymbol(Parser.getTok().getString());
-    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
+    AVRStreamer.EmitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
     return false;
   }
 
@@ -696,7 +676,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     const MCExpr *Value;
     if (Parser.parseExpression(Value))
       return true;
-    Parser.getStreamer().emitValue(Value, SizeInBytes, L);
+    Parser.getStreamer().EmitValue(Value, SizeInBytes, L);
     return false;
   };
   return (parseMany(parseOne));

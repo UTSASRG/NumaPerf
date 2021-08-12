@@ -101,6 +101,10 @@ multiple file formats.
 
  Display the version of the :program:`llvm-strip` executable.
 
+.. option:: @<FILE>
+
+ Read command-line options and commands from response file `<FILE>`.
+
 .. option:: --wildcard, -w
 
   Allow wildcard syntax for symbol-related flags. On by default for
@@ -124,10 +128,6 @@ multiple file formats.
 
   The order of wildcards does not matter. For example, ``-w -N '*' -N '!x'`` is
   the same as ``-w -N '!x' -N '*'``.
-
-.. option:: @<FILE>
-
- Read command-line options and commands from response file `<FILE>`.
 
 COFF-SPECIFIC OPTIONS
 ---------------------
@@ -181,10 +181,6 @@ them.
  segments. Note that many tools will not be able to use an object without
  section headers.
 
-.. option:: -T
-
- Remove Swift symbols.
-
 EXIT STATUS
 -----------
 
@@ -194,7 +190,7 @@ Otherwise, it exits with code 0.
 BUGS
 ----
 
-To report bugs, please visit <https://bugs.llvm.org/>.
+To report bugs, please visit <http://llvm.org/bugs/>.
 
 SEE ALSO
 --------

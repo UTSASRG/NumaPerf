@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUEENUMERATION_H
-#define LLDB_INTERPRETER_OPTIONVALUEENUMERATION_H
+#ifndef liblldb_OptionValueEnumeration_h_
+#define liblldb_OptionValueEnumeration_h_
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -83,4 +83,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUEENUMERATION_H
+#endif // liblldb_OptionValueEnumeration_h_

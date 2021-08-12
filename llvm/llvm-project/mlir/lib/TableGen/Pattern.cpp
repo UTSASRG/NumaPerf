@@ -1,6 +1,6 @@
 //===- Pattern.cpp - Pattern wrapper class --------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Pattern.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -56,10 +55,6 @@ bool tblgen::DagLeaf::isEnumAttrCase() const {
   return isSubClassOf("EnumAttrCaseInfo");
 }
 
-bool tblgen::DagLeaf::isStringAttr() const {
-  return isa<llvm::StringInit>(def) || isa<llvm::CodeInit>(def);
-}
-
 tblgen::Constraint tblgen::DagLeaf::getAsConstraint() const {
   assert((isOperandMatcher() || isAttrMatcher()) &&
          "the DAG leaf must be operand or attribute");
@@ -85,10 +80,6 @@ llvm::StringRef tblgen::DagLeaf::getNativeCodeTemplate() const {
   return cast<llvm::DefInit>(def)->getDef()->getValueAsString("expression");
 }
 
-std::string tblgen::DagLeaf::getStringAttr() const {
-  assert(isStringAttr() && "the DAG leaf must be string attribute");
-  return def->getAsUnquotedString();
-}
 bool tblgen::DagLeaf::isSubClassOf(StringRef superclass) const {
   if (auto *defInit = dyn_cast_or_null<llvm::DefInit>(def))
     return defInit->getDef()->isSubClassOf(superclass);
@@ -111,7 +102,7 @@ bool tblgen::DagNode::isNativeCodeCall() const {
 }
 
 bool tblgen::DagNode::isOperation() const {
-  return !isNativeCodeCall() && !isReplaceWithValue() && !isLocationDirective();
+  return !(isNativeCodeCall() || isReplaceWithValue());
 }
 
 llvm::StringRef tblgen::DagNode::getNativeCodeTemplate() const {
@@ -167,11 +158,6 @@ bool tblgen::DagNode::isReplaceWithValue() const {
   return dagOpDef->getName() == "replaceWithValue";
 }
 
-bool tblgen::DagNode::isLocationDirective() const {
-  auto *dagOpDef = cast<llvm::DefInit>(node->getOperator())->getDef();
-  return dagOpDef->getName() == "location";
-}
-
 void tblgen::DagNode::print(raw_ostream &os) const {
   if (node)
     node->print(os);
@@ -221,20 +207,19 @@ tblgen::SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   case Kind::Attr: {
     auto type =
         op->getArg(*argIndex).get<NamedAttribute *>()->attr.getStorageType();
-    return std::string(formatv("{0} {1};\n", type, name));
+    return formatv("{0} {1};\n", type, name);
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
     // operands).
-    return std::string(
-        formatv("Operation::operand_range {0}(op0->getOperands());\n", name));
+    return formatv("Operation::operand_range {0}(op0->getOperands());\n", name);
   }
   case Kind::Value: {
-    return std::string(formatv("ArrayRef<Value> {0};\n", name));
+    return formatv("ArrayRef<Value> {0};\n", name);
   }
   case Kind::Result: {
     // Use the op itself for captured results.
-    return std::string(formatv("{0} {1};\n", op->getQualCppClassName(), name));
+    return formatv("{0} {1};\n", op->getQualCppClassName(), name);
   }
   }
   llvm_unreachable("unknown kind");
@@ -248,40 +233,39 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     assert(index < 0);
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(llvm::dbgs() << repl << " (Attr)\n");
-    return std::string(repl);
+    return repl;
   }
   case Kind::Operand: {
     assert(index < 0);
     auto *operand = op->getArg(*argIndex).get<NamedTypeConstraint *>();
     // If this operand is variadic, then return a range. Otherwise, return the
     // value itself.
-    if (operand->isVariableLength()) {
+    if (operand->isVariadic()) {
       auto repl = formatv(fmt, name);
       LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicOperand)\n");
-      return std::string(repl);
+      return repl;
     }
     auto repl = formatv(fmt, formatv("(*{0}.begin())", name));
     LLVM_DEBUG(llvm::dbgs() << repl << " (SingleOperand)\n");
-    return std::string(repl);
+    return repl;
   }
   case Kind::Result: {
     // If `index` is greater than zero, then we are referencing a specific
     // result of a multi-result op. The result can still be variadic.
     if (index >= 0) {
-      std::string v =
-          std::string(formatv("{0}.getODSResults({1})", name, index));
+      std::string v = formatv("{0}.getODSResults({1})", name, index);
       if (!op->getResult(index).isVariadic())
-        v = std::string(formatv("(*{0}.begin())", v));
+        v = formatv("(*{0}.begin())", v);
       auto repl = formatv(fmt, v);
       LLVM_DEBUG(llvm::dbgs() << repl << " (SingleResult)\n");
-      return std::string(repl);
+      return repl;
     }
 
     // If this op has no result at all but still we bind a symbol to it, it
     // means we want to capture the op itself.
     if (op->getNumResults() == 0) {
       LLVM_DEBUG(llvm::dbgs() << name << " (Op)\n");
-      return std::string(name);
+      return name;
     }
 
     // We are referencing all results of the multi-result op. A specific result
@@ -290,11 +274,11 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     values.reserve(op->getNumResults());
 
     for (int i = 0, e = op->getNumResults(); i < e; ++i) {
-      std::string v = std::string(formatv("{0}.getODSResults({1})", name, i));
+      std::string v = formatv("{0}.getODSResults({1})", name, i);
       if (!op->getResult(i).isVariadic()) {
-        v = std::string(formatv("(*{0}.begin())", v));
+        v = formatv("(*{0}.begin())", v);
       }
-      values.push_back(std::string(formatv(fmt, v)));
+      values.push_back(formatv(fmt, v));
     }
     auto repl = llvm::join(values, separator);
     LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicResult)\n");
@@ -305,7 +289,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     assert(op == nullptr);
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
-    return std::string(repl);
+    return repl;
   }
   }
   llvm_unreachable("unknown kind");
@@ -320,13 +304,13 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
     assert(index < 0 && "only allowed for symbol bound to result");
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(llvm::dbgs() << repl << " (Operand/Attr)\n");
-    return std::string(repl);
+    return repl;
   }
   case Kind::Result: {
     if (index >= 0) {
       auto repl = formatv(fmt, formatv("{0}.getODSResults({1})", name, index));
       LLVM_DEBUG(llvm::dbgs() << repl << " (SingleResult)\n");
-      return std::string(repl);
+      return repl;
     }
 
     // We are referencing all results of the multi-result op. Each result should
@@ -335,8 +319,8 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
     values.reserve(op->getNumResults());
 
     for (int i = 0, e = op->getNumResults(); i < e; ++i) {
-      values.push_back(std::string(
-          formatv(fmt, formatv("{0}.getODSResults({1})", name, i))));
+      values.push_back(
+          formatv(fmt, formatv("{0}.getODSResults({1})", name, i)));
     }
     auto repl = llvm::join(values, separator);
     LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicResult)\n");
@@ -347,7 +331,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
     assert(op == nullptr);
     auto repl = formatv(fmt, formatv("{{{0}}", name));
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
-    return std::string(repl);
+    return repl;
   }
   }
   llvm_unreachable("unknown kind");
@@ -494,7 +478,7 @@ std::vector<tblgen::AppliedConstraint> tblgen::Pattern::getConstraints() const {
             def.getLoc(),
             "operands to additional constraints can only be symbol references");
       }
-      entities.push_back(std::string(argName->getValue()));
+      entities.push_back(argName->getValue());
     }
 
     ret.emplace_back(cast<llvm::DefInit>(dagInit->getOperator())->getDef(),
@@ -546,14 +530,7 @@ void tblgen::Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
   auto numOpArgs = op.getNumArgs();
   auto numTreeArgs = tree.getNumArgs();
 
-  // The pattern might have the last argument specifying the location.
-  bool hasLocDirective = false;
-  if (numTreeArgs != 0) {
-    if (auto lastArg = tree.getArgAsNestedDag(numTreeArgs - 1))
-      hasLocDirective = lastArg.isLocationDirective();
-  }
-
-  if (numOpArgs != numTreeArgs - hasLocDirective) {
+  if (numOpArgs != numTreeArgs) {
     auto err = formatv("op '{0}' argument number mismatch: "
                        "{1} in pattern vs. {2} in definition",
                        op.getOperationName(), numTreeArgs, numOpArgs);

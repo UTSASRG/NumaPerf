@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "../Common/AssemblerUtils.h"
+#include "Latency.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
 #include "TestBase.h"
+#include "Uops.h"
 #include "X86InstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 
@@ -32,7 +34,8 @@ protected:
   void SetUp() {
     TM = State.createTargetMachine();
     Context = std::make_unique<LLVMContext>();
-    Mod = std::make_unique<Module>("X86SnippetRepetitorTest", *Context);
+    Mod =
+        std::make_unique<Module>("X86SnippetRepetitorTest", *Context);
     Mod->setDataLayout(TM->createDataLayout());
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MF = &createVoidVoidPtrMachineFunction("TestFn", Mod.get(), MMI.get());

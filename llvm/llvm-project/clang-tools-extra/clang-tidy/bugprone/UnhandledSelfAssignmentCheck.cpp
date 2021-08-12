@@ -29,6 +29,9 @@ void UnhandledSelfAssignmentCheck::storeOptions(
 }
 
 void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   // We don't care about deleted, default or implicit operator implementations.
   const auto IsUserDefined = cxxMethodDecl(
       isDefinition(), unless(anyOf(isDeleted(), isImplicit(), isDefaulted())));
@@ -40,21 +43,17 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
 
   // Self-check: Code compares something with 'this' pointer. We don't check
   // whether it is actually the parameter what we compare.
-  const auto HasNoSelfCheck = cxxMethodDecl(unless(anyOf(
-      hasDescendant(binaryOperator(hasAnyOperatorName("==", "!="),
-                                   has(ignoringParenCasts(cxxThisExpr())))),
-      hasDescendant(cxxOperatorCallExpr(
-          hasAnyOverloadedOperatorName("==", "!="), argumentCountIs(2),
-          has(ignoringParenCasts(cxxThisExpr())))))));
+  const auto HasNoSelfCheck = cxxMethodDecl(unless(hasDescendant(
+      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+                     has(ignoringParenCasts(cxxThisExpr()))))));
 
   // Both copy-and-swap and copy-and-move method creates a copy first and
   // assign it to 'this' with swap or move.
   // In the non-template case, we can search for the copy constructor call.
   const auto HasNonTemplateSelfCopy = cxxMethodDecl(
       ofClass(cxxRecordDecl(unless(hasAncestor(classTemplateDecl())))),
-      traverse(ast_type_traits::TK_AsIs,
-               hasDescendant(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
-                   isCopyConstructor(), ofClass(equalsBoundNode("class"))))))));
+      hasDescendant(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+          isCopyConstructor(), ofClass(equalsBoundNode("class")))))));
 
   // In the template case, we need to handle two separate cases: 1) a local
   // variable is created with the copy, 2) copy is created only as a temporary

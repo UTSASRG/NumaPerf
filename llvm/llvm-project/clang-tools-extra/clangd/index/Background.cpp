@@ -8,10 +8,16 @@
 
 #include "index/Background.h"
 #include "Compiler.h"
+#include "Context.h"
+#include "FSProvider.h"
 #include "Headers.h"
+#include "Logger.h"
 #include "ParsedAST.h"
+#include "Path.h"
 #include "SourceCode.h"
 #include "Symbol.h"
+#include "Threading.h"
+#include "Trace.h"
 #include "URI.h"
 #include "index/BackgroundIndexLoader.h"
 #include "index/FileIndex.h"
@@ -21,12 +27,6 @@
 #include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
-#include "support/Context.h"
-#include "support/FSProvider.h"
-#include "support/Logger.h"
-#include "support/Path.h"
-#include "support/Threading.h"
-#include "support/Trace.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Types.h"
@@ -61,6 +61,51 @@ namespace clang {
 namespace clangd {
 namespace {
 
+// Resolves URI to file paths with cache.
+class URIToFileCache {
+public:
+  URIToFileCache(llvm::StringRef HintPath) : HintPath(HintPath) {}
+
+  llvm::StringRef resolve(llvm::StringRef FileURI) {
+    auto I = URIToPathCache.try_emplace(FileURI);
+    if (I.second) {
+      auto Path = URI::resolve(FileURI, HintPath);
+      if (!Path) {
+        elog("Failed to resolve URI {0}: {1}", FileURI, Path.takeError());
+        assert(false && "Failed to resolve URI");
+        return "";
+      }
+      I.first->second = *Path;
+    }
+    return I.first->second;
+  }
+
+private:
+  std::string HintPath;
+  llvm::StringMap<std::string> URIToPathCache;
+};
+
+// We keep only the node "U" and its edges. Any node other than "U" will be
+// empty in the resultant graph.
+IncludeGraph getSubGraph(const URI &U, const IncludeGraph &FullGraph) {
+  IncludeGraph IG;
+
+  std::string FileURI = U.toString();
+  auto Entry = IG.try_emplace(FileURI).first;
+  auto &Node = Entry->getValue();
+  Node = FullGraph.lookup(Entry->getKey());
+  Node.URI = Entry->getKey();
+
+  // URIs inside nodes must point into the keys of the same IncludeGraph.
+  for (auto &Include : Node.DirectIncludes) {
+    auto I = IG.try_emplace(Include).first;
+    I->getValue().URI = I->getKey();
+    Include = I->getKey();
+  }
+
+  return IG;
+}
+
 // We cannot use vfs->makeAbsolute because Cmd.FileName is either absolute or
 // relative to Cmd.Directory, which might not be the same as current working
 // directory.
@@ -92,21 +137,18 @@ bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
 BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, const FileSystemProvider &FSProvider,
     const GlobalCompilationDatabase &CDB,
-    BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize,
-    std::function<void(BackgroundQueue::Stats)> OnProgress)
-    : SwapIndex(std::make_unique<MemIndex>()), FSProvider(FSProvider), CDB(CDB),
-      BackgroundContext(std::move(BackgroundContext)),
+    BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize)
+    : SwapIndex(std::make_unique<MemIndex>()), FSProvider(FSProvider),
+      CDB(CDB), BackgroundContext(std::move(BackgroundContext)),
       Rebuilder(this, &IndexedSymbols, ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
-      Queue(std::move(OnProgress)),
       CommandsChanged(
           CDB.watch([&](const std::vector<std::string> &ChangedFiles) {
             enqueue(ChangedFiles);
           })) {
-  assert(Rebuilder.TUsBeforeFirstBuild > 0 &&
-         "Thread pool size can't be zero.");
+  assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
-  for (unsigned I = 0; I < Rebuilder.TUsBeforeFirstBuild; ++I) {
+  for (unsigned I = 0; I < ThreadPoolSize; ++I) {
     ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1), [this] {
       WithContext Ctx(this->BackgroundContext.clone());
       Queue.work([&] { Rebuilder.idle(); });
@@ -158,7 +200,7 @@ BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd) {
       elog("Indexing {0} failed: {1}", FileName, std::move(Error));
   });
   T.QueuePri = IndexFile;
-  T.Tag = std::string(filenameWithoutExtension(Cmd.Filename));
+  T.Tag = filenameWithoutExtension(Cmd.Filename);
   return T;
 }
 
@@ -174,50 +216,108 @@ void BackgroundIndex::update(
     llvm::StringRef MainFile, IndexFileIn Index,
     const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
     bool HadErrors) {
-  // Keys are URIs.
-  llvm::StringMap<std::pair<Path, FileDigest>> FilesToUpdate;
-  // Note that sources do not contain any information regarding missing headers,
-  // since we don't even know what absolute path they should fall in.
+  // Partition symbols/references into files.
+  struct File {
+    llvm::DenseSet<const Symbol *> Symbols;
+    llvm::DenseSet<const Ref *> Refs;
+    llvm::DenseSet<const Relation *> Relations;
+    FileDigest Digest;
+  };
+  llvm::StringMap<File> Files;
+  URIToFileCache URICache(MainFile);
   for (const auto &IndexIt : *Index.Sources) {
     const auto &IGN = IndexIt.getValue();
-    auto AbsPath = URI::resolve(IGN.URI, MainFile);
-    if (!AbsPath) {
-      elog("Failed to resolve URI: {0}", AbsPath.takeError());
-      continue;
-    }
-    const auto DigestIt = ShardVersionsSnapshot.find(*AbsPath);
-    // File has different contents, or indexing was successful this time.
+    // Note that sources do not contain any information regarding missing
+    // headers, since we don't even know what absolute path they should fall in.
+    const auto AbsPath = URICache.resolve(IGN.URI);
+    const auto DigestIt = ShardVersionsSnapshot.find(AbsPath);
+    // File has different contents, or indexing was successfull this time.
     if (DigestIt == ShardVersionsSnapshot.end() ||
         DigestIt->getValue().Digest != IGN.Digest ||
         (DigestIt->getValue().HadErrors && !HadErrors))
-      FilesToUpdate[IGN.URI] = {std::move(*AbsPath), IGN.Digest};
+      Files.try_emplace(AbsPath).first->getValue().Digest = IGN.Digest;
+  }
+  // This map is used to figure out where to store relations.
+  llvm::DenseMap<SymbolID, File *> SymbolIDToFile;
+  for (const auto &Sym : *Index.Symbols) {
+    if (Sym.CanonicalDeclaration) {
+      auto DeclPath = URICache.resolve(Sym.CanonicalDeclaration.FileURI);
+      const auto FileIt = Files.find(DeclPath);
+      if (FileIt != Files.end()) {
+        FileIt->second.Symbols.insert(&Sym);
+        SymbolIDToFile[Sym.ID] = &FileIt->second;
+      }
+    }
+    // For symbols with different declaration and definition locations, we store
+    // the full symbol in both the header file and the implementation file, so
+    // that merging can tell the preferred symbols (from canonical headers) from
+    // other symbols (e.g. forward declarations).
+    if (Sym.Definition &&
+        Sym.Definition.FileURI != Sym.CanonicalDeclaration.FileURI) {
+      auto DefPath = URICache.resolve(Sym.Definition.FileURI);
+      const auto FileIt = Files.find(DefPath);
+      if (FileIt != Files.end())
+        FileIt->second.Symbols.insert(&Sym);
+    }
+  }
+  llvm::DenseMap<const Ref *, SymbolID> RefToIDs;
+  for (const auto &SymRefs : *Index.Refs) {
+    for (const auto &R : SymRefs.second) {
+      auto Path = URICache.resolve(R.Location.FileURI);
+      const auto FileIt = Files.find(Path);
+      if (FileIt != Files.end()) {
+        auto &F = FileIt->getValue();
+        RefToIDs[&R] = SymRefs.first;
+        F.Refs.insert(&R);
+      }
+    }
+  }
+  for (const auto &Rel : *Index.Relations) {
+    const auto FileIt = SymbolIDToFile.find(Rel.Subject);
+    if (FileIt != SymbolIDToFile.end())
+      FileIt->second->Relations.insert(&Rel);
   }
 
-  // Shard slabs into files.
-  FileShardedIndex ShardedIndex(std::move(Index));
-
   // Build and store new slabs for each updated file.
-  for (const auto &FileIt : FilesToUpdate) {
-    auto Uri = FileIt.first();
-    auto IF = ShardedIndex.getShard(Uri);
-    assert(IF && "no shard for file in Index.Sources?");
-    PathRef Path = FileIt.getValue().first;
-
-    // Only store command line hash for main files of the TU, since our
-    // current model keeps only one version of a header file.
-    if (Path != MainFile)
-      IF->Cmd.reset();
+  for (const auto &FileIt : Files) {
+    llvm::StringRef Path = FileIt.getKey();
+    SymbolSlab::Builder Syms;
+    RefSlab::Builder Refs;
+    RelationSlab::Builder Relations;
+    for (const auto *S : FileIt.second.Symbols)
+      Syms.insert(*S);
+    for (const auto *R : FileIt.second.Refs)
+      Refs.insert(RefToIDs[R], *R);
+    for (const auto *Rel : FileIt.second.Relations)
+      Relations.insert(*Rel);
+    auto SS = std::make_unique<SymbolSlab>(std::move(Syms).build());
+    auto RS = std::make_unique<RefSlab>(std::move(Refs).build());
+    auto RelS = std::make_unique<RelationSlab>(std::move(Relations).build());
+    auto IG = std::make_unique<IncludeGraph>(
+        getSubGraph(URI::create(Path), Index.Sources.getValue()));
 
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
     // FIXME: Also skip serializing the shard if it is already up-to-date.
-    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, *IF))
+    BackgroundIndexStorage *IndexStorage = IndexStorageFactory(Path);
+    IndexFileOut Shard;
+    Shard.Symbols = SS.get();
+    Shard.Refs = RS.get();
+    Shard.Relations = RelS.get();
+    Shard.Sources = IG.get();
+
+    // Only store command line hash for main files of the TU, since our
+    // current model keeps only one version of a header file.
+    if (Path == MainFile)
+      Shard.Cmd = Index.Cmd.getPointer();
+
+    if (auto Error = IndexStorage->storeShard(Path, Shard))
       elog("Failed to write background-index shard for file {0}: {1}", Path,
            std::move(Error));
 
     {
       std::lock_guard<std::mutex> Lock(ShardVersionsMu);
-      const auto &Hash = FileIt.getValue().second;
+      auto Hash = FileIt.second.Digest;
       auto DigestIt = ShardVersions.try_emplace(Path);
       ShardVersion &SV = DigestIt.first->second;
       // Skip if file is already up to date, unless previous index was broken
@@ -230,11 +330,8 @@ void BackgroundIndex::update(
       // This can override a newer version that is added in another thread, if
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
-      IndexedSymbols.update(
-          Path, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
-          std::make_unique<RefSlab>(std::move(*IF->Refs)),
-          std::make_unique<RelationSlab>(std::move(*IF->Relations)),
-          Path == MainFile);
+      IndexedSymbols.update(Path, std::move(SS), std::move(RS), std::move(RelS),
+                            Path == MainFile);
     }
   }
 }

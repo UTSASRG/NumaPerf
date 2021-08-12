@@ -34,7 +34,7 @@ public:
     return getEncodingValue(i);
   }
 
-  bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
+  bool isReservedReg(const MachineFunction &MF, unsigned Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;
   void emitReservedArgRegCallError(const MachineFunction &MF) const;
 
@@ -44,13 +44,10 @@ public:
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const MCPhysReg *getDarwinCalleeSavedRegs(const MachineFunction *MF) const;
   const MCPhysReg *
   getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
-  const uint32_t *getDarwinCallPreservedMask(const MachineFunction &MF,
-                                             CallingConv::ID) const;
 
   unsigned getCSRFirstUseCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
@@ -86,8 +83,8 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
-                       MCRegister PhysReg) const override;
-  bool isConstantPhysReg(MCRegister PhysReg) const override;
+                       unsigned PhysReg) const override;
+  bool isConstantPhysReg(unsigned PhysReg) const override;
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,
                      unsigned Kind = 0) const override;
@@ -99,12 +96,12 @@ public:
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
 
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
-  bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
+  bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
                           int64_t Offset) const override;
-  void materializeFrameBaseRegister(MachineBasicBlock *MBB, Register BaseReg,
+  void materializeFrameBaseRegister(MachineBasicBlock *MBB, unsigned BaseReg,
                                     int FrameIdx,
                                     int64_t Offset) const override;
-  void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
+  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
                          int64_t Offset) const override;
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
@@ -120,6 +117,10 @@ public:
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
+
+  bool trackLivenessAfterRegAlloc(const MachineFunction&) const override {
+    return true;
+  }
 
   unsigned getLocalAddressRegister(const MachineFunction &MF) const;
 };

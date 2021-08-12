@@ -45,11 +45,6 @@ static cl::opt<bool> ExtractSymbolize("symbolize", cl::value_desc("symbolize"),
                                       cl::sub(Extract));
 static cl::alias ExtractSymbolize2("s", cl::aliasopt(ExtractSymbolize),
                                    cl::desc("alias for -symbolize"));
-static cl::opt<bool> ExtractNoDemangle("no-demangle",
-                                       cl::value_desc("no-demangle"),
-                                       cl::init(false),
-                                       cl::desc("don't demangle symbols"),
-                                       cl::sub(Extract));
 
 namespace {
 
@@ -63,9 +58,9 @@ void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS,
     auto FuncId = Map.getFunctionId(Sled.Function);
     if (!FuncId)
       return;
-    YAMLSleds.push_back(
-        {*FuncId, Sled.Address, Sled.Function, Sled.Kind, Sled.AlwaysInstrument,
-         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : "", Sled.Version});
+    YAMLSleds.push_back({*FuncId, Sled.Address, Sled.Function, Sled.Kind,
+                         Sled.AlwaysInstrument,
+                         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : ""});
   }
   Output Out(OS, nullptr, 0);
   Out << YAMLSleds;
@@ -89,10 +84,7 @@ static CommandRegistration Unused(&Extract, []() -> Error {
         Twine("Cannot open file '") + ExtractOutput + "' for writing.", EC);
   const auto &FunctionAddresses =
       InstrumentationMapOrError->getFunctionAddresses();
-  symbolize::LLVMSymbolizer::Options opts;
-  if (ExtractNoDemangle)
-    opts.Demangle = false;
-  symbolize::LLVMSymbolizer Symbolizer(opts);
+  symbolize::LLVMSymbolizer Symbolizer;
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ExtractInput, Symbolizer,
                                                   FunctionAddresses);
   exportAsYAML(*InstrumentationMapOrError, OS, FuncIdHelper);

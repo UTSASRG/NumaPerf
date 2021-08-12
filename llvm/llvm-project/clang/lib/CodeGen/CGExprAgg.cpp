@@ -15,7 +15,6 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
-#include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -250,7 +249,7 @@ void AggExprEmitter::withReturnValueSlot(
     const Expr *E, llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
   QualType RetTy = E->getType();
   bool RequiresDestruction =
-      !Dest.isExternallyDestructed() &&
+      Dest.isIgnored() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
 
   // If it makes no observable difference, save a memcpy + temporary.
@@ -288,8 +287,10 @@ void AggExprEmitter::withReturnValueSlot(
   }
 
   RValue Src =
-      EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused,
-                               Dest.isExternallyDestructed()));
+      EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused));
+
+  if (RequiresDestruction)
+    CGF.pushDestroy(RetTy.isDestructedType(), Src.getAggregateAddress(), RetTy);
 
   if (!UseTemp)
     return;
@@ -658,32 +659,22 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   }
 
   AggValueSlot Slot = EnsureSlot(E->getType());
-
-  // Block-scope compound literals are destroyed at the end of the enclosing
-  // scope in C.
-  bool Destruct =
-      !CGF.getLangOpts().CPlusPlus && !Slot.isExternallyDestructed();
-  if (Destruct)
-    Slot.setExternallyDestructed();
-
   CGF.EmitAggExpr(E->getInitializer(), Slot);
-
-  if (Destruct)
-    if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
-      CGF.pushLifetimeExtendedDestroy(
-          CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
-          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
 }
 
 /// Attempt to look through various unimportant expressions to find a
 /// cast of the given kind.
-static Expr *findPeephole(Expr *op, CastKind kind, const ASTContext &ctx) {
-  op = op->IgnoreParenNoopCasts(ctx);
-  if (auto castE = dyn_cast<CastExpr>(op)) {
-    if (castE->getCastKind() == kind)
-      return castE->getSubExpr();
+static Expr *findPeephole(Expr *op, CastKind kind) {
+  while (true) {
+    op = op->IgnoreParens();
+    if (CastExpr *castE = dyn_cast<CastExpr>(op)) {
+      if (castE->getCastKind() == kind)
+        return castE->getSubExpr();
+      if (castE->getCastKind() == CK_NoOp)
+        continue;
+    }
+    return nullptr;
   }
-  return nullptr;
 }
 
 void AggExprEmitter::VisitCastExpr(CastExpr *E) {
@@ -772,8 +763,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       (isToAtomic ? CK_AtomicToNonAtomic : CK_NonAtomicToAtomic);
 
     // These two cases are reverses of each other; try to peephole them.
-    if (Expr *op =
-            findPeephole(E->getSubExpr(), peepholeTarget, CGF.getContext())) {
+    if (Expr *op = findPeephole(E->getSubExpr(), peepholeTarget)) {
       assert(CGF.getContext().hasSameUnqualifiedType(op->getType(),
                                                      E->getType()) &&
            "peephole significantly changed types?");
@@ -823,19 +813,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     // If we're loading from a volatile type, force the destination
     // into existence.
     if (E->getSubExpr()->getType().isVolatileQualified()) {
-      bool Destruct =
-          !Dest.isExternallyDestructed() &&
-          E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
-      if (Destruct)
-        Dest.setExternallyDestructed();
       EnsureDest(E->getType());
-      Visit(E->getSubExpr());
-
-      if (Destruct)
-        CGF.pushDestroy(QualType::DK_nontrivial_c_struct, Dest.getAddress(),
-                        E->getType());
-
-      return;
+      return Visit(E->getSubExpr());
     }
 
     LLVM_FALLTHROUGH;
@@ -1940,18 +1919,6 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
              "constructor or assignment operator");
       // Ignore empty classes in C++.
       if (Record->isEmpty())
-        return;
-    }
-  }
-
-  if (getLangOpts().CUDAIsDevice) {
-    if (Ty->isCUDADeviceBuiltinSurfaceType()) {
-      if (getTargetHooks().emitCUDADeviceBuiltinSurfaceDeviceCopy(*this, Dest,
-                                                                  Src))
-        return;
-    } else if (Ty->isCUDADeviceBuiltinTextureType()) {
-      if (getTargetHooks().emitCUDADeviceBuiltinTextureDeviceCopy(*this, Dest,
-                                                                  Src))
         return;
     }
   }

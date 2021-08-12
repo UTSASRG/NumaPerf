@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_LANGUAGECATEGORY_H
-#define LLDB_DATAFORMATTERS_LANGUAGECATEGORY_H
+#ifndef lldb_LanguageCategory_h_
+#define lldb_LanguageCategory_h_
+
 
 #include "lldb/DataFormatters/FormatCache.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -57,4 +58,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_LANGUAGECATEGORY_H
+#endif // lldb_LanguageCategory_h_

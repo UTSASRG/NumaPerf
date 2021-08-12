@@ -1,61 +1,36 @@
-# Exclude tests from libMLIR.so
-add_mlir_library(MLIRTestTransforms
-  TestAllReduceLowering.cpp
-  TestBufferPlacement.cpp
+add_llvm_library(MLIRTestTransforms
   TestCallGraph.cpp
   TestConstantFold.cpp
-  TestConvertGPUKernelToCubin.cpp
-  TestConvertGPUKernelToHsaco.cpp
-  TestDominance.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
-  TestGpuParallelLoopMapping.cpp
   TestInlining.cpp
   TestLinalgTransforms.cpp
   TestLiveness.cpp
   TestLoopMapping.cpp
   TestLoopParametricTiling.cpp
-  TestLoopUnrolling.cpp
   TestOpaqueLoc.cpp
-  TestMemRefBoundCheck.cpp
-  TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
-  TestSCFUtils.cpp
+  TestVectorToLoopsConversion.cpp
   TestVectorTransforms.cpp
-
-  EXCLUDE_FROM_LIBMLIR
+  TestVectorizationUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
-
-  DEPENDS
-  MLIRStandardOpsIncGen
-  MLIRTestVectorTransformPatternsIncGen
-
-  LINK_LIBS PUBLIC
+  )
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../TestDialect)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../TestDialect)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
+add_dependencies(MLIRTestTransforms MLIRStandardOpsIncGen)
+add_dependencies(MLIRTestTransforms MLIRTestLinalgTransformPatternsIncGen)
+add_dependencies(MLIRTestTransforms MLIRTestVectorTransformPatternsIncGen)
+target_link_libraries(MLIRTestTransforms
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
-  MLIRGPUtoGPURuntimeTransforms
-  MLIRLinalgOps
-  MLIRLinalgTransforms
-  MLIRNVVMIR
-  MLIRSCF
-  MLIRSCFTransforms
-  MLIRGPU
+  MLIRLoopOps
   MLIRPass
-  MLIRROCDLIR
-  MLIRStandardOpsTransforms
-  MLIRTargetNVVMIR
-  MLIRTargetROCDLIR
   MLIRTestDialect
-  MLIRTransformUtils
-  MLIRVectorToSCF
-  MLIRVector
+  MLIRVectorOps
   )
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)

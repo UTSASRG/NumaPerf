@@ -1,4 +1,4 @@
-//===-- ClangExpressionSourceCode.cpp -------------------------------------===//
+//===-- ClangExpressionSourceCode.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 #include "ClangExpressionSourceCode.h"
 
 #include "clang/Basic/CharInfo.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
@@ -174,8 +173,8 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
 
 lldb_private::ClangExpressionSourceCode::ClangExpressionSourceCode(
     llvm::StringRef filename, llvm::StringRef name, llvm::StringRef prefix,
-    llvm::StringRef body, Wrapping wrap, WrapKind wrap_kind)
-    : ExpressionSourceCode(name, prefix, body, wrap), m_wrap_kind(wrap_kind) {
+    llvm::StringRef body, Wrapping wrap)
+    : ExpressionSourceCode(name, prefix, body, wrap) {
   // Use #line markers to pretend that we have a single-line source file
   // containing only the user expression. This will hide our wrapper code
   // from the user when we render diagnostics with Clang.
@@ -261,9 +260,10 @@ TokenVerifier::TokenVerifier(std::string body) {
   }
 }
 
-void ClangExpressionSourceCode::AddLocalVariableDecls(
-    const lldb::VariableListSP &var_list_sp, StreamString &stream,
-    const std::string &expr) const {
+static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
+                                  StreamString &stream,
+                                  const std::string &expr,
+                                  lldb::LanguageType wrapping_language) {
   TokenVerifier tokens(expr);
 
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
@@ -280,12 +280,13 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(
     if (!expr.empty() && !tokens.hasToken(var_name.GetStringRef()))
       continue;
 
-    const bool is_objc = m_wrap_kind == WrapKind::ObjCInstanceMethod ||
-                         m_wrap_kind == WrapKind::ObjCStaticMethod;
-    if ((var_name == "self" || var_name == "_cmd") && is_objc)
+    if ((var_name == "self" || var_name == "_cmd") &&
+        (wrapping_language == lldb::eLanguageTypeObjC ||
+         wrapping_language == lldb::eLanguageTypeObjC_plus_plus))
       continue;
 
-    if (var_name == "this" && m_wrap_kind == WrapKind::CppMemberFunction)
+    if (var_name == "this" &&
+        wrapping_language == lldb::eLanguageTypeC_plus_plus)
       continue;
 
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
@@ -293,8 +294,9 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(
 }
 
 bool ClangExpressionSourceCode::GetText(
-    std::string &text, ExecutionContext &exe_ctx, bool add_locals,
-    bool force_add_all_locals, llvm::ArrayRef<std::string> modules) const {
+    std::string &text, lldb::LanguageType wrapping_language, bool static_method,
+    ExecutionContext &exe_ctx, bool add_locals, bool force_add_all_locals,
+    llvm::ArrayRef<std::string> modules) const {
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
 
@@ -371,11 +373,21 @@ bool ClangExpressionSourceCode::GetText(
         lldb::VariableListSP var_list_sp =
             frame->GetInScopeVariableList(false, true);
         AddLocalVariableDecls(var_list_sp, lldb_local_var_decls,
-                              force_add_all_locals ? "" : m_body);
+                              force_add_all_locals ? "" : m_body,
+                              wrapping_language);
       }
   }
 
   if (m_wrap) {
+    switch (wrapping_language) {
+    default:
+      return false;
+    case lldb::eLanguageTypeC:
+    case lldb::eLanguageTypeC_plus_plus:
+    case lldb::eLanguageTypeObjC:
+      break;
+    }
+
     // Generate a list of @import statements that will import the specified
     // module into our expression.
     std::string module_imports;
@@ -394,12 +406,22 @@ bool ClangExpressionSourceCode::GetText(
     // First construct a tagged form of the user expression so we can find it
     // later:
     std::string tagged_body;
-    tagged_body.append(m_start_marker);
-    tagged_body.append(m_body);
-    tagged_body.append(m_end_marker);
-
-    switch (m_wrap_kind) {
-    case WrapKind::Function:
+    switch (wrapping_language) {
+    default:
+      tagged_body = m_body;
+      break;
+    case lldb::eLanguageTypeC:
+    case lldb::eLanguageTypeC_plus_plus:
+    case lldb::eLanguageTypeObjC:
+      tagged_body.append(m_start_marker);
+      tagged_body.append(m_body);
+      tagged_body.append(m_end_marker);
+      break;
+    }
+    switch (wrapping_language) {
+    default:
+      break;
+    case lldb::eLanguageTypeC:
       wrap_stream.Printf("%s"
                          "void                           \n"
                          "%s(void *$__lldb_arg)          \n"
@@ -410,7 +432,7 @@ bool ClangExpressionSourceCode::GetText(
                          module_imports.c_str(), m_name.c_str(),
                          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
-    case WrapKind::CppMemberFunction:
+    case lldb::eLanguageTypeC_plus_plus:
       wrap_stream.Printf("%s"
                          "void                                   \n"
                          "$__lldb_class::%s(void *$__lldb_arg)   \n"
@@ -421,42 +443,42 @@ bool ClangExpressionSourceCode::GetText(
                          module_imports.c_str(), m_name.c_str(),
                          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
-    case WrapKind::ObjCInstanceMethod:
-      wrap_stream.Printf(
-          "%s"
-          "@interface $__lldb_objc_class ($__lldb_category)       \n"
-          "-(void)%s:(void *)$__lldb_arg;                         \n"
-          "@end                                                   \n"
-          "@implementation $__lldb_objc_class ($__lldb_category)  \n"
-          "-(void)%s:(void *)$__lldb_arg                          \n"
-          "{                                                      \n"
-          "    %s;                                                \n"
-          "%s"
-          "}                                                      \n"
-          "@end                                                   \n",
-          module_imports.c_str(), m_name.c_str(), m_name.c_str(),
-          lldb_local_var_decls.GetData(), tagged_body.c_str());
-      break;
-
-    case WrapKind::ObjCStaticMethod:
-      wrap_stream.Printf(
-          "%s"
-          "@interface $__lldb_objc_class ($__lldb_category)        \n"
-          "+(void)%s:(void *)$__lldb_arg;                          \n"
-          "@end                                                    \n"
-          "@implementation $__lldb_objc_class ($__lldb_category)   \n"
-          "+(void)%s:(void *)$__lldb_arg                           \n"
-          "{                                                       \n"
-          "    %s;                                                 \n"
-          "%s"
-          "}                                                       \n"
-          "@end                                                    \n",
-          module_imports.c_str(), m_name.c_str(), m_name.c_str(),
-          lldb_local_var_decls.GetData(), tagged_body.c_str());
+    case lldb::eLanguageTypeObjC:
+      if (static_method) {
+        wrap_stream.Printf(
+            "%s"
+            "@interface $__lldb_objc_class ($__lldb_category)        \n"
+            "+(void)%s:(void *)$__lldb_arg;                          \n"
+            "@end                                                    \n"
+            "@implementation $__lldb_objc_class ($__lldb_category)   \n"
+            "+(void)%s:(void *)$__lldb_arg                           \n"
+            "{                                                       \n"
+            "    %s;                                                 \n"
+            "%s"
+            "}                                                       \n"
+            "@end                                                    \n",
+            module_imports.c_str(), m_name.c_str(), m_name.c_str(),
+            lldb_local_var_decls.GetData(), tagged_body.c_str());
+      } else {
+        wrap_stream.Printf(
+            "%s"
+            "@interface $__lldb_objc_class ($__lldb_category)       \n"
+            "-(void)%s:(void *)$__lldb_arg;                         \n"
+            "@end                                                   \n"
+            "@implementation $__lldb_objc_class ($__lldb_category)  \n"
+            "-(void)%s:(void *)$__lldb_arg                          \n"
+            "{                                                      \n"
+            "    %s;                                                \n"
+            "%s"
+            "}                                                      \n"
+            "@end                                                   \n",
+            module_imports.c_str(), m_name.c_str(), m_name.c_str(),
+            lldb_local_var_decls.GetData(), tagged_body.c_str());
+      }
       break;
     }
 
-    text = std::string(wrap_stream.GetString());
+    text = wrap_stream.GetString();
   } else {
     text.append(m_body);
   }
@@ -465,7 +487,17 @@ bool ClangExpressionSourceCode::GetText(
 }
 
 bool ClangExpressionSourceCode::GetOriginalBodyBounds(
-    std::string transformed_text, size_t &start_loc, size_t &end_loc) {
+    std::string transformed_text, lldb::LanguageType wrapping_language,
+    size_t &start_loc, size_t &end_loc) {
+  switch (wrapping_language) {
+  default:
+    return false;
+  case lldb::eLanguageTypeC:
+  case lldb::eLanguageTypeC_plus_plus:
+  case lldb::eLanguageTypeObjC:
+    break;
+  }
+
   start_loc = transformed_text.find(m_start_marker);
   if (start_loc == std::string::npos)
     return false;

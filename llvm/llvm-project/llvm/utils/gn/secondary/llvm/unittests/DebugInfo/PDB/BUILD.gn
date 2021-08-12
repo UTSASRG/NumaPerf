@@ -9,7 +9,6 @@ unittest("DebugInfoPDBTests") {
   ]
   sources = [
     "HashTableTest.cpp",
-    "NativeSessionTest.cpp",
     "NativeSymbolReuseTest.cpp",
     "PDBApiTest.cpp",
     "StringTableBuilderTest.cpp",

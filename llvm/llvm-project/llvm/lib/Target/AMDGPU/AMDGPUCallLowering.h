@@ -27,16 +27,14 @@ class AMDGPUCallLowering: public CallLowering {
                              uint64_t Offset) const;
 
   void lowerParameter(MachineIRBuilder &B, Type *ParamTy, uint64_t Offset,
-                      Align Alignment, Register DstReg) const;
+                      unsigned Align, Register DstReg) const;
 
   /// A function of this type is used to perform value split action.
-  using SplitArgTy = std::function<void(ArrayRef<Register>, Register, LLT, LLT, int)>;
+  using SplitArgTy = std::function<void(ArrayRef<Register>, LLT, LLT, int)>;
 
-  void splitToValueTypes(MachineIRBuilder &B,
-                         const ArgInfo &OrigArgInfo,
-                         unsigned OrigArgIdx,
+  void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL,
+                         const DataLayout &DL, MachineRegisterInfo &MRI,
                          CallingConv::ID CallConv,
                          SplitArgTy SplitArg) const;
 

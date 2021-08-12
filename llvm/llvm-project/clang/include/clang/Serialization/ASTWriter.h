@@ -216,8 +216,7 @@ private:
     /// indicates the index that this particular vector has in the global one.
     unsigned FirstDeclIndex;
   };
-  using FileDeclIDsTy =
-      llvm::DenseMap<FileID, std::unique_ptr<DeclIDInFileInfo>>;
+  using FileDeclIDsTy = llvm::DenseMap<FileID, DeclIDInFileInfo *>;
 
   /// Map from file SLocEntries to info about the file-level declarations
   /// that it contains.
@@ -244,7 +243,7 @@ private:
 
   /// Offset of each type in the bitstream, indexed by
   /// the type's ID.
-  std::vector<serialization::UnderalignedInt64> TypeOffsets;
+  std::vector<uint32_t> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
   serialization::IdentID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
@@ -278,8 +277,7 @@ private:
   /// The macro infos to emit.
   std::vector<MacroInfoToEmitData> MacroInfosToEmit;
 
-  llvm::DenseMap<const IdentifierInfo *, uint32_t>
-      IdentMacroDirectivesOffsetMap;
+  llvm::DenseMap<const IdentifierInfo *, uint64_t> IdentMacroDirectivesOffsetMap;
 
   /// @name FlushStmt Caches
   /// @{
@@ -466,8 +464,7 @@ private:
                                const Preprocessor &PP);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
-  void WritePreprocessorDetail(PreprocessingRecord &PPRec,
-                               uint64_t MacroOffsetsBase);
+  void WritePreprocessorDetail(PreprocessingRecord &PPRec);
   void WriteSubmodules(Module *WritingModule);
 
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
@@ -505,7 +502,6 @@ private:
   void WriteMSStructPragmaOptions(Sema &SemaRef);
   void WriteMSPointersToMembersPragmaOptions(Sema &SemaRef);
   void WritePackPragmaOptions(Sema &SemaRef);
-  void WriteFloatControlPragmaOptions(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 
@@ -592,7 +588,7 @@ public:
   /// Determine the ID of an already-emitted macro.
   serialization::MacroID getMacroID(MacroInfo *MI);
 
-  uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
+  uint64_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 
   /// Emit a reference to a type.
   void AddTypeRef(QualType T, RecordDataImpl &Record);

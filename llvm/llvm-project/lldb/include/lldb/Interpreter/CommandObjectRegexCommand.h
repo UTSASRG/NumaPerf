@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
-#define LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
+#ifndef liblldb_CommandObjectRegexCommand_h_
+#define liblldb_CommandObjectRegexCommand_h_
 
 #include <list>
 
@@ -51,11 +51,9 @@ protected:
   bool m_is_removable;
 
 private:
-  CommandObjectRegexCommand(const CommandObjectRegexCommand &) = delete;
-  const CommandObjectRegexCommand &
-  operator=(const CommandObjectRegexCommand &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(CommandObjectRegexCommand);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
+#endif // liblldb_CommandObjectRegexCommand_h_

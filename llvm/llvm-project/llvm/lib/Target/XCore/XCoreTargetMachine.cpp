@@ -54,7 +54,7 @@ XCoreTargetMachine::XCoreTargetMachine(const Target &T, const Triple &TT,
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveXCoreCodeModel(CM), OL),
       TLOF(std::make_unique<XCoreTargetObjectFile>()),
-      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
+      Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }
 

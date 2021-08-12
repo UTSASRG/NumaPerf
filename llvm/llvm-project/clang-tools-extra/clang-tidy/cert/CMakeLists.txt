@@ -1,7 +1,4 @@
-set(LLVM_LINK_COMPONENTS
-  support
-  FrontendOpenMP
-  )
+set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyCERTModule
   CERTTidyModule.cpp
@@ -11,7 +8,6 @@ add_clang_library(clangTidyCERTModule
   FloatLoopCounter.cpp
   LimitedRandomnessCheck.cpp
   MutatingCopyCheck.cpp
-  NonTrivialTypesLibcMemoryCallsCheck.cpp
   PostfixOperatorCheck.cpp
   ProperlySeededRandomGeneratorCheck.cpp
   SetLongJmpCheck.cpp

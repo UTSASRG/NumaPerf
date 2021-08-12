@@ -3,9 +3,11 @@
 //      trivial test. Expect one 'FUNC' per call to a function which is defined
 //      in one of the source files in the test directory.
 //
-// UNSUPPORTED: system-darwin
+// REQUIRES: system-linux, lldb
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_base test --fail-lt 1.0 -w  \
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
+// RUN:     | FileCheck %s
 // CHECK: func.cpp:
 
 int func(int i) {

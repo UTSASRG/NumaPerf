@@ -10,23 +10,23 @@
 # CHECK: .debug_loc.dwo         {{.*}} E
 # CHECK: .debug_str_offsets.dwo {{.*}} E
 
-.section .debug_info.dwo,"e"
+.section .debug_info.dwo
 nop
 
-.section .debug_types.dwo,"e"
+.section .debug_types.dwo
 nop
 
-.section .debug_abbrev.dwo,"e"
+.section .debug_abbrev.dwo
 nop
 
-.section .debug_str.dwo,"MSe",@progbits,1
+.section .debug_str.dwo
 nop
 
-.section .debug_line.dwo,"e"
+.section .debug_line.dwo
 nop
 
-.section .debug_loc.dwo,"e"
+.section .debug_loc.dwo
 nop
 
-.section .debug_str_offsets.dwo,"e"
+.section .debug_str_offsets.dwo
 nop

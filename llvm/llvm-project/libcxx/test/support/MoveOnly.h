@@ -23,20 +23,18 @@ class MoveOnly
 
     int data_;
 public:
-    constexpr MoveOnly(int data = 1) : data_(data) {}
-    TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x)
+    MoveOnly(int data = 1) : data_(data) {}
+    MoveOnly(MoveOnly&& x)
         : data_(x.data_) {x.data_ = 0;}
-    TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& x)
+    MoveOnly& operator=(MoveOnly&& x)
         {data_ = x.data_; x.data_ = 0; return *this;}
 
-    constexpr int get() const {return data_;}
+    int get() const {return data_;}
 
-    constexpr bool operator==(const MoveOnly& x) const {return data_ == x.data_;}
-    constexpr bool operator< (const MoveOnly& x) const {return data_ <  x.data_;}
-    TEST_CONSTEXPR_CXX14 MoveOnly operator+(const MoveOnly& x) const
-        { return MoveOnly{data_ + x.data_}; }
-    TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
-        { return MoveOnly{data_ * x.data_}; }
+    bool operator==(const MoveOnly& x) const {return data_ == x.data_;}
+    bool operator< (const MoveOnly& x) const {return data_ <  x.data_;}
+    MoveOnly operator+(const MoveOnly& x) const { return MoveOnly{data_ + x.data_}; }
+    MoveOnly operator*(const MoveOnly& x) const { return MoveOnly{data_ * x.data_}; }
 };
 
 namespace std {
@@ -46,7 +44,7 @@ struct hash<MoveOnly>
 {
     typedef MoveOnly argument_type;
     typedef size_t result_type;
-    constexpr std::size_t operator()(const MoveOnly& x) const {return x.get();}
+    std::size_t operator()(const MoveOnly& x) const {return x.get();}
 };
 
 }

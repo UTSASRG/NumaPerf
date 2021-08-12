@@ -5,7 +5,7 @@
 
 # CHECK: error: corrupted .eh_frame: CIE is too small
 
-.section .eh_frame,"a",@unwind
+.section .eh_frame
   .byte 0x03
   .byte 0x00
   .byte 0x00

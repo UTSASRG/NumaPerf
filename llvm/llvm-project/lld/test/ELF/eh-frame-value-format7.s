@@ -53,7 +53,7 @@
 foo:
  nop
 
-.section .eh_frame,"a",@unwind
+.section .eh_frame
   .long 12   # Size
   .long 0x00 # ID
   .byte 0x01 # Version.

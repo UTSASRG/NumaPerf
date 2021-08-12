@@ -1471,47 +1471,40 @@ namespace {
 class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   struct MemOpInfo {
     SUnit *SU;
-    SmallVector<const MachineOperand *, 4> BaseOps;
+    const MachineOperand *BaseOp;
     int64_t Offset;
-    unsigned Width;
 
-    MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
-              int64_t Offset, unsigned Width)
-        : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
-          Width(Width) {}
+    MemOpInfo(SUnit *su, const MachineOperand *Op, int64_t ofs)
+        : SU(su), BaseOp(Op), Offset(ofs) {}
 
-    static bool Compare(const MachineOperand *const &A,
-                        const MachineOperand *const &B) {
-      if (A->getType() != B->getType())
-        return A->getType() < B->getType();
-      if (A->isReg())
-        return A->getReg() < B->getReg();
-      if (A->isFI()) {
-        const MachineFunction &MF = *A->getParent()->getParent()->getParent();
+    bool operator<(const MemOpInfo &RHS) const {
+      if (BaseOp->getType() != RHS.BaseOp->getType())
+        return BaseOp->getType() < RHS.BaseOp->getType();
+
+      if (BaseOp->isReg())
+        return std::make_tuple(BaseOp->getReg(), Offset, SU->NodeNum) <
+               std::make_tuple(RHS.BaseOp->getReg(), RHS.Offset,
+                               RHS.SU->NodeNum);
+      if (BaseOp->isFI()) {
+        const MachineFunction &MF =
+            *BaseOp->getParent()->getParent()->getParent();
         const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
         bool StackGrowsDown = TFI.getStackGrowthDirection() ==
                               TargetFrameLowering::StackGrowsDown;
-        return StackGrowsDown ? A->getIndex() > B->getIndex()
-                              : A->getIndex() < B->getIndex();
+        // Can't use tuple comparison here since we might need to use a
+        // different order when the stack grows down.
+        if (BaseOp->getIndex() != RHS.BaseOp->getIndex())
+          return StackGrowsDown ? BaseOp->getIndex() > RHS.BaseOp->getIndex()
+                                : BaseOp->getIndex() < RHS.BaseOp->getIndex();
+
+        if (Offset != RHS.Offset)
+          return Offset < RHS.Offset;
+
+        return SU->NodeNum < RHS.SU->NodeNum;
       }
 
       llvm_unreachable("MemOpClusterMutation only supports register or frame "
                        "index bases.");
-    }
-
-    bool operator<(const MemOpInfo &RHS) const {
-      // FIXME: Don't compare everything twice. Maybe use C++20 three way
-      // comparison instead when it's available.
-      if (std::lexicographical_compare(BaseOps.begin(), BaseOps.end(),
-                                       RHS.BaseOps.begin(), RHS.BaseOps.end(),
-                                       Compare))
-        return true;
-      if (std::lexicographical_compare(RHS.BaseOps.begin(), RHS.BaseOps.end(),
-                                       BaseOps.begin(), BaseOps.end(), Compare))
-        return false;
-      if (Offset != RHS.Offset)
-        return Offset < RHS.Offset;
-      return SU->NodeNum < RHS.SU->NodeNum;
     }
   };
 
@@ -1567,69 +1560,41 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
-    const MachineInstr &MI = *SU->getInstr();
-    SmallVector<const MachineOperand *, 4> BaseOps;
+    const MachineOperand *BaseOp;
     int64_t Offset;
-    bool OffsetIsScalable;
-    unsigned Width;
-    if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI))
-      MemOpRecords.push_back(MemOpInfo(SU, BaseOps, Offset, Width));
-#ifndef NDEBUG
-    for (auto *Op : BaseOps)
-      assert(Op);
-#endif
+    if (TII->getMemOperandWithOffset(*SU->getInstr(), BaseOp, Offset, TRI))
+      MemOpRecords.push_back(MemOpInfo(SU, BaseOp, Offset));
   }
   if (MemOpRecords.size() < 2)
     return;
 
   llvm::sort(MemOpRecords);
-
-  // At this point, `MemOpRecords` array must hold atleast two mem ops. Try to
-  // cluster mem ops collected within `MemOpRecords` array.
   unsigned ClusterLength = 1;
-  unsigned CurrentClusterBytes = MemOpRecords[0].Width;
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
-    // Decision to cluster mem ops is taken based on target dependent logic
-    auto MemOpa = MemOpRecords[Idx];
-    auto MemOpb = MemOpRecords[Idx + 1];
-    ++ClusterLength;
-    CurrentClusterBytes += MemOpb.Width;
-    if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpb.BaseOps, ClusterLength,
-                                  CurrentClusterBytes)) {
-      // Current mem ops pair could not be clustered, reset cluster length, and
-      // go to next pair
-      ClusterLength = 1;
-      CurrentClusterBytes = MemOpb.Width;
-      continue;
-    }
-
-    SUnit *SUa = MemOpa.SU;
-    SUnit *SUb = MemOpb.SU;
+    SUnit *SUa = MemOpRecords[Idx].SU;
+    SUnit *SUb = MemOpRecords[Idx+1].SU;
     if (SUa->NodeNum > SUb->NodeNum)
       std::swap(SUa, SUb);
-
-    // FIXME: Is this check really required?
-    if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+    if (TII->shouldClusterMemOps(*MemOpRecords[Idx].BaseOp,
+                                 *MemOpRecords[Idx + 1].BaseOp,
+                                 ClusterLength) &&
+        DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+      LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
+                        << SUb->NodeNum << ")\n");
+      // Copy successor edges from SUa to SUb. Interleaving computation
+      // dependent on SUa can prevent load combining due to register reuse.
+      // Predecessor edges do not need to be copied from SUb to SUa since nearby
+      // loads should have effectively the same inputs.
+      for (const SDep &Succ : SUa->Succs) {
+        if (Succ.getSUnit() == SUb)
+          continue;
+        LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
+                          << ")\n");
+        DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
+      }
+      ++ClusterLength;
+    } else
       ClusterLength = 1;
-      CurrentClusterBytes = MemOpb.Width;
-      continue;
-    }
-
-    LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
-                      << SUb->NodeNum << ")\n");
-
-    // Copy successor edges from SUa to SUb. Interleaving computation
-    // dependent on SUa can prevent load combining due to register reuse.
-    // Predecessor edges do not need to be copied from SUb to SUa since
-    // nearby loads should have effectively the same inputs.
-    for (const SDep &Succ : SUa->Succs) {
-      if (Succ.getSUnit() == SUb)
-        continue;
-      LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
-                        << ")\n");
-      DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
-    }
   }
 }
 
@@ -1644,7 +1609,7 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
 
     unsigned ChainPredID = DAG->SUnits.size();
     for (const SDep &Pred : SU.Preds) {
-      if (Pred.isCtrl() && !Pred.isArtificial()) {
+      if (Pred.isCtrl()) {
         ChainPredID = Pred.getSUnit()->NodeNum;
         break;
       }
@@ -2755,9 +2720,6 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   SchedModel = DAG->getSchedModel();
   TRI = DAG->TRI;
 
-  if (RegionPolicy.ComputeDFSResult)
-    DAG->computeDFSResult();
-
   Rem.init(DAG, SchedModel);
   Top.init(DAG, SchedModel, &Rem);
   Bot.init(DAG, SchedModel, &Rem);
@@ -3722,7 +3684,7 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const ScheduleDAG *G) {
-    return std::string(G->MF.getName());
+    return G->MF.getName();
   }
 
   static bool renderGraphFromBottomUp() {

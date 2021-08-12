@@ -74,16 +74,20 @@ AST_MATCHER(Decl, isFromStdNamespace) {
 ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            utils::IncludeSorter::getMapping(),
-                                            utils::IncludeSorter::IS_LLVM)) {}
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
+          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle,
-                utils::IncludeSorter::getMapping());
+  Options.store(Opts, "IncludeStyle",
+                utils::IncludeSorter::toString(IncludeStyle));
 }
 
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
+  // Only register the matchers for C++; the functionality currently does not
+  // provide any benefit to other languages, despite being benign.
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isFromStdNamespace());
   auto AutoPtrType = qualType(hasDeclaration(AutoPtrDecl));
 
@@ -123,16 +127,19 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
                           callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
                           hasArgument(1, MovableArgumentMatcher)),
       this);
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
-                                hasArgument(0, MovableArgumentMatcher))),
-      this);
+  Finder->addMatcher(cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
+                                      hasArgument(0, MovableArgumentMatcher)),
+                     this);
 }
 
 void ReplaceAutoPtrCheck::registerPPCallbacks(const SourceManager &SM,
                                               Preprocessor *PP,
                                               Preprocessor *ModuleExpanderPP) {
+  // Only register the preprocessor callbacks for C++; the functionality
+  // currently does not provide any benefit to other languages, despite being
+  // benign.
+  if (!getLangOpts().CPlusPlus)
+    return;
   Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());

@@ -307,6 +307,6 @@ void ento::registerInnerPointerChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<InnerPointerChecker>();
 }
 
-bool ento::shouldRegisterInnerPointerChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterInnerPointerChecker(const LangOptions &LO) {
   return true;
 }

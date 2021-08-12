@@ -44,7 +44,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo, int MinSize,
                           int MinAlignment, ISD::ArgFlagsTy ArgFlags) {
   Align MinAlign(MinAlignment);
-  Align Alignment = ArgFlags.getNonZeroByValAlign();
+  Align Alignment(ArgFlags.getByValAlign());
   unsigned Size  = ArgFlags.getByValSize();
   if (MinSize > (int)Size)
     Size = MinSize;
@@ -59,12 +59,12 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
 }
 
 /// Mark a register and all of its aliases as allocated.
-void CCState::MarkAllocated(MCPhysReg Reg) {
+void CCState::MarkAllocated(unsigned Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    UsedRegs[*AI / 32] |= 1 << (*AI & 31);
+    UsedRegs[*AI/32] |= 1 << (*AI&31);
 }
 
-bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
+bool CCState::IsShadowAllocatedReg(unsigned Reg) const {
   if (!isAllocated(Reg))
     return false;
 
@@ -276,14 +276,18 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
   for (unsigned I = 0, E = RVLocs1.size(); I != E; ++I) {
     const CCValAssign &Loc1 = RVLocs1[I];
     const CCValAssign &Loc2 = RVLocs2[I];
-
-    if ( // Must both be in registers, or both in memory
-        Loc1.isRegLoc() != Loc2.isRegLoc() ||
-        // Must fill the same part of their locations
-        Loc1.getLocInfo() != Loc2.getLocInfo() ||
-        // Memory offset/register number must be the same
-        Loc1.getExtraInfo() != Loc2.getExtraInfo())
+    if (Loc1.getLocInfo() != Loc2.getLocInfo())
       return false;
+    bool RegLoc1 = Loc1.isRegLoc();
+    if (RegLoc1 != Loc2.isRegLoc())
+      return false;
+    if (RegLoc1) {
+      if (Loc1.getLocReg() != Loc2.getLocReg())
+        return false;
+    } else {
+      if (Loc1.getLocMemOffset() != Loc2.getLocMemOffset())
+        return false;
+    }
   }
   return true;
 }

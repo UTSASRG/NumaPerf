@@ -116,14 +116,13 @@ void ObjCSuperDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
     return;
 
   ProgramStateRef State = C.getState();
-  const LocationContext *LC = C.getLocationContext();
-  SymbolRef SelfSymbol = State->getSelfSVal(LC).getAsSymbol();
-  assert(SelfSymbol && "No receiver symbol at call to [super dealloc]?");
+  SymbolRef ReceiverSymbol = M.getSelfSVal().getAsSymbol();
+  assert(ReceiverSymbol && "No receiver symbol at call to [super dealloc]?");
 
   // We add this transition in checkPostObjCMessage to avoid warning when
   // we inline a call to [super dealloc] where the inlined call itself
   // calls [super dealloc].
-  State = State->add<CalledSuperDealloc>(SelfSymbol);
+  State = State->add<CalledSuperDealloc>(ReceiverSymbol);
   C.addTransition(State);
 }
 
@@ -285,6 +284,6 @@ void ento::registerObjCSuperDeallocChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCSuperDeallocChecker>();
 }
 
-bool ento::shouldRegisterObjCSuperDeallocChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterObjCSuperDeallocChecker(const LangOptions &LO) {
   return true;
 }

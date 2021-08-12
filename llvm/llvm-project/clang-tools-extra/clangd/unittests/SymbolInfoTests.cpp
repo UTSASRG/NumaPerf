@@ -138,15 +138,12 @@ TEST(SymbolInfoTests, All) {
                                            "c:TestTU.cpp@38@F@bar#I#@aaa")}},
           {
               R"cpp( // Lambda capture
-          void foo() {
-            int ii;
-            auto lam = [ii]() {
-              return i^i;
-            };
-          }
+          int ii;
+          auto lam = [ii]() {
+            return i^i;
+          };
         )cpp",
-              {CreateExpectedSymbolDetails("ii", "foo",
-                                           "c:TestTU.cpp@54@F@foo#@ii")}},
+              {CreateExpectedSymbolDetails("ii", "", "c:@ii")}},
           {
               R"cpp( // Macro reference
           #define MACRO 5\nint i = MAC^RO;
@@ -199,7 +196,7 @@ TEST(SymbolInfoTests, All) {
         )cpp",
               {CreateExpectedSymbolDetails("foo", "", "c:@S@foo")}},
           {
-              R"cpp( // Type Reference - template argument
+              R"cpp( // Type Reference - template argumen
           struct foo {};
           template<class T> struct bar {};
           void baz() {

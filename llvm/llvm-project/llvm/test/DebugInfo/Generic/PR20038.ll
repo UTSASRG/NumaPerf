@@ -1,3 +1,5 @@
+; REQUIRES: object-emission
+
 ; For some reason, the output when targetting sparc is not quite as expected.
 ; XFAIL: sparc
 

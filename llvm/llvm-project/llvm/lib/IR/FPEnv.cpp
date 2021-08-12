@@ -17,41 +17,35 @@
 
 namespace llvm {
 
-Optional<RoundingMode> StrToRoundingMode(StringRef RoundingArg) {
+Optional<fp::RoundingMode> StrToRoundingMode(StringRef RoundingArg) {
   // For dynamic rounding mode, we use round to nearest but we will set the
   // 'exact' SDNodeFlag so that the value will not be rounded.
-  return StringSwitch<Optional<RoundingMode>>(RoundingArg)
-      .Case("round.dynamic", RoundingMode::Dynamic)
-      .Case("round.tonearest", RoundingMode::NearestTiesToEven)
-      .Case("round.tonearestaway", RoundingMode::NearestTiesToAway)
-      .Case("round.downward", RoundingMode::TowardNegative)
-      .Case("round.upward", RoundingMode::TowardPositive)
-      .Case("round.towardzero", RoundingMode::TowardZero)
+  return StringSwitch<Optional<fp::RoundingMode>>(RoundingArg)
+      .Case("round.dynamic", fp::rmDynamic)
+      .Case("round.tonearest", fp::rmToNearest)
+      .Case("round.downward", fp::rmDownward)
+      .Case("round.upward", fp::rmUpward)
+      .Case("round.towardzero", fp::rmTowardZero)
       .Default(None);
 }
 
-Optional<StringRef> RoundingModeToStr(RoundingMode UseRounding) {
+Optional<StringRef> RoundingModeToStr(fp::RoundingMode UseRounding) {
   Optional<StringRef> RoundingStr = None;
   switch (UseRounding) {
-  case RoundingMode::Dynamic:
+  case fp::rmDynamic:
     RoundingStr = "round.dynamic";
     break;
-  case RoundingMode::NearestTiesToEven:
+  case fp::rmToNearest:
     RoundingStr = "round.tonearest";
     break;
-  case RoundingMode::NearestTiesToAway:
-    RoundingStr = "round.tonearestaway";
-    break;
-  case RoundingMode::TowardNegative:
+  case fp::rmDownward:
     RoundingStr = "round.downward";
     break;
-  case RoundingMode::TowardPositive:
+  case fp::rmUpward:
     RoundingStr = "round.upward";
     break;
-  case RoundingMode::TowardZero:
+  case fp::rmTowardZero:
     RoundingStr = "round.towardzero";
-    break;
-  default:
     break;
   }
   return RoundingStr;
@@ -80,4 +74,5 @@ Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   }
   return ExceptStr;
 }
+
 }

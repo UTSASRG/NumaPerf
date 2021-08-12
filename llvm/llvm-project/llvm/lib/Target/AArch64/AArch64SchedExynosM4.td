@@ -24,8 +24,7 @@ def ExynosM4Model : SchedMachineModel {
   let MispredictPenalty     =  16; // Minimum branch misprediction penalty.
   let CompleteModel         =   1; // Use the default model otherwise.
 
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
 }
 
 //===----------------------------------------------------------------------===//
@@ -804,7 +803,7 @@ def : InstRW<[M4WriteNEONY],  (instrs FSQRTv2f64)>;
 
 // ASIMD miscellaneous instructions.
 def : InstRW<[M4WriteNALU1],  (instregex "^RBITv")>;
-def : InstRW<[M4WriteNALU1],  (instregex "^(BIF|BIT|BSL|BSP)v")>;
+def : InstRW<[M4WriteNALU1],  (instregex "^(BIF|BIT|BSL)v")>;
 def : InstRW<[M4WriteNALU1],  (instregex "^CL[STZ]v")>;
 def : InstRW<[M4WriteNEONB],  (instregex "^DUPv.+gpr")>;
 def : InstRW<[M4WriteNSHF1],  (instregex "^CPY")>;

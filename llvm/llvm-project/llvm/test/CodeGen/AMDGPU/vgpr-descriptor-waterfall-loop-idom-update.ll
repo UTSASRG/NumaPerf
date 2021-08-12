@@ -13,7 +13,6 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) {
 ; GCN-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v0, 8
 ; GCN-NEXT:    s_mov_b32 s5, exec_lo
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
-; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    flat_load_dwordx2 v[2:3], v[2:3]
 ; GCN-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
 ; GCN-NEXT:  BB0_2: ; Parent Loop BB0_1 Depth=1
@@ -40,10 +39,9 @@ entry:
 
 bb0:
   %desc = load <4 x i32>, <4 x i32>* %arg, align 8
-  tail call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> %desc, i32 undef, i32 0, i32 0)
+  tail call void @llvm.amdgcn.buffer.store.f32(float undef, <4 x i32> %desc, i32 0, i32 undef, i1 zeroext false, i1 zeroext false)
   br label %bb0
 }
 
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #0
-
-attributes #0 = { nounwind writeonly }
+; Function Attrs: nounwind writeonly
+declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1 immarg, i1 immarg)

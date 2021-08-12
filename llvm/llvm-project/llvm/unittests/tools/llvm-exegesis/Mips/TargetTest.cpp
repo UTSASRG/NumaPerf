@@ -12,7 +12,6 @@
 #include <memory>
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
-#include "TestBase.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -20,6 +19,9 @@
 
 namespace llvm {
 namespace exegesis {
+
+void InitializeMipsExegesisTarget();
+
 namespace {
 
 using testing::AllOf;
@@ -60,12 +62,25 @@ Matcher<MCInst> IsShift(unsigned Reg, uint16_t Amount, bool IsGPR32) {
                ElementsAre(IsReg(Reg), IsReg(Reg), IsImm(Amount)));
 }
 
-class MipsTargetTest : public MipsTestBase {
+constexpr const char kTriple[] = "mips-unknown-linux";
+
+class MipsTargetTest : public ::testing::Test {
 protected:
+  MipsTargetTest() : State(kTriple, "mips32", "") {}
+
+  static void SetUpTestCase() {
+    LLVMInitializeMipsTargetInfo();
+    LLVMInitializeMipsTarget();
+    LLVMInitializeMipsTargetMC();
+    InitializeMipsExegesisTarget();
+  }
+
   std::vector<MCInst> setRegTo(unsigned Reg, const APInt &Value) {
     return State.getExegesisTarget().setRegTo(State.getSubtargetInfo(), Reg,
                                               Value);
   }
+
+  LLVMState State;
 };
 
 TEST_F(MipsTargetTest, SetGPR32RegTo16BitValue) {

@@ -12,7 +12,6 @@
 
 #include "Unix.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"

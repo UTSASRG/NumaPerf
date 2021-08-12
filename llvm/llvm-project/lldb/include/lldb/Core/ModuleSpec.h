@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_MODULESPEC_H
-#define LLDB_CORE_MODULESPEC_H
+#ifndef liblldb_ModuleSpec_h_
+#define liblldb_ModuleSpec_h_
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/PathMappingList.h"
@@ -415,4 +415,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_MODULESPEC_H
+#endif // liblldb_ModuleSpec_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_INSTRUCTIONUTILS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_INSTRUCTIONUTILS_H
+#ifndef lldb_InstructionUtils_h_
+#define lldb_InstructionUtils_h_
 
 #include <cassert>
 #include <cstdint>
@@ -113,4 +113,4 @@ static inline int64_t SignedBits(const uint64_t value, const uint64_t msbit,
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_INSTRUCTIONUTILS_H
+#endif // lldb_InstructionUtils_h_

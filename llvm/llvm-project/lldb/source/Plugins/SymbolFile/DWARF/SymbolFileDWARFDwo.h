@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
+#ifndef SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
+#define SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
 
 #include "SymbolFileDWARF.h"
 
@@ -24,15 +24,19 @@ public:
   static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
   /// \}
 
-  SymbolFileDWARFDwo(SymbolFileDWARF &m_base_symbol_file,
-                     lldb::ObjectFileSP objfile, uint32_t id);
+  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit &dwarf_cu);
 
   ~SymbolFileDWARFDwo() override = default;
 
-  DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
+  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu) override;
 
-  void GetObjCMethods(lldb_private::ConstString class_name,
-                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  DWARFCompileUnit *GetCompileUnit();
+
+  DWARFUnit *
+  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+
+  size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
+                                 DIEArray &method_die_offsets) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
@@ -40,9 +44,14 @@ public:
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
+  DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
+
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
 protected:
+  void LoadSectionData(lldb::SectionType sect_type,
+                       lldb_private::DWARFDataExtractor &data) override;
+
   DIEToTypePtr &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
@@ -60,13 +69,12 @@ protected:
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
+  SymbolFileDWARF &GetBaseSymbolFile();
 
-  /// If this file contains exactly one compile unit, this function will return
-  /// it. Otherwise it returns nullptr.
-  DWARFCompileUnit *FindSingleCompileUnit();
+  DWARFCompileUnit *ComputeCompileUnit();
 
-  SymbolFileDWARF &m_base_symbol_file;
+  DWARFCompileUnit &m_base_dwarf_cu;
+  DWARFCompileUnit *m_cu = nullptr;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
+#endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_

@@ -4,21 +4,20 @@
 // RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
 // RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
 
-// GNU:      Displaying notes found in: .note.foo
+// GNU:      Displaying notes found
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   FreeBSD              0x00000000       NT_THRMISC (thrmisc structure)
 // GNU-NEXT:   FreeBSD              0x00000000       NT_PROCSTAT_PROC (proc data)
-// GNU-NEXT: Displaying notes found in: .note.bar
+// GNU-NEXT: Displaying notes found
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   FreeBSD              0x00000000       NT_PROCSTAT_FILES (files data)
-// GNU-NEXT: Displaying notes found in: .note.baz
+// GNU-NEXT: Displaying notes found
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   FreeBSD              0x0000001c       Unknown note type (0x00000003)
 // GNU-NEXT:    description data: 4c 6f 72 65 6d 20 69 70 73 75 6d 20 64 6f 6c 6f 72 20 73 69 74 20 61 6d 65 74 00 00
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
-// LLVM-NEXT:     Name: .note.foo
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
 // LLVM-NEXT:     Note {
@@ -33,7 +32,6 @@
 // LLVM-NEXT:     }
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
-// LLVM-NEXT:     Name: .note.bar
 // LLVM-NEXT:     Offset: 0x68
 // LLVM-NEXT:     Size: 0x14
 // LLVM-NEXT:     Note {
@@ -43,7 +41,6 @@
 // LLVM-NEXT:     }
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
-// LLVM-NEXT:     Name: .note.baz
 // LLVM-NEXT:     Offset: 0x7C
 // LLVM-NEXT:     Size: 0x30
 // LLVM-NEXT:     Note {

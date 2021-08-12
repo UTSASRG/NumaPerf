@@ -66,7 +66,7 @@ protected:
     std::map<std::string, EquivClass> Classes;
     for (llvm::StringRef Name : DeclNames) {
       auto Type = OpaqueType::fromType(ASTCtx(), typeOf(Name));
-      Classes[std::string(Type->raw())].insert(std::string(Name));
+      Classes[Type->raw()].insert(Name);
     }
     return Classes;
   }

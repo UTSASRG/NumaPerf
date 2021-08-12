@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTRACE_H
-#define LLDB_API_SBTRACE_H
+#ifndef LLDB_SBTrace_h_
+#define LLDB_SBTrace_h_
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
@@ -113,4 +113,4 @@ protected:
 };
 } // namespace lldb
 
-#endif // LLDB_API_SBTRACE_H
+#endif // LLDB_SBTrace_h_

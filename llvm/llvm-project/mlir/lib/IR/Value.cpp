@@ -1,6 +1,6 @@
 //===- Value.cpp - MLIR Value Classes -------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,13 +10,10 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "llvm/ADT/SmallPtrSet.h"
-
 using namespace mlir;
-using namespace mlir::detail;
 
 /// Construct a value.
-Value::Value(BlockArgumentImpl *impl)
+Value::Value(detail::BlockArgumentImpl *impl)
     : ownerAndKind(impl, Kind::BlockArgument) {}
 Value::Value(Operation *op, unsigned resultNo) {
   assert(op->getNumResults() > resultNo && "invalid result number");
@@ -25,9 +22,12 @@ Value::Value(Operation *op, unsigned resultNo) {
     return;
   }
 
-  // If we can't pack the result directly, grab the use list from the parent op.
-  unsigned trailingNo = resultNo - OpResult::getMaxInlineResults();
-  ownerAndKind = {op->getTrailingResult(trailingNo), Kind::TrailingOpResult};
+  // If we can't pack the result directly, we need to represent this as a
+  // trailing result.
+  unsigned trailingResultNo =
+      resultNo - static_cast<unsigned>(Kind::TrailingOpResult);
+  ownerAndKind = {op->getTrailingResult(trailingResultNo),
+                  Kind::TrailingOpResult};
 }
 
 /// Return the type of this value.
@@ -87,13 +87,6 @@ Region *Value::getParentRegion() {
   return cast<BlockArgument>().getOwner()->getParent();
 }
 
-/// Return the Block in which this Value is defined.
-Block *Value::getParentBlock() {
-  if (Operation *op = getDefiningOp())
-    return op->getBlock();
-  return cast<BlockArgument>().getOwner();
-}
-
 //===----------------------------------------------------------------------===//
 // Value::UseLists
 //===----------------------------------------------------------------------===//
@@ -102,64 +95,48 @@ Block *Value::getParentBlock() {
 IRObjectWithUseList<OpOperand> *Value::getUseList() const {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getImpl();
-  if (getKind() != Kind::TrailingOpResult) {
-    OpResult result = cast<OpResult>();
-    return result.getOwner()->getInlineResult(result.getResultNumber());
-  }
-
-  // Otherwise this is a trailing operation result, which contains a use list.
-  return reinterpret_cast<TrailingOpResult *>(ownerAndKind.getPointer());
+  return cast<OpResult>().getOwner();
 }
 
 /// Drop all uses of this object from their respective owners.
-void Value::dropAllUses() const { return getUseList()->dropAllUses(); }
+void Value::dropAllUses() const {
+  if (BlockArgument arg = dyn_cast<BlockArgument>())
+    return arg.getImpl()->dropAllUses();
+  return cast<OpResult>().getOwner()->dropAllUses(*this);
+}
 
 /// Replace all uses of 'this' value with the new value, updating anything in
 /// the IR that uses 'this' to use the other value instead.  When this returns
 /// there are zero uses of 'this'.
 void Value::replaceAllUsesWith(Value newValue) const {
-  return getUseList()->replaceAllUsesWith(newValue);
-}
-
-/// Replace all uses of 'this' value with the new value, updating anything in
-/// the IR that uses 'this' to use the other value instead except if the user is
-/// listed in 'exceptions' .
-void Value::replaceAllUsesExcept(
-    Value newValue, const SmallPtrSetImpl<Operation *> &exceptions) const {
-  for (auto &use : llvm::make_early_inc_range(getUses())) {
-    if (exceptions.count(use.getOwner()) == 0)
-      use.set(newValue);
-  }
-}
-
-/// Replace all uses of 'this' value with 'newValue' if the given callback
-/// returns true.
-void Value::replaceUsesWithIf(Value newValue,
-                              function_ref<bool(OpOperand &)> shouldReplace) {
-  for (OpOperand &use : llvm::make_early_inc_range(getUses()))
-    if (shouldReplace(use))
-      use.set(newValue);
-}
-
-/// Returns true if the value is used outside of the given block.
-bool Value::isUsedOutsideOfBlock(Block *block) {
-  return llvm::any_of(getUsers(), [block](Operation *user) {
-    return user->getBlock() != block;
-  });
+  if (BlockArgument arg = dyn_cast<BlockArgument>())
+    return arg.getImpl()->replaceAllUsesWith(newValue);
+  IRMultiObjectWithUseList<OpOperand> *useList = cast<OpResult>().getOwner();
+  useList->replaceAllUsesWith(*this, newValue);
 }
 
 //===--------------------------------------------------------------------===//
 // Uses
 
 auto Value::use_begin() const -> use_iterator {
-  return getUseList()->use_begin();
+  if (BlockArgument arg = dyn_cast<BlockArgument>())
+    return arg.getImpl()->use_begin();
+  return cast<OpResult>().getOwner()->use_begin(*this);
 }
 
 /// Returns true if this value has exactly one use.
-bool Value::hasOneUse() const { return getUseList()->hasOneUse(); }
+bool Value::hasOneUse() const {
+  if (BlockArgument arg = dyn_cast<BlockArgument>())
+    return arg.getImpl()->hasOneUse();
+  return cast<OpResult>().getOwner()->hasOneUse(*this);
+}
 
 /// Returns true if this value has no uses.
-bool Value::use_empty() const { return getUseList()->use_empty(); }
+bool Value::use_empty() const {
+  if (BlockArgument arg = dyn_cast<BlockArgument>())
+    return arg.getImpl()->use_empty();
+  return cast<OpResult>().getOwner()->use_empty(*this);
+}
 
 //===----------------------------------------------------------------------===//
 // OpResult
@@ -168,12 +145,18 @@ bool Value::use_empty() const { return getUseList()->use_empty(); }
 /// Returns the operation that owns this result.
 Operation *OpResult::getOwner() const {
   // If the result is in-place, the `owner` is the operation.
-  void *owner = ownerAndKind.getPointer();
   if (LLVM_LIKELY(getKind() != Kind::TrailingOpResult))
-    return static_cast<Operation *>(owner);
+    return reinterpret_cast<Operation *>(ownerAndKind.getPointer());
 
-  // Otherwise, query the trailing result for the owner.
-  return static_cast<TrailingOpResult *>(owner)->getOwner();
+  // Otherwise, we need to do some arithmetic to get the operation pointer.
+  // Move the trailing owner to the start of the array.
+  auto *trailingIt =
+      static_cast<detail::TrailingOpResult *>(ownerAndKind.getPointer());
+  trailingIt -= trailingIt->trailingResultNumber;
+
+  // This point is the first trailing object after the operation. So all we need
+  // to do here is adjust for the operation size.
+  return reinterpret_cast<Operation *>(trailingIt) - 1;
 }
 
 /// Return the result number of this result.
@@ -181,23 +164,20 @@ unsigned OpResult::getResultNumber() const {
   // If the result is in-place, we can use the kind directly.
   if (LLVM_LIKELY(getKind() != Kind::TrailingOpResult))
     return static_cast<unsigned>(ownerAndKind.getInt());
-  // Otherwise, query the trailing result.
-  auto *result = static_cast<TrailingOpResult *>(ownerAndKind.getPointer());
-  return result->getResultNumber();
-}
-
-/// Given a number of operation results, returns the number that need to be
-/// stored inline.
-unsigned OpResult::getNumInline(unsigned numResults) {
-  return std::min(numResults, getMaxInlineResults());
+  // Otherwise, we add the number of inline results to the trailing owner.
+  auto *trailingIt =
+      static_cast<detail::TrailingOpResult *>(ownerAndKind.getPointer());
+  unsigned trailingNumber = trailingIt->trailingResultNumber;
+  return trailingNumber + static_cast<unsigned>(Kind::TrailingOpResult);
 }
 
 /// Given a number of operation results, returns the number that need to be
 /// stored as trailing.
 unsigned OpResult::getNumTrailing(unsigned numResults) {
   // If we can pack all of the results, there is no need for additional storage.
-  unsigned maxInline = getMaxInlineResults();
-  return numResults <= maxInline ? 0 : numResults - maxInline;
+  if (numResults <= static_cast<unsigned>(Kind::TrailingOpResult))
+    return 0;
+  return numResults - static_cast<unsigned>(Kind::TrailingOpResult);
 }
 
 //===----------------------------------------------------------------------===//
@@ -225,12 +205,12 @@ IRObjectWithUseList<OpOperand> *OpOperand::getUseList(Value value) {
 
 /// Return the current value being used by this operand.
 Value OpOperand::get() const {
-  return IROperand<OpOperand, OpaqueValue>::get();
+  return IROperand<OpOperand, detail::OpaqueValue>::get();
 }
 
 /// Set the operand to the given value.
 void OpOperand::set(Value value) {
-  IROperand<OpOperand, OpaqueValue>::set(value);
+  IROperand<OpOperand, detail::OpaqueValue>::set(value);
 }
 
 /// Return which operand this is in the operand list.
@@ -239,13 +219,14 @@ unsigned OpOperand::getOperandNumber() {
 }
 
 //===----------------------------------------------------------------------===//
-// OpaqueValue
+// detail::OpaqueValue
 //===----------------------------------------------------------------------===//
 
 /// Implicit conversion from 'Value'.
-OpaqueValue::OpaqueValue(Value value) : impl(value.getAsOpaquePointer()) {}
+detail::OpaqueValue::OpaqueValue(Value value)
+    : impl(value.getAsOpaquePointer()) {}
 
 /// Implicit conversion back to 'Value'.
-OpaqueValue::operator Value() const {
+detail::OpaqueValue::operator Value() const {
   return Value::getFromOpaquePointer(impl);
 }

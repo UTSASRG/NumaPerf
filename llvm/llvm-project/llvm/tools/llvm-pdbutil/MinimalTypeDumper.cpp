@@ -201,9 +201,8 @@ static std::string formatPointerAttrs(const PointerRecord &Record) {
   PointerMode Mode = Record.getMode();
   PointerOptions Opts = Record.getOptions();
   PointerKind Kind = Record.getPointerKind();
-  return std::string(formatv("mode = {0}, opts = {1}, kind = {2}",
-                             formatPointerMode(Mode), pointerOptions(Opts),
-                             pointerKind(Kind)));
+  return formatv("mode = {0}, opts = {1}, kind = {2}", formatPointerMode(Mode),
+                 pointerOptions(Opts), pointerKind(Kind));
 }
 
 static std::string formatFunctionOptions(FunctionOptions Options) {

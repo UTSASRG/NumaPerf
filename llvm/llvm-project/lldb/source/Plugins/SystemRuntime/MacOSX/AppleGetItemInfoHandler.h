@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETITEMINFOHANDLER_H
-#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETITEMINFOHANDLER_H
+#ifndef lldb_AppleGetItemInfoHandler_h_
+#define lldb_AppleGetItemInfoHandler_h_
 
 #include <map>
 #include <mutex>
@@ -109,4 +109,4 @@ private:
 
 } // using namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETITEMINFOHANDLER_H
+#endif // lldb_AppleGetItemInfoHandler_h_

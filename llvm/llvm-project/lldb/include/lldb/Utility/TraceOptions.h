@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_TRACEOPTIONS_H
-#define LLDB_UTILITY_TRACEOPTIONS_H
+#ifndef liblldb_TraceOptions_h_
+#define liblldb_TraceOptions_h_
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -57,4 +57,4 @@ private:
 };
 }
 
-#endif // LLDB_UTILITY_TRACEOPTIONS_H
+#endif // liblldb_TraceOptions_h_

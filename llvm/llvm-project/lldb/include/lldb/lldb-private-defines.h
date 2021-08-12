@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_LLDB_PRIVATE_DEFINES_H
-#define LLDB_LLDB_PRIVATE_DEFINES_H
+#ifndef liblldb_lldb_private_defines_h_
+#define liblldb_lldb_private_defines_h_
 
 #if defined(__cplusplus)
 
@@ -33,4 +33,4 @@
 
 #endif // #if defined(__cplusplus)
 
-#endif // LLDB_LLDB_PRIVATE_DEFINES_H
+#endif // liblldb_lldb_private_defines_h_

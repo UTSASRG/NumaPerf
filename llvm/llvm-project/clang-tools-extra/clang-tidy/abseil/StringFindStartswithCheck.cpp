@@ -26,9 +26,8 @@ StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses", "::std::basic_string"))),
-      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            utils::IncludeSorter::getMapping(),
-                                            utils::IncludeSorter::IS_LLVM)),
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
+          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
       AbseilStringsMatchHeader(
           Options.get("AbseilStringsMatchHeader", "absl/strings/match.h")) {}
 
@@ -51,9 +50,9 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       // Match [=!]= with a zero on one side and a string.find on the other.
       binaryOperator(
-          hasAnyOperatorName("==", "!="),
-          hasOperands(ignoringParenImpCasts(ZeroLiteral),
-                      ignoringParenImpCasts(StringFind.bind("findexpr"))))
+          anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+          hasEitherOperand(ignoringParenImpCasts(ZeroLiteral)),
+          hasEitherOperand(ignoringParenImpCasts(StringFind.bind("findexpr"))))
           .bind("expr"),
       this);
 }
@@ -106,9 +105,12 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Create a preprocessor #include FixIt hint (CreateIncludeInsertion checks
   // whether this already exists).
-  Diagnostic << IncludeInserter->CreateIncludeInsertion(
+  auto IncludeHint = IncludeInserter->CreateIncludeInsertion(
       Source.getFileID(ComparisonExpr->getBeginLoc()), AbseilStringsMatchHeader,
       false);
+  if (IncludeHint) {
+    Diagnostic << *IncludeHint;
+  }
 }
 
 void StringFindStartswithCheck::registerPPCallbacks(
@@ -122,8 +124,8 @@ void StringFindStartswithCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",
                 utils::options::serializeStringList(StringLikeClasses));
-  Options.store(Opts, "IncludeStyle", IncludeStyle,
-                utils::IncludeSorter::getMapping());
+  Options.store(Opts, "IncludeStyle",
+                utils::IncludeSorter::toString(IncludeStyle));
   Options.store(Opts, "AbseilStringsMatchHeader", AbseilStringsMatchHeader);
 }
 

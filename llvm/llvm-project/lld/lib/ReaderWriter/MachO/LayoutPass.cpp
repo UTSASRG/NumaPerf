@@ -461,11 +461,10 @@ llvm::Error LayoutPass::perform(SimpleFile &mergedFile) {
   });
 
   std::vector<LayoutPass::SortKey> vec = decorate(atomRange);
-  llvm::parallelSort(
-      vec,
-      [&](const LayoutPass::SortKey &l, const LayoutPass::SortKey &r) -> bool {
-        return compareAtoms(l, r, _customSorter);
-      });
+  sort(llvm::parallel::par, vec.begin(), vec.end(),
+       [&](const LayoutPass::SortKey &l, const LayoutPass::SortKey &r) -> bool {
+         return compareAtoms(l, r, _customSorter);
+       });
   LLVM_DEBUG(checkTransitivity(vec, _customSorter));
   undecorate(atomRange, vec);
 

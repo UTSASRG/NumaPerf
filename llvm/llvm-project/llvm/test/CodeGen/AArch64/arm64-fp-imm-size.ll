@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-apple-darwin | FileCheck %s
 
 ; CHECK: literal8
-; CHECK: .quad  0x400921fb54442d18
+; CHECK: .quad  4614256656552045848
 define double @foo() optsize {
 ; CHECK: _foo:
 ; CHECK: adrp x[[REG:[0-9]+]], lCPI0_0@PAGE
@@ -11,7 +11,7 @@ define double @foo() optsize {
 }
 
 ; CHECK: literal8
-; CHECK: .quad 0x0000001fffffffc
+; CHECK: .quad  137438953409
 define double @foo2() optsize {
 ; CHECK: _foo2:
 ; CHECK: adrp x[[REG:[0-9]+]], lCPI1_0@PAGE

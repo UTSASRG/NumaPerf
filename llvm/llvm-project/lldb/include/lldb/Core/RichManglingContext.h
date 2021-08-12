@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_RICHMANGLINGCONTEXT_H
-#define LLDB_CORE_RICHMANGLINGCONTEXT_H
+#ifndef liblldb_RichManglingContext_h_
+#define liblldb_RichManglingContext_h_
 
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"

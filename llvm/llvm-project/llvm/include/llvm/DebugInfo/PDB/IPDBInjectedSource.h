@@ -9,11 +9,15 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBINJECTEDSOURCE_H
 #define LLVM_DEBUGINFO_PDB_IPDBINJECTEDSOURCE_H
 
-#include <cstdint>
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <string>
 
 namespace llvm {
+class raw_ostream;
+
 namespace pdb {
+
 /// IPDBInjectedSource defines an interface used to represent source files
 /// which were injected directly into the PDB file during the compilation
 /// process.  This is used, for example, to add natvis files to a PDB, but

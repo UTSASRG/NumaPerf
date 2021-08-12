@@ -1,7 +1,3 @@
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_NTSTRUCTURES_H
-
-#define LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_NTSTRUCTURES_H
-
 //===-- NtStructures.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -38,5 +34,3 @@ struct TEB64 {
 #endif // liblldb_Plugins_Process_Minidump_NtStructures_h_
 } // namespace minidump
 } // namespace lldb_private
-
-#endif

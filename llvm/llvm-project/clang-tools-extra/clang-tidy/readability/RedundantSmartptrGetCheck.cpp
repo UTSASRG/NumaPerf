@@ -81,11 +81,11 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
 
   // Matches against nullptr.
   Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("==", "!="),
-                     hasOperands(ignoringImpCasts(anyOf(
-                                     cxxNullPtrLiteralExpr(), gnuNullExpr(),
-                                     integerLiteral(equals(0)))),
-                                 callToGet(knownSmartptr()))),
+      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+                     hasEitherOperand(ignoringImpCasts(
+                         anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
+                               integerLiteral(equals(0))))),
+                     hasEitherOperand(callToGet(knownSmartptr()))),
       Callback);
 
   // FIXME: Match and fix if (l.get() == r.get()).
@@ -99,6 +99,11 @@ void RedundantSmartptrGetCheck::storeOptions(
 }
 
 void RedundantSmartptrGetCheck::registerMatchers(MatchFinder *Finder) {
+  // Only register the matchers for C++; the functionality currently does not
+  // provide any benefit to other languages, despite being benign.
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   registerMatchersForGetArrowStart(Finder, this);
   registerMatchersForGetEquals(Finder, this);
 }

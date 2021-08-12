@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_VARIABLELIST_H
-#define LLDB_SYMBOL_VARIABLELIST_H
+#ifndef liblldb_VariableList_h_
+#define liblldb_VariableList_h_
 
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Variable.h"
@@ -80,10 +80,9 @@ protected:
 
 private:
   // For VariableList only
-  VariableList(const VariableList &) = delete;
-  const VariableList &operator=(const VariableList &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(VariableList);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_VARIABLELIST_H
+#endif // liblldb_VariableList_h_

@@ -68,12 +68,10 @@ class VectorType;
       CALL,         // Function call.
       CALL_PRED,    // Function call that's predicable.
       CALL_NOLINK,  // Function call with branch not branch-and-link.
-      tSECALL,      // CMSE non-secure function call.
       BRCOND,       // Conditional branch.
       BR_JT,        // Jumptable branch.
       BR2_JT,       // Jumptable branch (2 level - jumptable entry is a jump).
       RET_FLAG,     // Return with a flag operand.
-      SERET_FLAG,   // CMSE Entry function return with a flag operand.
       INTRET_FLAG,  // Interrupt return with an LR-offset and a flag operand.
 
       PIC_ADD,      // Add with a PC operand and a PIC label.
@@ -135,7 +133,6 @@ class VectorType;
       LE,           // Low-overhead loops, Loop End
 
       PREDICATE_CAST, // Predicate cast for MVE i1 types
-      VECTOR_REG_CAST, // Reinterpret the current contents of a vector register
 
       VCMP,         // Vector compare.
       VCMPZ,        // Vector compare to zero.
@@ -204,31 +201,9 @@ class VectorType;
       VTBL2,        // 2-register shuffle with mask
       VMOVN,        // MVE vmovn
 
-      // MVE Saturating truncates
-      VQMOVNs,      // Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
-      VQMOVNu,      // Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
-
       // Vector multiply long:
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
-
-      // MVE reductions
-      VADDVs,       // sign- or zero-extend the elements of a vector to i32,
-      VADDVu,       //   add them all together, and return an i32 of their sum
-      VADDLVs,      // sign- or zero-extend elements to i64 and sum, returning
-      VADDLVu,      //   the low and high 32-bit halves of the sum
-      VADDLVAs,     // same as VADDLV[su] but also add an input accumulator
-      VADDLVAu,     //   provided as low and high halves
-      VADDLVps,     // same as VADDLVs but with a v4i1 predicate mask
-      VADDLVpu,     // same as VADDLVu but with a v4i1 predicate mask
-      VADDLVAps,    // same as VADDLVps but with a v4i1 predicate mask
-      VADDLVApu,    // same as VADDLVpu but with a v4i1 predicate mask
-      VMLAVs,
-      VMLAVu,
-      VMLALVs,
-      VMLALVu,
-      VMLALVAs,
-      VMLALVAu,
 
       SMULWB,       // Signed multiply word by half word, bottom
       SMULWT,       // Signed multiply word by half word, top
@@ -305,11 +280,7 @@ class VectorType;
       VST4_UPD,
       VST2LN_UPD,
       VST3LN_UPD,
-      VST4LN_UPD,
-
-      // Load/Store of dual registers
-      LDRD,
-      STRD
+      VST4LN_UPD
     };
 
   } // end namespace ARMISD
@@ -362,15 +333,7 @@ class VectorType;
     SDValue PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformCMOVToBFICombine(SDNode *N, SelectionDAG &DAG) const;
-    SDValue PerformIntrinsicCombine(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-
-    bool SimplifyDemandedBitsForTargetNode(SDValue Op,
-                                           const APInt &OriginalDemandedBits,
-                                           const APInt &OriginalDemandedElts,
-                                           KnownBits &Known,
-                                           TargetLoweringOpt &TLO,
-                                           unsigned Depth) const override;
 
     bool isDesirableToTransformToIntegerOp(unsigned Opc, EVT VT) const override;
 
@@ -382,7 +345,10 @@ class VectorType;
                                         MachineMemOperand::Flags Flags,
                                         bool *Fast) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(uint64_t Size,
+                            unsigned DstAlign, unsigned SrcAlign,
+                            bool IsMemset, bool ZeroMemset,
+                            bool MemcpyStrSrc,
                             const AttributeList &FuncAttributes) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
@@ -390,7 +356,6 @@ class VectorType;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
     bool shouldSinkOperands(Instruction *I,
                             SmallVectorImpl<Use *> &Ops) const override;
-    Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const override;
 
     bool isFNegFree(EVT VT) const override;
 
@@ -557,12 +522,6 @@ class VectorType;
     bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                  unsigned Index) const override;
 
-    bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
-                              bool MathUsed) const override {
-      // Using overflow ops for overflow checks only should beneficial on ARM.
-      return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
-    }
-
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
@@ -570,12 +529,12 @@ class VectorType;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    Register
+    unsigned
     getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    Register
+    unsigned
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     Instruction *makeDMB(IRBuilder<> &Builder, ARM_MB::MemBOpt Domain) const;
@@ -647,7 +606,7 @@ class VectorType;
     /// Returns true if \p VecTy is a legal interleaved access type. This
     /// function checks the vector element type and the overall width of the
     /// vector.
-    bool isLegalInterleavedAccessType(unsigned Factor, FixedVectorType *VecTy,
+    bool isLegalInterleavedAccessType(unsigned Factor, VectorType *VecTy,
                                       const DataLayout &DL) const;
 
     bool alignLoopsWithOptSize() const override;
@@ -775,8 +734,6 @@ class VectorType;
     SDValue LowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
     void lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,
                   SelectionDAG &DAG) const;
-    void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
-                   SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;

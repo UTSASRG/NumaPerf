@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_CPPLANGUAGERUNTIME_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_CPPLANGUAGERUNTIME_H
+#ifndef liblldb_CPPLanguageRuntime_h_
+#define liblldb_CPPLanguageRuntime_h_
 
 #include <vector>
 
@@ -69,7 +69,7 @@ public:
   /// Obtain a ThreadPlan to get us into C++ constructs such as std::function.
   ///
   /// \param[in] thread
-  ///     Current thrad of execution.
+  ///     Curent thrad of execution.
   ///
   /// \param[in] stop_others
   ///     True if other threads should pause during execution.
@@ -90,10 +90,9 @@ private:
 
   OperatorStringToCallableInfoMap CallableLookupCache;
 
-  CPPLanguageRuntime(const CPPLanguageRuntime &) = delete;
-  const CPPLanguageRuntime &operator=(const CPPLanguageRuntime &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(CPPLanguageRuntime);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_CPPLANGUAGERUNTIME_H
+#endif // liblldb_CPPLanguageRuntime_h_

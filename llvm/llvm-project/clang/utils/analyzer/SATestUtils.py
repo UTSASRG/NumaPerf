@@ -1,11 +1,11 @@
 import os
+from subprocess import check_call
 import sys
 
-from subprocess import CalledProcessError, check_call
-from typing import List, IO, Optional
 
+Verbose = 1
 
-def which(command: str, paths: Optional[str] = None) -> Optional[str]:
+def which(command, paths=None):
     """which(command, [paths]) - Look up the given command in the paths string
     (or the PATH environment variable, if unspecified)."""
 
@@ -37,44 +37,41 @@ def which(command: str, paths: Optional[str] = None) -> Optional[str]:
     return None
 
 
-def has_no_extension(file_name: str) -> bool:
-    root, ext = os.path.splitext(file_name)
-    return ext == ""
+def hasNoExtension(FileName):
+    (Root, Ext) = os.path.splitext(FileName)
+    return (Ext == "")
 
 
-def is_valid_single_input_file(file_name: str) -> bool:
-    root, ext = os.path.splitext(file_name)
-    return ext in (".i", ".ii", ".c", ".cpp", ".m", "")
+def isValidSingleInputFile(FileName):
+    (Root, Ext) = os.path.splitext(FileName)
+    return Ext in (".i", ".ii", ".c", ".cpp", ".m", "")
 
 
-def run_script(script_path: str, build_log_file: IO, cwd: str,
-               out=sys.stdout, err=sys.stderr, verbose: int = 0):
+def runScript(ScriptPath, PBuildLogFile, Cwd, Stdout=sys.stdout,
+              Stderr=sys.stderr):
     """
     Run the provided script if it exists.
     """
-    if os.path.exists(script_path):
+    if os.path.exists(ScriptPath):
         try:
-            if verbose == 1:
-                out.write(f"  Executing: {script_path}\n")
-
-            check_call(f"chmod +x '{script_path}'", cwd=cwd,
-                       stderr=build_log_file,
-                       stdout=build_log_file,
+            if Verbose == 1:
+                Stdout.write("  Executing: %s\n" % (ScriptPath,))
+            check_call("chmod +x '%s'" % ScriptPath, cwd=Cwd,
+                       stderr=PBuildLogFile,
+                       stdout=PBuildLogFile,
                        shell=True)
-
-            check_call(f"'{script_path}'", cwd=cwd,
-                       stderr=build_log_file,
-                       stdout=build_log_file,
+            check_call("'%s'" % ScriptPath, cwd=Cwd,
+                       stderr=PBuildLogFile,
+                       stdout=PBuildLogFile,
                        shell=True)
-
-        except CalledProcessError:
-            err.write(f"Error: Running {script_path} failed. "
-                      f"See {build_log_file.name} for details.\n")
+        except:
+            Stderr.write("Error: Running %s failed. See %s for details.\n" % (
+                         ScriptPath, PBuildLogFile.name))
             sys.exit(-1)
 
 
-def is_comment_csv_line(entries: List[str]) -> bool:
+def isCommentCSVLine(Entries):
     """
     Treat CSV lines starting with a '#' as a comment.
     """
-    return len(entries) > 0 and entries[0].startswith("#")
+    return len(Entries) > 0 and Entries[0].startswith("#")

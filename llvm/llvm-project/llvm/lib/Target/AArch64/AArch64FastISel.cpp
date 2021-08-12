@@ -434,9 +434,11 @@ unsigned AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
 
   // Materialize via constant pool.  MachineConstantPool wants an explicit
   // alignment.
-  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
+  unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
+  if (Align == 0)
+    Align = DL.getTypeAllocSize(CFP->getType());
 
-  unsigned CPI = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
+  unsigned CPI = MCP.getConstantPoolIndex(cast<Constant>(CFP), Align);
   unsigned ADRPReg = createResultReg(&AArch64::GPR64commonRegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::ADRP),
           ADRPReg).addConstantPoolIndex(CPI, 0, AArch64II::MO_PAGE);
@@ -1128,7 +1130,7 @@ void AArch64FastISel::addLoadStoreOperands(Address &Addr,
     // and alignment should be based on the VT.
     MMO = FuncInfo.MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, FI, Offset), Flags,
-        MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
+        MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
     // Now add the rest of the operands.
     MIB.addFrameIndex(FI).addImm(Offset);
   } else {
@@ -3135,7 +3137,7 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
       Addr.setReg(AArch64::SP);
       Addr.setOffset(VA.getLocMemOffset() + BEAlign);
 
-      Align Alignment = DL.getABITypeAlign(ArgVal->getType());
+      unsigned Alignment = DL.getABITypeAlignment(ArgVal->getType());
       MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
           MachinePointerInfo::getStack(*FuncInfo.MF, Addr.getOffset()),
           MachineMemOperand::MOStore, ArgVT.getStoreSize(), Alignment);

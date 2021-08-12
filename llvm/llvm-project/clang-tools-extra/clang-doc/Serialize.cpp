@@ -36,7 +36,7 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 // <root>/A/B
 //
 // namespace A {
-// namespace B {
+// namesapce B {
 //
 // class C {};
 //

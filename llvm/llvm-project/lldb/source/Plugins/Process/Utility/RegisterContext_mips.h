@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_MIPS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_MIPS_H
+#ifndef liblldb_RegisterContext_mips64_H_
+#define liblldb_RegisterContext_mips64_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -371,4 +371,4 @@ struct UserArea {
   MSA_linux_mips msa; // MSA registers.
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_MIPS_H
+#endif // liblldb_RegisterContext_mips64_H_

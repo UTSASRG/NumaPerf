@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -61,13 +62,14 @@ TEST(CaptureTracking, MaxUsesToExplore) {
 
     BasicBlock *EntryBB = &F->getEntryBlock();
     DominatorTree DT(*F);
+    OrderedBasicBlock OBB(EntryBB);
 
     Instruction *Ret = EntryBB->getTerminator();
     ASSERT_TRUE(isa<ReturnInst>(Ret));
-    ASSERT_FALSE(PointerMayBeCapturedBefore(Arg, true, true, Ret, &DT, false,
-                                            FalseMaxUsesLimit));
+    ASSERT_FALSE(PointerMayBeCapturedBefore(Arg, true, true, Ret, &DT, false, 
+                                            &OBB, FalseMaxUsesLimit));
     ASSERT_TRUE(PointerMayBeCapturedBefore(Arg, true, true, Ret, &DT, false,
-                                           TrueMaxUsesLimit));
+                                           &OBB, TrueMaxUsesLimit));
   };
 
   Test("test_few_uses", 6, 4);

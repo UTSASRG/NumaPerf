@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
-#define LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
+#ifndef utility_ARM64_ehframe_Registers_h_
+#define utility_ARM64_ehframe_Registers_h_
 
 // The register numbers used in the eh_frame unwind information.
 // Should be the same as DWARF register numbers.
@@ -88,4 +88,4 @@ enum {
 };
 }
 
-#endif // LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
+#endif // utility_ARM64_ehframe_Registers_h_

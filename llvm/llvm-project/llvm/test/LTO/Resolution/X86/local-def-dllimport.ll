@@ -13,7 +13,9 @@ target triple = "x86_64-unknown-linux-gnu"
 $g = comdat any
 @g = global i8 42, comdat, !type !0
 
-; CHECK: define available_externally dllimport i8* @f()
+; CHECK: define
+; CHECK-NOT: dllimport
+; CHECK-SAME: @f
 define available_externally dllimport i8* @f() {
   ret i8* @g
 }

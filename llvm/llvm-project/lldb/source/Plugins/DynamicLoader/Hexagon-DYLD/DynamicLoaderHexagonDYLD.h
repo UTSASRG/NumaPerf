@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_DYNAMICLOADERHEXAGONDYLD_H
-#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_DYNAMICLOADERHEXAGONDYLD_H
+#ifndef liblldb_DynamicLoaderHexagonDYLD_h_
+#define liblldb_DynamicLoaderHexagonDYLD_h_
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -132,9 +132,7 @@ private:
   const lldb_private::SectionList *
   GetSectionListFromModule(const lldb::ModuleSP module) const;
 
-  DynamicLoaderHexagonDYLD(const DynamicLoaderHexagonDYLD &) = delete;
-  const DynamicLoaderHexagonDYLD &
-  operator=(const DynamicLoaderHexagonDYLD &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderHexagonDYLD);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_DYNAMICLOADERHEXAGONDYLD_H
+#endif // liblldb_DynamicLoaderHexagonDYLD_h_

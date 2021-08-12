@@ -79,6 +79,7 @@ template <> bool ConcreteRegion<MachineLoop>::isLoop() const { return true; }
 class RegionInfo {
   const MachineLoopInfo &MLI;
   const WebAssemblyExceptionInfo &WEI;
+  std::vector<const Region *> Regions;
   DenseMap<const MachineLoop *, std::unique_ptr<Region>> LoopMap;
   DenseMap<const WebAssemblyException *, std::unique_ptr<Region>> ExceptionMap;
 
@@ -92,14 +93,7 @@ public:
     const auto *WE = WEI.getExceptionFor(MBB);
     if (!ML && !WE)
       return nullptr;
-    // We determine subregion relationship by domination of their headers, i.e.,
-    // if region A's header dominates region B's header, B is a subregion of A.
-    // WebAssemblyException contains BBs in all its subregions (loops or
-    // exceptions), but MachineLoop may not, because MachineLoop does not contain
-    // BBs that don't have a path to its header even if they are dominated by
-    // its header. So here we should use WE->contains(ML->getHeader()), but not
-    // ML->contains(WE->getHeader()).
-    if ((ML && !WE) || (ML && WE && WE->contains(ML->getHeader()))) {
+    if ((ML && !WE) || (ML && WE && ML->getNumBlocks() < WE->getNumBlocks())) {
       // If the smallest region containing MBB is a loop
       if (LoopMap.count(ML))
         return LoopMap[ML].get();
@@ -158,7 +152,7 @@ static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
     AllAnalyzable &= Term.isBranch() && !Term.isIndirectBranch();
   }
   assert((AnyBarrier || AllAnalyzable) &&
-         "analyzeBranch needs to analyze any block with a fallthrough");
+         "AnalyzeBranch needs to analyze any block with a fallthrough");
   if (AllAnalyzable)
     MBB->updateTerminator();
 }
@@ -374,7 +368,6 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     const Region *Region = RI.getRegionFor(&MBB);
 
     if (Region && &MBB == Region->getHeader()) {
-      // Region header.
       if (Region->isLoop()) {
         // Loop header. The loop predecessor should be sorted above, and the
         // other predecessors should be backedges below.
@@ -384,7 +377,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
               "Loop header predecessors must be loop predecessors or "
               "backedges");
       } else {
-        // Exception header. All predecessors should be sorted above.
+        // Not a loop header. All predecessors should be sorted above.
         for (auto Pred : MBB.predecessors())
           assert(Pred->getNumber() < MBB.getNumber() &&
                  "Non-loop-header predecessors should be topologically sorted");
@@ -393,7 +386,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
              "Regions should be declared at most once.");
 
     } else {
-      // Not a region header. All predecessors should be sorted above.
+      // Not a loop header. All predecessors should be sorted above.
       for (auto Pred : MBB.predecessors())
         assert(Pred->getNumber() < MBB.getNumber() &&
                "Non-loop-header predecessors should be topologically sorted");

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_CXXFUNCTIONPOINTER_H
-#define LLDB_DATAFORMATTERS_CXXFUNCTIONPOINTER_H
+#ifndef liblldb_CXXFunctionPointer_h_
+#define liblldb_CXXFunctionPointer_h_
 
 #include "lldb/lldb-forward.h"
 
@@ -18,4 +18,4 @@ bool CXXFunctionPointerSummaryProvider(ValueObject &valobj, Stream &stream,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_CXXFUNCTIONPOINTER_H
+#endif // liblldb_CXXFunctionPointer_h_

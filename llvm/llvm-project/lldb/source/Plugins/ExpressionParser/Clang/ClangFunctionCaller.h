@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGFUNCTIONCALLER_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGFUNCTIONCALLER_H
+#ifndef liblldb_ClangFunctionCaller_h_
+#define liblldb_ClangFunctionCaller_h_
 
 #include "ClangExpressionHelper.h"
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -149,4 +150,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGFUNCTIONCALLER_H
+#endif // liblldb_ClangFunctionCaller_h_

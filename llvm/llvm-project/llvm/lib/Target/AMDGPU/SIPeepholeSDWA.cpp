@@ -922,24 +922,18 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
     if (I->modifiesRegister(AMDGPU::VCC, TRI))
       return;
   }
-
   // Make the two new e32 instruction variants.
   // Replace MI with V_{SUB|ADD}_I32_e32
-  BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opc))
-    .add(*TII->getNamedOperand(MI, AMDGPU::OpName::vdst))
-    .add(*TII->getNamedOperand(MI, AMDGPU::OpName::src0))
-    .add(*TII->getNamedOperand(MI, AMDGPU::OpName::src1))
-    .setMIFlags(MI.getFlags());
-
+  auto NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opc));
+  NewMI.add(*TII->getNamedOperand(MI, AMDGPU::OpName::vdst));
+  NewMI.add(*TII->getNamedOperand(MI, AMDGPU::OpName::src0));
+  NewMI.add(*TII->getNamedOperand(MI, AMDGPU::OpName::src1));
   MI.eraseFromParent();
-
   // Replace MISucc with V_{SUBB|ADDC}_U32_e32
-  BuildMI(MBB, MISucc, MISucc.getDebugLoc(), TII->get(SuccOpc))
-    .add(*TII->getNamedOperand(MISucc, AMDGPU::OpName::vdst))
-    .add(*TII->getNamedOperand(MISucc, AMDGPU::OpName::src0))
-    .add(*TII->getNamedOperand(MISucc, AMDGPU::OpName::src1))
-    .setMIFlags(MISucc.getFlags());
-
+  auto NewInst = BuildMI(MBB, MISucc, MISucc.getDebugLoc(), TII->get(SuccOpc));
+  NewInst.add(*TII->getNamedOperand(MISucc, AMDGPU::OpName::vdst));
+  NewInst.add(*TII->getNamedOperand(MISucc, AMDGPU::OpName::src0));
+  NewInst.add(*TII->getNamedOperand(MISucc, AMDGPU::OpName::src1));
   MISucc.eraseFromParent();
 }
 
@@ -1016,8 +1010,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 
   // Create SDWA version of instruction MI and initialize its operands
   MachineInstrBuilder SDWAInst =
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), SDWADesc)
-    .setMIFlags(MI.getFlags());
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), SDWADesc);
 
   // Copy dst, if it is present in original then should also be present in SDWA
   MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);

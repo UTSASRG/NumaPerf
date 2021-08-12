@@ -22,7 +22,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -109,8 +108,12 @@ PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                         StringRef ExpectedPrinted,
                         PrintingPolicyModifier PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
-  return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted, "input.cc", PolicyModifier);
+  return PrintedDeclMatches(Code,
+                            Args,
+                            namedDecl(hasName(DeclName)).bind("id"),
+                            ExpectedPrinted,
+                            "input.cc",
+                            PolicyModifier);
 }
 
 ::testing::AssertionResult
@@ -130,8 +133,11 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                                                    StringRef DeclName,
                                                    StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted, "input.cc");
+  return PrintedDeclMatches(Code,
+                            Args,
+                            namedDecl(hasName(DeclName)).bind("id"),
+                            ExpectedPrinted,
+                            "input.cc");
 }
 
 ::testing::AssertionResult PrintedDeclCXX11Matches(
@@ -1158,8 +1164,8 @@ TEST(DeclPrinter, TestTemplateArgumentList4) {
     "template<typename T> struct X {};"
     "Z<X<int>> A;",
     "A",
-    "Z<X<int>> A"));
-    // Should be: with semicolon
+    "Z<X<int> > A"));
+    // Should be: with semicolon, without extra space in "> >"
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList5) {
@@ -1272,15 +1278,6 @@ TEST(DeclPrinter, TestTemplateArgumentList15) {
     "A",
     "Z<sizeof...(T)> A"));
     // Should be: with semicolon
-}
-
-TEST(DeclPrinter, TestTemplateArgumentList16) {
-  llvm::StringLiteral Code = "template<typename T1, int NT1, typename T2 = "
-                             "bool, int NT2 = 5> struct Z {};";
-  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T1", "typename T1"));
-  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T2", "typename T2 = bool"));
-  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT1", "int NT1"));
-  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
 }
 
 TEST(DeclPrinter, TestStaticAssert1) {

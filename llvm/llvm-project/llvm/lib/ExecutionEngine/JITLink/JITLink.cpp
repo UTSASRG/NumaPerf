@@ -10,7 +10,6 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -181,14 +180,18 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
     // Copy edges to NewBlock (recording their iterators so that we can remove
     // them from B), and update of Edges remaining on B.
     std::vector<Block::edge_iterator> EdgesToRemove;
-    for (auto I = B.edges().begin(); I != B.edges().end();) {
+    for (auto I = B.edges().begin(), E = B.edges().end(); I != E; ++I) {
       if (I->getOffset() < SplitIndex) {
         NewBlock.addEdge(*I);
-        I = B.removeEdge(I);
-      } else {
+        EdgesToRemove.push_back(I);
+      } else
         I->setOffset(I->getOffset() - SplitIndex);
-        ++I;
-      }
+    }
+
+    // Remove edges that were transfered to NewBlock from B.
+    while (!EdgesToRemove.empty()) {
+      B.removeEdge(EdgesToRemove.back());
+      EdgesToRemove.pop_back();
     }
   }
 
@@ -301,8 +304,6 @@ void jitLink(std::unique_ptr<JITLinkContext> Ctx) {
   switch (Magic) {
   case file_magic::macho_object:
     return jitLink_MachO(std::move(Ctx));
-  case file_magic::elf_relocatable:
-    return jitLink_ELF(std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported file format"));
   };

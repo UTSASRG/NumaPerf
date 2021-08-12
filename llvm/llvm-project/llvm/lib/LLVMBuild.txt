@@ -25,7 +25,6 @@ subdirectories =
  Demangle
  DWARFLinker
  ExecutionEngine
- Extensions
  Frontend
  FuzzMutate
  LineEditor

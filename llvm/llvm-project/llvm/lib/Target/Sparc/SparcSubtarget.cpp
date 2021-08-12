@@ -50,7 +50,7 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   HasLeonCycleCounter = false;
 
   // Determine default and user specified characteristics
-  std::string CPUName = std::string(CPU);
+  std::string CPUName = CPU;
   if (CPUName.empty())
     CPUName = (Is64Bit) ? "v9" : "v8";
 

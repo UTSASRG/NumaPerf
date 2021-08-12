@@ -154,8 +154,7 @@ class OrcMCJITReplacement : public ExecutionEngine {
           M.reportError(std::move(Err));
           return SymbolNameSet();
         } else {
-          if (auto Sym2 =
-                  M.ClientResolver->findSymbolInLogicalDylib(std::string(*S))) {
+          if (auto Sym2 = M.ClientResolver->findSymbolInLogicalDylib(*S)) {
             if (!Sym2.getFlags().isStrong())
               Result.insert(S);
           } else if (auto Err = Sym2.takeError()) {
@@ -188,7 +187,7 @@ class OrcMCJITReplacement : public ExecutionEngine {
           M.ES.legacyFailQuery(*Query, std::move(Err));
           return SymbolNameSet();
         } else {
-          if (auto Sym2 = M.ClientResolver->findSymbol(std::string(*S))) {
+          if (auto Sym2 = M.ClientResolver->findSymbol(*S)) {
             if (auto Addr = Sym2.getAddress()) {
               Query->notifySymbolMetRequiredState(
                   S, JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
@@ -379,9 +378,9 @@ public:
 
 private:
   JITSymbol findMangledSymbol(StringRef Name) {
-    if (auto Sym = LazyEmitLayer.findSymbol(std::string(Name), false))
+    if (auto Sym = LazyEmitLayer.findSymbol(Name, false))
       return Sym;
-    if (auto Sym = ClientResolver->findSymbol(std::string(Name)))
+    if (auto Sym = ClientResolver->findSymbol(Name))
       return Sym;
     if (auto Sym = scanArchives(Name))
       return Sym;

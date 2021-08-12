@@ -1,4 +1,4 @@
-//===-- CommandObjectSource.cpp -------------------------------------------===//
+//===-- CommandObjectSource.cpp ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -63,11 +63,11 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
         break;
 
       case 'f':
-        file_name = std::string(option_arg);
+        file_name = option_arg;
         break;
 
       case 'n':
-        symbol_name = std::string(option_arg);
+        symbol_name = option_arg;
         break;
 
       case 'a': {
@@ -646,11 +646,11 @@ class CommandObjectSourceList : public CommandObjectParsed {
         break;
 
       case 'f':
-        file_name = std::string(option_arg);
+        file_name = option_arg;
         break;
 
       case 'n':
-        symbol_name = std::string(option_arg);
+        symbol_name = option_arg;
         break;
 
       case 'a': {

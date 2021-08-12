@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTUTILS_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTUTILS_H
+#ifndef liblldb_ASTUtils_h_
+#define liblldb_ASTUtils_h_
 
-#include "clang/Basic/Module.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/Sema.h"
@@ -72,7 +71,7 @@ public:
     return m_Source->getModule(ID);
   }
 
-  llvm::Optional<clang::ASTSourceDescriptor>
+  llvm::Optional<ASTSourceDescriptor>
   getSourceDescriptor(unsigned ID) override {
     return m_Source->getSourceDescriptor(ID);
   }
@@ -577,4 +576,4 @@ public:
 };
 
 } // namespace lldb_private
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTUTILS_H
+#endif // liblldb_ASTUtils_h_

@@ -51,10 +51,12 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
       })));
 
   unsigned NotifyResolvedCount = 0;
-  auto NotifyResolved = [&](JITTargetAddress ResolvedAddr) {
-    ++NotifyResolvedCount;
-    return Error::success();
-  };
+  auto NotifyResolved = LazyCallThroughManager::createNotifyResolvedFunction(
+      [&](JITDylib &JD, const SymbolStringPtr &SymbolName,
+          JITTargetAddress ResolvedAddr) {
+        ++NotifyResolvedCount;
+        return Error::success();
+      });
 
   auto CallThroughTrampoline = cantFail((*LCTM)->getCallThroughTrampoline(
       JD, DummyTarget, std::move(NotifyResolved)));

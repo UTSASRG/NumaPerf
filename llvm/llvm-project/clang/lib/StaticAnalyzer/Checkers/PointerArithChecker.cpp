@@ -343,6 +343,6 @@ void ento::registerPointerArithChecker(CheckerManager &mgr) {
   mgr.registerChecker<PointerArithChecker>();
 }
 
-bool ento::shouldRegisterPointerArithChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterPointerArithChecker(const LangOptions &LO) {
   return true;
 }

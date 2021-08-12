@@ -17,6 +17,10 @@ namespace tidy {
 namespace objc {
 
 void AvoidNSErrorInitCheck::registerMatchers(MatchFinder *Finder) {
+  // this check should only be applied to ObjC sources.
+  if (!getLangOpts().ObjC)
+    return;
+
   Finder->addMatcher(objcMessageExpr(hasSelector("init"),
                                      hasReceiverType(asString("NSError *")))
                          .bind("nserrorInit"),

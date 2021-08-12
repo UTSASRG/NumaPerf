@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_SECTION_H
-#define LLDB_CORE_SECTION_H
+#ifndef liblldb_Section_h_
+#define liblldb_Section_h_
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Utility/ConstString.h"
@@ -29,6 +29,7 @@ class Address;
 class DataExtractor;
 class ObjectFile;
 class Section;
+class Stream;
 class Target;
 
 class SectionList {
@@ -55,8 +56,7 @@ public:
 
   bool ContainsSection(lldb::user_id_t sect_id) const;
 
-  void Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
-            bool show_header, uint32_t depth) const;
+  void Dump(Stream *s, Target *target, bool show_header, uint32_t depth) const;
 
   lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
 
@@ -127,10 +127,9 @@ public:
 
   const SectionList &GetChildren() const { return m_children; }
 
-  void Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
-            uint32_t depth) const;
+  void Dump(Stream *s, Target *target, uint32_t depth) const;
 
-  void DumpName(llvm::raw_ostream &s) const;
+  void DumpName(Stream *s) const;
 
   lldb::addr_t GetLoadBaseAddress(Target *target) const;
 
@@ -268,10 +267,9 @@ protected:
                                // This is specified as
                                // as a multiple number of a host bytes
 private:
-  Section(const Section &) = delete;
-  const Section &operator=(const Section &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(Section);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_SECTION_H
+#endif // liblldb_Section_h_

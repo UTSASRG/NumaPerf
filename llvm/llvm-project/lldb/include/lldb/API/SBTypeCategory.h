@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTYPECATEGORY_H
-#define LLDB_API_SBTYPECATEGORY_H
+#ifndef LLDB_SBTypeCategory_h_
+#define LLDB_SBTypeCategory_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -113,4 +113,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBTYPECATEGORY_H
+#endif // LLDB_SBTypeCategory_h_

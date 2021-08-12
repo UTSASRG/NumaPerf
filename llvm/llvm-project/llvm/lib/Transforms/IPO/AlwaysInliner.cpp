@@ -16,6 +16,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
@@ -36,30 +37,30 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   // Add inline assumptions during code generation.
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+      [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  InlineFunctionInfo IFI(/*cg=*/nullptr, GetAssumptionCache);
+  InlineFunctionInfo IFI(/*cg=*/nullptr, &GetAssumptionCache);
 
-  SmallSetVector<CallBase *, 16> Calls;
+  SmallSetVector<CallSite, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedFunctions;
   for (Function &F : M)
     if (!F.isDeclaration() && F.hasFnAttribute(Attribute::AlwaysInline) &&
-        isInlineViable(F).isSuccess()) {
+        isInlineViable(F)) {
       Calls.clear();
 
       for (User *U : F.users())
-        if (auto *CB = dyn_cast<CallBase>(U))
-          if (CB->getCalledFunction() == &F)
-            Calls.insert(CB);
+        if (auto CS = CallSite(U))
+          if (CS.getCalledFunction() == &F)
+            Calls.insert(CS);
 
-      for (CallBase *CB : Calls)
+      for (CallSite CS : Calls)
         // FIXME: We really shouldn't be able to fail to inline at this point!
         // We should do something to log or check the inline failures here.
         Changed |=
-            InlineFunction(*CB, IFI, /*CalleeAAR=*/nullptr, InsertLifetime)
-                .isSuccess();
+            InlineFunction(CS, IFI, /*CalleeAAR=*/nullptr, InsertLifetime);
 
       // Remember to try and delete this function afterward. This both avoids
       // re-walking the rest of the module and avoids dealing with any iterator
@@ -115,7 +116,7 @@ public:
 
   static char ID; // Pass identification, replacement for typeid
 
-  InlineCost getInlineCost(CallBase &CB) override;
+  InlineCost getInlineCost(CallSite CS) override;
 
   using llvm::Pass::doFinalization;
   bool doFinalization(CallGraph &CG) override {
@@ -150,8 +151,8 @@ Pass *llvm::createAlwaysInlinerLegacyPass(bool InsertLifetime) {
 /// computed here, but as we only expect to do this for relatively few and
 /// small functions which have the explicit attribute to force inlining, it is
 /// likely not worth it in practice.
-InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallBase &CB) {
-  Function *Callee = CB.getCalledFunction();
+InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallSite CS) {
+  Function *Callee = CS.getCalledFunction();
 
   // Only inline direct calls to functions with always-inline attributes
   // that are viable for inlining.
@@ -162,12 +163,12 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallBase &CB) {
   if (Callee->isDeclaration())
     return InlineCost::getNever("no definition");
 
-  if (!CB.hasFnAttr(Attribute::AlwaysInline))
+  if (!CS.hasFnAttr(Attribute::AlwaysInline))
     return InlineCost::getNever("no alwaysinline attribute");
 
   auto IsViable = isInlineViable(*Callee);
-  if (!IsViable.isSuccess())
-    return InlineCost::getNever(IsViable.getFailureReason());
+  if (!IsViable)
+    return InlineCost::getNever(IsViable.message);
 
   return InlineCost::getAlways("always inliner");
 }

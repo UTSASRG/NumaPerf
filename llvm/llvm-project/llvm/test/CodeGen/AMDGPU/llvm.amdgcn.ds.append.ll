@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9,GCN-SDAG %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-SDAG,GCN-SDAG %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-SDAG,GCN-SDAG %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,CIPLUS-SDAG,GCN-SDAG %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
 
 ; GCN-LABEL: {{^}}ds_append_lds:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
@@ -51,13 +51,10 @@ define amdgpu_kernel void @ds_append_no_fold_offset_si(i32 addrspace(3)* addrspa
 ; GCN-LABEL: {{^}}ds_append_lds_over_max_offset:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
 
-; SI-SDAG: s_bitset1_b32 [[PTR]], 16
-; CIPLUS-SDAG: s_add_i32 [[PTR]], [[PTR]], 0x10000
-; GCN-SDAG: s_mov_b32 m0, [[PTR]]
+; SI: s_bitset1_b32 [[PTR]], 16
+; CIPLUS: s_add_i32 [[PTR]], [[PTR]], 0x10000
 
-; SI-GISEL: s_bitset1_b32 m0, 16
-; CIPLUS-GISEL: s_add_u32 m0, [[PTR]], 0x10000
-
+; GCN: s_mov_b32 m0, [[PTR]]
 ; GCN: ds_append [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
@@ -69,11 +66,8 @@ define amdgpu_kernel void @ds_append_lds_over_max_offset(i32 addrspace(3)* %lds,
 }
 
 ; GCN-LABEL: {{^}}ds_append_lds_vgpr_addr:
-; GCN-SDAG: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
-; GCN-SDAG: s_mov_b32 m0, [[READLANE]]
-
-; GCN-GISEL: v_readfirstlane_b32 m0, v0
-
+; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
+; GCN: s_mov_b32 m0, [[READLANE]]
 ; GCN: ds_append [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
@@ -133,8 +127,8 @@ define amdgpu_kernel void @ds_append_lds_m0_restore(i32 addrspace(3)* %lds, i32 
   ret void
 }
 
-declare i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* nocapture, i1 immarg) #1
-declare i32 @llvm.amdgcn.ds.append.p2i32(i32 addrspace(2)* nocapture, i1 immarg) #1
+declare i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* nocapture, i1) #1
+declare i32 @llvm.amdgcn.ds.append.p2i32(i32 addrspace(2)* nocapture, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly convergent nounwind }

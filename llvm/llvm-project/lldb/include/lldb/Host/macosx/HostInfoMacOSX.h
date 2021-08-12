@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_MACOSX_HOSTINFOMACOSX_H
-#define LLDB_HOST_MACOSX_HOSTINFOMACOSX_H
+#ifndef lldb_Host_macosx_HostInfoMacOSX_h_
+#define lldb_Host_macosx_HostInfoMacOSX_h_
 
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/XcodeSDK.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -32,10 +31,7 @@ public:
   static bool GetOSBuildString(std::string &s);
   static bool GetOSKernelDescription(std::string &s);
   static FileSpec GetProgramFileSpec();
-  static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
 
-  /// Query xcrun to find an Xcode SDK directory.
-  static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk);
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

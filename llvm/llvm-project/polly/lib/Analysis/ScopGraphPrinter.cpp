@@ -68,10 +68,11 @@ template <> struct DOTGraphTraits<RegionNode *> : public DefaultDOTGraphTraits {
       BasicBlock *BB = Node->getNodeAs<BasicBlock>();
 
       if (isSimple())
-        return DOTGraphTraits<DOTFuncInfo *>::getSimpleNodeLabel(BB, nullptr);
-
+        return DOTGraphTraits<const Function *>::getSimpleNodeLabel(
+            BB, BB->getParent());
       else
-        return DOTGraphTraits<DOTFuncInfo *>::getCompleteNodeLabel(BB, nullptr);
+        return DOTGraphTraits<const Function *>::getCompleteNodeLabel(
+            BB, BB->getParent());
     }
 
     return "Not implemented";

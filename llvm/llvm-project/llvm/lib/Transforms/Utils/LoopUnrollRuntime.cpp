@@ -25,6 +25,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Metadata.h"
@@ -36,7 +37,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
 
@@ -543,11 +543,13 @@ static bool canProfitablyUnrollMultiExitLoop(
 ///        if (extraiters != 0) jump Epil: // Omitted if unroll factor is 2.
 /// EpilExit:
 
-bool llvm::UnrollRuntimeLoopRemainder(
-    Loop *L, unsigned Count, bool AllowExpensiveTripCount,
-    bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
-    LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    const TargetTransformInfo *TTI, bool PreserveLCSSA, Loop **ResultLoop) {
+bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
+                                      bool AllowExpensiveTripCount,
+                                      bool UseEpilogRemainder,
+                                      bool UnrollRemainder, bool ForgetAllSCEV,
+                                      LoopInfo *LI, ScalarEvolution *SE,
+                                      DominatorTree *DT, AssumptionCache *AC,
+                                      bool PreserveLCSSA, Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -635,8 +637,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   const DataLayout &DL = Header->getModule()->getDataLayout();
   SCEVExpander Expander(*SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount &&
-      Expander.isHighCostExpansion(TripCountSC, L, SCEVCheapExpansionBudget,
-                                   TTI, PreHeaderBR)) {
+      Expander.isHighCostExpansion(TripCountSC, L, PreHeaderBR)) {
     LLVM_DEBUG(dbgs() << "High cost for expanding trip count scev!\n");
     return false;
   }
@@ -948,7 +949,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
                     /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
                     /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
                     /*PeelCount*/ 0, /*UnrollRemainder*/ false, ForgetAllSCEV},
-                   LI, SE, DT, AC, TTI, /*ORE*/ nullptr, PreserveLCSSA);
+                   LI, SE, DT, AC, /*ORE*/ nullptr, PreserveLCSSA);
   }
 
   if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)

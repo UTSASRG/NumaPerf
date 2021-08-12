@@ -1,6 +1,6 @@
 //===- LocationDetail.h - MLIR Location storage details ---------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -126,15 +126,15 @@ struct NameLocationStorage : public AttributeStorage {
 };
 
 struct OpaqueLocationStorage : public AttributeStorage {
-  OpaqueLocationStorage(uintptr_t underlyingLocation, TypeID typeID,
+  OpaqueLocationStorage(uintptr_t underlyingLocation, ClassID *classId,
                         Location fallbackLocation)
-      : underlyingLocation(underlyingLocation), typeID(typeID),
+      : underlyingLocation(underlyingLocation), classId(classId),
         fallbackLocation(fallbackLocation) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::tuple<uintptr_t, TypeID, Location>;
+  using KeyTy = std::tuple<uintptr_t, ClassID *, Location>;
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(underlyingLocation, typeID, fallbackLocation);
+    return key == KeyTy(underlyingLocation, classId, fallbackLocation);
   }
 
   /// Construct a new storage instance.
@@ -149,7 +149,7 @@ struct OpaqueLocationStorage : public AttributeStorage {
   uintptr_t underlyingLocation;
 
   /// A unique pointer for each type of underlyingLocation.
-  TypeID typeID;
+  ClassID *classId;
 
   /// An additional location that can be used if the external one is not
   /// suitable.

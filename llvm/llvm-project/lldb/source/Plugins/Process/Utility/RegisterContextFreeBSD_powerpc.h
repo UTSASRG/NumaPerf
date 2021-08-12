@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTFREEBSD_POWERPC_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTFREEBSD_POWERPC_H
+#ifndef liblldb_RegisterContextFreeBSD_powerpc_h_
+#define liblldb_RegisterContextFreeBSD_powerpc_h_
 
 #include "RegisterInfoInterface.h"
 
@@ -49,4 +49,4 @@ public:
   uint32_t GetRegisterCount() const override;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTFREEBSD_POWERPC_H
+#endif // liblldb_RegisterContextFreeBSD_powerpc_h_

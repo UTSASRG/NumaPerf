@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -970,7 +969,8 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
     return false;
 
   return isDereferenceableAndAlignedPointer(
-      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL);
+      BasePtr, Align::None(), APInt(DL.getPointerSizeInBits(), Offset + Size),
+      DL);
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the
@@ -1004,16 +1004,17 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     uint64_t s, Align a,
+                                     uint64_t s, uint64_t a,
                                      const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
-    : PtrInfo(ptrinfo), Size(s), FlagVals(f), BaseAlign(a), AAInfo(AAInfo),
-      Ranges(Ranges) {
+    : PtrInfo(ptrinfo), Size(s), FlagVals(f), BaseAlignLog2(Log2_32(a) + 1),
+      AAInfo(AAInfo), Ranges(Ranges) {
   assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue *>() ||
           isa<PointerType>(PtrInfo.V.get<const Value *>()->getType())) &&
          "invalid pointer value");
+  assert(getBaseAlignment() == a && a != 0 && "Alignment is not a power of 2!");
   assert((isLoad() || isStore()) && "Not a load/store!");
 
   AtomicInfo.SSID = static_cast<unsigned>(SSID);
@@ -1031,7 +1032,7 @@ void MachineMemOperand::Profile(FoldingSetNodeID &ID) const {
   ID.AddInteger(Size);
   ID.AddPointer(getOpaqueValue());
   ID.AddInteger(getFlags());
-  ID.AddInteger(getBaseAlign().value());
+  ID.AddInteger(getBaseAlignment());
 }
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
@@ -1040,9 +1041,9 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   assert(MMO->getFlags() == getFlags() && "Flags mismatch!");
   assert(MMO->getSize() == getSize() && "Size mismatch!");
 
-  if (MMO->getBaseAlign() >= getBaseAlign()) {
+  if (MMO->getBaseAlignment() >= getBaseAlignment()) {
     // Update the alignment value.
-    BaseAlign = MMO->getBaseAlign();
+    BaseAlignLog2 = Log2_32(MMO->getBaseAlignment()) + 1;
     // Also update the base and offset, because the new alignment may
     // not be applicable with the old ones.
     PtrInfo = MMO->PtrInfo;
@@ -1051,12 +1052,8 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
 
 /// getAlignment - Return the minimum known alignment in bytes of the
 /// actual memory reference.
-uint64_t MachineMemOperand::getAlignment() const { return getAlign().value(); }
-
-/// getAlign - Return the minimum known alignment in bytes of the
-/// actual memory reference.
-Align MachineMemOperand::getAlign() const {
-  return commonAlignment(getBaseAlign(), getOffset());
+uint64_t MachineMemOperand::getAlignment() const {
+  return MinAlign(getBaseAlignment(), getOffset());
 }
 
 void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
@@ -1151,8 +1148,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
   }
   MachineOperand::printOperandOffset(OS, getOffset());
-  if (getBaseAlign() != getSize())
-    OS << ", align " << getBaseAlign().value();
+  if (getBaseAlignment() != getSize())
+    OS << ", align " << getBaseAlignment();
   auto AAInfo = getAAInfo();
   if (AAInfo.TBAA) {
     OS << ", !tbaa ";

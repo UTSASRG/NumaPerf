@@ -18,6 +18,7 @@ namespace llvm {
   class MCOperand;
   class MCSymbol;
   class MachineInstr;
+  class MachineModuleInfoMachO;
   class MachineOperand;
 
   /// MSP430MCInstLower - This class is used to lower an MachineInstr

@@ -1,6 +1,6 @@
 //===- SerializationTest.cpp - SPIR-V Serialization Tests -----------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/Serialization.h"
-#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -38,7 +37,7 @@ protected:
   SerializationTest() { createModuleOp(); }
 
   void createModuleOp() {
-    OpBuilder builder(&context);
+    Builder builder(&context);
     OperationState state(UnknownLoc::get(&context),
                          spirv::ModuleOp::getOperationName());
     state.addAttribute("addressing_model",
@@ -47,11 +46,7 @@ protected:
     state.addAttribute("memory_model",
                        builder.getI32IntegerAttr(
                            static_cast<uint32_t>(spirv::MemoryModel::GLSL450)));
-    state.addAttribute("vce_triple",
-                       spirv::VerCapExtAttr::get(
-                           spirv::Version::V_1_0, ArrayRef<spirv::Capability>(),
-                           ArrayRef<spirv::Extension>(), &context));
-    spirv::ModuleOp::build(builder, state);
+    spirv::ModuleOp::build(&builder, state);
     module = cast<spirv::ModuleOp>(Operation::create(state));
   }
 

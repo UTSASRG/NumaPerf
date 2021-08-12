@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+class MCWasmStreamer;
 class MCSymbolWasm;
 
 /// WebAssembly-specific streamer interface, to implement support

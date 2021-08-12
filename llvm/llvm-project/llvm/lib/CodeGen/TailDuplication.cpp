@@ -31,7 +31,6 @@ namespace {
 
 class TailDuplicateBase : public MachineFunctionPass {
   TailDuplicator Duplicator;
-  std::unique_ptr<MBFIWrapper> MBFIW;
   bool PreRegAlloc;
 public:
   TailDuplicateBase(char &PassID, bool PreRegAlloc)
@@ -89,10 +88,7 @@ bool TailDuplicateBase::runOnMachineFunction(MachineFunction &MF) {
   auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
                &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
                nullptr;
-  if (MBFI)
-    MBFIW = std::make_unique<MBFIWrapper>(*MBFI);
-  Duplicator.initMF(MF, PreRegAlloc, MBPI, MBFI ? MBFIW.get() : nullptr, PSI,
-                    /*LayoutMode=*/false);
+  Duplicator.initMF(MF, PreRegAlloc, MBPI, MBFI, PSI, /*LayoutMode=*/false);
 
   bool MadeChange = false;
   while (Duplicator.tailDuplicateBlocks())

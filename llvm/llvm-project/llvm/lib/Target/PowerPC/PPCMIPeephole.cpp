@@ -57,8 +57,6 @@ STATISTIC(NumRotatesCollapsed,
           "Number of pairs of rotate left, clear left/right collapsed");
 STATISTIC(NumEXTSWAndSLDICombined,
           "Number of pairs of EXTSW and SLDI combined as EXTSWSLI");
-STATISTIC(NumLoadImmZeroFoldedAndRemoved,
-          "Number of LI(8) reg, 0 that are folded to r0 and removed");
 
 static cl::opt<bool>
 FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
@@ -126,14 +124,9 @@ public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    initialize(MF);
-    // At this point, TOC pointer should not be used in a function that uses
-    // PC-Relative addressing.
-    assert((MF.getRegInfo().use_empty(PPC::X2) ||
-            !MF.getSubtarget<PPCSubtarget>().isUsingPCRelativeCalls()) &&
-           "TOC pointer used in a function using PC-Relative addressing!");
     if (skipFunction(MF.getFunction()))
       return false;
+    initialize(MF);
     return simplifyCode();
   }
 };
@@ -321,22 +314,7 @@ bool PPCMIPeephole::simplifyCode(void) {
 
       default:
         break;
-      case PPC::LI:
-      case PPC::LI8: {
-        // If we are materializing a zero, look for any use operands for which
-        // zero means immediate zero. All such operands can be replaced with
-        // PPC::ZERO.
-        if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != 0)
-          break;
-        unsigned MIDestReg = MI.getOperand(0).getReg();
-        for (MachineInstr& UseMI : MRI->use_instructions(MIDestReg))
-          Simplified |= TII->onlyFoldImmediate(UseMI, MI, MIDestReg);
-        if (MRI->use_nodbg_empty(MIDestReg)) {
-          ++NumLoadImmZeroFoldedAndRemoved;
-          ToErase = &MI;
-        }
-        break;
-      }
+
       case PPC::STD: {
         MachineFrameInfo &MFI = MF->getFrameInfo();
         if (MFI.hasVarSizedObjects() ||
@@ -563,12 +541,10 @@ bool PPCMIPeephole::simplifyCode(void) {
           if (!P1 || !P2)
             break;
 
-          // Remove the passed FRSP/XSRSP instruction if it only feeds this MI
-          // and set any uses of that FRSP/XSRSP (in this MI) to the source of
-          // the FRSP/XSRSP.
+          // Remove the passed FRSP instruction if it only feeds this MI and
+          // set any uses of that FRSP (in this MI) to the source of the FRSP.
           auto removeFRSPIfPossible = [&](MachineInstr *RoundInstr) {
-            unsigned Opc = RoundInstr->getOpcode();
-            if ((Opc == PPC::FRSP || Opc == PPC::XSRSP) &&
+            if (RoundInstr->getOpcode() == PPC::FRSP &&
                 MRI->hasOneNonDBGUse(RoundInstr->getOperand(0).getReg())) {
               Simplified = true;
               Register ConvReg1 = RoundInstr->getOperand(1).getReg();
@@ -578,7 +554,7 @@ bool PPCMIPeephole::simplifyCode(void) {
                 if (Use.getOperand(i).isReg() &&
                     Use.getOperand(i).getReg() == FRSPDefines)
                   Use.getOperand(i).setReg(ConvReg1);
-              LLVM_DEBUG(dbgs() << "Removing redundant FRSP/XSRSP:\n");
+              LLVM_DEBUG(dbgs() << "Removing redundant FRSP:\n");
               LLVM_DEBUG(RoundInstr->dump());
               LLVM_DEBUG(dbgs() << "As it feeds instruction:\n");
               LLVM_DEBUG(MI.dump());

@@ -1,4 +1,4 @@
-//===-- IRExecutionUnit.cpp -----------------------------------------------===//
+//===-- IRExecutionUnit.cpp -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -404,7 +404,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
         ss.PutCString("\n");
       emitNewLine = true;
       ss.PutCString("  ");
-      ss.PutCString(Mangled(failed_lookup).GetDemangledName().GetStringRef());
+      ss.PutCString(Mangled(failed_lookup)
+                        .GetDemangledName(lldb::eLanguageTypeObjC_plus_plus)
+                        .AsCString());
     }
 
     m_failed_lookups.clear();
@@ -643,8 +645,10 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
   return return_value;
 }
 
-static ConstString FindBestAlternateMangledName(ConstString demangled,
-                                                const SymbolContext &sym_ctx) {
+static ConstString
+FindBestAlternateMangledName(ConstString demangled,
+                             const lldb::LanguageType &lang_type,
+                             const SymbolContext &sym_ctx) {
   CPlusPlusLanguage::MethodName cpp_name(demangled);
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
@@ -666,7 +670,7 @@ static ConstString FindBestAlternateMangledName(ConstString demangled,
   for (size_t i = 0; i < alternates.size(); i++) {
     ConstString alternate_mangled_name = alternates[i];
     Mangled mangled(alternate_mangled_name);
-    ConstString demangled = mangled.GetDemangledName();
+    ConstString demangled = mangled.GetDemangledName(lang_type);
 
     CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
     if (!cpp_name.IsValid())
@@ -714,11 +718,12 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
 
     if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
       Mangled mangled(name);
-      ConstString demangled = mangled.GetDemangledName();
+      ConstString demangled =
+          mangled.GetDemangledName(lldb::eLanguageTypeC_plus_plus);
 
       if (demangled) {
-        ConstString best_alternate_mangled_name =
-            FindBestAlternateMangledName(demangled, sc);
+        ConstString best_alternate_mangled_name = FindBestAlternateMangledName(
+            demangled, lldb::eLanguageTypeC_plus_plus, sc);
 
         if (best_alternate_mangled_name) {
           CPP_specs.push_back(best_alternate_mangled_name);
@@ -743,7 +748,8 @@ void IRExecutionUnit::CollectFallbackNames(
 
     if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
       Mangled mangled_name(name);
-      ConstString demangled_name = mangled_name.GetDemangledName();
+      ConstString demangled_name =
+          mangled_name.GetDemangledName(lldb::eLanguageTypeC_plus_plus);
       if (!demangled_name.IsEmpty()) {
         const char *demangled_cstr = demangled_name.AsCString();
         const char *lparen_loc = strchr(demangled_cstr, '(');
@@ -843,7 +849,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     };
 
     if (sc.module_sp) {
-      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
+      sc.module_sp->FindFunctions(spec.name, nullptr, spec.mask,
                                   true,  // include_symbols
                                   false, // include_inlines
                                   sc_list);

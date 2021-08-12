@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_JITLOADER_GDB_JITLOADERGDB_H
-#define LLDB_SOURCE_PLUGINS_JITLOADER_GDB_JITLOADERGDB_H
+#ifndef liblldb_JITLoaderGDB_h_
+#define liblldb_JITLoaderGDB_h_
 
 #include <map>
 
@@ -77,4 +77,4 @@ private:
   lldb::addr_t m_jit_descriptor_addr;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_JITLOADER_GDB_JITLOADERGDB_H
+#endif // liblldb_JITLoaderGDB_h_

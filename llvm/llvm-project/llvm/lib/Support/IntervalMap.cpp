@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/IntervalMap.h"
-#include <cassert>
 
 namespace llvm {
 namespace IntervalMapImpl {

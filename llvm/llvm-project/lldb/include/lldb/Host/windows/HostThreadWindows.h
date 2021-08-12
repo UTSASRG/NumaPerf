@@ -16,8 +16,7 @@
 namespace lldb_private {
 
 class HostThreadWindows : public HostNativeThreadBase {
-  HostThreadWindows(const HostThreadWindows &) = delete;
-  const HostThreadWindows &operator=(const HostThreadWindows &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(HostThreadWindows);
 
 public:
   HostThreadWindows();

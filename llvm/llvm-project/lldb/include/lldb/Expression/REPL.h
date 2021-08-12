@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_REPL_H
-#define LLDB_EXPRESSION_REPL_H
+#ifndef lldb_REPL_h
+#define lldb_REPL_h
 
 #include <string>
 
@@ -130,8 +130,8 @@ protected:
                                 lldb::ValueObjectSP &valobj_sp,
                                 ExpressionVariable *var = nullptr) = 0;
 
-  virtual void CompleteCode(const std::string &current_code,
-                            CompletionRequest &request) = 0;
+  virtual int CompleteCode(const std::string &current_code,
+                           StringList &matches) = 0;
 
   OptionGroupFormat m_format_options = OptionGroupFormat(lldb::eFormatDefault);
   OptionGroupValueObjectDisplay m_varobj_options;
@@ -158,4 +158,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_EXPRESSION_REPL_H
+#endif // lldb_REPL_h

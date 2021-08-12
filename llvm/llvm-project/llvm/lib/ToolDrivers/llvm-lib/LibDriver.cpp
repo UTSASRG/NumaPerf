@@ -59,10 +59,13 @@ public:
 
 }
 
-static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {
+static std::string getOutputPath(opt::InputArgList *Args,
+                                 const NewArchiveMember &FirstMember) {
+  if (auto *Arg = Args->getLastArg(OPT_out))
+    return Arg->getValue();
   SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
   sys::path::replace_extension(Val, ".lib");
-  return std::string(Val.str());
+  return Val.str();
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
@@ -93,7 +96,7 @@ static std::string findInputFile(StringRef File, ArrayRef<StringRef> Paths) {
     SmallString<128> Path = Dir;
     sys::path::append(Path, File);
     if (sys::fs::exists(Path))
-      return std::string(Path);
+      return Path.str().str();
   }
   return "";
 }
@@ -141,14 +144,14 @@ static void doList(opt::InputArgList& Args) {
 
 static COFF::MachineTypes getCOFFFileMachine(MemoryBufferRef MB) {
   std::error_code EC;
-  auto Obj = object::COFFObjectFile::create(MB);
-  if (!Obj) {
+  object::COFFObjectFile Obj(MB, EC);
+  if (EC) {
     llvm::errs() << MB.getBufferIdentifier()
-                 << ": failed to open: " << Obj.takeError() << '\n';
+                 << ": failed to open: " << EC.message() << '\n';
     exit(1);
   }
 
-  uint16_t Machine = (*Obj)->getMachine();
+  uint16_t Machine = Obj.getMachine();
   if (Machine != COFF::IMAGE_FILE_MACHINE_I386 &&
       Machine != COFF::IMAGE_FILE_MACHINE_AMD64 &&
       Machine != COFF::IMAGE_FILE_MACHINE_ARMNT &&
@@ -289,9 +292,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
     return 0;
   }
 
-  // If no input files and not told otherwise, silently do nothing to match
-  // lib.exe
-  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArg(OPT_llvmlibempty))
+  // If no input files, silently do nothing to match lib.exe.
+  if (!Args.hasArgNoClaim(OPT_INPUT))
     return 0;
 
   if (Args.hasArg(OPT_lst)) {
@@ -350,15 +352,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   }
 
   // Create an archive file.
-  std::string OutputPath;
-  if (auto *Arg = Args.getLastArg(OPT_out)) {
-    OutputPath = Arg->getValue();
-  } else if (!Members.empty()) {
-    OutputPath = getDefaultOutputPath(Members[0]);
-  } else {
-    llvm::errs() << "no output path given, and cannot infer with no inputs\n";
-    return 1;
-  }
+  std::string OutputPath = getOutputPath(&Args, Members[0]);
   // llvm-lib uses relative paths for both regular and thin archives, unlike
   // standard GNU ar, which only uses relative paths for thin archives and
   // basenames for regular archives.

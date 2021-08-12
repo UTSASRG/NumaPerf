@@ -2,28 +2,11 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsDescs
   AllTargetsInfos
-  FrontendOpenMP
   support
   )
 
-# Needed by LLVM's CMake checks because this file defines multiple targets.
-set(LLVM_OPTIONAL_SOURCES ClangTidyMain.cpp ClangTidyToolMain.cpp)
-
-add_clang_library(clangTidyMain
-  ClangTidyMain.cpp
-
-  LINK_LIBS
-  clangAST
-  clangASTMatchers
-  clangBasic
-  clangTidy
-  ${ALL_CLANG_TIDY_CHECKS}
-  clangTooling
-  clangToolingCore
-  )
-
 add_clang_tool(clang-tidy
-  ClangTidyToolMain.cpp
+  ClangTidyMain.cpp
   )
 add_dependencies(clang-tidy
   clang-resource-headers
@@ -39,7 +22,6 @@ clang_target_link_libraries(clang-tidy
 target_link_libraries(clang-tidy
   PRIVATE
   clangTidy
-  clangTidyMain
   ${ALL_CLANG_TIDY_CHECKS}
   )
 

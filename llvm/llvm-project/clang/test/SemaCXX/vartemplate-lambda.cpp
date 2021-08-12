@@ -4,12 +4,7 @@ template <class> auto fn0 = [] {};
 template <typename> void foo0() { fn0<char>(); }
 
 template<typename T> auto fn1 = [](auto a) { return a + T(1); };
-template<typename T> auto v1 = [](int a = T()) { return a; }();
-// expected-error@-1{{cannot initialize a parameter of type 'int' with an rvalue of type 'int *'}}
-// expected-error@-2{{no matching function for call}}
-// expected-note@-3{{passing argument to parameter 'a' here}}
-// expected-note@-4{{candidate function not viable}}
-// expected-note@-5{{conversion candidate of type 'int (*)(int)'}}
+template<typename T> auto v1 = [](int a = T(1)) { return a; }();
 
 struct S {
   template<class T>
@@ -21,7 +16,6 @@ int foo2() {
   X a = 0x61;
   fn1<char>(a);
   (void)v1<int>;
-  (void)v1<int *>; // expected-note{{in instantiation of variable template specialization 'v1' requested here}}
   (void)S::t<int>; // expected-note{{in instantiation of static data member 'S::t<int>' requested here}}
   return 0;
 }

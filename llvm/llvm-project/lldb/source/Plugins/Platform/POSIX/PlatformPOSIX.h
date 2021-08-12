@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H
+#ifndef liblldb_PlatformPOSIX_h_
+#define liblldb_PlatformPOSIX_h_
 
 #include <map>
 #include <memory>
@@ -36,6 +36,10 @@ public:
           const lldb_private::FileSpec &destination) override;
 
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
+
+  lldb_private::Status ResolveExecutable(
+      const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+      const lldb_private::FileSpecList *module_search_paths_ptr) override;
 
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
                          lldb_private::Debugger &debugger,
@@ -101,8 +105,7 @@ protected:
   llvm::StringRef GetLibdlFunctionDeclarations(lldb_private::Process *process);
 
 private:
-  PlatformPOSIX(const PlatformPOSIX &) = delete;
-  const PlatformPOSIX &operator=(const PlatformPOSIX &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformPOSIX);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H
+#endif // liblldb_PlatformPOSIX_h_

@@ -23,9 +23,6 @@ namespace abseil {
 class DurationDivisionCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
-  }
   void registerMatchers(ast_matchers::MatchFinder *finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &result) override;
 };

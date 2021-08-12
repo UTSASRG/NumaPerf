@@ -584,7 +584,7 @@ TEST(TripleTest, ParsedIDs) {
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
-  std::string Str = std::string(A);
+  std::string Str = A;
   Str += '-';
   Str += B;
   Str += '-';
@@ -593,7 +593,7 @@ static std::string Join(StringRef A, StringRef B, StringRef C) {
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C, StringRef D) {
-  std::string Str = std::string(A);
+  std::string Str = A;
   Str += '-';
   Str += B;
   Str += '-';

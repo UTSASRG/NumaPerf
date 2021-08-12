@@ -114,7 +114,7 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
       Stores.insert(&*I);
     Instruction &Inst = *I;
     if (auto *Call = dyn_cast<CallBase>(&Inst)) {
-      Value *Callee = Call->getCalledOperand();
+      Value *Callee = Call->getCalledValue();
       // Skip actual functions for direct function calls.
       if (!isa<Function>(Callee) && isInterestingPointer(Callee))
         Pointers.insert(Callee);

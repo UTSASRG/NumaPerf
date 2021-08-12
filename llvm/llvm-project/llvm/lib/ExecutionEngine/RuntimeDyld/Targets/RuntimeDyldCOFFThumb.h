@@ -48,7 +48,7 @@ class RuntimeDyldCOFFThumb : public RuntimeDyldCOFF {
 public:
   RuntimeDyldCOFFThumb(RuntimeDyld::MemoryManager &MM,
                        JITSymbolResolver &Resolver)
-      : RuntimeDyldCOFF(MM, Resolver, 4, COFF::IMAGE_REL_ARM_ADDR32) {}
+      : RuntimeDyldCOFF(MM, Resolver) {}
 
   unsigned getMaxStubSize() const override {
     return 16; // 8-byte load instructions, 4-byte jump, 4-byte padding
@@ -103,29 +103,16 @@ public:
                       << " RelType: " << RelTypeName << " TargetName: "
                       << TargetName << " Addend " << Addend << "\n");
 
-    bool IsExtern = Section == Obj.section_end();
     unsigned TargetSectionID = -1;
-    uint64_t TargetOffset = -1;
-
-    if (TargetName.startswith(getImportSymbolPrefix())) {
-      TargetSectionID = SectionID;
-      TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName, true);
-      TargetName = StringRef();
-      IsExtern = false;
-    } else if (!IsExtern) {
+    if (Section == Obj.section_end()) {
+      RelocationEntry RE(SectionID, Offset, RelType, 0, -1, 0, 0, 0, false, 0);
+      addRelocationForSymbol(RE, TargetName);
+    } else {
       if (auto TargetSectionIDOrErr =
           findOrEmitSection(Obj, *Section, Section->isText(), ObjSectionToID))
         TargetSectionID = *TargetSectionIDOrErr;
       else
         return TargetSectionIDOrErr.takeError();
-      if (RelType != COFF::IMAGE_REL_ARM_SECTION)
-        TargetOffset = getSymbolOffset(*Symbol);
-    }
-
-    if (IsExtern) {
-      RelocationEntry RE(SectionID, Offset, RelType, 0, -1, 0, 0, 0, false, 0);
-      addRelocationForSymbol(RE, TargetName);
-    } else {
 
       // We need to find out if the relocation is relative to a thumb function
       // so that we include the ISA selection bit when resolve the relocation
@@ -137,16 +124,16 @@ public:
         // This relocation is ignored.
         break;
       case COFF::IMAGE_REL_ARM_ADDR32: {
-        RelocationEntry RE =
-            RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
-                            TargetOffset, 0, 0, false, 0, IsTargetThumbFunc);
+        RelocationEntry RE = RelocationEntry(
+            SectionID, Offset, RelType, Addend, TargetSectionID,
+            getSymbolOffset(*Symbol), 0, 0, false, 0, IsTargetThumbFunc);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
       case COFF::IMAGE_REL_ARM_ADDR32NB: {
         RelocationEntry RE =
             RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
-                            TargetOffset, 0, 0, false, 0);
+                            getSymbolOffset(*Symbol), 0, 0, false, 0);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
@@ -157,23 +144,24 @@ public:
         break;
       }
       case COFF::IMAGE_REL_ARM_SECREL: {
-        RelocationEntry RE =
-            RelocationEntry(SectionID, Offset, RelType, TargetOffset + Addend);
+        RelocationEntry RE = RelocationEntry(SectionID, Offset, RelType,
+                                             getSymbolOffset(*Symbol) + Addend);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
       case COFF::IMAGE_REL_ARM_MOV32T: {
-        RelocationEntry RE =
-            RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
-                            TargetOffset, 0, 0, false, 0, IsTargetThumbFunc);
+        RelocationEntry RE = RelocationEntry(
+            SectionID, Offset, RelType, Addend, TargetSectionID,
+            getSymbolOffset(*Symbol), 0, 0, false, 0, IsTargetThumbFunc);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
       case COFF::IMAGE_REL_ARM_BRANCH20T:
       case COFF::IMAGE_REL_ARM_BRANCH24T:
       case COFF::IMAGE_REL_ARM_BLX23T: {
-        RelocationEntry RE = RelocationEntry(SectionID, Offset, RelType,
-                                             TargetOffset + Addend, true, 0);
+        RelocationEntry RE =
+            RelocationEntry(SectionID, Offset, RelType,
+                            getSymbolOffset(*Symbol) + Addend, true, 0);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
@@ -268,6 +256,7 @@ public:
       EncodeImmediate(&Target[0],
                       (static_cast<uint32_t>(Result) >> 00) | ISASelectionBit);
       EncodeImmediate(&Target[4], static_cast<uint32_t>(Result) >> 16);
+
       break;
     }
     case COFF::IMAGE_REL_ARM_BRANCH20T: {

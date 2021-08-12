@@ -189,7 +189,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
           Clang->getASTConsumer().GetASTDeserializationListener());
       if (!Reader)
         return nullptr;
-      Clang->setASTReader(Reader);
+      Clang->setModuleManager(Reader);
       Clang->getASTContext().setExternalSource(Reader);
     }
 

@@ -12,7 +12,7 @@
 
 // locale(const locale& other, const char* std_name, category cat);
 
-// REQUIRES: no-exceptions
+// REQUIRES: libcpp-no-exceptions
 
 // Make sure we abort() when we construct a locale with a null name and
 // exceptions are disabled.

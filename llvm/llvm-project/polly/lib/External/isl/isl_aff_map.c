@@ -132,15 +132,13 @@ __isl_give isl_basic_map *isl_basic_map_from_multi_aff2(
 	__isl_take isl_multi_aff *maff, int rational)
 {
 	int i;
-	isl_size dim;
 	isl_space *space;
 	isl_basic_map *bmap;
 
-	dim = isl_multi_aff_dim(maff, isl_dim_out);
-	if (dim < 0)
-		goto error;
+	if (!maff)
+		return NULL;
 
-	if (dim != maff->n)
+	if (isl_space_dim(maff->space, isl_dim_out) != maff->n)
 		isl_die(isl_multi_aff_get_ctx(maff), isl_error_internal,
 			"invalid space", goto error);
 
@@ -200,7 +198,7 @@ __isl_give isl_basic_set *isl_basic_set_from_multi_aff(
 {
 	if (check_input_is_set(isl_multi_aff_peek_space(ma)) < 0)
 		ma = isl_multi_aff_free(ma);
-	return bset_from_bmap(basic_map_from_multi_aff(ma));
+	return bset_from_bmap(isl_basic_map_from_multi_aff(ma));
 }
 
 /* Construct a map mapping the domain of the multi-affine expression
@@ -379,13 +377,11 @@ static __isl_give isl_map *map_from_multi_pw_aff(
 	__isl_take isl_multi_pw_aff *mpa)
 {
 	int i;
-	isl_size dim;
 	isl_space *space;
 	isl_map *map;
 
-	dim = isl_multi_pw_aff_dim(mpa, isl_dim_out);
-	if (dim < 0)
-		goto error;
+	if (!mpa)
+		return NULL;
 
 	if (isl_space_dim(mpa->space, isl_dim_out) != mpa->n)
 		isl_die(isl_multi_pw_aff_get_ctx(mpa), isl_error_internal,

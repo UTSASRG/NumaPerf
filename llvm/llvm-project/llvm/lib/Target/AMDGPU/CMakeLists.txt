@@ -15,12 +15,6 @@ tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUGISel.td)
 tablegen(LLVM AMDGPUGenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPUPreLegalizerCombinerHelper")
-tablegen(LLVM AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPUPostLegalizerCombinerHelper")
-tablegen(LLVM AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPURegBankCombinerHelper")
 
 set(LLVM_TARGET_DEFINITIONS R600.td)
 tablegen(LLVM R600GenAsmWriter.inc -gen-asm-writer)
@@ -44,7 +38,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUAtomicOptimizer.cpp
   AMDGPUCallLowering.cpp
   AMDGPUCodeGenPrepare.cpp
-  AMDGPUExportClustering.cpp
   AMDGPUFixFunctionBitcasts.cpp
   AMDGPUFrameLowering.cpp
   AMDGPUHSAMetadataStreamer.cpp
@@ -65,12 +58,10 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
-  AMDGPUPostLegalizerCombiner.cpp
-  AMDGPUPreLegalizerCombiner.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPUPropagateAttributes.cpp
-  AMDGPURegBankCombiner.cpp
   AMDGPURegisterBankInfo.cpp
+  AMDGPURegisterInfo.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
@@ -110,7 +101,6 @@ add_llvm_target(AMDGPUCodeGen
   SIFoldOperands.cpp
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
-  SIInsertHardClauses.cpp
   SIInsertSkips.cpp
   SIInsertWaitcnts.cpp
   SIInstrInfo.cpp
@@ -125,10 +115,7 @@ add_llvm_target(AMDGPUCodeGen
   SIOptimizeExecMasking.cpp
   SIOptimizeExecMaskingPreRA.cpp
   SIPeepholeSDWA.cpp
-  SIPostRABundler.cpp
-  SIPreEmitPeephole.cpp
   SIRegisterInfo.cpp
-  SIRemoveShortExecBranches.cpp
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp

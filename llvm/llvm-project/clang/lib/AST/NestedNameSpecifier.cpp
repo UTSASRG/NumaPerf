@@ -16,7 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -198,49 +197,75 @@ CXXRecordDecl *NestedNameSpecifier::getAsRecordDecl() const {
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-NestedNameSpecifierDependence NestedNameSpecifier::getDependence() const {
+/// Whether this nested name specifier refers to a dependent
+/// type or not.
+bool NestedNameSpecifier::isDependent() const {
   switch (getKind()) {
-  case Identifier: {
+  case Identifier:
     // Identifier specifiers always represent dependent types
-    auto F = NestedNameSpecifierDependence::Dependent |
-             NestedNameSpecifierDependence::Instantiation;
-    // Prefix can contain unexpanded template parameters.
-    if (getPrefix())
-      return F | getPrefix()->getDependence();
-    return F;
-  }
+    return true;
 
   case Namespace:
   case NamespaceAlias:
   case Global:
-    return NestedNameSpecifierDependence::None;
+    return false;
 
   case Super: {
     CXXRecordDecl *RD = static_cast<CXXRecordDecl *>(Specifier);
     for (const auto &Base : RD->bases())
       if (Base.getType()->isDependentType())
-        // FIXME: must also be instantiation-dependent.
-        return NestedNameSpecifierDependence::Dependent;
-    return NestedNameSpecifierDependence::None;
+        return true;
+
+    return false;
   }
 
   case TypeSpec:
   case TypeSpecWithTemplate:
-    return toNestedNameSpecifierDependendence(getAsType()->getDependence());
+    return getAsType()->isDependentType();
   }
+
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-bool NestedNameSpecifier::isDependent() const {
-  return getDependence() & NestedNameSpecifierDependence::Dependent;
-}
-
+/// Whether this nested name specifier refers to a dependent
+/// type or not.
 bool NestedNameSpecifier::isInstantiationDependent() const {
-  return getDependence() & NestedNameSpecifierDependence::Instantiation;
+  switch (getKind()) {
+  case Identifier:
+    // Identifier specifiers always represent dependent types
+    return true;
+
+  case Namespace:
+  case NamespaceAlias:
+  case Global:
+  case Super:
+    return false;
+
+  case TypeSpec:
+  case TypeSpecWithTemplate:
+    return getAsType()->isInstantiationDependentType();
+  }
+
+  llvm_unreachable("Invalid NNS Kind!");
 }
 
 bool NestedNameSpecifier::containsUnexpandedParameterPack() const {
-  return getDependence() & NestedNameSpecifierDependence::UnexpandedPack;
+  switch (getKind()) {
+  case Identifier:
+    return getPrefix() && getPrefix()->containsUnexpandedParameterPack();
+
+  case Namespace:
+  case NamespaceAlias:
+  case Global:
+  case Super:
+    return false;
+
+  case TypeSpec:
+  case TypeSpecWithTemplate:
+    return getAsType()->containsUnexpandedParameterPack();
+  }
+
+  llvm_unreachable("Invalid NNS Kind!");
 }
 
 /// Print this nested name specifier to the given output
@@ -310,14 +335,6 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
 
       // Print the template argument list.
       printTemplateArgumentList(OS, SpecType->template_arguments(),
-                                InnerPolicy);
-    } else if (const auto *DepSpecType =
-                   dyn_cast<DependentTemplateSpecializationType>(T)) {
-      // Print the template name without its corresponding
-      // nested-name-specifier.
-      OS << DepSpecType->getIdentifier()->getName();
-      // Print the template argument list.
-      printTemplateArgumentList(OS, DepSpecType->template_arguments(),
                                 InnerPolicy);
     } else {
       // Print the type normally
@@ -464,14 +481,12 @@ static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
     unsigned NewCapacity = std::max(
         (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
         (unsigned)(BufferSize + (End - Start)));
-    if (!BufferCapacity) {
-      char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
-      if (Buffer)
-        memcpy(NewBuffer, Buffer, BufferSize);
-      Buffer = NewBuffer;
-    } else {
-      Buffer = static_cast<char *>(llvm::safe_realloc(Buffer, NewCapacity));
+    char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
+    if (BufferCapacity) {
+      memcpy(NewBuffer, Buffer, BufferSize);
+      free(Buffer);
     }
+    Buffer = NewBuffer;
     BufferCapacity = NewCapacity;
   }
   assert(Buffer && Start && End && End > Start && "Illegal memory buffer copy");

@@ -18,8 +18,6 @@
 
 #include "amdgcn_interface.h"
 
-#include <assert.h>
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -129,8 +127,6 @@ INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
 INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
-DEVICE unsigned GetWarpId();
-DEVICE unsigned GetLaneId();
 
 DEVICE bool __kmpc_impl_is_first_active_thread();
 
@@ -146,9 +142,11 @@ DEVICE void *__kmpc_impl_malloc(size_t x);
 DEVICE void __kmpc_impl_free(void *x);
 
 // DEVICE versions of part of libc
-INLINE void __assert_fail(const char *, const char *, unsigned int,
-                          const char *) {
-  __builtin_trap();
+EXTERN __attribute__((noreturn)) void
+__assertfail(const char *, const char *, unsigned, const char *, size_t);
+INLINE void __assert_fail(const char *__message, const char *__file,
+                          unsigned int __line, const char *__function) {
+  __assertfail(__message, __file, __line, __function, sizeof(char));
 }
 EXTERN int printf(const char *, ...);
 

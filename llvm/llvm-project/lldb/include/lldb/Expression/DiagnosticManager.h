@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_DIAGNOSTICMANAGER_H
-#define LLDB_EXPRESSION_DIAGNOSTICMANAGER_H
+#ifndef lldb_DiagnosticManager_h
+#define lldb_DiagnosticManager_h
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
@@ -78,7 +78,7 @@ public:
                      bool precede_with_newline = true) {
     if (precede_with_newline)
       m_message.push_back('\n');
-    m_message += message;
+    m_message.append(message);
   }
 
 protected:
@@ -148,4 +148,4 @@ protected:
 };
 }
 
-#endif // LLDB_EXPRESSION_DIAGNOSTICMANAGER_H
+#endif /* lldb_DiagnosticManager_h */

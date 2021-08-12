@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -15,7 +15,6 @@
 #include <span>
 #include <cassert>
 #include <string>
-#include <type_traits>
 
 #include "test_macros.h"
 
@@ -80,9 +79,5 @@ int main(int, char**)
 
     checkCV();
 
-    static_assert( std::is_default_constructible_v<std::span<int, std::dynamic_extent>>, "");
-    static_assert( std::is_default_constructible_v<std::span<int, 0>>, "");
-    static_assert(!std::is_default_constructible_v<std::span<int, 2>>, "");
-
-    return 0;
+  return 0;
 }

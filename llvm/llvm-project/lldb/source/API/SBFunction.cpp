@@ -1,4 +1,4 @@
-//===-- SBFunction.cpp ----------------------------------------------------===//
+//===-- SBFunction.cpp ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,7 +69,9 @@ const char *SBFunction::GetDisplayName() const {
 
   const char *cstr = nullptr;
   if (m_opaque_ptr)
-    cstr = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
+    cstr = m_opaque_ptr->GetMangled()
+               .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
+               .AsCString();
 
   return cstr;
 }
@@ -126,15 +128,20 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
 
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
+    ExecutionContext exe_ctx;
     TargetSP target_sp(target.GetSP());
     std::unique_lock<std::recursive_mutex> lock;
+    if (target_sp) {
+      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+      target_sp->CalculateExecutionContext(exe_ctx);
+      exe_ctx.SetProcessSP(target_sp->GetProcessSP());
+    }
     ModuleSP module_sp(
         m_opaque_ptr->GetAddressRange().GetBaseAddress().GetModule());
-    if (target_sp && module_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    if (module_sp) {
       const bool prefer_file_cache = false;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          module_sp->GetArchitecture(), nullptr, flavor, *target_sp,
+          module_sp->GetArchitecture(), nullptr, flavor, exe_ctx,
           m_opaque_ptr->GetAddressRange(), prefer_file_cache));
     }
   }

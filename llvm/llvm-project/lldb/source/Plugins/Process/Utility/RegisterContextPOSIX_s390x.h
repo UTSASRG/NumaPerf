@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_S390X_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_S390X_H
+#ifndef liblldb_RegisterContextPOSIX_s390x_h_
+#define liblldb_RegisterContextPOSIX_s390x_h_
 
 #include "RegisterContext_s390x.h"
 #include "RegisterInfoInterface.h"
@@ -76,4 +76,4 @@ protected:
   virtual bool WriteFPR() = 0;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_S390X_H
+#endif // liblldb_RegisterContextPOSIX_s390x_h_

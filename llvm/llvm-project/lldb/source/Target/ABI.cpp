@@ -1,4 +1,4 @@
-//===-- ABI.cpp -----------------------------------------------------------===//
+//===-- ABI.cpp -------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/TargetRegistry.h"
-#include <cctype>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,27 +41,20 @@ ABI::FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch) {
 
 ABI::~ABI() = default;
 
-bool RegInfoBasedABI::GetRegisterInfoByName(ConstString name, RegisterInfo &info) {
+bool ABI::GetRegisterInfoByName(ConstString name, RegisterInfo &info) {
   uint32_t count = 0;
   const RegisterInfo *register_info_array = GetRegisterInfoArray(count);
   if (register_info_array) {
     const char *unique_name_cstr = name.GetCString();
     uint32_t i;
     for (i = 0; i < count; ++i) {
-      const char *reg_name = register_info_array[i].name;
-      assert(ConstString(reg_name).GetCString() == reg_name &&
-             "register_info_array[i].name not from a ConstString?");
-      if (reg_name == unique_name_cstr) {
+      if (register_info_array[i].name == unique_name_cstr) {
         info = register_info_array[i];
         return true;
       }
     }
     for (i = 0; i < count; ++i) {
-      const char *reg_alt_name = register_info_array[i].alt_name;
-      assert((reg_alt_name == nullptr ||
-              ConstString(reg_alt_name).GetCString() == reg_alt_name) &&
-             "register_info_array[i].alt_name not from a ConstString?");
-      if (reg_alt_name == unique_name_cstr) {
+      if (register_info_array[i].alt_name == unique_name_cstr) {
         info = register_info_array[i];
         return true;
       }
@@ -97,8 +89,10 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
     if (!persistent_expression_state)
       return {};
 
+    auto prefix = persistent_expression_state->GetPersistentVariablePrefix();
     ConstString persistent_variable_name =
-        persistent_expression_state->GetNextPersistentVariableName();
+        persistent_expression_state->GetNextPersistentVariableName(target,
+                                                                   prefix);
 
     lldb::ValueObjectSP const_valobj_sp;
 
@@ -218,7 +212,7 @@ std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &ar
   return info_up;
 }
 
-void RegInfoBasedABI::AugmentRegisterInfo(RegisterInfo &info) {
+void ABI::AugmentRegisterInfo(RegisterInfo &info) {
   if (info.kinds[eRegisterKindEHFrame] != LLDB_INVALID_REGNUM &&
       info.kinds[eRegisterKindDWARF] != LLDB_INVALID_REGNUM)
     return;
@@ -233,45 +227,4 @@ void RegInfoBasedABI::AugmentRegisterInfo(RegisterInfo &info) {
     info.kinds[eRegisterKindDWARF] = abi_info.kinds[eRegisterKindDWARF];
   if (info.kinds[eRegisterKindGeneric] == LLDB_INVALID_REGNUM)
     info.kinds[eRegisterKindGeneric] = abi_info.kinds[eRegisterKindGeneric];
-}
-
-void MCBasedABI::AugmentRegisterInfo(RegisterInfo &info) {
-  uint32_t eh, dwarf;
-  std::tie(eh, dwarf) = GetEHAndDWARFNums(info.name);
-
-  if (info.kinds[eRegisterKindEHFrame] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindEHFrame] = eh;
-  if (info.kinds[eRegisterKindDWARF] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindDWARF] = dwarf;
-  if (info.kinds[eRegisterKindGeneric] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindGeneric] = GetGenericNum(info.name);
-}
-
-std::pair<uint32_t, uint32_t>
-MCBasedABI::GetEHAndDWARFNums(llvm::StringRef name) {
-  std::string mc_name = GetMCName(name.str());
-  for (char &c : mc_name)
-    c = std::toupper(c);
-  int eh = -1;
-  int dwarf = -1;
-  for (unsigned reg = 0; reg < m_mc_register_info_up->getNumRegs(); ++reg) {
-    if (m_mc_register_info_up->getName(reg) == mc_name) {
-      eh = m_mc_register_info_up->getDwarfRegNum(reg, /*isEH=*/true);
-      dwarf = m_mc_register_info_up->getDwarfRegNum(reg, /*isEH=*/false);
-      break;
-    }
-  }
-  return std::pair<uint32_t, uint32_t>(eh == -1 ? LLDB_INVALID_REGNUM : eh,
-                                       dwarf == -1 ? LLDB_INVALID_REGNUM
-                                                   : dwarf);
-}
-
-void MCBasedABI::MapRegisterName(std::string &name, llvm::StringRef from_prefix,
-                                 llvm::StringRef to_prefix) {
-  llvm::StringRef name_ref = name;
-  if (!name_ref.consume_front(from_prefix))
-    return;
-  uint64_t _;
-  if (name_ref.empty() || to_integer(name_ref, _, 10))
-    name = (to_prefix + name_ref).str();
 }

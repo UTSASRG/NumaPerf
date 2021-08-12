@@ -94,7 +94,7 @@ void InefficientVectorOperationCheck::AddMatcher(
   const auto TargetVarDecl =
       varDecl(hasInitializer(DefaultConstructorCall)).bind(VarDeclName);
   const auto TargetVarDefStmt =
-      declStmt(hasSingleDecl(equalsBoundNode(std::string(VarDeclName))))
+      declStmt(hasSingleDecl(equalsBoundNode(VarDeclName)))
           .bind(VarDeclStmtName);
 
   const auto AppendCallExpr =
@@ -253,7 +253,7 @@ void InefficientVectorOperationCheck::check(
     StringRef LoopEndSource = Lexer::getSourceText(
         CharSourceRange::getTokenRange(LoopEndExpr->getSourceRange()), SM,
         Context->getLangOpts());
-    ReserveSize = std::string(LoopEndSource);
+    ReserveSize = LoopEndSource;
   }
 
   auto Diag = diag(AppendCall->getBeginLoc(),

@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // type_traits
+// XFAIL: apple-clang-6.0
+//  The Apple-6 compiler gets is_constructible<void ()> wrong.
 
 // template <class T, class... Args>
 //   struct is_constructible;
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE
-
+// MODULES_DEFINES: _LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE
+#define _LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE
 #include <type_traits>
 #include "test_macros.h"
 

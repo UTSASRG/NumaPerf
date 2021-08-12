@@ -18,14 +18,14 @@ endforeach()
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
 set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
 
-if(lldb_vc AND LLVM_APPEND_VC_REV)
+if(lldb_vc)
   set(lldb_source_dir ${LLDB_SOURCE_DIR})
 endif()
 
 add_custom_command(OUTPUT "${version_inc}"
   DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
   COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
-                           "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
+                           "-DLLDB_SOURCE_DIR=${LLDB_SOURCE_DIR}"
                            "-DHEADER_FILE=${version_inc}"
                            -P "${generate_vcs_version_script}")
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTIMPL_H
-#define LLDB_CORE_VALUEOBJECTCONSTRESULTIMPL_H
+#ifndef liblldb_ValueObjectConstResultImpl_h_
+#define liblldb_ValueObjectConstResultImpl_h_
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
@@ -71,11 +71,9 @@ private:
   lldb::ValueObjectSP m_load_addr_backend;
   lldb::ValueObjectSP m_address_of_backend;
 
-  ValueObjectConstResultImpl(const ValueObjectConstResultImpl &) = delete;
-  const ValueObjectConstResultImpl &
-  operator=(const ValueObjectConstResultImpl &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResultImpl);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_VALUEOBJECTCONSTRESULTIMPL_H
+#endif // liblldb_ValueObjectConstResultImpl_h_

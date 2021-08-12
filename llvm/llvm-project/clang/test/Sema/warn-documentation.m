@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -Wno-objc-root-class -Wdocumentation -Wdocumentation-pedantic -verify %s
-// RUN: %clang_cc1 -xobjective-c++ -fsyntax-only -fblocks -Wno-objc-root-class -Wdocumentation -Wdocumentation-pedantic -verify %s
 
 @class NSString;
 
@@ -319,10 +318,3 @@ VoidBlockTypeCall *d; ///< \return none
 // expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
 VoidBlockTypeCall ^e; ///< \return none
 // expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
-
-#ifdef __cplusplus
-@interface HasAnonNamespace @end
-@implementation HasAnonNamespace
-namespace {}
-@end
-#endif

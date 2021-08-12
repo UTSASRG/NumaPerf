@@ -17,7 +17,6 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -139,19 +138,8 @@ void DeclarationName::print(raw_ostream &OS,
                             const PrintingPolicy &Policy) const {
   switch (getNameKind()) {
   case DeclarationName::Identifier:
-    if (const IdentifierInfo *II = getAsIdentifierInfo()) {
-      StringRef Name = II->getName();
-      // If this is a mangled OpenMP variant name we strip off the mangling for
-      // printing. It should not be visible to the user at all.
-      if (II->isMangledOpenMPVariantName()) {
-        std::pair<StringRef, StringRef> NameContextPair =
-            Name.split(getOpenMPVariantManglingSeparatorStr());
-        OS << NameContextPair.first << "["
-           << OMPTraitInfo(NameContextPair.second) << "]";
-      } else {
-        OS << Name;
-      }
-    }
+    if (const IdentifierInfo *II = getAsIdentifierInfo())
+      OS << II->getName();
     return;
 
   case DeclarationName::ObjCZeroArgSelector:

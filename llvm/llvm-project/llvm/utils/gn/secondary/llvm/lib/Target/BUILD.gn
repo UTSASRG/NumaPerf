@@ -47,7 +47,9 @@ static_library("Target") {
 
 # 2. Forwarding targets.
 group("NativeTarget") {
-  deps = [ "$native_target" ]
+  deps = [
+    "$native_target",
+  ]
 }
 
 group("TargetsToBuild") {

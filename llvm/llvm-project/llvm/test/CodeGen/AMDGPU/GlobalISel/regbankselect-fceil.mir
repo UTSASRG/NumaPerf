@@ -11,8 +11,7 @@ body: |
     liveins: $sgpr0
     ; CHECK-LABEL: name: fceil_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[FCEIL:%[0-9]+]]:vgpr(s32) = G_FCEIL [[COPY1]]
+    ; CHECK: [[FCEIL_:%[0-9]+]]:vgpr(s32) = G_FCEIL [[COPY]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_FCEIL %0
 ...
@@ -26,7 +25,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: fceil_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[FCEIL:%[0-9]+]]:vgpr(s32) = G_FCEIL [[COPY]]
+    ; CHECK: [[FCEIL_:%[0-9]+]]:vgpr(s32) = G_FCEIL [[COPY]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FCEIL %0
 ...

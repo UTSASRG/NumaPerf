@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBERROR_H
-#define LLDB_API_SBERROR_H
+#ifndef LLDB_SBError_h_
+#define LLDB_SBError_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -90,4 +90,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBERROR_H
+#endif // LLDB_SBError_h_

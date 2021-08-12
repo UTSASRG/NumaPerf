@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_REGULAREXPRESSION_H
-#define LLDB_UTILITY_REGULAREXPRESSION_H
+#ifndef liblldb_RegularExpression_h_
+#define liblldb_RegularExpression_h_
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -91,4 +91,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_REGULAREXPRESSION_H
+#endif // liblldb_RegularExpression_h_

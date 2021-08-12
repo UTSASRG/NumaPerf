@@ -27,7 +27,10 @@ class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
+class StringRef;
 class Target;
+class Triple;
+class raw_pwrite_stream;
 
 MCInstrInfo *createAVRMCInstrInfo();
 

@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
+#ifndef liblldb_PlatformRemoteGDBServer_h_
+#define liblldb_PlatformRemoteGDBServer_h_
 
 #include <string>
 
-#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationReplayServer.h"
+#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "lldb/Target/Platform.h"
 
 namespace lldb_private {
@@ -165,7 +164,6 @@ public:
 
 protected:
   process_gdb_remote::GDBRemoteCommunicationClient m_gdb_client;
-  process_gdb_remote::GDBRemoteCommunicationReplayServer m_gdb_replay_server;
   std::string m_platform_description; // After we connect we can get a more
                                       // complete description of what we are
                                       // connected to
@@ -194,12 +192,10 @@ private:
   llvm::Optional<std::string> DoGetUserName(UserIDResolver::id_t uid) override;
   llvm::Optional<std::string> DoGetGroupName(UserIDResolver::id_t uid) override;
 
-  PlatformRemoteGDBServer(const PlatformRemoteGDBServer &) = delete;
-  const PlatformRemoteGDBServer &
-  operator=(const PlatformRemoteGDBServer &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteGDBServer);
 };
 
 } // namespace platform_gdb_server
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
+#endif // liblldb_PlatformRemoteGDBServer_h_

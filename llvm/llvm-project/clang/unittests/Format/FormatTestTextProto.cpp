@@ -199,7 +199,7 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "field_c: {}");
 
   verifyFormat("field_a < field_b: 1 >,\n"
-               "msg_fid: < fiel_b: 123 >,\n"
+               "msg_fid: < fiel_b: 123 >,\n" 
                "field_c <>");
 
   verifyFormat("field_a < field_b: 1 >\n"
@@ -450,16 +450,14 @@ TEST_F(FormatTestTextProto, FormatsExtensions) {
                " bbbbbbbbbbbbbb] { key: value }");
   // These go over the column limit intentionally, since the alternative
   // [aa..a\n] is worse.
-  verifyFormat(
-      "[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] {\n"
-      "  key: value\n"
-      "}");
-  verifyFormat(
-      "[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] {\n"
-      "  [type.type] {\n"
-      "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
-      "  }\n"
-      "}");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] {\n"
+               "  key: value\n"
+               "}");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] {\n"
+               "  [type.type] {\n"
+               "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
+               "  }\n"
+               "}");
   verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/\n"
                " bbbbbbb] {\n"
                "  [type.type] {\n"
@@ -519,7 +517,8 @@ TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {
                "    'long'\n"
                "  ]\n"
                "}\n"
-               "key: value");
+               "key: value"
+               );
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
   Style.ColumnLimit = 60; // To make writing tests easier.
   Style.Cpp11BracedListStyle = true;
@@ -556,8 +555,7 @@ TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
                "    key: value\n"
                "    key: value\n"
                "  }\n"
-               "}",
-               Style);
+               "}", Style);
 }
 
 TEST_F(FormatTestTextProto, BreaksAfterBraceFollowedByClosingBraceOnNextLine) {
@@ -736,5 +734,5 @@ TEST_F(FormatTestTextProto, KeepsAmpersandsNextToKeys) {
                "}");
 }
 
-} // namespace format
+} // end namespace tooling
 } // end namespace clang

@@ -8,7 +8,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(LLVMFrontendTests
-  OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp
   )
 

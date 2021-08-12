@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-class SystemZFeature<string extname, string intname, dag featdag, string desc>
-  : Predicate<"Subtarget->has"#intname#"()">,
-    AssemblerPredicate<featdag, extname>,
-    SubtargetFeature<extname, "Has"#intname, "true", desc>;
+class SystemZFeature<string extname, string intname, string desc>
+  : Predicate<"Subtarget->has"##intname##"()">,
+    AssemblerPredicate<"Feature"##intname, extname>,
+    SubtargetFeature<extname, "Has"##intname, "true", desc>;
 
 class SystemZMissingFeature<string intname>
-  : Predicate<"!Subtarget->has"#intname#"()">;
+  : Predicate<"!Subtarget->has"##intname##"()">;
 
 class SystemZFeatureList<list<SystemZFeature> x> {
   list<SystemZFeature> List = x;
@@ -25,13 +25,6 @@ class SystemZFeatureList<list<SystemZFeature> x> {
 class SystemZFeatureAdd<list<SystemZFeature> x, list<SystemZFeature> y>
   : SystemZFeatureList<!listconcat(x, y)>;
 
-// This feature is added as a subtarget feature whenever the function is
-// compiled to use soft-float.
-def FeatureSoftFloat : SystemZFeature<
-  "soft-float", "SoftFloat", (all_of FeatureSoftFloat),
-  "Use software emulation for floating point"
->;
-
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture
@@ -39,54 +32,54 @@ def FeatureSoftFloat : SystemZFeature<
 //===----------------------------------------------------------------------===//
 
 def FeatureDistinctOps : SystemZFeature<
-  "distinct-ops", "DistinctOps", (all_of FeatureDistinctOps),
+  "distinct-ops", "DistinctOps",
   "Assume that the distinct-operands facility is installed"
 >;
 
 def FeatureFastSerialization : SystemZFeature<
-  "fast-serialization", "FastSerialization", (all_of FeatureFastSerialization),
+  "fast-serialization", "FastSerialization",
   "Assume that the fast-serialization facility is installed"
 >;
 
 def FeatureFPExtension : SystemZFeature<
-  "fp-extension", "FPExtension", (all_of FeatureFPExtension),
+  "fp-extension", "FPExtension",
   "Assume that the floating-point extension facility is installed"
 >;
 
 def FeatureHighWord : SystemZFeature<
-  "high-word", "HighWord", (all_of FeatureHighWord),
+  "high-word", "HighWord",
   "Assume that the high-word facility is installed"
 >;
 
 def FeatureInterlockedAccess1 : SystemZFeature<
-  "interlocked-access1", "InterlockedAccess1", (all_of FeatureInterlockedAccess1),
+  "interlocked-access1", "InterlockedAccess1",
   "Assume that interlocked-access facility 1 is installed"
 >;
 def FeatureNoInterlockedAccess1 : SystemZMissingFeature<"InterlockedAccess1">;
 
 def FeatureLoadStoreOnCond : SystemZFeature<
-  "load-store-on-cond", "LoadStoreOnCond", (all_of FeatureLoadStoreOnCond),
+  "load-store-on-cond", "LoadStoreOnCond",
   "Assume that the load/store-on-condition facility is installed"
 >;
 def FeatureNoLoadStoreOnCond : SystemZMissingFeature<"LoadStoreOnCond">;
 
 def FeaturePopulationCount : SystemZFeature<
-  "population-count", "PopulationCount", (all_of FeaturePopulationCount),
+  "population-count", "PopulationCount",
   "Assume that the population-count facility is installed"
 >;
 
 def FeatureMessageSecurityAssist3 : SystemZFeature<
-  "message-security-assist-extension3", "MessageSecurityAssist3", (all_of FeatureMessageSecurityAssist3),
+  "message-security-assist-extension3", "MessageSecurityAssist3",
   "Assume that the message-security-assist extension facility 3 is installed"
 >;
 
 def FeatureMessageSecurityAssist4 : SystemZFeature<
-  "message-security-assist-extension4", "MessageSecurityAssist4", (all_of FeatureMessageSecurityAssist4),
+  "message-security-assist-extension4", "MessageSecurityAssist4",
   "Assume that the message-security-assist extension facility 4 is installed"
 >;
 
 def FeatureResetReferenceBitsMultiple : SystemZFeature<
-  "reset-reference-bits-multiple", "ResetReferenceBitsMultiple", (all_of FeatureResetReferenceBitsMultiple),
+  "reset-reference-bits-multiple", "ResetReferenceBitsMultiple",
   "Assume that the reset-reference-bits-multiple facility is installed"
 >;
 
@@ -110,37 +103,37 @@ def Arch9NewFeatures : SystemZFeatureList<[
 //===----------------------------------------------------------------------===//
 
 def FeatureExecutionHint : SystemZFeature<
-  "execution-hint", "ExecutionHint", (all_of FeatureExecutionHint),
+  "execution-hint", "ExecutionHint",
   "Assume that the execution-hint facility is installed"
 >;
 
 def FeatureLoadAndTrap : SystemZFeature<
-  "load-and-trap", "LoadAndTrap", (all_of FeatureLoadAndTrap),
+  "load-and-trap", "LoadAndTrap",
   "Assume that the load-and-trap facility is installed"
 >;
 
 def FeatureMiscellaneousExtensions : SystemZFeature<
-  "miscellaneous-extensions", "MiscellaneousExtensions", (all_of FeatureMiscellaneousExtensions),
+  "miscellaneous-extensions", "MiscellaneousExtensions",
   "Assume that the miscellaneous-extensions facility is installed"
 >;
 
 def FeatureProcessorAssist : SystemZFeature<
-  "processor-assist", "ProcessorAssist", (all_of FeatureProcessorAssist),
+  "processor-assist", "ProcessorAssist",
   "Assume that the processor-assist facility is installed"
 >;
 
 def FeatureTransactionalExecution : SystemZFeature<
-  "transactional-execution", "TransactionalExecution", (all_of FeatureTransactionalExecution),
+  "transactional-execution", "TransactionalExecution",
   "Assume that the transactional-execution facility is installed"
 >;
 
 def FeatureDFPZonedConversion : SystemZFeature<
-  "dfp-zoned-conversion", "DFPZonedConversion", (all_of FeatureDFPZonedConversion),
+  "dfp-zoned-conversion", "DFPZonedConversion",
   "Assume that the DFP zoned-conversion facility is installed"
 >;
 
 def FeatureEnhancedDAT2 : SystemZFeature<
-  "enhanced-dat-2", "EnhancedDAT2", (all_of FeatureEnhancedDAT2),
+  "enhanced-dat-2", "EnhancedDAT2",
   "Assume that the enhanced-DAT facility 2 is installed"
 >;
 
@@ -161,27 +154,27 @@ def Arch10NewFeatures : SystemZFeatureList<[
 //===----------------------------------------------------------------------===//
 
 def FeatureLoadAndZeroRightmostByte : SystemZFeature<
-  "load-and-zero-rightmost-byte", "LoadAndZeroRightmostByte", (all_of FeatureLoadAndZeroRightmostByte),
+  "load-and-zero-rightmost-byte", "LoadAndZeroRightmostByte",
   "Assume that the load-and-zero-rightmost-byte facility is installed"
 >;
 
 def FeatureLoadStoreOnCond2 : SystemZFeature<
-  "load-store-on-cond-2", "LoadStoreOnCond2", (all_of FeatureLoadStoreOnCond2),
+  "load-store-on-cond-2", "LoadStoreOnCond2",
   "Assume that the load/store-on-condition facility 2 is installed"
 >;
 
 def FeatureMessageSecurityAssist5 : SystemZFeature<
-  "message-security-assist-extension5", "MessageSecurityAssist5", (all_of FeatureMessageSecurityAssist5),
+  "message-security-assist-extension5", "MessageSecurityAssist5",
   "Assume that the message-security-assist extension facility 5 is installed"
 >;
 
 def FeatureDFPPackedConversion : SystemZFeature<
-  "dfp-packed-conversion", "DFPPackedConversion", (all_of FeatureDFPPackedConversion),
+  "dfp-packed-conversion", "DFPPackedConversion",
   "Assume that the DFP packed-conversion facility is installed"
 >;
 
 def FeatureVector : SystemZFeature<
-  "vector", "Vector", (all_of FeatureVector),
+  "vector", "Vector",
   "Assume that the vectory facility is installed"
 >;
 def FeatureNoVector : SystemZMissingFeature<"Vector">;
@@ -201,38 +194,38 @@ def Arch11NewFeatures : SystemZFeatureList<[
 //===----------------------------------------------------------------------===//
 
 def FeatureMiscellaneousExtensions2 : SystemZFeature<
-  "miscellaneous-extensions-2", "MiscellaneousExtensions2", (all_of FeatureMiscellaneousExtensions2),
+  "miscellaneous-extensions-2", "MiscellaneousExtensions2",
   "Assume that the miscellaneous-extensions facility 2 is installed"
 >;
 
 def FeatureGuardedStorage : SystemZFeature<
-  "guarded-storage", "GuardedStorage", (all_of FeatureGuardedStorage),
+  "guarded-storage", "GuardedStorage",
   "Assume that the guarded-storage facility is installed"
 >;
 
 def FeatureMessageSecurityAssist7 : SystemZFeature<
-  "message-security-assist-extension7", "MessageSecurityAssist7", (all_of FeatureMessageSecurityAssist7),
+  "message-security-assist-extension7", "MessageSecurityAssist7",
   "Assume that the message-security-assist extension facility 7 is installed"
 >;
 
 def FeatureMessageSecurityAssist8 : SystemZFeature<
-  "message-security-assist-extension8", "MessageSecurityAssist8", (all_of FeatureMessageSecurityAssist8),
+  "message-security-assist-extension8", "MessageSecurityAssist8",
   "Assume that the message-security-assist extension facility 8 is installed"
 >;
 
 def FeatureVectorEnhancements1 : SystemZFeature<
-  "vector-enhancements-1", "VectorEnhancements1", (all_of FeatureVectorEnhancements1),
+  "vector-enhancements-1", "VectorEnhancements1",
   "Assume that the vector enhancements facility 1 is installed"
 >;
 def FeatureNoVectorEnhancements1 : SystemZMissingFeature<"VectorEnhancements1">;
 
 def FeatureVectorPackedDecimal : SystemZFeature<
-  "vector-packed-decimal", "VectorPackedDecimal", (all_of FeatureVectorPackedDecimal),
+  "vector-packed-decimal", "VectorPackedDecimal",
   "Assume that the vector packed decimal facility is installed"
 >;
 
 def FeatureInsertReferenceBitsMultiple : SystemZFeature<
-  "insert-reference-bits-multiple", "InsertReferenceBitsMultiple", (all_of FeatureInsertReferenceBitsMultiple),
+  "insert-reference-bits-multiple", "InsertReferenceBitsMultiple",
   "Assume that the insert-reference-bits-multiple facility is installed"
 >;
 
@@ -253,32 +246,32 @@ def Arch12NewFeatures : SystemZFeatureList<[
 //===----------------------------------------------------------------------===//
 
 def FeatureMiscellaneousExtensions3 : SystemZFeature<
-  "miscellaneous-extensions-3", "MiscellaneousExtensions3", (all_of FeatureMiscellaneousExtensions3),
+  "miscellaneous-extensions-3", "MiscellaneousExtensions3",
   "Assume that the miscellaneous-extensions facility 3 is installed"
 >;
 
 def FeatureMessageSecurityAssist9 : SystemZFeature<
-  "message-security-assist-extension9", "MessageSecurityAssist9", (all_of FeatureMessageSecurityAssist9),
+  "message-security-assist-extension9", "MessageSecurityAssist9",
   "Assume that the message-security-assist extension facility 9 is installed"
 >;
 
 def FeatureVectorEnhancements2 : SystemZFeature<
-  "vector-enhancements-2", "VectorEnhancements2", (all_of FeatureVectorEnhancements2),
+  "vector-enhancements-2", "VectorEnhancements2",
   "Assume that the vector enhancements facility 2 is installed"
 >;
 
 def FeatureVectorPackedDecimalEnhancement : SystemZFeature<
-  "vector-packed-decimal-enhancement", "VectorPackedDecimalEnhancement", (all_of FeatureVectorPackedDecimalEnhancement),
+  "vector-packed-decimal-enhancement", "VectorPackedDecimalEnhancement",
   "Assume that the vector packed decimal enhancement facility is installed"
 >;
 
 def FeatureEnhancedSort : SystemZFeature<
-  "enhanced-sort", "EnhancedSort", (all_of FeatureEnhancedSort),
+  "enhanced-sort", "EnhancedSort",
   "Assume that the enhanced-sort facility is installed"
 >;
 
 def FeatureDeflateConversion : SystemZFeature<
-  "deflate-conversion", "DeflateConversion", (all_of FeatureDeflateConversion),
+  "deflate-conversion", "DeflateConversion",
   "Assume that the deflate-conversion facility is installed"
 >;
 

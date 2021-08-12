@@ -157,10 +157,6 @@ public:
 
   const llvm::APSInt &Convert(QualType T, const llvm::APSInt &From) {
     APSIntType TargetType = getAPSIntType(T);
-    return Convert(TargetType, From);
-  }
-
-  const llvm::APSInt &Convert(APSIntType TargetType, const llvm::APSInt &From) {
     if (TargetType == APSIntType(From))
       return From;
 
@@ -181,19 +177,11 @@ public:
   }
 
   const llvm::APSInt &getMaxValue(QualType T) {
-    return getMaxValue(getAPSIntType(T));
+    return getValue(getAPSIntType(T).getMaxValue());
   }
 
   const llvm::APSInt &getMinValue(QualType T) {
-    return getMinValue(getAPSIntType(T));
-  }
-
-  const llvm::APSInt &getMaxValue(APSIntType T) {
-    return getValue(T.getMaxValue());
-  }
-
-  const llvm::APSInt &getMinValue(APSIntType T) {
-    return getValue(T.getMinValue());
+    return getValue(getAPSIntType(T).getMinValue());
   }
 
   const llvm::APSInt &Add1(const llvm::APSInt &V) {

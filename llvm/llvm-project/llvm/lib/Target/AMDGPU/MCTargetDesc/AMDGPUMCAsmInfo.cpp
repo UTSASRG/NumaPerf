@@ -43,9 +43,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   WeakRefDirective = ".weakref\t";
   //===--- Dwarf Emission Directives -----------------------------------===//
   SupportsDebugInformation = true;
-  DwarfRegNumForCFI = true;
-
-  UseIntegratedAssembler = false;
 }
 
 bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {

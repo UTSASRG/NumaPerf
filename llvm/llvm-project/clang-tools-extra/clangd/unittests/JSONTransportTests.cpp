@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "Protocol.h"
 #include "Transport.h"
-#include "support/Cancellation.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstdio>
@@ -71,9 +70,6 @@ public:
     if (Method == "err")
       Target.reply(
           ID, llvm::make_error<LSPError>("trouble at mill", ErrorCode(88)));
-    else if (Method == "invalidated") // gone out skew on treadle
-      Target.reply(ID, llvm::make_error<CancelledError>(
-                           static_cast<int>(ErrorCode::ContentModified)));
     else
       Target.reply(ID, std::move(Params));
     return true;
@@ -144,7 +140,7 @@ TEST_F(JSONTransportTest, DelimitedPretty) {
 ---
 {"jsonrpc": "2.0", "id": "xyz", "error": {"code": 99, "message": "bad!"}}
 ---
-{"jsonrpc": "2.0", "method": "invalidated", "id": "wxyz", "params": "boom!"}
+{"jsonrpc": "2.0", "method": "err", "id": "wxyz", "params": "boom!"}
 ---
 {"jsonrpc": "2.0", "method": "exit"}
   )jsonrpc",
@@ -158,7 +154,7 @@ Notification call: 1234
 Reply(1234): 5678
 Call foo("abcd"): "efgh"
 Reply("xyz"): error = 99: bad!
-Call invalidated("wxyz"): "boom!"
+Call err("wxyz"): "boom!"
 Notification exit: null
   )";
   EXPECT_EQ(trim(E.log()), trim(WantLog));
@@ -175,11 +171,11 @@ Notification exit: null
   "jsonrpc": "2.0",
   "result": "efgh"
 })"
-                           "Content-Length: 145\r\n\r\n"
+                           "Content-Length: 105\r\n\r\n"
                            R"({
   "error": {
-    "code": -32801,
-    "message": "Request cancelled because the document was modified"
+    "code": 88,
+    "message": "trouble at mill"
   },
   "id": "wxyz",
   "jsonrpc": "2.0"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABI_ITANIUMABILANGUAGERUNTIME_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABI_ITANIUMABILANGUAGERUNTIME_H
+#ifndef liblldb_ItaniumABILanguageRuntime_h_
+#define liblldb_ItaniumABILanguageRuntime_h_
 
 #include <map>
 #include <mutex>
@@ -66,9 +66,9 @@ public:
 
   bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) override;
 
-  lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+                                                     bool catch_bp,
+                                                     bool throw_bp) override;
 
   lldb::SearchFilterSP CreateExceptionSearchFilter() override;
   
@@ -81,9 +81,10 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
-  lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp, bool for_expressions);
+  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+                                                     bool catch_bp,
+                                                     bool throw_bp,
+                                                     bool for_expressions);
 
   lldb::BreakpointSP CreateExceptionBreakpoint(bool catch_bp, bool throw_bp,
                                                bool for_expressions,
@@ -113,4 +114,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABI_ITANIUMABILANGUAGERUNTIME_H
+#endif // liblldb_ItaniumABILanguageRuntime_h_

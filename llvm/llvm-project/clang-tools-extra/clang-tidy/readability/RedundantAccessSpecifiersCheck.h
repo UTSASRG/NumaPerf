@@ -25,9 +25,6 @@ public:
       : ClangTidyCheck(Name, Context),
         CheckFirstDeclaration(
             Options.getLocalOrGlobal("CheckFirstDeclaration", false)) {}
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
-  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 

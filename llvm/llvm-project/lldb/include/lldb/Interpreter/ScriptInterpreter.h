@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
-#define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
+#ifndef liblldb_ScriptInterpreter_h_
+#define liblldb_ScriptInterpreter_h_
 
 #include "lldb/lldb-private.h"
 
@@ -29,9 +29,7 @@ public:
   virtual ~ScriptInterpreterLocker() = default;
 
 private:
-  ScriptInterpreterLocker(const ScriptInterpreterLocker &) = delete;
-  const ScriptInterpreterLocker &
-  operator=(const ScriptInterpreterLocker &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ScriptInterpreterLocker);
 };
 
 class ScriptInterpreter : public PluginInterface {
@@ -490,4 +488,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_SCRIPTINTERPRETER_H
+#endif // liblldb_ScriptInterpreter_h_

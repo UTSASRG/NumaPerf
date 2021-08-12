@@ -66,7 +66,7 @@ protected:
   llvm::StringRef FileName = "TestTU.cpp";
 
   // Extra flags passed to the compilation in apply().
-  std::vector<std::string> ExtraArgs;
+  std::vector<const char *> ExtraArgs;
 
   // Context in which snippets of code should be placed to run tweaks.
   CodeContext Context = File;

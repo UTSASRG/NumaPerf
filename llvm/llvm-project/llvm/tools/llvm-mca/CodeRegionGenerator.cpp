@@ -47,21 +47,21 @@ public:
       : MCStreamer(Context), Regions(R) {}
 
   // We only want to intercept the emission of new instructions.
-  virtual void emitInstruction(const MCInst &Inst,
-                               const MCSubtargetInfo & /* unused */) override {
+  virtual void EmitInstruction(const MCInst &Inst,
+                               const MCSubtargetInfo &/* unused */) override {
     Regions.addInstruction(Inst);
   }
 
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+  bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return true;
   }
 
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override {}
-  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
+  void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, unsigned ByteAlignment = 0,
                     SMLoc Loc = SMLoc()) override {}
-  void emitGPRel32Value(const MCExpr *Value) override {}
+  void EmitGPRel32Value(const MCExpr *Value) override {}
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {}
   void EmitCOFFSymbolStorageClass(int StorageClass) override {}
   void EmitCOFFSymbolType(int Type) override {}

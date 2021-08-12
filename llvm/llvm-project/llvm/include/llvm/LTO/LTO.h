@@ -17,24 +17,28 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/LTO/Config.h"
+#include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/thread.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
 namespace llvm {
 
 class BitcodeModule;
 class Error;
-class IRMover;
 class LLVMContext;
 class MemoryBufferRef;
 class Module;
-class raw_pwrite_stream;
 class Target;
-class ToolOutputFile;
+class raw_pwrite_stream;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
 /// recorded in the index and the ThinLTO backends must apply the changes to
@@ -83,9 +87,9 @@ std::string getThinLTOOutputFile(const std::string &Path,
 
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>
-setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                             StringRef RemarksPasses, StringRef RemarksFormat,
-                             bool RemarksWithHotness, int Count = -1);
+setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
+                         StringRef RemarksPasses, StringRef RemarksFormat,
+                         bool RemarksWithHotness, int Count = -1);
 
 /// Setups the output file for saving statistics.
 Expected<std::unique_ptr<ToolOutputFile>>
@@ -223,8 +227,7 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
     AddStreamFn AddStream, NativeObjectCache Cache)>;
 
 /// This ThinBackend runs the individual backend jobs in-process.
-/// The default value means to use one job per hardware core (not hyper-thread).
-ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism);
+ThinBackend createInProcessThinBackend(unsigned ParallelismLevel);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -327,7 +330,6 @@ private:
       std::vector<GlobalValue *> Keep;
     };
     std::vector<AddedModule> ModsWithSummaries;
-    bool EmptyCombinedModule = true;
   } RegularLTO;
 
   struct ThinLTOState {

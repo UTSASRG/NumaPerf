@@ -27,10 +27,6 @@ using namespace clang;
 using namespace ento;
 using llvm::sys::DynamicLibrary;
 
-//===----------------------------------------------------------------------===//
-// Utilities.
-//===----------------------------------------------------------------------===//
-
 using RegisterCheckersFn = void (*)(CheckerRegistry &);
 
 static bool isCompatibleAPIVersion(const char *VersionString) {
@@ -55,15 +51,17 @@ using CheckerNameLT = FullNameLT<CheckerRegistry::CheckerInfo>;
 } // end of anonymous namespace
 
 template <class CheckerOrPackageInfoList>
-static std::conditional_t<std::is_const<CheckerOrPackageInfoList>::value,
-                          typename CheckerOrPackageInfoList::const_iterator,
-                          typename CheckerOrPackageInfoList::iterator>
-binaryFind(CheckerOrPackageInfoList &Collection, StringRef FullName) {
+static
+    typename std::conditional<std::is_const<CheckerOrPackageInfoList>::value,
+                              typename CheckerOrPackageInfoList::const_iterator,
+                              typename CheckerOrPackageInfoList::iterator>::type
+    binaryFind(CheckerOrPackageInfoList &Collection, StringRef FullName) {
 
   using CheckerOrPackage = typename CheckerOrPackageInfoList::value_type;
   using CheckerOrPackageFullNameLT = FullNameLT<CheckerOrPackage>;
 
-  assert(llvm::is_sorted(Collection, CheckerOrPackageFullNameLT{}) &&
+  assert(std::is_sorted(Collection.begin(), Collection.end(),
+                        CheckerOrPackageFullNameLT{}) &&
          "In order to efficiently gather checkers/packages, this function "
          "expects them to be already sorted!");
 
@@ -90,64 +88,6 @@ static bool isInPackage(const CheckerRegistry::CheckerInfo &Checker,
   return false;
 }
 
-//===----------------------------------------------------------------------===//
-// Methods of CmdLineOption, PackageInfo and CheckerInfo.
-//===----------------------------------------------------------------------===//
-
-LLVM_DUMP_METHOD void
-CheckerRegistry::CmdLineOption::dumpToStream(llvm::raw_ostream &Out) const {
-  // The description can be just checked in Checkers.inc, the point here is to
-  // debug whether we succeeded in parsing it.
-  Out << OptionName << " (" << OptionType << ", "
-      << (IsHidden ? "hidden, " : "") << DevelopmentStatus << ") default: \""
-      << DefaultValStr;
-}
-
-static StringRef toString(CheckerRegistry::StateFromCmdLine Kind) {
-  switch (Kind) {
-  case CheckerRegistry::StateFromCmdLine::State_Disabled:
-    return "Disabled";
-  case CheckerRegistry::StateFromCmdLine::State_Enabled:
-    return "Enabled";
-  case CheckerRegistry::StateFromCmdLine::State_Unspecified:
-    return "Unspecified";
-  }
-  llvm_unreachable("Unhandled CheckerRegistry::StateFromCmdLine enum");
-}
-
-LLVM_DUMP_METHOD void
-CheckerRegistry::CheckerInfo::dumpToStream(llvm::raw_ostream &Out) const {
-  // The description can be just checked in Checkers.inc, the point here is to
-  // debug whether we succeeded in parsing it. Same with documentation uri.
-  Out << FullName << " (" << toString(State) << (IsHidden ? ", hidden" : "")
-      << ")\n";
-  Out << "  Options:\n";
-  for (const CmdLineOption &Option : CmdLineOptions) {
-    Out << "    ";
-    Option.dumpToStream(Out);
-    Out << '\n';
-  }
-  Out << "  Dependencies:\n";
-  for (const CheckerInfo *Dependency : Dependencies) {
-    Out << "  " << Dependency->FullName << '\n';
-  }
-}
-
-LLVM_DUMP_METHOD void
-CheckerRegistry::PackageInfo::dumpToStream(llvm::raw_ostream &Out) const {
-  Out << FullName << "\n";
-  Out << "  Options:\n";
-  for (const CmdLineOption &Option : CmdLineOptions) {
-    Out << "    ";
-    Option.dumpToStream(Out);
-    Out << '\n';
-  }
-}
-
-//===----------------------------------------------------------------------===//
-// Methods of CheckerRegistry.
-//===----------------------------------------------------------------------===//
-
 CheckerRegistry::CheckerInfoListRange
 CheckerRegistry::getMutableCheckersForCmdLineArg(StringRef CmdLineArg) {
   auto It = binaryFind(Checkers, CmdLineArg);
@@ -170,9 +110,9 @@ CheckerRegistry::getMutableCheckersForCmdLineArg(StringRef CmdLineArg) {
 
 CheckerRegistry::CheckerRegistry(
     ArrayRef<std::string> Plugins, DiagnosticsEngine &Diags,
-    AnalyzerOptions &AnOpts,
+    AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
     ArrayRef<std::function<void(CheckerRegistry &)>> CheckerRegistrationFns)
-    : Diags(Diags), AnOpts(AnOpts) {
+    : Diags(Diags), AnOpts(AnOpts), LangOpts(LangOpts) {
 
   // Register builtin checkers.
 #define GET_CHECKERS
@@ -240,16 +180,12 @@ CheckerRegistry::CheckerRegistry(
   addDependency(FULLNAME, DEPENDENCY);
 
 #define GET_CHECKER_OPTIONS
-#define CHECKER_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL,             \
-                       DEVELOPMENT_STATUS, IS_HIDDEN)                          \
-  addCheckerOption(TYPE, FULLNAME, CMDFLAG, DEFAULT_VAL, DESC,                 \
-                   DEVELOPMENT_STATUS, IS_HIDDEN);
+#define CHECKER_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL, DEVELOPMENT_STATUS, IS_HIDDEN)  \
+  addCheckerOption(TYPE, FULLNAME, CMDFLAG, DEFAULT_VAL, DESC, DEVELOPMENT_STATUS, IS_HIDDEN);
 
 #define GET_PACKAGE_OPTIONS
-#define PACKAGE_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL,             \
-                       DEVELOPMENT_STATUS, IS_HIDDEN)                          \
-  addPackageOption(TYPE, FULLNAME, CMDFLAG, DEFAULT_VAL, DESC,                 \
-                   DEVELOPMENT_STATUS, IS_HIDDEN);
+#define PACKAGE_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL, DEVELOPMENT_STATUS, IS_HIDDEN)  \
+  addPackageOption(TYPE, FULLNAME, CMDFLAG, DEFAULT_VAL, DESC, DEVELOPMENT_STATUS, IS_HIDDEN);
 
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER_DEPENDENCY
@@ -278,22 +214,60 @@ CheckerRegistry::CheckerRegistry(
                                  : StateFromCmdLine::State_Disabled;
     }
   }
-  validateCheckerOptions();
 }
+
+/// Collects dependencies in \p ret, returns false on failure.
+static bool
+collectDependenciesImpl(const CheckerRegistry::ConstCheckerInfoList &Deps,
+                        const LangOptions &LO,
+                        CheckerRegistry::CheckerInfoSet &Ret);
 
 /// Collects dependenies in \p enabledCheckers. Return None on failure.
 LLVM_NODISCARD
 static llvm::Optional<CheckerRegistry::CheckerInfoSet>
 collectDependencies(const CheckerRegistry::CheckerInfo &checker,
-                    const CheckerManager &Mgr);
+                    const LangOptions &LO) {
 
-void CheckerRegistry::initializeRegistry(const CheckerManager &Mgr) {
+  CheckerRegistry::CheckerInfoSet Ret;
+  // Add dependencies to the enabled checkers only if all of them can be
+  // enabled.
+  if (!collectDependenciesImpl(checker.Dependencies, LO, Ret))
+    return None;
+
+  return Ret;
+}
+
+static bool
+collectDependenciesImpl(const CheckerRegistry::ConstCheckerInfoList &Deps,
+                        const LangOptions &LO,
+                        CheckerRegistry::CheckerInfoSet &Ret) {
+
+  for (const CheckerRegistry::CheckerInfo *Dependency : Deps) {
+
+    if (Dependency->isDisabled(LO))
+      return false;
+
+    // Collect dependencies recursively.
+    if (!collectDependenciesImpl(Dependency->Dependencies, LO, Ret))
+      return false;
+
+    Ret.insert(Dependency);
+  }
+
+  return true;
+}
+
+CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers() const {
+
+  CheckerInfoSet EnabledCheckers;
+
   for (const CheckerInfo &Checker : Checkers) {
-    if (!Checker.isEnabled(Mgr))
+    if (!Checker.isEnabled(LangOpts))
       continue;
 
     // Recursively enable its dependencies.
-    llvm::Optional<CheckerInfoSet> Deps = collectDependencies(Checker, Mgr);
+    llvm::Optional<CheckerInfoSet> Deps =
+        collectDependencies(Checker, LangOpts);
 
     if (!Deps) {
       // If we failed to enable any of the dependencies, don't enable this
@@ -307,47 +281,8 @@ void CheckerRegistry::initializeRegistry(const CheckerManager &Mgr) {
     // Enable the checker.
     EnabledCheckers.insert(&Checker);
   }
-}
 
-/// Collects dependencies in \p ret, returns false on failure.
-static bool
-collectDependenciesImpl(const CheckerRegistry::ConstCheckerInfoList &Deps,
-                        const CheckerManager &Mgr,
-                        CheckerRegistry::CheckerInfoSet &Ret);
-
-/// Collects dependenies in \p enabledCheckers. Return None on failure.
-LLVM_NODISCARD
-static llvm::Optional<CheckerRegistry::CheckerInfoSet>
-collectDependencies(const CheckerRegistry::CheckerInfo &checker,
-                    const CheckerManager &Mgr) {
-
-  CheckerRegistry::CheckerInfoSet Ret;
-  // Add dependencies to the enabled checkers only if all of them can be
-  // enabled.
-  if (!collectDependenciesImpl(checker.Dependencies, Mgr, Ret))
-    return None;
-
-  return Ret;
-}
-
-static bool
-collectDependenciesImpl(const CheckerRegistry::ConstCheckerInfoList &Deps,
-                        const CheckerManager &Mgr,
-                        CheckerRegistry::CheckerInfoSet &Ret) {
-
-  for (const CheckerRegistry::CheckerInfo *Dependency : Deps) {
-
-    if (Dependency->isDisabled(Mgr))
-      return false;
-
-    // Collect dependencies recursively.
-    if (!collectDependenciesImpl(Dependency->Dependencies, Mgr, Ret))
-      return false;
-
-    Ret.insert(Dependency);
-  }
-
-  return true;
+  return EnabledCheckers;
 }
 
 void CheckerRegistry::resolveDependencies() {
@@ -364,6 +299,8 @@ void CheckerRegistry::resolveDependencies() {
 
     CheckerIt->Dependencies.emplace_back(&*DependencyIt);
   }
+
+  Dependencies.clear();
 }
 
 void CheckerRegistry::addDependency(StringRef FullName, StringRef Dependency) {
@@ -379,8 +316,7 @@ static void insertAndValidate(StringRef FullName,
 
   std::string FullOption = (FullName + ":" + Option.OptionName).str();
 
-  auto It =
-      AnOpts.Config.insert({FullOption, std::string(Option.DefaultValStr)});
+  auto It = AnOpts.Config.insert({FullOption, Option.DefaultValStr});
 
   // Insertation was successful -- CmdLineOption's constructor will validate
   // whether values received from plugins or TableGen files are correct.
@@ -401,7 +337,7 @@ static void insertAndValidate(StringRef FullName,
             << FullOption << "a boolean value";
       }
 
-      It.first->setValue(std::string(Option.DefaultValStr));
+      It.first->setValue(Option.DefaultValStr);
     }
     return;
   }
@@ -415,7 +351,7 @@ static void insertAndValidate(StringRef FullName,
             << FullOption << "an integer value";
       }
 
-      It.first->setValue(std::string(Option.DefaultValStr));
+      It.first->setValue(Option.DefaultValStr);
     }
     return;
   }
@@ -442,12 +378,14 @@ void CheckerRegistry::resolveCheckerAndPackageOptions() {
     insertOptionToCollection(CheckerOptEntry.first, Checkers,
                              CheckerOptEntry.second, AnOpts, Diags);
   }
+  CheckerOptions.clear();
 
   for (const std::pair<StringRef, CmdLineOption> &PackageOptEntry :
        PackageOptions) {
     insertOptionToCollection(PackageOptEntry.first, Packages,
                              PackageOptEntry.second, AnOpts, Diags);
   }
+  PackageOptions.clear();
 }
 
 void CheckerRegistry::addPackage(StringRef FullName) {
@@ -494,8 +432,11 @@ void CheckerRegistry::addCheckerOption(StringRef OptionType,
 }
 
 void CheckerRegistry::initializeManager(CheckerManager &CheckerMgr) const {
+  // Collect checkers enabled by the options.
+  CheckerInfoSet enabledCheckers = getEnabledCheckers();
+
   // Initialize the CheckerManager with all enabled checkers.
-  for (const auto *Checker : EnabledCheckers) {
+  for (const auto *Checker : enabledCheckers) {
     CheckerMgr.setCurrentCheckerName(CheckerNameRef(Checker->FullName));
     Checker->Initialize(CheckerMgr);
   }
@@ -564,10 +505,6 @@ void CheckerRegistry::validateCheckerOptions() const {
   }
 }
 
-//===----------------------------------------------------------------------===//
-// Printing functions.
-//===----------------------------------------------------------------------===//
-
 void CheckerRegistry::printCheckerWithDescList(raw_ostream &Out,
                                                size_t MaxNameChars) const {
   // FIXME: Print available packages.
@@ -619,6 +556,9 @@ void CheckerRegistry::printCheckerWithDescList(raw_ostream &Out,
 }
 
 void CheckerRegistry::printEnabledCheckerList(raw_ostream &Out) const {
+  // Collect checkers enabled by the options.
+  CheckerInfoSet EnabledCheckers = getEnabledCheckers();
+
   for (const auto *i : EnabledCheckers)
     Out << i->FullName << '\n';
 }

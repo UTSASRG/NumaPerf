@@ -25,7 +25,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 
 using namespace llvm;
@@ -313,8 +312,8 @@ static const Value *getNoopInput(const Value *V,
       DataBits = std::min((uint64_t)DataBits,
                          I->getType()->getPrimitiveSizeInBits().getFixedSize());
       NoopInput = Op;
-    } else if (auto *CB = dyn_cast<CallBase>(I)) {
-      const Value *ReturnedOp = CB->getReturnedArgOperand();
+    } else if (auto CS = ImmutableCallSite(I)) {
+      const Value *ReturnedOp = CS.getReturnedArgOperand();
       if (ReturnedOp && isNoopBitcast(ReturnedOp->getType(), I->getType(), TLI))
         NoopInput = ReturnedOp;
     } else if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(V)) {
@@ -396,7 +395,7 @@ static bool slotOnlyDiscardsData(const Value *RetVal, const Value *CallVal,
 
 /// For an aggregate type, determine whether a given index is within bounds or
 /// not.
-static bool indexReallyValid(Type *T, unsigned Idx) {
+static bool indexReallyValid(CompositeType *T, unsigned Idx) {
   if (ArrayType *AT = dyn_cast<ArrayType>(T))
     return Idx < AT->getNumElements();
 
@@ -420,7 +419,7 @@ static bool indexReallyValid(Type *T, unsigned Idx) {
 /// function again on a finished iterator will repeatedly return
 /// false. SubTypes.back()->getTypeAtIndex(Path.back()) is either an empty
 /// aggregate or a non-aggregate
-static bool advanceToNextLeafType(SmallVectorImpl<Type *> &SubTypes,
+static bool advanceToNextLeafType(SmallVectorImpl<CompositeType *> &SubTypes,
                                   SmallVectorImpl<unsigned> &Path) {
   // First march back up the tree until we can successfully increment one of the
   // coordinates in Path.
@@ -436,16 +435,16 @@ static bool advanceToNextLeafType(SmallVectorImpl<Type *> &SubTypes,
   // We know there's *some* valid leaf now, so march back down the tree picking
   // out the left-most element at each node.
   ++Path.back();
-  Type *DeeperType =
-      ExtractValueInst::getIndexedType(SubTypes.back(), Path.back());
+  Type *DeeperType = SubTypes.back()->getTypeAtIndex(Path.back());
   while (DeeperType->isAggregateType()) {
-    if (!indexReallyValid(DeeperType, 0))
+    CompositeType *CT = cast<CompositeType>(DeeperType);
+    if (!indexReallyValid(CT, 0))
       return true;
 
-    SubTypes.push_back(DeeperType);
+    SubTypes.push_back(CT);
     Path.push_back(0);
 
-    DeeperType = ExtractValueInst::getIndexedType(DeeperType, 0);
+    DeeperType = CT->getTypeAtIndex(0U);
   }
 
   return true;
@@ -461,15 +460,17 @@ static bool advanceToNextLeafType(SmallVectorImpl<Type *> &SubTypes,
 /// For example, if Next was {[0 x i64], {{}, i32, {}}, i32} then we would setup
 /// Path as [1, 1] and SubTypes as [Next, {{}, i32, {}}] to represent the first
 /// i32 in that type.
-static bool firstRealType(Type *Next, SmallVectorImpl<Type *> &SubTypes,
+static bool firstRealType(Type *Next,
+                          SmallVectorImpl<CompositeType *> &SubTypes,
                           SmallVectorImpl<unsigned> &Path) {
   // First initialise the iterator components to the first "leaf" node
   // (i.e. node with no valid sub-type at any index, so {} does count as a leaf
   // despite nominally being an aggregate).
-  while (Type *FirstInner = ExtractValueInst::getIndexedType(Next, 0)) {
-    SubTypes.push_back(Next);
+  while (Next->isAggregateType() &&
+         indexReallyValid(cast<CompositeType>(Next), 0)) {
+    SubTypes.push_back(cast<CompositeType>(Next));
     Path.push_back(0);
-    Next = FirstInner;
+    Next = cast<CompositeType>(Next)->getTypeAtIndex(0U);
   }
 
   // If there's no Path now, Next was originally scalar already (or empty
@@ -479,8 +480,7 @@ static bool firstRealType(Type *Next, SmallVectorImpl<Type *> &SubTypes,
 
   // Otherwise, use normal iteration to keep looking through the tree until we
   // find a non-aggregate type.
-  while (ExtractValueInst::getIndexedType(SubTypes.back(), Path.back())
-             ->isAggregateType()) {
+  while (SubTypes.back()->getTypeAtIndex(Path.back())->isAggregateType()) {
     if (!advanceToNextLeafType(SubTypes, Path))
       return false;
   }
@@ -490,15 +490,14 @@ static bool firstRealType(Type *Next, SmallVectorImpl<Type *> &SubTypes,
 
 /// Set the iterator data-structures to the next non-empty, non-aggregate
 /// subtype.
-static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
+static bool nextRealType(SmallVectorImpl<CompositeType *> &SubTypes,
                          SmallVectorImpl<unsigned> &Path) {
   do {
     if (!advanceToNextLeafType(SubTypes, Path))
       return false;
 
     assert(!Path.empty() && "found a leaf but didn't set the path?");
-  } while (ExtractValueInst::getIndexedType(SubTypes.back(), Path.back())
-               ->isAggregateType());
+  } while (SubTypes.back()->getTypeAtIndex(Path.back())->isAggregateType());
 
   return true;
 }
@@ -510,8 +509,9 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
-  const BasicBlock *ExitBB = Call.getParent();
+bool llvm::isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM) {
+  const Instruction *I = CS.getInstruction();
+  const BasicBlock *ExitBB = I->getParent();
   const Instruction *Term = ExitBB->getTerminator();
   const ReturnInst *Ret = dyn_cast<ReturnInst>(Term);
 
@@ -525,32 +525,33 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
   // been fully understood.
   if (!Ret &&
       ((!TM.Options.GuaranteedTailCallOpt &&
-        Call.getCallingConv() != CallingConv::Tail) || !isa<UnreachableInst>(Term)))
+        CS.getCallingConv() != CallingConv::Tail) || !isa<UnreachableInst>(Term)))
     return false;
 
   // If I will have a chain, make sure no other instruction that will have a
   // chain interposes between I and the return.
-  // Check for all calls including speculatable functions.
-  for (BasicBlock::const_iterator BBI = std::prev(ExitBB->end(), 2);; --BBI) {
-    if (&*BBI == &Call)
-      break;
-    // Debug info intrinsics do not get in the way of tail call optimization.
-    if (isa<DbgInfoIntrinsic>(BBI))
-      continue;
-    // A lifetime end or assume intrinsic should not stop tail call
-    // optimization.
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
-      if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
-          II->getIntrinsicID() == Intrinsic::assume)
+  if (I->mayHaveSideEffects() || I->mayReadFromMemory() ||
+      !isSafeToSpeculativelyExecute(I))
+    for (BasicBlock::const_iterator BBI = std::prev(ExitBB->end(), 2);; --BBI) {
+      if (&*BBI == I)
+        break;
+      // Debug info intrinsics do not get in the way of tail call optimization.
+      if (isa<DbgInfoIntrinsic>(BBI))
         continue;
-    if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
-        !isSafeToSpeculativelyExecute(&*BBI))
-      return false;
-  }
+      // A lifetime end or assume intrinsic should not stop tail call
+      // optimization.
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
+            II->getIntrinsicID() == Intrinsic::assume)
+          continue;
+      if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
+          !isSafeToSpeculativelyExecute(&*BBI))
+        return false;
+    }
 
   const Function *F = ExitBB->getParent();
   return returnTypeIsEligibleForTailCall(
-      F, &Call, Ret, *TM.getSubtargetImpl(*F)->getTargetLowering());
+      F, I, Ret, *TM.getSubtargetImpl(*F)->getTargetLowering());
 }
 
 bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
@@ -668,7 +669,7 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   }
 
   SmallVector<unsigned, 4> RetPath, CallPath;
-  SmallVector<Type *, 4> RetSubTypes, CallSubTypes;
+  SmallVector<CompositeType *, 4> RetSubTypes, CallSubTypes;
 
   bool RetEmpty = !firstRealType(RetVal->getType(), RetSubTypes, RetPath);
   bool CallEmpty = !firstRealType(CallVal->getType(), CallSubTypes, CallPath);
@@ -691,8 +692,7 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
       // We've exhausted the values produced by the tail call instruction, the
       // rest are essentially undef. The type doesn't really matter, but we need
       // *something*.
-      Type *SlotType =
-          ExtractValueInst::getIndexedType(RetSubTypes.back(), RetPath.back());
+      Type *SlotType = RetSubTypes.back()->getTypeAtIndex(RetPath.back());
       CallVal = UndefValue::get(SlotType);
     }
 

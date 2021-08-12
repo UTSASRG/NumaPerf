@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Logger.h"
 #include "ParsedAST.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
-#include "support/Logger.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -63,19 +63,15 @@ bool ObjCLocalizeStringLiteral::prepare(const Selection &Inputs) {
 
 Expected<Tweak::Effect>
 ObjCLocalizeStringLiteral::apply(const Selection &Inputs) {
-  auto *AST = Inputs.AST;
-  auto &SM = AST->getSourceManager();
-  const auto &TB = AST->getTokens();
-  auto Toks = TB.spelledForExpanded(TB.expandedTokens(Str->getSourceRange()));
-  if (!Toks || Toks->empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to find tokens to replace.");
-  // Insert `NSLocalizedString(` before the literal.
+  auto &SM = Inputs.AST->getSourceManager();
+  auto &LangOpts = Inputs.AST->getASTContext().getLangOpts();
   auto Reps = tooling::Replacements(tooling::Replacement(
-      SM, Toks->front().location(), 0, "NSLocalizedString("));
-  // Insert `, @"")` after the literal.
-  if (auto Err = Reps.add(
-          tooling::Replacement(SM, Toks->back().endLocation(), 0, ", @\"\")")))
+      SM, CharSourceRange::getCharRange(Str->getBeginLoc()),
+      "NSLocalizedString(", LangOpts));
+  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+      Str->getEndLoc(), 0, Inputs.AST->getSourceManager(), LangOpts);
+  if (auto Err = Reps.add(tooling::Replacement(
+          SM, CharSourceRange::getCharRange(EndLoc), ", @\"\")", LangOpts)))
     return std::move(Err);
   return Effect::mainFileEdit(SM, std::move(Reps));
 }

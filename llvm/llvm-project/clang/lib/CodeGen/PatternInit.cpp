@@ -8,7 +8,6 @@
 
 #include "PatternInit.h"
 #include "CodeGenModule.h"
-#include "clang/Basic/TargetInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Type.h"
 
@@ -34,15 +33,17 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
   constexpr bool NegativeNaN = true;
   constexpr uint64_t NaNPayload = 0xFFFFFFFFFFFFFFFFull;
   if (Ty->isIntOrIntVectorTy()) {
-    unsigned BitWidth =
-        cast<llvm::IntegerType>(Ty->getScalarType())->getBitWidth();
+    unsigned BitWidth = cast<llvm::IntegerType>(
+                            Ty->isVectorTy() ? Ty->getVectorElementType() : Ty)
+                            ->getBitWidth();
     if (BitWidth <= 64)
       return llvm::ConstantInt::get(Ty, IntValue);
     return llvm::ConstantInt::get(
         Ty, llvm::APInt::getSplat(BitWidth, llvm::APInt(64, IntValue)));
   }
   if (Ty->isPtrOrPtrVectorTy()) {
-    auto *PtrTy = cast<llvm::PointerType>(Ty->getScalarType());
+    auto *PtrTy = cast<llvm::PointerType>(
+        Ty->isVectorTy() ? Ty->getVectorElementType() : Ty);
     unsigned PtrWidth = CGM.getContext().getTargetInfo().getPointerWidth(
         PtrTy->getAddressSpace());
     if (PtrWidth > 64)
@@ -53,7 +54,8 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
   }
   if (Ty->isFPOrFPVectorTy()) {
     unsigned BitWidth = llvm::APFloat::semanticsSizeInBits(
-        Ty->getScalarType()->getFltSemantics());
+        (Ty->isVectorTy() ? Ty->getVectorElementType() : Ty)
+            ->getFltSemantics());
     llvm::APInt Payload(64, NaNPayload);
     if (BitWidth >= 64)
       Payload = llvm::APInt::getSplat(BitWidth, Payload);

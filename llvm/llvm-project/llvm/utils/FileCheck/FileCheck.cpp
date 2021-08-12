@@ -44,14 +44,6 @@ static cl::alias CheckPrefixesAlias(
     cl::desc(
         "Alias for -check-prefix permitting multiple comma separated values"));
 
-static cl::list<std::string> CommentPrefixes(
-    "comment-prefixes", cl::CommaSeparated, cl::Hidden,
-    cl::desc("Comma-separated list of comment prefixes to use from check file\n"
-             "(defaults to 'COM,RUN'). Please avoid using this feature in\n"
-             "LLVM's LIT-based test suites, which should be easier to\n"
-             "maintain if they all follow a consistent comment style. This\n"
-             "feature is meant for non-LIT test suites using FileCheck."));
-
 static cl::opt<bool> NoCanonicalizeWhiteSpace(
     "strict-whitespace",
     cl::desc("Do not treat all horizontal whitespace as equivalent"));
@@ -201,15 +193,14 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   // Labels for annotation lines.
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "T:L";
-  OS << "    labels the only match result for either (1) a pattern of type T"
-     << " from\n"
-     << "           line L of the check file if L is an integer or (2) the"
-     << " I-th implicit\n"
-     << "           pattern if L is \"imp\" followed by an integer "
-     << "I (index origin one)\n";
+  OS << "    labels the only match result for a pattern of type T from "
+     << "line L of\n"
+     << "           the check file\n";
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "T:L'N";
-  OS << "  labels the Nth match result for such a pattern\n";
+  OS << "  labels the Nth match result for a pattern of type T from line "
+     << "L of\n"
+     << "           the check file\n";
 
   // Markers on annotation lines.
   OS << "  - ";
@@ -249,8 +240,11 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
 
 /// An annotation for a single input line.
 struct InputAnnotation {
-  /// The index of the match result across all checks
-  unsigned DiagIndex;
+  /// The check file line (one-origin indexing) where the directive that
+  /// produced this annotation is located.
+  unsigned CheckLine;
+  /// The index of the match result for this check.
+  unsigned CheckDiagIndex;
   /// The label for this annotation.
   std::string Label;
   /// What input line (one-origin indexing) this annotation marks.  This might
@@ -258,7 +252,7 @@ struct InputAnnotation {
   /// a non-initial fragment of a diagnostic that has been broken across
   /// multiple lines.
   unsigned InputLine;
-  /// The column range (one-origin indexing, open end) in which to mark the
+  /// The column range (one-origin indexing, open end) in which to to mark the
   /// input line.  If InputEndCol is UINT_MAX, treat it as the last column
   /// before the newline.
   unsigned InputStartCol, InputEndCol;
@@ -287,8 +281,6 @@ std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
     return "label";
   case Check::CheckEmpty:
     return "empty";
-  case Check::CheckComment:
-    return "com";
   case Check::CheckEOF:
     return "eof";
   case Check::CheckBadNot:
@@ -301,14 +293,9 @@ std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
   llvm_unreachable("unknown FileCheckType");
 }
 
-static void
-BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
-                      const std::pair<unsigned, unsigned> &ImpPatBufferIDRange,
-                      const std::vector<FileCheckDiag> &Diags,
-                      std::vector<InputAnnotation> &Annotations,
-                      unsigned &LabelWidth) {
-  // How many diagnostics have we seen so far?
-  unsigned DiagCount = 0;
+static void BuildInputAnnotations(const std::vector<FileCheckDiag> &Diags,
+                                  std::vector<InputAnnotation> &Annotations,
+                                  unsigned &LabelWidth) {
   // How many diagnostics has the current check seen so far?
   unsigned CheckDiagCount = 0;
   // What's the widest label?
@@ -316,33 +303,25 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   for (auto DiagItr = Diags.begin(), DiagEnd = Diags.end(); DiagItr != DiagEnd;
        ++DiagItr) {
     InputAnnotation A;
-    A.DiagIndex = DiagCount++;
 
     // Build label, which uniquely identifies this check result.
-    unsigned CheckBufferID = SM.FindBufferContainingLoc(DiagItr->CheckLoc);
-    auto CheckLineAndCol =
-        SM.getLineAndColumn(DiagItr->CheckLoc, CheckBufferID);
+    A.CheckLine = DiagItr->CheckLine;
     llvm::raw_string_ostream Label(A.Label);
-    Label << GetCheckTypeAbbreviation(DiagItr->CheckTy) << ":";
-    if (CheckBufferID == CheckFileBufferID)
-      Label << CheckLineAndCol.first;
-    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
-             CheckBufferID < ImpPatBufferIDRange.second)
-      Label << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
-    else
-      llvm_unreachable("expected diagnostic's check location to be either in "
-                       "the check file or for an implicit pattern");
-    unsigned CheckDiagIndex = UINT_MAX;
+    Label << GetCheckTypeAbbreviation(DiagItr->CheckTy) << ":"
+          << DiagItr->CheckLine;
+    A.CheckDiagIndex = UINT_MAX;
     auto DiagNext = std::next(DiagItr);
     if (DiagNext != DiagEnd && DiagItr->CheckTy == DiagNext->CheckTy &&
-        DiagItr->CheckLoc == DiagNext->CheckLoc)
-      CheckDiagIndex = CheckDiagCount++;
+        DiagItr->CheckLine == DiagNext->CheckLine)
+      A.CheckDiagIndex = CheckDiagCount++;
     else if (CheckDiagCount) {
-      CheckDiagIndex = CheckDiagCount;
+      A.CheckDiagIndex = CheckDiagCount;
       CheckDiagCount = 0;
     }
-    if (CheckDiagIndex != UINT_MAX)
-      Label << "'" << CheckDiagIndex;
+    if (A.CheckDiagIndex != UINT_MAX)
+      Label << "'" << A.CheckDiagIndex;
+    else
+      A.CheckDiagIndex = 0;
     Label.flush();
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
@@ -373,7 +352,8 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         if (DiagItr->InputEndCol == 1 && L == E)
           break;
         InputAnnotation B;
-        B.DiagIndex = A.DiagIndex;
+        B.CheckLine = A.CheckLine;
+        B.CheckDiagIndex = A.CheckDiagIndex;
         B.Label = A.Label;
         B.InputLine = L;
         B.Marker = A.Marker;
@@ -398,53 +378,35 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   OS << "Full input was:\n<<<<<<\n";
 
   // Sort annotations.
+  //
+  // First, sort in the order of input lines to make it easier to find relevant
+  // annotations while iterating input lines in the implementation below.
+  // FileCheck diagnostics are not always reported and recorded in the order of
+  // input lines due to, for example, CHECK-DAG and CHECK-NOT.
+  //
+  // Second, for annotations for the same input line, sort in the order of the
+  // FileCheck directive's line in the check file (where there's at most one
+  // directive per line) and then by the index of the match result for that
+  // directive.  The rationale of this choice is that, for any input line, this
+  // sort establishes a total order of annotations that, with respect to match
+  // results, is consistent across multiple lines, thus making match results
+  // easier to track from one line to the next when they span multiple lines.
   std::sort(Annotations.begin(), Annotations.end(),
             [](const InputAnnotation &A, const InputAnnotation &B) {
-              // 1. Sort annotations in the order of the input lines.
-              //
-              // This makes it easier to find relevant annotations while
-              // iterating input lines in the implementation below.  FileCheck
-              // does not always produce diagnostics in the order of input
-              // lines due to, for example, CHECK-DAG and CHECK-NOT.
               if (A.InputLine != B.InputLine)
                 return A.InputLine < B.InputLine;
-              // 2. Sort annotations in the temporal order FileCheck produced
-              // their associated diagnostics.
-              //
-              // This sort offers several benefits:
-              //
-              // A. On a single input line, the order of annotations reflects
-              //    the FileCheck logic for processing directives/patterns.
-              //    This can be helpful in understanding cases in which the
-              //    order of the associated directives/patterns in the check
-              //    file or on the command line either (i) does not match the
-              //    temporal order in which FileCheck looks for matches for the
-              //    directives/patterns (due to, for example, CHECK-LABEL,
-              //    CHECK-NOT, or `--implicit-check-not`) or (ii) does match
-              //    that order but does not match the order of those
-              //    diagnostics along an input line (due to, for example,
-              //    CHECK-DAG).
-              //
-              //    On the other hand, because our presentation format presents
-              //    input lines in order, there's no clear way to offer the
-              //    same benefit across input lines.  For consistency, it might
-              //    then seem worthwhile to have annotations on a single line
-              //    also sorted in input order (that is, by input column).
-              //    However, in practice, this appears to be more confusing
-              //    than helpful.  Perhaps it's intuitive to expect annotations
-              //    to be listed in the temporal order in which they were
-              //    produced except in cases the presentation format obviously
-              //    and inherently cannot support it (that is, across input
-              //    lines).
-              //
-              // B. When diagnostics' annotations are split among multiple
-              //    input lines, the user must track them from one input line
-              //    to the next.  One property of the sort chosen here is that
-              //    it facilitates the user in this regard by ensuring the
-              //    following: when comparing any two input lines, a
-              //    diagnostic's annotations are sorted in the same position
-              //    relative to all other diagnostics' annotations.
-              return A.DiagIndex < B.DiagIndex;
+              if (A.CheckLine != B.CheckLine)
+                return A.CheckLine < B.CheckLine;
+              // FIXME: Sometimes CHECK-LABEL reports its match twice with
+              // other diagnostics in between, and then diag index incrementing
+              // fails to work properly, and then this assert fails.  We should
+              // suppress one of those diagnostics or do a better job of
+              // computing this index.  For now, we just produce a redundant
+              // CHECK-LABEL annotation.
+              // assert(A.CheckDiagIndex != B.CheckDiagIndex &&
+              //        "expected diagnostic indices to be unique within a "
+              //        " check line");
+              return A.CheckDiagIndex < B.CheckDiagIndex;
             });
 
   // Compute the width of the label column.
@@ -572,17 +534,14 @@ int main(int argc, char **argv) {
   }
 
   FileCheckRequest Req;
-  for (StringRef Prefix : CheckPrefixes)
+  for (auto Prefix : CheckPrefixes)
     Req.CheckPrefixes.push_back(Prefix);
 
-  for (StringRef Prefix : CommentPrefixes)
-    Req.CommentPrefixes.push_back(Prefix);
-
-  for (StringRef CheckNot : ImplicitCheckNot)
+  for (auto CheckNot : ImplicitCheckNot)
     Req.ImplicitCheckNot.push_back(CheckNot);
 
   bool GlobalDefineError = false;
-  for (StringRef G : GlobalDefines) {
+  for (auto G : GlobalDefines) {
     size_t EqIdx = G.find('=');
     if (EqIdx == std::string::npos) {
       errs() << "Missing equal sign in command-line definition '-D" << G
@@ -614,8 +573,12 @@ int main(int argc, char **argv) {
     Req.Verbose = true;
 
   FileCheck FC(Req);
-  if (!FC.ValidateCheckPrefixes())
+  if (!FC.ValidateCheckPrefixes()) {
+    errs() << "Supplied check-prefix is invalid! Prefixes must be unique and "
+              "start with a letter and contain only alphanumeric characters, "
+              "hyphens and underscores\n";
     return 2;
+  }
 
   Regex PrefixRE = FC.buildCheckPrefixRegex();
   std::string REError;
@@ -643,20 +606,16 @@ int main(int argc, char **argv) {
   SmallString<4096> CheckFileBuffer;
   StringRef CheckFileText = FC.CanonicalizeFile(CheckFile, CheckFileBuffer);
 
-  unsigned CheckFileBufferID =
-      SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(
-                                CheckFileText, CheckFile.getBufferIdentifier()),
-                            SMLoc());
+  SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(
+                            CheckFileText, CheckFile.getBufferIdentifier()),
+                        SMLoc());
 
-  std::pair<unsigned, unsigned> ImpPatBufferIDRange;
-  if (FC.readCheckFile(SM, CheckFileText, PrefixRE, &ImpPatBufferIDRange))
+  if (FC.readCheckFile(SM, CheckFileText, PrefixRE))
     return 2;
 
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
-  if (InputFilename == "-")
-    InputFilename = "<stdin>"; // Overwrite for improved diagnostic messages
   if (std::error_code EC = InputFileOrErr.getError()) {
     errs() << "Could not open input file '" << InputFilename
            << "': " << EC.message() << '\n';
@@ -689,7 +648,7 @@ int main(int argc, char **argv) {
       (ExitCode == 1 && DumpInput == DumpInputFail)) {
     errs() << "\n"
            << "Input file: "
-           << InputFilename
+           << (InputFilename == "-" ? "<stdin>" : InputFilename.getValue())
            << "\n"
            << "Check file: " << CheckFilename << "\n"
            << "\n"
@@ -697,8 +656,7 @@ int main(int argc, char **argv) {
            << "\n";
     std::vector<InputAnnotation> Annotations;
     unsigned LabelWidth;
-    BuildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
-                          Annotations, LabelWidth);
+    BuildInputAnnotations(Diags, Annotations, LabelWidth);
     DumpAnnotatedInput(errs(), Req, InputFileText, Annotations, LabelWidth);
   }
 

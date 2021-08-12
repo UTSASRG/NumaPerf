@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -check-bfi-unknown-block-queries=true | FileCheck %s
 
 ; Checks if movl $1 is sinked to critical edge.
 ; CHECK-NOT: movl $1

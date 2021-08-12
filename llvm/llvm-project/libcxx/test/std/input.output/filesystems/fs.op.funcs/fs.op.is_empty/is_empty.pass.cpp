@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++98, c++03
 
 // <filesystem>
 
@@ -35,8 +35,7 @@ TEST_CASE(signature_test)
 
 TEST_CASE(test_exist_not_found)
 {
-    static_test_env static_env;
-    const path p = static_env.DNE;
+    const path p = StaticEnv::DNE;
     std::error_code ec;
     TEST_CHECK(is_empty(p, ec) == false);
     TEST_CHECK(ec);
@@ -45,9 +44,8 @@ TEST_CASE(test_exist_not_found)
 
 TEST_CASE(test_is_empty_directory)
 {
-    static_test_env static_env;
-    TEST_CHECK(!is_empty(static_env.Dir));
-    TEST_CHECK(!is_empty(static_env.SymlinkToDir));
+    TEST_CHECK(!is_empty(StaticEnv::Dir));
+    TEST_CHECK(!is_empty(StaticEnv::SymlinkToDir));
 }
 
 TEST_CASE(test_is_empty_directory_dynamic)
@@ -60,9 +58,8 @@ TEST_CASE(test_is_empty_directory_dynamic)
 
 TEST_CASE(test_is_empty_file)
 {
-    static_test_env static_env;
-    TEST_CHECK(is_empty(static_env.EmptyFile));
-    TEST_CHECK(!is_empty(static_env.NonEmptyFile));
+    TEST_CHECK(is_empty(StaticEnv::EmptyFile));
+    TEST_CHECK(!is_empty(StaticEnv::NonEmptyFile));
 }
 
 TEST_CASE(test_is_empty_fails)

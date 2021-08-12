@@ -45,8 +45,8 @@ namespace {
     AnalyzerOptions &AnOpts;
     const bool SupportsCrossFileDiagnostics;
   public:
-    PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
-                     const std::string &OutputFile, const Preprocessor &PP,
+    PlistDiagnostics(AnalyzerOptions &AnalyzerOpts, const std::string &prefix,
+                     const Preprocessor &PP,
                      const cross_tu::CrossTranslationUnitContext &CTU,
                      bool supportsMultipleFiles);
 
@@ -582,32 +582,19 @@ PlistDiagnostics::PlistDiagnostics(
 
 void ento::createPlistDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &OutputFile, const Preprocessor &PP,
+    const std::string &s, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-
-  // TODO: Emit an error here.
-  if (OutputFile.empty())
-    return;
-
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, OutputFile, PP, CTU,
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, CTU,
                                    /*supportsMultipleFiles*/ false));
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputFile, PP, CTU);
 }
 
 void ento::createPlistMultiFileDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &OutputFile, const Preprocessor &PP,
+    const std::string &s, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-
-  // TODO: Emit an error here.
-  if (OutputFile.empty())
-    return;
-
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, OutputFile, PP, CTU,
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, CTU,
                                    /*supportsMultipleFiles*/ true));
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputFile, PP, CTU);
 }
-
 void PlistDiagnostics::FlushDiagnosticsImpl(
                                     std::vector<const PathDiagnostic *> &Diags,
                                     FilesMade *filesMade) {
@@ -952,7 +939,7 @@ getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
 
   std::string MacroName = getMacroNameAndPrintExpansion(
       Printer, MacroLoc, *PPToUse, MacroArgMap{}, AlreadyProcessedTokens);
-  return {MacroName, std::string(OS.str())};
+  return { MacroName, OS.str() };
 }
 
 static std::string getMacroNameAndPrintExpansion(

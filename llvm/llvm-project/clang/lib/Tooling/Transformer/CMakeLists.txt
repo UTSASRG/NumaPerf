@@ -1,7 +1,4 @@
-set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-)
+set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangTransformer
   RangeSelector.cpp

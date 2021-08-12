@@ -14,6 +14,7 @@
 
 #include "CriticalAntiDepBreaker.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -32,7 +33,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <map>
 #include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -698,10 +701,4 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
   }
 
   return Broken;
-}
-
-AntiDepBreaker *
-llvm::createCriticalAntiDepBreaker(MachineFunction &MFi,
-                                   const RegisterClassInfo &RCI) {
-  return new CriticalAntiDepBreaker(MFi, RCI);
 }

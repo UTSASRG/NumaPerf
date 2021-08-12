@@ -13,9 +13,8 @@ namespace clang {
 namespace clangd {
 
 void runAddDocument(ClangdServer &Server, PathRef File,
-                    llvm::StringRef Contents, llvm::StringRef Version,
-                    WantDiagnostics WantDiags, bool ForceRebuild) {
-  Server.addDocument(File, Contents, Version, WantDiags, ForceRebuild);
+                    llvm::StringRef Contents, WantDiagnostics WantDiags) {
+  Server.addDocument(File, Contents, WantDiags);
   if (!Server.blockUntilIdleForTest())
     llvm_unreachable("not idle after addDocument");
 }
@@ -98,10 +97,9 @@ runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
 }
 
 llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
-                                    Position Pos, llvm::StringRef NewName,
-                                    const RenameOptions &RenameOpts) {
+                                    Position Pos, llvm::StringRef NewName) {
   llvm::Optional<llvm::Expected<FileEdits>> Result;
-  Server.rename(File, Pos, NewName, RenameOpts, capture(Result));
+  Server.rename(File, Pos, NewName, /*WantFormat=*/false, capture(Result));
   return std::move(*Result);
 }
 
@@ -127,7 +125,7 @@ runDocumentSymbols(ClangdServer &Server, PathRef File) {
 
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, llvm::StringRef Query) {
   FuzzyFindRequest Req;
-  Req.Query = std::string(Query);
+  Req.Query = Query;
   Req.AnyScope = true;
   return runFuzzyFind(Index, Req);
 }
@@ -146,10 +144,9 @@ RefSlab getRefs(const SymbolIndex &Index, SymbolID ID) {
   return std::move(Slab).build();
 }
 
-llvm::Expected<std::vector<SelectionRange>>
-runSemanticRanges(ClangdServer &Server, PathRef File,
-                  const std::vector<Position> &Pos) {
-  llvm::Optional<llvm::Expected<std::vector<SelectionRange>>> Result;
+llvm::Expected<std::vector<Range>>
+runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<std::vector<Range>>> Result;
   Server.semanticRanges(File, Pos, capture(Result));
   return std::move(*Result);
 }

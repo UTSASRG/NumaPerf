@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGINTERFACES_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGINTERFACES_H
+#ifndef DarwinLogInterfaces_h
+#define DarwinLogInterfaces_h
 
 #include <memory>
 
@@ -21,4 +21,4 @@ using LogFilterChainSP = std::shared_ptr<LogFilterChain>;
 
 class LogMessage;
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGINTERFACES_H
+#endif /* DarwinLogInterfaces_h */

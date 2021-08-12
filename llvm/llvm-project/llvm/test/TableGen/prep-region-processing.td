@@ -2,7 +2,7 @@
 
 class C;
 
-// TableGen prints records in alphabetical order.
+// TableGen prints records in alpabetical order.
 // CHECK-NOT: def ifdef_disabled1
 // CHECK-NOT: def ifdef_disabled2
 // CHECK:     def ifdef_disabled3

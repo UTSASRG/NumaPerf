@@ -16,9 +16,9 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_arm64.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
 
 using namespace llvm;
 
@@ -34,9 +34,7 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
 
   StringRef Data = Ctx->getObjectBuffer().getBuffer();
   if (Data.size() < 4) {
-    StringRef BufferName = Ctx->getObjectBuffer().getBufferIdentifier();
-    Ctx->notifyFailed(make_error<JITLinkError>("Truncated MachO buffer \"" +
-                                               BufferName + "\""));
+    Ctx->notifyFailed(make_error<JITLinkError>("Truncated MachO buffer"));
     return;
   }
 
@@ -53,26 +51,20 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
         make_error<JITLinkError>("MachO 32-bit platforms not supported"));
     return;
   } else if (Magic == MachO::MH_MAGIC_64 || Magic == MachO::MH_CIGAM_64) {
+    MachO::mach_header_64 Header;
 
-    if (Data.size() < sizeof(MachO::mach_header_64)) {
-      StringRef BufferName = Ctx->getObjectBuffer().getBufferIdentifier();
-      Ctx->notifyFailed(make_error<JITLinkError>("Truncated MachO buffer \"" +
-                                                 BufferName + "\""));
-      return;
-    }
-
-    // Read the CPU type from the header.
-    uint32_t CPUType;
-    memcpy(&CPUType, Data.data() + 4, sizeof(uint32_t));
+    memcpy(&Header, Data.data(), sizeof(MachO::mach_header_64));
     if (Magic == MachO::MH_CIGAM_64)
-      CPUType = ByteSwap_32(CPUType);
+      swapStruct(Header);
 
     LLVM_DEBUG({
-      dbgs() << "jitLink_MachO: cputype = " << format("0x%08" PRIx32, CPUType)
+      dbgs() << "jitLink_MachO: cputype = "
+             << format("0x%08" PRIx32, Header.cputype)
+             << ", cpusubtype = " << format("0x%08" PRIx32, Header.cpusubtype)
              << "\n";
     });
 
-    switch (CPUType) {
+    switch (Header.cputype) {
     case MachO::CPU_TYPE_ARM64:
       return jitLink_MachO_arm64(std::move(Ctx));
     case MachO::CPU_TYPE_X86_64:

@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # This tests that a reproducer is generated when LLDB crashes.
 
 # Start clean.

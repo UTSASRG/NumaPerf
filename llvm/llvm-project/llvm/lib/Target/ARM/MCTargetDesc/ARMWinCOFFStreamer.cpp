@@ -22,18 +22,18 @@ public:
                      std::unique_ptr<MCObjectWriter> OW)
       : MCWinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW)) {}
 
-  void emitThumbFunc(MCSymbol *Symbol) override;
-  void finishImpl() override;
+  void EmitThumbFunc(MCSymbol *Symbol) override;
+  void FinishImpl() override;
 };
 
-void ARMWinCOFFStreamer::emitThumbFunc(MCSymbol *Symbol) {
+void ARMWinCOFFStreamer::EmitThumbFunc(MCSymbol *Symbol) {
   getAssembler().setIsThumbFunc(Symbol);
 }
 
-void ARMWinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+void ARMWinCOFFStreamer::FinishImpl() {
+  EmitFrames(nullptr);
 
-  MCWinCOFFStreamer::finishImpl();
+  MCWinCOFFStreamer::FinishImpl();
 }
 }
 

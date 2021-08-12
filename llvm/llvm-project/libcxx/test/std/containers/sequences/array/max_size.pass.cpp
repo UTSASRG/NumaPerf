@@ -10,45 +10,28 @@
 
 // class array
 
-// constexpr bool max_size() const noexcept;
+// bool max_size() const noexcept;
 
 #include <array>
 #include <cassert>
 
 #include "test_macros.h"
-
-TEST_CONSTEXPR_CXX14 bool tests()
-{
-    {
-        typedef std::array<int, 2> C;
-        C c = {};
-        ASSERT_NOEXCEPT(c.max_size());
-        assert(c.max_size() == 2);
-    }
-    {
-        typedef std::array<int, 0> C;
-        C c = {};
-        ASSERT_NOEXCEPT(c.max_size());
-        assert(c.max_size() == 0);
-    }
-
-    return true;
-}
+#include "min_allocator.h"
 
 int main(int, char**)
 {
-    tests();
-#if TEST_STD_VER >= 14
-    static_assert(tests(), "");
-#endif
-
-#if TEST_STD_VER >= 11
-    // Sanity check for constexpr in C++11
     {
-        constexpr std::array<int, 3> array = {};
-        static_assert(array.max_size() == 3, "");
+    typedef std::array<int, 2> C;
+    C c;
+    ASSERT_NOEXCEPT(c.max_size());
+    assert(c.max_size() == 2);
     }
-#endif
+    {
+    typedef std::array<int, 0> C;
+    C c;
+    ASSERT_NOEXCEPT(c.max_size());
+    assert(c.max_size() == 0);
+    }
 
-    return 0;
+  return 0;
 }

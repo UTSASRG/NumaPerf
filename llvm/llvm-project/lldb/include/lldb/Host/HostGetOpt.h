@@ -5,9 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#ifndef LLDB_HOST_HOSTGETOPT_H
-#define LLDB_HOST_HOSTGETOPT_H
+#pragma once
 
 #if !defined(_MSC_VER) && !defined(__NetBSD__)
 
@@ -23,5 +21,3 @@
 #include <lldb/Host/common/GetOptInc.h>
 
 #endif
-
-#endif // LLDB_HOST_HOSTGETOPT_H

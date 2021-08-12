@@ -53,8 +53,8 @@ static void printName(raw_ostream &OS, StringRef Name) {
 void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                         raw_ostream &OS,
                                         const MCExpr *Subsection) const {
-  if (ShouldOmitSectionDirective(getName(), MAI)) {
-    OS << '\t' << getName();
+  if (ShouldOmitSectionDirective(SectionName, MAI)) {
+    OS << '\t' << getSectionName();
     if (Subsection) {
       OS << '\t';
       Subsection->print(OS, &MAI);
@@ -64,7 +64,7 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   OS << "\t.section\t";
-  printName(OS, getName());
+  printName(OS, getSectionName());
 
   // Handle the weird solaris syntax if desired.
   if (MAI.usesSunStyleELFSectionSwitchSyntax() &&
@@ -158,7 +158,7 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_sympart";
   else
     report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
-                       " for section " + getName());
+                       " for section " + getSectionName());
 
   if (EntrySize) {
     assert(Flags & ELF::SHF_MERGE);
@@ -172,9 +172,9 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (Flags & ELF::SHF_LINK_ORDER) {
-    assert(LinkedToSym);
+    assert(AssociatedSymbol);
     OS << ",";
-    printName(OS, LinkedToSym->getName());
+    printName(OS, AssociatedSymbol->getName());
   }
 
   if (isUnique())
@@ -196,5 +196,3 @@ bool MCSectionELF::UseCodeAlign() const {
 bool MCSectionELF::isVirtualSection() const {
   return getType() == ELF::SHT_NOBITS;
 }
-
-StringRef MCSectionELF::getVirtualSectionKind() const { return "SHT_NOBITS"; }

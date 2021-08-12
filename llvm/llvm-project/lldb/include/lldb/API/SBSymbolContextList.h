@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBSYMBOLCONTEXTLIST_H
-#define LLDB_API_SBSYMBOLCONTEXTLIST_H
+#ifndef LLDB_SBSymbolContextList_h_
+#define LLDB_SBSymbolContextList_h_
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBSymbolContext.h"
@@ -55,4 +55,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBSYMBOLCONTEXTLIST_H
+#endif // LLDB_SBSymbolContextList_h_

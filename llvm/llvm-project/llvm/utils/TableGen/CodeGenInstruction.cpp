@@ -80,16 +80,16 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
     unsigned NumOps = 1;
     DagInit *MIOpInfo = nullptr;
     if (Rec->isSubClassOf("RegisterOperand")) {
-      PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
-      OperandType = std::string(Rec->getValueAsString("OperandType"));
-      OperandNamespace = std::string(Rec->getValueAsString("OperandNamespace"));
-      EncoderMethod = std::string(Rec->getValueAsString("EncoderMethod"));
+      PrintMethod = Rec->getValueAsString("PrintMethod");
+      OperandType = Rec->getValueAsString("OperandType");
+      OperandNamespace = Rec->getValueAsString("OperandNamespace");
+      EncoderMethod = Rec->getValueAsString("EncoderMethod");
     } else if (Rec->isSubClassOf("Operand")) {
-      PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
-      OperandType = std::string(Rec->getValueAsString("OperandType"));
-      OperandNamespace = std::string(Rec->getValueAsString("OperandNamespace"));
+      PrintMethod = Rec->getValueAsString("PrintMethod");
+      OperandType = Rec->getValueAsString("OperandType");
+      OperandNamespace = Rec->getValueAsString("OperandNamespace");
       // If there is an explicit encoder method, use it.
-      EncoderMethod = std::string(Rec->getValueAsString("EncoderMethod"));
+      EncoderMethod = Rec->getValueAsString("EncoderMethod");
       MIOpInfo = Rec->getValueAsDag("MIOperandInfo");
 
       // Verify that MIOpInfo has an 'ops' root value.
@@ -124,16 +124,15 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                        "', operand #" + Twine(i) +
                                        " has no name!");
-    if (!OperandNames.insert(std::string(ArgName)).second)
+    if (!OperandNames.insert(ArgName).second)
       PrintFatalError(R->getLoc(),
                       "In instruction '" + R->getName() + "', operand #" +
                           Twine(i) +
                           " has the same name as a previous operand!");
 
-    OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(PrintMethod),
-        std::string(EncoderMethod), OperandNamespace + "::" + OperandType,
-        MIOperandNo, NumOps, MIOpInfo);
+    OperandList.emplace_back(Rec, ArgName, PrintMethod, EncoderMethod,
+                             OperandNamespace + "::" + OperandType, MIOperandNo,
+                             NumOps, MIOpInfo);
     MIOperandNo += NumOps;
   }
 
@@ -266,8 +265,7 @@ static void ParseConstraint(const std::string &CStr, CGIOperandList &Ops,
     PrintFatalError(
       Rec->getLoc(), "Illegal format for tied-to constraint in '" +
       Rec->getName() + "': '" + CStr + "'");
-  std::string LHSOpName =
-      std::string(StringRef(CStr).substr(start, wpos - start));
+  std::string LHSOpName = StringRef(CStr).substr(start, wpos - start);
   std::pair<unsigned,unsigned> LHSOp = Ops.ParseOperandName(LHSOpName, false);
 
   wpos = CStr.find_first_not_of(" \t", pos + 1);
@@ -275,7 +273,7 @@ static void ParseConstraint(const std::string &CStr, CGIOperandList &Ops,
     PrintFatalError(
       Rec->getLoc(), "Illegal format for tied-to constraint: '" + CStr + "'");
 
-  std::string RHSOpName = std::string(StringRef(CStr).substr(wpos));
+  std::string RHSOpName = StringRef(CStr).substr(wpos);
   std::pair<unsigned,unsigned> RHSOp = Ops.ParseOperandName(RHSOpName, false);
 
   // Sort the operands into order, which should put the output one
@@ -341,8 +339,8 @@ static void ParseConstraints(const std::string &CStr, CGIOperandList &Ops,
 void CGIOperandList::ProcessDisableEncoding(std::string DisableEncoding) {
   while (1) {
     std::pair<StringRef, StringRef> P = getToken(DisableEncoding, " ,\t");
-    std::string OpName = std::string(P.first);
-    DisableEncoding = std::string(P.second);
+    std::string OpName = P.first;
+    DisableEncoding = P.second;
     if (OpName.empty()) break;
 
     // Figure out which operand this is.
@@ -363,7 +361,7 @@ void CGIOperandList::ProcessDisableEncoding(std::string DisableEncoding) {
 CodeGenInstruction::CodeGenInstruction(Record *R)
   : TheDef(R), Operands(R), InferredFrom(nullptr) {
   Namespace = R->getValueAsString("Namespace");
-  AsmString = std::string(R->getValueAsString("AsmString"));
+  AsmString = R->getValueAsString("AsmString");
 
   isPreISelOpcode = R->getValueAsBit("isPreISelOpcode");
   isReturn     = R->getValueAsBit("isReturn");
@@ -422,18 +420,15 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   hasChain_Inferred = false;
 
   // Parse Constraints.
-  ParseConstraints(std::string(R->getValueAsString("Constraints")), Operands,
-                   R);
+  ParseConstraints(R->getValueAsString("Constraints"), Operands, R);
 
   // Parse the DisableEncoding field.
-  Operands.ProcessDisableEncoding(
-      std::string(R->getValueAsString("DisableEncoding")));
+  Operands.ProcessDisableEncoding(R->getValueAsString("DisableEncoding"));
 
   // First check for a ComplexDeprecationPredicate.
   if (R->getValue("ComplexDeprecationPredicate")) {
     HasComplexDeprecationPredicate = true;
-    DeprecatedReason =
-        std::string(R->getValueAsString("ComplexDeprecationPredicate"));
+    DeprecatedReason = R->getValueAsString("ComplexDeprecationPredicate");
   } else if (RecordVal *Dep = R->getValue("DeprecatedFeatureMask")) {
     // Check if we have a Subtarget feature mask.
     HasComplexDeprecationPredicate = false;
@@ -546,8 +541,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
     if (!Result->getArgName(AliasOpNo))
       PrintFatalError(Loc, "result argument #" + Twine(AliasOpNo) +
                            " must have a name!");
-    ResOp = ResultOperand(std::string(Result->getArgNameStr(AliasOpNo)),
-                          ResultRecord);
+    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo), ResultRecord);
     return true;
   }
 
@@ -565,8 +559,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
     if (!T.getRegisterClass(InstOpRec)
               .hasSubClass(&T.getRegisterClass(ADI->getDef())))
       return false;
-    ResOp = ResultOperand(std::string(Result->getArgNameStr(AliasOpNo)),
-                          ResultRecord);
+    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo), ResultRecord);
     return true;
   }
 
@@ -648,8 +641,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
     // MIOperandInfo perhaps?
     if (InstOpRec->getValueInit("Type") != ADI->getDef()->getValueInit("Type"))
       return false;
-    ResOp = ResultOperand(std::string(Result->getArgNameStr(AliasOpNo)),
-                          ADI->getDef());
+    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo), ADI->getDef());
     return true;
   }
 
@@ -676,7 +668,8 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
 CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T)
     : TheDef(R) {
   Result = R->getValueAsDag("ResultInst");
-  AsmString = std::string(R->getValueAsString("AsmString"));
+  AsmString = R->getValueAsString("AsmString");
+
 
   // Verify that the root of the result is an instruction.
   DefInit *DI = dyn_cast<DefInit>(Result->getOperator());

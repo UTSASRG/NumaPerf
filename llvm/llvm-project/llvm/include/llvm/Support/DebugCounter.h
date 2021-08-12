@@ -44,14 +44,13 @@
 #define LLVM_SUPPORT_DEBUGCOUNTER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/UniqueVector.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace llvm {
-
-class raw_ostream;
 
 class DebugCounter {
 public:
@@ -69,7 +68,7 @@ public:
   // line option parsing. The main reason to register counters is to produce a
   // nice list of them on the command line, but i'm not sure this is worth it.
   static unsigned registerCounter(StringRef Name, StringRef Desc) {
-    return instance().addCounter(std::string(Name), std::string(Desc));
+    return instance().addCounter(Name, Desc);
   }
   inline static bool shouldExecute(unsigned CounterName) {
     if (!isCountingEnabled())

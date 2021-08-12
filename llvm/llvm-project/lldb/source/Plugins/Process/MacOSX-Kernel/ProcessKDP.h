@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDP_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDP_H
+#ifndef liblldb_ProcessKDP_h_
+#define liblldb_ProcessKDP_h_
+
 
 #include <list>
 #include <vector>
@@ -186,8 +187,7 @@ protected:
 private:
   // For ProcessKDP only
 
-  ProcessKDP(const ProcessKDP &) = delete;
-  const ProcessKDP &operator=(const ProcessKDP &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ProcessKDP);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDP_H
+#endif // liblldb_ProcessKDP_h_

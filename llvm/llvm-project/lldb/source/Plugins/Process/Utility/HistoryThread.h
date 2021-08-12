@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_HISTORYTHREAD_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_HISTORYTHREAD_H
+#ifndef liblldb_HistoryThread_h_
+#define liblldb_HistoryThread_h_
 
 #include <mutex>
 
@@ -33,8 +33,7 @@ namespace lldb_private {
 class HistoryThread : public lldb_private::Thread {
 public:
   HistoryThread(lldb_private::Process &process, lldb::tid_t tid,
-                std::vector<lldb::addr_t> pcs,
-                bool pcs_are_call_addresses = false);
+                std::vector<lldb::addr_t> pcs);
 
   ~HistoryThread() override;
 
@@ -89,4 +88,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_HISTORYTHREAD_H
+#endif // liblldb_HistoryThread_h_

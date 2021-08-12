@@ -169,9 +169,7 @@ namespace clang {
     /// template-name.
     ParsedTemplateTy Template;
 
-    /// The kind of template that Template refers to. If this is
-    /// TNK_Non_template, an error was encountered and diagnosed
-    /// when parsing or looking up the template name.
+    /// The kind of template that Template refers to.
     TemplateNameKind Kind;
 
     /// The location of the '<' before the template argument
@@ -185,10 +183,6 @@ namespace clang {
     /// NumArgs - The number of template arguments.
     unsigned NumArgs;
 
-    /// Whether an error was encountered in the template arguments.
-    /// If so, NumArgs and the trailing arguments are best-effort.
-    bool ArgsInvalid;
-
     /// Retrieves a pointer to the template arguments
     ParsedTemplateArgument *getTemplateArgs() {
       return getTrailingObjects<ParsedTemplateArgument>();
@@ -201,13 +195,13 @@ namespace clang {
            IdentifierInfo *Name, OverloadedOperatorKind OperatorKind,
            ParsedTemplateTy OpaqueTemplateName, TemplateNameKind TemplateKind,
            SourceLocation LAngleLoc, SourceLocation RAngleLoc,
-           ArrayRef<ParsedTemplateArgument> TemplateArgs, bool ArgsInvalid,
+           ArrayRef<ParsedTemplateArgument> TemplateArgs,
            SmallVectorImpl<TemplateIdAnnotation *> &CleanupList) {
       TemplateIdAnnotation *TemplateId = new (llvm::safe_malloc(
           totalSizeToAlloc<ParsedTemplateArgument>(TemplateArgs.size())))
           TemplateIdAnnotation(TemplateKWLoc, TemplateNameLoc, Name,
                                OperatorKind, OpaqueTemplateName, TemplateKind,
-                               LAngleLoc, RAngleLoc, TemplateArgs, ArgsInvalid);
+                               LAngleLoc, RAngleLoc, TemplateArgs);
       CleanupList.push_back(TemplateId);
       return TemplateId;
     }
@@ -219,20 +213,6 @@ namespace clang {
       this->~TemplateIdAnnotation();
       free(this);
     }
-
-    /// Determine whether this might be a type template.
-    bool mightBeType() const {
-      return Kind == TNK_Non_template ||
-             Kind == TNK_Type_template ||
-             Kind == TNK_Dependent_template_name ||
-             Kind == TNK_Undeclared_template;
-    }
-
-    bool hasInvalidName() const { return Kind == TNK_Non_template; }
-    bool hasInvalidArgs() const { return ArgsInvalid; }
-
-    bool isInvalid() const { return hasInvalidName() || hasInvalidArgs(); }
-
   private:
     TemplateIdAnnotation(const TemplateIdAnnotation &) = delete;
 
@@ -242,12 +222,11 @@ namespace clang {
                          ParsedTemplateTy OpaqueTemplateName,
                          TemplateNameKind TemplateKind,
                          SourceLocation LAngleLoc, SourceLocation RAngleLoc,
-                         ArrayRef<ParsedTemplateArgument> TemplateArgs,
-                         bool ArgsInvalid) noexcept
+                         ArrayRef<ParsedTemplateArgument> TemplateArgs) noexcept
         : TemplateKWLoc(TemplateKWLoc), TemplateNameLoc(TemplateNameLoc),
           Name(Name), Operator(OperatorKind), Template(OpaqueTemplateName),
           Kind(TemplateKind), LAngleLoc(LAngleLoc), RAngleLoc(RAngleLoc),
-          NumArgs(TemplateArgs.size()), ArgsInvalid(ArgsInvalid) {
+          NumArgs(TemplateArgs.size()) {
 
       std::uninitialized_copy(TemplateArgs.begin(), TemplateArgs.end(),
                               getTemplateArgs());

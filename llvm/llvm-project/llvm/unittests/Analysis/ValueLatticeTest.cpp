@@ -23,6 +23,9 @@ namespace {
 class ValueLatticeTest : public testing::Test {
 protected:
   LLVMContext Context;
+  Module M;
+
+  ValueLatticeTest() : M("", Context) {}
 };
 
 TEST_F(ValueLatticeTest, ValueLatticeGetters) {
@@ -40,49 +43,32 @@ TEST_F(ValueLatticeTest, ValueLatticeGetters) {
   EXPECT_TRUE(ValueLatticeElement::getNot(C2).isNotConstant());
 }
 
-TEST_F(ValueLatticeTest, MarkConstantRange) {
-  auto LV1 =
-      ValueLatticeElement::getRange({APInt(32, 10, true), APInt(32, 20, true)});
-
-  // Test markConstantRange() with an equal range.
-  EXPECT_FALSE(
-      LV1.markConstantRange({APInt(32, 10, true), APInt(32, 20, true)}));
-
-  // Test markConstantRange() with supersets of existing range.
-  EXPECT_TRUE(LV1.markConstantRange({APInt(32, 5, true), APInt(32, 20, true)}));
-  EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 5U);
-  EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 20U);
-  EXPECT_TRUE(LV1.markConstantRange({APInt(32, 5, true), APInt(32, 23, true)}));
-  EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 5U);
-  EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 23U);
-}
-
 TEST_F(ValueLatticeTest, MergeIn) {
   auto I32Ty = IntegerType::get(Context, 32);
   auto *C1 = ConstantInt::get(I32Ty, 1);
 
   // Merge to lattice values with equal integer constant.
   auto LV1 = ValueLatticeElement::get(C1);
-  EXPECT_FALSE(LV1.mergeIn(ValueLatticeElement::get(C1)));
+  EXPECT_FALSE(LV1.mergeIn(ValueLatticeElement::get(C1), M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.asConstantInteger().getValue().getLimitedValue(), 1U);
 
   // Merge LV1 with different integer constant.
-  EXPECT_TRUE(
-      LV1.mergeIn(ValueLatticeElement::get(ConstantInt::get(I32Ty, 99))));
+  EXPECT_TRUE(LV1.mergeIn(ValueLatticeElement::get(ConstantInt::get(I32Ty, 99)),
+                          M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 1U);
   EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 100U);
 
   // Merge constant range with same constant range.
-  EXPECT_FALSE(LV1.mergeIn(LV1));
+  EXPECT_FALSE(LV1.mergeIn(LV1, M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 1U);
   EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 100U);
 
   // Merge LV1 in undefined value.
   ValueLatticeElement LV2;
-  EXPECT_TRUE(LV2.mergeIn(LV1));
+  EXPECT_TRUE(LV2.mergeIn(LV1, M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 1U);
   EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 100U);
@@ -91,11 +77,13 @@ TEST_F(ValueLatticeTest, MergeIn) {
   EXPECT_EQ(LV2.getConstantRange().getUpper().getLimitedValue(), 100U);
 
   // Merge LV1 with overdefined.
-  EXPECT_TRUE(LV1.mergeIn(ValueLatticeElement::getOverdefined()));
+  EXPECT_TRUE(
+      LV1.mergeIn(ValueLatticeElement::getOverdefined(), M.getDataLayout()));
   EXPECT_TRUE(LV1.isOverdefined());
 
   // Merge overdefined with overdefined.
-  EXPECT_FALSE(LV1.mergeIn(ValueLatticeElement::getOverdefined()));
+  EXPECT_FALSE(
+      LV1.mergeIn(ValueLatticeElement::getOverdefined(), M.getDataLayout()));
   EXPECT_TRUE(LV1.isOverdefined());
 }
 
@@ -160,7 +148,8 @@ TEST_F(ValueLatticeTest, getCompareFloat) {
   EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV2)->isZeroValue());
 
   EXPECT_TRUE(
-      LV1.mergeIn(ValueLatticeElement::get(ConstantFP::get(FloatTy, 2.2))));
+      LV1.mergeIn(ValueLatticeElement::get(ConstantFP::get(FloatTy, 2.2)),
+                  M.getDataLayout()));
   EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV2), nullptr);
   EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV2), nullptr);
   EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV2), nullptr);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_URIPARSER_H
-#define LLDB_UTILITY_URIPARSER_H
+#ifndef utility_UriParser_h_
+#define utility_UriParser_h_
 
 #include "llvm/ADT/StringRef.h"
 
@@ -28,4 +28,4 @@ public:
 };
 }
 
-#endif // LLDB_UTILITY_URIPARSER_H
+#endif // utility_UriParser_h_

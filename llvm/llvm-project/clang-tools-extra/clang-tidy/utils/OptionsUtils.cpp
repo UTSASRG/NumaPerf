@@ -22,13 +22,13 @@ std::vector<std::string> parseStringList(StringRef Option) {
   for (StringRef &Name : Names) {
     Name = Name.trim();
     if (!Name.empty())
-      Result.emplace_back(Name);
+      Result.push_back(Name);
   }
   return Result;
 }
 
 std::string serializeStringList(ArrayRef<std::string> Strings) {
-  return llvm::join(Strings, StringsDelimiter);
+  return llvm::join(Strings.begin(), Strings.end(), StringsDelimiter);
 }
 
 } // namespace options

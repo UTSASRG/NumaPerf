@@ -16,7 +16,6 @@
 #ifndef LLVM_ANALYSIS_PROFILE_GEN_ANALYSIS_H
 #define LLVM_ANALYSIS_PROFILE_GEN_ANALYSIS_H
 
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -59,7 +58,7 @@ public:
     Instruction *AnnotatedInst; // Where metadata is attached.
   };
 
-  ValueProfileCollector(Function &Fn, TargetLibraryInfo &TLI);
+  ValueProfileCollector(Function &Fn);
   ValueProfileCollector(ValueProfileCollector &&) = delete;
   ValueProfileCollector &operator=(ValueProfileCollector &&) = delete;
 

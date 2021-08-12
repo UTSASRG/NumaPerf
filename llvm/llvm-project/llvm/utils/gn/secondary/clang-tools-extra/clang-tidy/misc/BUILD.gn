@@ -18,7 +18,6 @@ static_library("misc") {
     "MiscTidyModule.cpp",
     "MisplacedConstCheck.cpp",
     "NewDeleteOverloadsCheck.cpp",
-    "NoRecursionCheck.cpp",
     "NonCopyableObjects.cpp",
     "NonPrivateMemberVariablesInClassesCheck.cpp",
     "RedundantExpressionCheck.cpp",

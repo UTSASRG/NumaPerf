@@ -261,6 +261,6 @@ void ento::registerTestAfterDivZeroChecker(CheckerManager &mgr) {
   mgr.registerChecker<TestAfterDivZeroChecker>();
 }
 
-bool ento::shouldRegisterTestAfterDivZeroChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterTestAfterDivZeroChecker(const LangOptions &LO) {
   return true;
 }

@@ -39,7 +39,7 @@ public:
                             RegScavenger *RS = nullptr) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+                             unsigned &FrameReg) const override;
 
   /// targetHandlesStackFrameRounding - Returns true if the target is
   /// responsible for rounding up the stack frame (probably at emitPrologue

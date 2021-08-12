@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTYPESUMMARY_H
-#define LLDB_API_SBTYPESUMMARY_H
+#ifndef LLDB_SBTypeSummary_h_
+#define LLDB_SBTypeSummary_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -136,4 +136,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBTYPESUMMARY_H
+#endif // LLDB_SBTypeSummary_h_

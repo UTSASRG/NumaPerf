@@ -38,7 +38,7 @@ template <typename T> class ArrayRef;
   Constant *ConstantFoldInsertElementInstruction(Constant *Val, Constant *Elt,
                                                  Constant *Idx);
   Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
-                                                 ArrayRef<int> Mask);
+                                                 Constant *Mask);
   Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
                                                 ArrayRef<unsigned> Idxs);
   Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,

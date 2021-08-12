@@ -1,4 +1,4 @@
-//===-- OperatingSystemPython.cpp -----------------------------------------===//
+//===-- OperatingSystemPython.cpp --------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,8 +38,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-LLDB_PLUGIN_DEFINE(OperatingSystemPython)
 
 void OperatingSystemPython::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -339,7 +337,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
         m_interpreter->OSPlugin_RegisterContextData(m_python_object_sp,
                                                     thread->GetID());
     if (reg_context_data) {
-      std::string value = std::string(reg_context_data->GetValue());
+      std::string value = reg_context_data->GetValue();
       DataBufferSP data_sp(new DataBufferHeap(value.c_str(), value.length()));
       if (data_sp->GetByteSize()) {
         RegisterContextMemory *reg_ctx_memory = new RegisterContextMemory(

@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_TEMPLATENAME_H
 #define LLVM_CLANG_AST_TEMPLATENAME_H
 
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -296,8 +295,6 @@ public:
   /// the template, including any default template arguments.
   TemplateName getNameToSubstitute() const;
 
-  TemplateNameDependence getDependence() const;
-
   /// Determines whether this is a dependent template name.
   bool isDependent() const;
 
@@ -562,7 +559,7 @@ struct PointerLikeTypeTraits<clang::TemplateName> {
   }
 
   // No bits are available!
-  static constexpr int NumLowBitsAvailable = 0;
+  enum { NumLowBitsAvailable = 0 };
 };
 
 } // namespace llvm.

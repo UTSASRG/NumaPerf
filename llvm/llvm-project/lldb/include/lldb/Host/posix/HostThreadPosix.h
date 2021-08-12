@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_POSIX_HOSTTHREADPOSIX_H
-#define LLDB_HOST_POSIX_HOSTTHREADPOSIX_H
+#ifndef lldb_Host_posix_HostThreadPosix_h_
+#define lldb_Host_posix_HostThreadPosix_h_
 
 #include "lldb/Host/HostNativeThreadBase.h"
 
 namespace lldb_private {
 
 class HostThreadPosix : public HostNativeThreadBase {
-  HostThreadPosix(const HostThreadPosix &) = delete;
-  const HostThreadPosix &operator=(const HostThreadPosix &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(HostThreadPosix);
 
 public:
   HostThreadPosix();
@@ -30,4 +29,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_POSIX_HOSTTHREADPOSIX_H
+#endif // lldb_Host_posix_HostThreadPosix_h_

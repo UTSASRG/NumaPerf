@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONGROUPPYTHONCLASSWITHDICT_H
-#define LLDB_INTERPRETER_OPTIONGROUPPYTHONCLASSWITHDICT_H
+#ifndef liblldb_OptionGroupPythonClassWithDict_h_
+#define liblldb_OptionGroupPythonClassWithDict_h_
 
 #include "lldb/lldb-types.h"
 #include "lldb/Interpreter/Options.h"
@@ -60,4 +60,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONGROUPPYTHONCLASSWITHDICT_H
+#endif // liblldb_OptionGroupPythonClassWithDict_h_

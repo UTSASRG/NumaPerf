@@ -13,17 +13,13 @@
 #ifndef LLVM_COV_COVERAGEFILTERS_H
 #define LLVM_COV_COVERAGEFILTERS_H
 
-#include "llvm/ADT/StringRef.h"
+#include "CoverageSummaryInfo.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include <memory>
 #include <vector>
 
 namespace llvm {
-class SpecialCaseList;
-
-namespace coverage {
-class CoverageMapping;
-struct FunctionRecord;
-} // namespace coverage
 
 /// Matches specific functions that pass the requirement of this filter.
 class CoverageFilter {

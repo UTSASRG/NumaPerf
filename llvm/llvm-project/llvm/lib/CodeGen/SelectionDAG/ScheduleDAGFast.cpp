@@ -761,7 +761,7 @@ void ScheduleDAGLinearize::Schedule() {
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(BB, InsertPos);
-  DenseMap<SDValue, Register> VRBaseMap;
+  DenseMap<SDValue, unsigned> VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });
 

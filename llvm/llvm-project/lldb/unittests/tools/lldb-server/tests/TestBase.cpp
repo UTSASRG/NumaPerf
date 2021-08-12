@@ -1,4 +1,4 @@
-//===-- TestBase.cpp ------------------------------------------------------===//
+//===-- TestBase.cpp --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,6 +30,6 @@ std::string TestBase::getLogFileName() {
   sys::path::append(DirStr, std::string("server-") +
                                 test_info->test_case_name() + "-" +
                                 test_info->name() + ".log");
-  return std::string(DirStr.str());
+  return DirStr.str();
 }
 

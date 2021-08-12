@@ -273,6 +273,7 @@ SourceRange Stmt::getSourceRange() const {
 }
 
 SourceLocation Stmt::getBeginLoc() const {
+  //  llvm::errs() << "getBeginLoc() for " << getStmtClassName() << "\n";
   switch (getStmtClass()) {
   case Stmt::NoStmtClass: llvm_unreachable("statement without class");
 #define ABSTRACT_STMT(type)
@@ -456,7 +457,7 @@ void GCCAsmStmt::setInputExpr(unsigned i, Expr *E) {
 }
 
 AddrLabelExpr *GCCAsmStmt::getLabelExpr(unsigned i) const {
-  return cast<AddrLabelExpr>(Exprs[i + NumOutputs + NumInputs]);
+  return cast<AddrLabelExpr>(Exprs[i + NumInputs]);
 }
 
 StringRef GCCAsmStmt::getLabelName(unsigned i) const {
@@ -522,7 +523,7 @@ int GCCAsmStmt::getNamedOperand(StringRef SymbolicName) const {
 
   for (unsigned i = 0, e = getNumLabels(); i != e; ++i)
     if (getLabelName(i) == SymbolicName)
-      return i + getNumOutputs() + getNumInputs();
+      return i + getNumInputs();
 
   // Not found.
   return -1;
@@ -731,7 +732,7 @@ std::string GCCAsmStmt::generateAsmString(const ASTContext &C) const {
 /// Assemble final IR asm string (MS-style).
 std::string MSAsmStmt::generateAsmString(const ASTContext &C) const {
   // FIXME: This needs to be translated into the IR string representation.
-  return std::string(AsmStr);
+  return AsmStr;
 }
 
 Expr *MSAsmStmt::getOutputExpr(unsigned i) {

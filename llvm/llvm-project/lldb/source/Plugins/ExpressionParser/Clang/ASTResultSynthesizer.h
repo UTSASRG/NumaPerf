@@ -6,19 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTRESULTSYNTHESIZER_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTRESULTSYNTHESIZER_H
+#ifndef liblldb_ASTResultSynthesizer_h_
+#define liblldb_ASTResultSynthesizer_h_
 
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Target/Target.h"
 #include "clang/Sema/SemaConsumer.h"
-
-namespace clang {
-class CompoundStmt;
-class DeclContext;
-class NamedDecl;
-class ObjCMethodDecl;
-class TypeDecl;
-} // namespace clang
 
 namespace lldb_private {
 
@@ -170,4 +163,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTRESULTSYNTHESIZER_H
+#endif // liblldb_ASTResultSynthesizer_h_

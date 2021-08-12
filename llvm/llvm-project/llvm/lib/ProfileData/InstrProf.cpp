@@ -162,10 +162,6 @@ const char *InstrProfSectNamePrefix[] = {
 
 namespace llvm {
 
-cl::opt<bool> DoInstrProfNameCompression(
-    "enable-name-compression",
-    cl::desc("Enable name/filename string compression"), cl::init(true));
-
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {
@@ -290,7 +286,7 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
 // symbol is created to hold the name. Return the legalized symbol name.
 std::string getPGOFuncNameVarName(StringRef FuncName,
                                   GlobalValue::LinkageTypes Linkage) {
-  std::string VarName = std::string(getInstrProfNameVarPrefix());
+  std::string VarName = getInstrProfNameVarPrefix();
   VarName += FuncName;
 
   if (!GlobalValue::isLocalLinkage(Linkage))
@@ -431,7 +427,7 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression) {
   std::vector<std::string> NameStrs;
   for (auto *NameVar : NameVars) {
-    NameStrs.push_back(std::string(getPGOFuncNameVarInitializer(NameVar)));
+    NameStrs.push_back(getPGOFuncNameVarInitializer(NameVar));
   }
   return collectPGOFuncNameStrings(
       NameStrs, zlib::isAvailable() && doCompression, Result);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_EXECUTIONCONTEXT_H
-#define LLDB_TARGET_EXECUTIONCONTEXT_H
+#ifndef liblldb_ExecutionContext_h_
+#define liblldb_ExecutionContext_h_
 
 #include <mutex>
 
@@ -565,4 +565,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_EXECUTIONCONTEXT_H
+#endif // liblldb_ExecutionContext_h_

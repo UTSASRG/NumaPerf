@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginOperatingSystemPython PLUGIN
+add_lldb_library(lldbPluginOSPython PLUGIN
   OperatingSystemPython.cpp
 
   LINK_LIBS

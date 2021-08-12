@@ -32,16 +32,13 @@ namespace modernize {
 class UseNoexceptCheck : public ClangTidyCheck {
 public:
   UseNoexceptCheck(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11;
-  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
   const std::string NoexceptMacro;
-  const bool UseNoexceptFalse;
+  bool UseNoexceptFalse;
 };
 
 } // namespace modernize

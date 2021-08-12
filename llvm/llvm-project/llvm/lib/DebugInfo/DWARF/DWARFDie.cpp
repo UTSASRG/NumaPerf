@@ -79,7 +79,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
     ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
     DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
                        Ctx.isLittleEndian(), 0);
-    DWARFExpression(Data, U->getAddressByteSize(), U->getFormParams().Format)
+    DWARFExpression(Data, U->getVersion(), U->getAddressByteSize())
         .print(OS, MRI, U);
     return;
   }
@@ -317,9 +317,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       dumpRanges(Obj, OS, RangesOrError.get(), U->getAddressByteSize(),
                  sizeof(BaseIndent) + Indent + 4, DumpOpts);
     else
-      DumpOpts.RecoverableErrorHandler(createStringError(
-          errc::invalid_argument, "decoding address ranges: %s",
-          toString(RangesOrError.takeError()).c_str()));
+      WithColor::error() << "decoding address ranges: "
+                         << toString(RangesOrError.takeError()) << '\n';
   }
 
   OS << ")\n";
@@ -357,7 +356,7 @@ DWARFDie::find(ArrayRef<dwarf::Attribute> Attrs) const {
 
 Optional<DWARFFormValue>
 DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
-  SmallVector<DWARFDie, 3> Worklist;
+  std::vector<DWARFDie> Worklist;
   Worklist.push_back(*this);
 
   // Keep track if DIEs already seen to prevent infinite recursion.
@@ -532,26 +531,14 @@ const char *DWARFDie::getName(DINameKind Kind) const {
     return nullptr;
   // Try to get mangled name only if it was asked for.
   if (Kind == DINameKind::LinkageName) {
-    if (auto Name = getLinkageName())
+    if (auto Name = dwarf::toString(
+            findRecursively({DW_AT_MIPS_linkage_name, DW_AT_linkage_name}),
+            nullptr))
       return Name;
   }
-  return getShortName();
-}
-
-const char *DWARFDie::getShortName() const {
-  if (!isValid())
-    return nullptr;
-
-  return dwarf::toString(findRecursively(dwarf::DW_AT_name), nullptr);
-}
-
-const char *DWARFDie::getLinkageName() const {
-  if (!isValid())
-    return nullptr;
-
-  return dwarf::toString(findRecursively({dwarf::DW_AT_MIPS_linkage_name,
-                                          dwarf::DW_AT_linkage_name}),
-                         nullptr);
+  if (auto Name = dwarf::toString(findRecursively(DW_AT_name), nullptr))
+    return Name;
+  return nullptr;
 }
 
 uint64_t DWARFDie::getDeclLine() const {

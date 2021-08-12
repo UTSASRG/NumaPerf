@@ -296,7 +296,7 @@ std::string segment(llvm::StringRef Text) {
 }
 
 // this is a no-op hack so clang-format will vertically align our testcases.
-std::string returns(llvm::StringRef Text) { return std::string(Text); }
+llvm::StringRef returns(llvm::StringRef Text) { return Text; }
 
 TEST(FuzzyMatch, Segmentation) {
   EXPECT_THAT(segment("std::basic_string"), //

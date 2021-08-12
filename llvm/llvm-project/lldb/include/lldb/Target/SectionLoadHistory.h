@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_SECTIONLOADHISTORY_H
-#define LLDB_TARGET_SECTIONLOADHISTORY_H
+#ifndef liblldb_SectionLoadHistory_h_
+#define liblldb_SectionLoadHistory_h_
 
 #include <map>
 #include <mutex>
@@ -75,10 +75,9 @@ protected:
   mutable std::recursive_mutex m_mutex;
 
 private:
-  SectionLoadHistory(const SectionLoadHistory &) = delete;
-  const SectionLoadHistory &operator=(const SectionLoadHistory &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(SectionLoadHistory);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_SECTIONLOADHISTORY_H
+#endif // liblldb_SectionLoadHistory_h_

@@ -11,10 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Internals.h"
 #include "Transforms.h"
+#include "Internals.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
 using namespace clang;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_BREAKPOINTRESOLVERSCRIPTED_H
-#define LLDB_BREAKPOINT_BREAKPOINTRESOLVERSCRIPTED_H
+#ifndef liblldb_BreakpointResolverScripted_h_
+#define liblldb_BreakpointResolverScripted_h_
 
 #include "lldb/lldb-forward.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
@@ -23,15 +23,15 @@ namespace lldb_private {
 
 class BreakpointResolverScripted : public BreakpointResolver {
 public:
-  BreakpointResolverScripted(const lldb::BreakpointSP &bkpt,
+  BreakpointResolverScripted(Breakpoint *bkpt,
                              const llvm::StringRef class_name,
                              lldb::SearchDepth depth,
                              StructuredDataImpl *args_data);
 
-  ~BreakpointResolverScripted() override = default;
+  ~BreakpointResolverScripted() override;
 
   static BreakpointResolver *
-  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
+  CreateFromStructuredData(Breakpoint *bkpt,
                            const StructuredData::Dictionary &options_dict,
                            Status &error);
 
@@ -53,13 +53,12 @@ public:
     return V->getResolverID() == BreakpointResolver::PythonResolver;
   }
 
-  lldb::BreakpointResolverSP
-  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
+  lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
 
 protected:
   void NotifyBreakpointSet() override;
 private:
-  void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt);
+  void CreateImplementationIfNeeded();
   ScriptInterpreter *GetScriptInterpreter();
   
   std::string m_class_name;
@@ -70,11 +69,9 @@ private:
                                   // SBStructuredData).
   StructuredData::GenericSP m_implementation_sp;
 
-  BreakpointResolverScripted(const BreakpointResolverScripted &) = delete;
-  const BreakpointResolverScripted &
-  operator=(const BreakpointResolverScripted &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverScripted);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_BREAKPOINTRESOLVERSCRIPTED_H
+#endif // liblldb_BreakpointResolverScripted_h_

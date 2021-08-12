@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86Subtarget.h"
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
+
 #include "X86CallLowering.h"
 #include "X86LegalizerInfo.h"
 #include "X86MacroFusion.h"
 #include "X86RegisterBankInfo.h"
+#include "X86Subtarget.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
@@ -88,9 +89,7 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
 
       // Medium is a hybrid: RIP-rel for code, GOTOFF for DSO local data.
       case CodeModel::Medium:
-        // Constant pool and jump table handling pass a nullptr to this
-        // function so we need to use isa_and_nonnull.
-        if (isa_and_nonnull<Function>(GV))
+        if (isa<Function>(GV))
           return X86II::MO_NO_FLAG; // All code is RIP-relative
         return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
       }
@@ -228,11 +227,11 @@ bool X86Subtarget::isLegalToCallImmediateAddr() const {
 }
 
 void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
-  std::string CPUName = std::string(CPU);
+  std::string CPUName = CPU;
   if (CPUName.empty())
     CPUName = "generic";
 
-  std::string FullFS = std::string(FS);
+  std::string FullFS = FS;
   if (In64BitMode) {
     // SSE2 should default to enabled in 64-bit mode, but can be turned off
     // explicitly.
@@ -379,8 +378,4 @@ bool X86Subtarget::enableEarlyIfConversion() const {
 void X86Subtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(createX86MacroFusionDAGMutation());
-}
-
-bool X86Subtarget::isPositionIndependent() const {
-  return TM.isPositionIndependent();
 }

@@ -169,11 +169,9 @@ template <class T, class Allocator>
          noexcept(noexcept(x.swap(y)));
 
 template <class T, class Allocator, class U>
-    typename forward_list<T, Allocator>::size_type
-    erase(forward_list<T, Allocator>& c, const U& value);       // C++20
+    void erase(forward_list<T, Allocator>& c, const U& value);       // C++20
 template <class T, class Allocator, class Predicate>
-    typename forward_list<T, Allocator>::size_type
-    erase_if(forward_list<T, Allocator>& c, Predicate pred);    // C++20
+    void erase_if(forward_list<T, Allocator>& c, Predicate pred);    // C++20
 
 }  // std
 
@@ -1767,17 +1765,13 @@ swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y)
 #if _LIBCPP_STD_VER > 17
 template <class _Tp, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
-    typename forward_list<_Tp, _Allocator>::size_type
-    erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred) {
-  return __c.remove_if(__pred);
-}
+void erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred)
+{ __c.remove_if(__pred); }
 
 template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
-    typename forward_list<_Tp, _Allocator>::size_type
-    erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
-  return _VSTD::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
-}
+void erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v)
+{ _VSTD::erase_if(__c, [&](auto& __elem) { return __elem == __v; }); }
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

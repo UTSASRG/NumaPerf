@@ -1,8 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -verify %s \
-// RUN:   -analyzer-checker=core.builtin \
-// RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-checker=unix.cstring \
-// RUN:   -analyzer-config display-checker-name=false
+// RUN: %clang_analyze_cc1 -std=c++14 -triple i386-apple-darwin10 -analyzer-checker=core.builtin,debug.ExprInspection,unix.cstring -verify %s
 
 typedef unsigned long size_t;
 

@@ -346,11 +346,6 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
-    %feature("autodoc", "
-    Returns the process' extended crash information.") GetExtendedCrashInformation;
-    lldb::SBStructuredData
-    GetExtendedCrashInformation ();
-
     uint32_t
     GetNumSupportedHardwareWatchpoints (lldb::SBError &error) const;
 

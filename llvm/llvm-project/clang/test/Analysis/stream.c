@@ -1,6 +1,26 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.unix.Stream -analyzer-store region -verify %s
 
-#include "Inputs/system-header-simulator.h"
+typedef __typeof__(sizeof(int)) size_t;
+typedef __typeof__(sizeof(int)) fpos_t;
+typedef struct _IO_FILE FILE;
+#define SEEK_SET	0	/* Seek from beginning of file.  */
+#define SEEK_CUR	1	/* Seek from current position.  */
+#define SEEK_END	2	/* Seek from end of file.  */
+extern FILE *fopen(const char *path, const char *mode);
+extern FILE *tmpfile(void);
+extern int fclose(FILE *fp);
+extern size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern int fseek (FILE *__stream, long int __off, int __whence);
+extern long int ftell (FILE *__stream);
+extern void rewind (FILE *__stream);
+extern int fgetpos(FILE *stream, fpos_t *pos);
+extern int fsetpos(FILE *stream, const fpos_t *pos);
+extern void clearerr(FILE *stream);
+extern int feof(FILE *stream);
+extern int ferror(FILE *stream);
+extern int fileno(FILE *stream);
+extern FILE *freopen(const char *pathname, const char *mode, FILE *stream);
 
 void check_fread() {
   FILE *fp = tmpfile();
@@ -88,56 +108,19 @@ void f_seek(void) {
 
 void f_double_close(void) {
   FILE *p = fopen("foo", "r");
-  if (!p)
-    return;
-  fclose(p);
-  fclose(p); // expected-warning {{Stream might be already closed}}
+  fclose(p); 
+  fclose(p); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
 }
 
 void f_double_close_alias(void) {
   FILE *p1 = fopen("foo", "r");
-  if (!p1)
-    return;
   FILE *p2 = p1;
   fclose(p1);
-  fclose(p2); // expected-warning {{Stream might be already closed}}
-}
-
-void f_use_after_close(void) {
-  FILE *p = fopen("foo", "r");
-  if (!p)
-    return;
-  fclose(p);
-  clearerr(p); // expected-warning {{Stream might be already closed}}
-}
-
-void f_open_after_close(void) {
-  FILE *p = fopen("foo", "r");
-  if (!p)
-    return;
-  fclose(p);
-  p = fopen("foo", "r");
-  if (!p)
-    return;
-  fclose(p);
-}
-
-void f_reopen_after_close(void) {
-  FILE *p = fopen("foo", "r");
-  if (!p)
-    return;
-  fclose(p);
-  // Allow reopen after close.
-  p = freopen("foo", "w", p);
-  if (!p)
-    return;
-  fclose(p);
+  fclose(p2); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
 }
 
 void f_leak(int c) {
   FILE *p = fopen("foo.c", "r");
-  if (!p)
-    return;
   if(c)
     return; // expected-warning {{Opened File never closed. Potential Resource leak}}
   fclose(p);
@@ -172,13 +155,13 @@ void check_freopen_2() {
     if (f2) {
       // Check if f1 and f2 point to the same stream.
       fclose(f1);
-      fclose(f2); // expected-warning {{Stream might be already closed.}}
+      fclose(f2); // expected-warning {{Try to close a file Descriptor already closed. Cause undefined behaviour}}
     } else {
       // Reopen failed.
-      // f1 is non-NULL but points to a possibly invalid stream.
-      rewind(f1); // expected-warning {{Stream might be invalid}}
-      // f2 is NULL but the previous error stops the checker.
-      rewind(f2);
+      // f1 points now to a possibly invalid stream but this condition is currently not checked.
+      // f2 is NULL.
+      rewind(f1);
+      rewind(f2); // expected-warning {{Stream pointer might be NULL}}
     }
   }
 }
@@ -187,9 +170,9 @@ void check_freopen_3() {
   FILE *f1 = fopen("foo.c", "r");
   if (f1) {
     // Unchecked result of freopen.
-    // The f1 may be invalid after this call.
+    // The f1 may be invalid after this call (not checked by the checker).
     freopen(0, "w", f1);
-    rewind(f1); // expected-warning {{Stream might be invalid}}
+    rewind(f1);
     fclose(f1);
   }
 }

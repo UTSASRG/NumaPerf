@@ -7,5 +7,5 @@
 sym:
 	.localentry sym, 123
 
-# CHECK: error: .localentry expression is not a valid power of 2.
+# CHECK: LLVM ERROR: .localentry expression cannot be encoded.
 

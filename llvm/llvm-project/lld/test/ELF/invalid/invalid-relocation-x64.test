@@ -22,9 +22,11 @@ Sections:
     Link:            .symtab
     Info:            .text
     Relocations:
-      - Symbol:          foo
+      - Offset:          0x0000000000000000
+        Symbol:          foo
         Type:            0x98
-      - Symbol:          foo
+      - Offset:          0x0000000000000000
+        Symbol:          foo
         Type:            0x99
 Symbols:
   - Name:            foo

@@ -66,6 +66,6 @@ void ento::registerFixedAddressChecker(CheckerManager &mgr) {
   mgr.registerChecker<FixedAddressChecker>();
 }
 
-bool ento::shouldRegisterFixedAddressChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterFixedAddressChecker(const LangOptions &LO) {
   return true;
 }

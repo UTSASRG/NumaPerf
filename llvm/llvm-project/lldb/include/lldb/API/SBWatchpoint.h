@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBWATCHPOINT_H
-#define LLDB_API_SBWATCHPOINT_H
+#ifndef LLDB_SBWatchpoint_h_
+#define LLDB_SBWatchpoint_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -82,4 +82,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBWATCHPOINT_H
+#endif // LLDB_SBWatchpoint_h_

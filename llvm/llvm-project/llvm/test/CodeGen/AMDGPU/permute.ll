@@ -62,7 +62,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}lsh8_or_lsr24:
-; GCN: v_alignbit_b32 v{{[0-9]+}}, {{[vs][0-9]+}}, {{[vs][0-9]+}}, 24
+; GCN: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x6050403
+; GCN: v_perm_b32 v{{[0-9]+}}, {{[vs][0-9]+}}, {{[vs][0-9]+}}, [[MASK]]
 define amdgpu_kernel void @lsh8_or_lsr24(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

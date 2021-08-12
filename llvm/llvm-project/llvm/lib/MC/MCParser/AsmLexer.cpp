@@ -36,8 +36,7 @@ AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
 
 AsmLexer::~AsmLexer() = default;
 
-void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
-                         bool EndStatementAtEOF) {
+void AsmLexer::setBuffer(StringRef Buf, const char *ptr) {
   CurBuf = Buf;
 
   if (ptr)
@@ -46,7 +45,6 @@ void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
     CurPtr = CurBuf.begin();
 
   TokStart = nullptr;
-  this->EndStatementAtEOF = EndStatementAtEOF;
 }
 
 /// ReturnError - Set the error to the specified string at the specified
@@ -586,7 +584,7 @@ AsmToken AsmLexer::LexToken() {
 
   // If we're missing a newline at EOF, make sure we still get an
   // EndOfStatement token before the Eof token.
-  if (CurChar == EOF && !IsAtStartOfStatement && EndStatementAtEOF) {
+  if (CurChar == EOF && !IsAtStartOfStatement) {
     IsAtStartOfLine = true;
     IsAtStartOfStatement = true;
     return AsmToken(AsmToken::EndOfStatement, StringRef(TokStart, 1));
@@ -596,24 +594,15 @@ AsmToken AsmLexer::LexToken() {
   IsAtStartOfStatement = false;
   switch (CurChar) {
   default:
-    if (MAI.doesAllowSymbolAtNameStart()) {
-      // Handle Microsoft-style identifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@?]*
-      if (!isDigit(CurChar) &&
-          IsIdentifierChar(CurChar, MAI.doesAllowAtInName()))
-        return LexIdentifier();
-    } else {
-      // Handle identifier: [a-zA-Z_.][a-zA-Z0-9_$.@]*
-      if (isalpha(CurChar) || CurChar == '_' || CurChar == '.')
-        return LexIdentifier();
-    }
+    // Handle identifier: [a-zA-Z_.][a-zA-Z0-9_$.@]*
+    if (isalpha(CurChar) || CurChar == '_' || CurChar == '.')
+      return LexIdentifier();
 
     // Unknown character, emit an error.
     return ReturnError(TokStart, "invalid character in input");
   case EOF:
-    if (EndStatementAtEOF) {
-      IsAtStartOfLine = true;
-      IsAtStartOfStatement = true;
-    }
+    IsAtStartOfLine = true;
+    IsAtStartOfStatement = true;
     return AsmToken(AsmToken::Eof, StringRef(TokStart, 0));
   case 0:
   case ' ':

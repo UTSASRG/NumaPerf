@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++03, c++11
-//
-// ALLOW_RETRIES: 2
+// UNSUPPORTED: c++98, c++03, c++11
 
 // <shared_mutex>
 

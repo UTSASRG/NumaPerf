@@ -99,14 +99,17 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
     LLT p0 = LLT::pointer(0, 32);
     LLT s32 = LLT::scalar(32);
-    auto SPReg = MIRBuilder.buildCopy(p0, Register(ARM::SP));
+    Register SPReg = MRI.createGenericVirtualRegister(p0);
+    MIRBuilder.buildCopy(SPReg, Register(ARM::SP));
 
-    auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
+    Register OffsetReg = MRI.createGenericVirtualRegister(s32);
+    MIRBuilder.buildConstant(OffsetReg, Offset);
 
-    auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
+    Register AddrReg = MRI.createGenericVirtualRegister(p0);
+    MIRBuilder.buildPtrAdd(AddrReg, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
-    return AddrReg.getReg(0);
+    return AddrReg;
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -130,7 +133,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     Register ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
-        Align(1));
+        /* Alignment */ 1);
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
@@ -296,8 +299,11 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
-    return MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI)
-        .getReg(0);
+    Register AddrReg =
+        MRI.createGenericVirtualRegister(LLT::pointer(MPO.getAddrSpace(), 32));
+    MIRBuilder.buildFrameIndex(AddrReg, FI);
+
+    return AddrReg;
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
@@ -312,21 +318,20 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
       Size = 4;
       assert(MRI.getType(ValVReg).isScalar() && "Only scalars supported atm");
 
-      auto LoadVReg = buildLoad(LLT::scalar(32), Addr, Size, MPO);
+      auto LoadVReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      buildLoad(LoadVReg, Addr, Size, /* Alignment */ 1, MPO);
       MIRBuilder.buildTrunc(ValVReg, LoadVReg);
     } else {
       // If the value is not extended, a simple load will suffice.
-      buildLoad(ValVReg, Addr, Size, MPO);
+      buildLoad(ValVReg, Addr, Size, /* Alignment */ 1, MPO);
     }
   }
 
-  MachineInstrBuilder buildLoad(const DstOp &Res, Register Addr, uint64_t Size,
-                                MachinePointerInfo &MPO) {
-    MachineFunction &MF = MIRBuilder.getMF();
-
-    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
-                                       inferAlignFromPtrInfo(MF, MPO));
-    return MIRBuilder.buildLoad(Res, Addr, *MMO);
+  void buildLoad(Register Val, Register Addr, uint64_t Size, unsigned Alignment,
+                 MachinePointerInfo &MPO) {
+    auto MMO = MIRBuilder.getMF().getMachineMemOperand(
+        MPO, MachineMemOperand::MOLoad, Size, Alignment);
+    MIRBuilder.buildLoad(Val, Addr, *MMO);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -349,7 +354,9 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
       // We cannot create a truncating copy, nor a trunc of a physical register.
       // Therefore, we need to copy the content of the physical register into a
       // virtual one and then truncate that.
-      auto PhysRegToVReg = MIRBuilder.buildCopy(LLT::scalar(LocSize), PhysReg);
+      auto PhysRegToVReg =
+          MRI.createGenericVirtualRegister(LLT::scalar(LocSize));
+      MIRBuilder.buildCopy(PhysRegToVReg, PhysReg);
       MIRBuilder.buildTrunc(ValVReg, PhysRegToVReg);
     }
   }
@@ -429,7 +436,7 @@ bool ARMCallLowering::lowerFormalArguments(
   for (auto &Arg : F.args()) {
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;
-    if (Arg.hasPassPointeeByValueAttr())
+    if (Arg.hasByValOrInAllocaAttr())
       return false;
   }
 

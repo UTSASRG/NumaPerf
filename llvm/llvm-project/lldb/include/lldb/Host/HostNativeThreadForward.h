@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_HOSTNATIVETHREADFORWARD_H
-#define LLDB_HOST_HOSTNATIVETHREADFORWARD_H
+#ifndef lldb_Host_HostNativeThreadForward_h_
+#define lldb_Host_HostNativeThreadForward_h_
 
 namespace lldb_private {
 #if defined(_WIN32)

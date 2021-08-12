@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_SYMBOLCONTEXT_H
-#define LLDB_SYMBOL_SYMBOLCONTEXT_H
+#ifndef liblldb_SymbolContext_h_
+#define liblldb_SymbolContext_h_
 
 #include <memory>
 #include <string>
@@ -475,4 +475,4 @@ bool operator!=(const SymbolContextList &lhs, const SymbolContextList &rhs);
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_SYMBOLCONTEXT_H
+#endif // liblldb_SymbolContext_h_

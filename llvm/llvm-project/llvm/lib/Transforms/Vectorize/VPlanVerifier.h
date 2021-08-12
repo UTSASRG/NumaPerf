@@ -24,12 +24,14 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 
-namespace llvm {
-class VPRegionBlock;
+#include "VPlan.h"
 
-/// Struct with utility functions that can be used to check the consistency and
+namespace llvm {
+
+/// Class with utility functions that can be used to check the consistency and
 /// invariants of a VPlan, including the components of its H-CFG.
-struct VPlanVerifier {
+class VPlanVerifier {
+public:
   /// Verify the invariants of the H-CFG starting from \p TopRegion. The
   /// verification process comprises the following steps:
   /// 1. Region/Block verification: Check the Region/Block verification

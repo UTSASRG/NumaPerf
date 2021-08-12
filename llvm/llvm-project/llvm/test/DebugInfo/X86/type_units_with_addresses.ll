@@ -1,3 +1,4 @@
+; REQUIRES: object-emission
 
 ; RUN: llc -split-dwarf-file=foo.dwo -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s

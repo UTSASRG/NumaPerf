@@ -95,28 +95,23 @@ void SCEVAffinator::interpretAsUnsigned(PWACtx &PWAC, unsigned Width) {
       NonNegPWA, isl_pw_aff_add(PWAC.first.release(), ExpPWA)));
 }
 
-void SCEVAffinator::takeNonNegativeAssumption(
-    PWACtx &PWAC, RecordedAssumptionsTy *RecordedAssumptions) {
-  this->RecordedAssumptions = RecordedAssumptions;
-
+void SCEVAffinator::takeNonNegativeAssumption(PWACtx &PWAC) {
   auto *NegPWA = isl_pw_aff_neg(PWAC.first.copy());
   auto *NegDom = isl_pw_aff_pos_set(NegPWA);
   PWAC.second =
       isl::manage(isl_set_union(PWAC.second.release(), isl_set_copy(NegDom)));
   auto *Restriction = BB ? NegDom : isl_set_params(NegDom);
   auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
-  recordAssumption(RecordedAssumptions, UNSIGNED, isl::manage(Restriction), DL,
-                   AS_RESTRICTION, BB);
+  S->recordAssumption(UNSIGNED, isl::manage(Restriction), DL, AS_RESTRICTION,
+                      BB);
 }
 
 PWACtx SCEVAffinator::getPWACtxFromPWA(isl::pw_aff PWA) {
   return std::make_pair(PWA, isl::set::empty(isl::space(Ctx, 0, NumIterators)));
 }
 
-PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB,
-                               RecordedAssumptionsTy *RecordedAssumptions) {
+PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB) {
   this->BB = BB;
-  this->RecordedAssumptions = RecordedAssumptions;
 
   if (BB) {
     auto *DC = S->getDomainConditions(BB).release();
@@ -150,8 +145,7 @@ PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr, PWACtx PWAC) const {
   NotEqualSet = NotEqualSet.coalesce();
 
   if (!NotEqualSet.is_empty())
-    recordAssumption(RecordedAssumptions, WRAPPING, NotEqualSet, Loc,
-                     AS_RESTRICTION, BB);
+    S->recordAssumption(WRAPPING, NotEqualSet, Loc, AS_RESTRICTION, BB);
 
   return PWAC;
 }
@@ -295,8 +289,8 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
     OutOfBoundsDom = isl_set_params(OutOfBoundsDom);
   }
 
-  recordAssumption(RecordedAssumptions, UNSIGNED, isl::manage(OutOfBoundsDom),
-                   DebugLoc(), AS_RESTRICTION, BB);
+  S->recordAssumption(UNSIGNED, isl::manage(OutOfBoundsDom), DebugLoc(),
+                      AS_RESTRICTION, BB);
 
   return OpPWAC;
 }
@@ -350,7 +344,7 @@ PWACtx SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
 
   // If the width is to big we assume the negative part does not occur.
   if (!computeModuloForExpr(Op)) {
-    takeNonNegativeAssumption(OpPWAC, RecordedAssumptions);
+    takeNonNegativeAssumption(OpPWAC);
     return OpPWAC;
   }
 
@@ -491,7 +485,7 @@ PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   //       precise but therefor a heuristic is needed.
 
   // Assume a non-negative dividend.
-  takeNonNegativeAssumption(DividendPWAC, RecordedAssumptions);
+  takeNonNegativeAssumption(DividendPWAC);
 
   DividendPWAC = combine(DividendPWAC, DivisorPWAC, isl_pw_aff_div);
   DividendPWAC.first = DividendPWAC.first.floor();

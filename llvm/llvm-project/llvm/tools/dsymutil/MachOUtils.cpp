@@ -50,7 +50,7 @@ ArchAndFile::~ArchAndFile() {
 std::string getArchName(StringRef Arch) {
   if (Arch.startswith("thumb"))
     return (llvm::Twine("arm") + Arch.drop_front(5)).str();
-  return std::string(Arch);
+  return Arch;
 }
 
 static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
@@ -332,8 +332,7 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // Stream a dSYM companion binary file corresponding to the binary referenced
 // by \a DM to \a OutFile. The passed \a MS MCStreamer is setup to write to
 // \a OutFile and it must be using a MachObjectWriter object to do so.
-bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                           const DebugMap &DM, SymbolMapTranslator &Translator,
+bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
                            MCStreamer &MS, raw_fd_ostream &OutFile) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
@@ -344,7 +343,7 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
   MCAsmLayout Layout(MCAsm);
   MCAsm.layout(Layout);
 
-  BinaryHolder InputBinaryHolder(VFS, false);
+  BinaryHolder InputBinaryHolder(false);
 
   auto ObjectEntry = InputBinaryHolder.getObjectEntry(DM.getBinaryPath());
   if (!ObjectEntry) {

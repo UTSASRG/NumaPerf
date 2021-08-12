@@ -12,8 +12,6 @@
 
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ComputeDependence.h"
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -27,13 +25,20 @@ using namespace clang;
 
 ObjCArrayLiteral::ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
                                    ObjCMethodDecl *Method, SourceRange SR)
-    : Expr(ObjCArrayLiteralClass, T, VK_RValue, OK_Ordinary),
+    : Expr(ObjCArrayLiteralClass, T, VK_RValue, OK_Ordinary, false, false,
+           false, false),
       NumElements(Elements.size()), Range(SR), ArrayWithObjectsMethod(Method) {
   Expr **SaveElements = getElements();
-  for (unsigned I = 0, N = Elements.size(); I != N; ++I)
-    SaveElements[I] = Elements[I];
+  for (unsigned I = 0, N = Elements.size(); I != N; ++I) {
+    if (Elements[I]->isTypeDependent() || Elements[I]->isValueDependent())
+      ExprBits.ValueDependent = true;
+    if (Elements[I]->isInstantiationDependent())
+      ExprBits.InstantiationDependent = true;
+    if (Elements[I]->containsUnexpandedParameterPack())
+      ExprBits.ContainsUnexpandedParameterPack = true;
 
-  setDependence(computeDependence(this));
+    SaveElements[I] = Elements[I];
+  }
 }
 
 ObjCArrayLiteral *ObjCArrayLiteral::Create(const ASTContext &C,
@@ -54,13 +59,25 @@ ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
                                              bool HasPackExpansions, QualType T,
                                              ObjCMethodDecl *method,
                                              SourceRange SR)
-    : Expr(ObjCDictionaryLiteralClass, T, VK_RValue, OK_Ordinary),
+    : Expr(ObjCDictionaryLiteralClass, T, VK_RValue, OK_Ordinary, false, false,
+           false, false),
       NumElements(VK.size()), HasPackExpansions(HasPackExpansions), Range(SR),
       DictWithObjectsMethod(method) {
   KeyValuePair *KeyValues = getTrailingObjects<KeyValuePair>();
   ExpansionData *Expansions =
       HasPackExpansions ? getTrailingObjects<ExpansionData>() : nullptr;
   for (unsigned I = 0; I < NumElements; I++) {
+    if (VK[I].Key->isTypeDependent() || VK[I].Key->isValueDependent() ||
+        VK[I].Value->isTypeDependent() || VK[I].Value->isValueDependent())
+      ExprBits.ValueDependent = true;
+    if (VK[I].Key->isInstantiationDependent() ||
+        VK[I].Value->isInstantiationDependent())
+      ExprBits.InstantiationDependent = true;
+    if (VK[I].EllipsisLoc.isInvalid() &&
+        (VK[I].Key->containsUnexpandedParameterPack() ||
+         VK[I].Value->containsUnexpandedParameterPack()))
+      ExprBits.ContainsUnexpandedParameterPack = true;
+
     KeyValues[I].Key = VK[I].Key;
     KeyValues[I].Value = VK[I].Value;
     if (Expansions) {
@@ -71,7 +88,6 @@ ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
         Expansions[I].NumExpansionsPlusOne = 0;
     }
   }
-  setDependence(computeDependence(this));
 }
 
 ObjCDictionaryLiteral *
@@ -111,7 +127,10 @@ ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
                                  SelectorLocationsKind SelLocsK,
                                  ObjCMethodDecl *Method, ArrayRef<Expr *> Args,
                                  SourceLocation RBracLoc, bool isImplicit)
-    : Expr(ObjCMessageExprClass, T, VK, OK_Ordinary),
+    : Expr(ObjCMessageExprClass, T, VK, OK_Ordinary,
+           /*TypeDependent=*/false, /*ValueDependent=*/false,
+           /*InstantiationDependent=*/false,
+           /*ContainsUnexpandedParameterPack=*/false),
       SelectorOrMethod(
           reinterpret_cast<uintptr_t>(Method ? Method : Sel.getAsOpaquePtr())),
       Kind(IsInstanceSuper ? SuperInstance : SuperClass),
@@ -120,7 +139,6 @@ ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
       RBracLoc(RBracLoc) {
   initArgsAndSelLocs(Args, SelLocs, SelLocsK);
   setReceiverPointer(SuperType.getAsOpaquePtr());
-  setDependence(computeDependence(this));
 }
 
 ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
@@ -130,14 +148,15 @@ ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
                                  SelectorLocationsKind SelLocsK,
                                  ObjCMethodDecl *Method, ArrayRef<Expr *> Args,
                                  SourceLocation RBracLoc, bool isImplicit)
-    : Expr(ObjCMessageExprClass, T, VK, OK_Ordinary),
+    : Expr(ObjCMessageExprClass, T, VK, OK_Ordinary, T->isDependentType(),
+           T->isDependentType(), T->isInstantiationDependentType(),
+           T->containsUnexpandedParameterPack()),
       SelectorOrMethod(
           reinterpret_cast<uintptr_t>(Method ? Method : Sel.getAsOpaquePtr())),
       Kind(Class), HasMethod(Method != nullptr), IsDelegateInitCall(false),
       IsImplicit(isImplicit), LBracLoc(LBracLoc), RBracLoc(RBracLoc) {
   initArgsAndSelLocs(Args, SelLocs, SelLocsK);
   setReceiverPointer(Receiver);
-  setDependence(computeDependence(this));
 }
 
 ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
@@ -146,14 +165,16 @@ ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
                                  SelectorLocationsKind SelLocsK,
                                  ObjCMethodDecl *Method, ArrayRef<Expr *> Args,
                                  SourceLocation RBracLoc, bool isImplicit)
-    : Expr(ObjCMessageExprClass, T, VK, OK_Ordinary),
+    : Expr(ObjCMessageExprClass, T, VK, OK_Ordinary,
+           Receiver->isTypeDependent(), Receiver->isTypeDependent(),
+           Receiver->isInstantiationDependent(),
+           Receiver->containsUnexpandedParameterPack()),
       SelectorOrMethod(
           reinterpret_cast<uintptr_t>(Method ? Method : Sel.getAsOpaquePtr())),
       Kind(Instance), HasMethod(Method != nullptr), IsDelegateInitCall(false),
       IsImplicit(isImplicit), LBracLoc(LBracLoc), RBracLoc(RBracLoc) {
   initArgsAndSelLocs(Args, SelLocs, SelLocsK);
   setReceiverPointer(Receiver);
-  setDependence(computeDependence(this));
 }
 
 void ObjCMessageExpr::initArgsAndSelLocs(ArrayRef<Expr *> Args,
@@ -161,8 +182,18 @@ void ObjCMessageExpr::initArgsAndSelLocs(ArrayRef<Expr *> Args,
                                          SelectorLocationsKind SelLocsK) {
   setNumArgs(Args.size());
   Expr **MyArgs = getArgs();
-  for (unsigned I = 0; I != Args.size(); ++I)
+  for (unsigned I = 0; I != Args.size(); ++I) {
+    if (Args[I]->isTypeDependent())
+      ExprBits.TypeDependent = true;
+    if (Args[I]->isValueDependent())
+      ExprBits.ValueDependent = true;
+    if (Args[I]->isInstantiationDependent())
+      ExprBits.InstantiationDependent = true;
+    if (Args[I]->containsUnexpandedParameterPack())
+      ExprBits.ContainsUnexpandedParameterPack = true;
+
     MyArgs[I] = Args[I];
+  }
 
   SelLocsKind = SelLocsK;
   if (!isImplicit()) {

@@ -176,9 +176,11 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 }
 
 // FIXME: Can we eleminate these in favour of generic code?
-bool MSP430FrameLowering::spillCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+bool
+MSP430FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MI,
+                                        const std::vector<CalleeSavedInfo> &CSI,
+                                        const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return false;
 
@@ -200,9 +202,11 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
-bool MSP430FrameLowering::restoreCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+bool
+MSP430FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                                 MachineBasicBlock::iterator MI,
+                                        std::vector<CalleeSavedInfo> &CSI,
+                                        const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return false;
 
@@ -223,6 +227,8 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
     MachineBasicBlock::iterator I) const {
   const MSP430InstrInfo &TII =
       *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  unsigned StackAlign = getStackAlignment();
+
   if (!hasReservedCallFrame(MF)) {
     // If the stack pointer can be changed after prologue, turn the
     // adjcallstackup instruction into a 'sub SP, <amt>' and the
@@ -234,7 +240,7 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
       // alignment boundary.
-      Amount = alignTo(Amount, getStackAlign());
+      Amount = (Amount+StackAlign-1)/StackAlign*StackAlign;
 
       MachineInstr *New = nullptr;
       if (Old.getOpcode() == TII.getCallFrameSetupOpcode()) {

@@ -20,20 +20,16 @@ define dllexport void @f2() unnamed_addr {
 }
 
 ; CHECK: .globl lnk1
-$lnk1 = comdat any
-
-define linkonce_odr dllexport void @lnk1() comdat {
+define linkonce_odr dllexport void @lnk1() {
 	ret void
 }
 
 ; CHECK: .globl lnk2
-$lnk2 = comdat any
-
-define linkonce_odr dllexport void @lnk2() alwaysinline comdat {
+define linkonce_odr dllexport void @lnk2() alwaysinline {
 	ret void
 }
 
-; CHECK: .weak weak1
+; CHECK: .globl weak1
 define weak_odr dllexport void @weak1() {
 	ret void
 }
@@ -50,14 +46,14 @@ define weak_odr dllexport void @weak1() {
 ; CHECK: .comm Var3
 @Var3 = common dllexport global i32 0, align 4
 
-; CHECK: .weak WeakVar1
+; CHECK: .globl WeakVar1
 @WeakVar1 = weak_odr dllexport global i32 1, align 4
 
-; CHECK: .weak WeakVar2
+; CHECK: .globl WeakVar2
 @WeakVar2 = weak_odr dllexport unnamed_addr constant i32 1
 
 ; CHECK: .bss
-; CHECK: .weak WeakVar3
+; CHECK: .globl WeakVar3
 @WeakVar3 = weak_odr dllexport global i32 0, align 4
 
 

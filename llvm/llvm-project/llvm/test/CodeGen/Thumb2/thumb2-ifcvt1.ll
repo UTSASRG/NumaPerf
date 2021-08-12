@@ -4,12 +4,10 @@
 ; RUN: llc < %s -mtriple=thumbv8 -arm-no-restrict-it -enable-tail-merge=0 | FileCheck %s
 define i32 @t1(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: t1:
-; CHECK: ittee ne
+; CHECK: ittt ne
 ; CHECK: cmpne
 ; CHECK: addne
-; CHECK: addeq
-; CHECK: addeq
-; CHECK: bx lr
+; CHECK: bxne lr
 	switch i32 %c, label %cond_next [
 		 i32 1, label %cond_true
 		 i32 7, label %cond_true

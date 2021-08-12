@@ -457,12 +457,12 @@ INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE,
 bool PeepholeOptimizer::
 optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
                  SmallPtrSetImpl<MachineInstr*> &LocalMIs) {
-  Register SrcReg, DstReg;
-  unsigned SubIdx;
+  unsigned SrcReg, DstReg, SubIdx;
   if (!TII->isCoalescableExtInstr(MI, SrcReg, DstReg, SubIdx))
     return false;
 
-  if (DstReg.isPhysical() || SrcReg.isPhysical())
+  if (Register::isPhysicalRegister(DstReg) ||
+      Register::isPhysicalRegister(SrcReg))
     return false;
 
   if (MRI->hasOneNonDBGUse(SrcReg))
@@ -607,16 +607,15 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
 bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
-  Register SrcReg, SrcReg2;
+  unsigned SrcReg, SrcReg2;
   int CmpMask, CmpValue;
   if (!TII->analyzeCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
-      SrcReg.isPhysical() || SrcReg2.isPhysical())
+      Register::isPhysicalRegister(SrcReg) ||
+      (SrcReg2 != 0 && Register::isPhysicalRegister(SrcReg2)))
     return false;
 
   // Attempt to optimize the comparison instruction.
-  LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
   if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
     ++NumCmps;
     return true;
   }
@@ -637,7 +636,6 @@ bool PeepholeOptimizer::optimizeSelect(MachineInstr &MI,
     return false;
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
-  LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
   MI.eraseFromParent();
   ++NumSelects;
   return true;
@@ -665,8 +663,8 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
   // So far we do not have any motivating example for doing that.
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
-  Register Reg = RegSubReg.Reg;
-  if (Reg.isPhysical())
+  unsigned Reg = RegSubReg.Reg;
+  if (Register::isPhysicalRegister(Reg))
     return false;
   const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
 
@@ -1302,7 +1300,6 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   }
 
   // MI is now dead.
-  LLVM_DEBUG(dbgs() << "Deleting uncoalescable copy: " << MI);
   MI.eraseFromParent();
   ++NumUncoalescableCopies;
   return true;
@@ -1727,7 +1724,6 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
           (foldRedundantCopy(*MI, CopySrcRegs, CopySrcMIs) ||
            foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
         LocalMIs.erase(MI);
-        LLVM_DEBUG(dbgs() << "Deleting redundant copy: " << *MI << "\n");
         MI->eraseFromParent();
         Changed = true;
         continue;
@@ -1780,8 +1776,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
               LocalMIs.erase(MI);
               LocalMIs.erase(DefMI);
               LocalMIs.insert(FoldMI);
-              // Update the call site info.
-              if (MI->shouldUpdateCallSiteInfo())
+              if (MI->isCall())
                 MI->getMF()->moveCallSiteInfo(MI, FoldMI);
               MI->eraseFromParent();
               DefMI->eraseFromParent();

@@ -136,5 +136,5 @@ std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
   }
   llvm::sys::path::append(
       Path, Twine("libclang_rt." + Component + "-" + "mips" + Suffix));
-  return std::string(Path.str());
+  return Path.str();
 }

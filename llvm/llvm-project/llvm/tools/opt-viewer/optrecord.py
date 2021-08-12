@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import io
 import yaml
 # Try to use the C parser.
 try:
@@ -11,7 +10,7 @@ except ImportError:
     print("For faster parsing, you may want to install libYAML for PyYAML")
     from yaml import Loader
 
-import html
+import cgi
 from collections import defaultdict
 import fnmatch
 import functools
@@ -159,7 +158,7 @@ class Remark(yaml.YAMLObject):
         (key, value) = list(mapping.items())[0]
 
         if key == 'Caller' or key == 'Callee' or key == 'DirectCallee':
-            value = html.escape(self.demangle(value))
+            value = cgi.escape(self.demangle(value))
 
         if dl and key != 'Caller':
             dl_dict = dict(list(dl))
@@ -273,7 +272,7 @@ def get_remarks(input_file, filter_=None):
     all_remarks = dict()
     file_remarks = defaultdict(functools.partial(defaultdict, list))
 
-    with io.open(input_file, encoding = 'utf-8') as f:
+    with open(input_file) as f:
         docs = yaml.load_all(f, Loader=Loader)
 
         filter_e = None

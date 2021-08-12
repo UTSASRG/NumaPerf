@@ -23,7 +23,7 @@
 using namespace llvm;
 
 void LanaiSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
-  std::string CPUName = std::string(CPU);
+  std::string CPUName = CPU;
   if (CPUName.empty())
     CPUName = "generic";
 

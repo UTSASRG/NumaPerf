@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_SYSSIGNAL_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_SYSSIGNAL_H
+#ifndef __SysSignal_h__
+#define __SysSignal_h__
 
 class SysSignal {
 public:

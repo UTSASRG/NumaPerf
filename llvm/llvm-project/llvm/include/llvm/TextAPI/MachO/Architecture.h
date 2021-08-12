@@ -13,14 +13,11 @@
 #ifndef LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
 #define LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
 
-#include <cstdint>
-#include <utility>
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-class raw_ostream;
-class StringRef;
-class Triple;
-
 namespace MachO {
 
 /// Defines the architecture slices that are supported by Text-based Stub files.

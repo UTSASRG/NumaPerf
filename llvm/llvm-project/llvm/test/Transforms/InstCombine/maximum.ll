@@ -147,9 +147,8 @@ define float @maximum_f32_val_nan(float %x) {
 
 define float @maximum_f32_1_maximum_val_p0(float %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_val_p0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call float @llvm.maximum.f32(float %x, float 1.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.maximum.f32(float %x, float 0.0)
   %z = call float @llvm.maximum.f32(float %y, float 1.0)
   ret float %z
@@ -157,49 +156,26 @@ define float @maximum_f32_1_maximum_val_p0(float %x) {
 
 define float @maximum_f32_1_maximum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call fast float @llvm.maximum.f32(float %x, float 1.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.maximum.f32(float 0.0, float %x)
   %z = call fast float @llvm.maximum.f32(float %y, float 1.0)
   ret float %z
 }
 
-define float @maximum_f32_1_maximum_p0_val_fmf1(float %x) {
-; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fmf1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan arcp float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
-  %y = call arcp nnan float @llvm.maximum.f32(float 0.0, float %x)
-  %z = call arcp nnan ninf float @llvm.maximum.f32(float %y, float 1.0)
-  ret float %z
-}
-
-define float @maximum_f32_1_maximum_p0_val_fmf2(float %x) {
-; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fmf2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
-  %y = call arcp nnan ninf float @llvm.maximum.f32(float 0.0, float %x)
-  %z = call nnan float @llvm.maximum.f32(float %y, float 1.0)
-  ret float %z
-}
-
-define float @maximum_f32_1_maximum_p0_val_fmf3(float %x) {
-; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fmf3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
-  %y = call nnan ninf float @llvm.maximum.f32(float 0.0, float %x)
-  %z = call arcp nnan ninf float @llvm.maximum.f32(float %y, float 1.0)
+define float @maximum_f32_1_maximum_p0_val_nnan_ninf(float %x) {
+; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_nnan_ninf(
+; CHECK-NEXT: [[RES:%.*]] = call nnan ninf float @llvm.maximum.f32(float %x, float 1.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
+  %y = call float @llvm.maximum.f32(float 0.0, float %x)
+  %z = call nnan ninf float @llvm.maximum.f32(float %y, float 1.0)
   ret float %z
 }
 
 define float @maximum_f32_p0_maximum_val_n0(float %x) {
 ; CHECK-LABEL: @maximum_f32_p0_maximum_val_n0(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call float @llvm.maximum.f32(float %x, float 0.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.maximum.f32(float %x, float -0.0)
   %z = call float @llvm.maximum.f32(float %y, float 0.0)
   ret float %z
@@ -207,9 +183,8 @@ define float @maximum_f32_p0_maximum_val_n0(float %x) {
 
 define float @maximum_f32_1_maximum_p0_val(float %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_p0_val(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call float @llvm.maximum.f32(float %x, float 1.000000e+00)
+; CHECK-NEXT: ret float [[RES]]
   %y = call float @llvm.maximum.f32(float 0.0, float %x)
   %z = call float @llvm.maximum.f32(float %y, float 1.0)
   ret float %z
@@ -217,9 +192,8 @@ define float @maximum_f32_1_maximum_p0_val(float %x) {
 
 define <2 x float> @maximum_f32_1_maximum_val_p0_val_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_val_p0_val_v2f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> [[X:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>)
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
-;
+; CHECK-NEXT: [[RES:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> <float 1.000000e+00, float 1.000000e+00>)
+; CHECK-NEXT: ret <2 x float> [[RES]]
   %y = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
   %z = call <2 x float> @llvm.maximum.v2f32(<2 x float> %y, <2 x float><float 1.0, float 1.0>)
   ret <2 x float> %z
@@ -243,7 +217,7 @@ define float @maximum4(float %x, float %y, float %z, float %w) {
 define <2 x float> @neg_neg(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_neg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -255,7 +229,7 @@ define <2 x float> @neg_neg(<2 x float> %x, <2 x float> %y) {
 define <2 x float> @unary_neg_neg(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @unary_neg_neg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fneg <2 x float> %x
@@ -269,7 +243,7 @@ define <2 x float> @unary_neg_neg(<2 x float> %x, <2 x float> %y) {
 define float @neg_neg_vec_fmf(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_vec_fmf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fsub arcp float -0.0, %x
@@ -281,7 +255,7 @@ define float @neg_neg_vec_fmf(float %x, float %y) {
 define float @unary_neg_neg_vec_fmf(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_neg_vec_fmf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg arcp float %x
@@ -296,9 +270,9 @@ define float @unary_neg_neg_vec_fmf(float %x, float %y) {
 declare void @use(float)
 define float @neg_neg_extra_use_x(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_x(
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEGX:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X]], float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -313,7 +287,7 @@ define float @unary_neg_neg_extra_use_x(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_neg_extra_use_x(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X]], float [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -326,9 +300,9 @@ define float @unary_neg_neg_extra_use_x(float %x, float %y) {
 
 define float @neg_neg_extra_use_y(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_y(
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[NEGY:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGY]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -343,7 +317,7 @@ define float @unary_neg_neg_extra_use_y(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_neg_extra_use_y(
 ; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGY]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -356,8 +330,8 @@ define float @unary_neg_neg_extra_use_y(float %x, float %y) {
 
 define float @neg_neg_extra_use_x_and_y(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_x_and_y(
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[NEGX:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEGY:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximum.f32(float [[NEGX]], float [[NEGY]])
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
 ; CHECK-NEXT:    call void @use(float [[NEGY]])
@@ -386,28 +360,4 @@ define float @unary_neg_neg_extra_use_x_and_y(float %x, float %y) {
   call void @use(float %negx)
   call void @use(float %negy)
   ret float %r
-}
-
-define float @reduce_precision(float %x, float %y) {
-; CHECK-LABEL: @reduce_precision(
-; CHECK-NEXT:    [[MAXIMUM:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MAXIMUM]]
-;
-  %x.ext = fpext float %x to double
-  %y.ext = fpext float %y to double
-  %maximum = call double @llvm.maximum.f64(double %x.ext, double %y.ext)
-  %trunc = fptrunc double %maximum to float
-  ret float %trunc
-}
-
-define float @reduce_precision_fmf(float %x, float %y) {
-; CHECK-LABEL: @reduce_precision_fmf(
-; CHECK-NEXT:    [[MAXIMUM:%.*]] = call nnan float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[MAXIMUM]]
-;
-  %x.ext = fpext float %x to double
-  %y.ext = fpext float %y to double
-  %maximum = call nnan double @llvm.maximum.f64(double %x.ext, double %y.ext)
-  %trunc = fptrunc double %maximum to float
-  ret float %trunc
 }

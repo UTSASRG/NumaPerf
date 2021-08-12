@@ -123,7 +123,7 @@ bool BPFInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       Register SrcReg, bool IsKill, int FI,
+                                       unsigned SrcReg, bool IsKill, int FI,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -146,7 +146,7 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void BPFInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
-                                        Register DestReg, int FI,
+                                        unsigned DestReg, int FI,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
   DebugLoc DL;

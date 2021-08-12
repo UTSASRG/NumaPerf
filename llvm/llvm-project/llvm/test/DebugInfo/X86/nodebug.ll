@@ -1,3 +1,4 @@
+; REQUIRES: object-emission
 
 ; RUN: llc < %s -filetype=obj -mtriple=x86_64-apple-darwin | llvm-dwarfdump -v - | FileCheck %s
 

@@ -25,7 +25,9 @@ template <class Allocator> struct TSDRegistryExT {
   void initLinkerInitialized(Allocator *Instance) {
     Instance->initLinkerInitialized();
     CHECK_EQ(pthread_key_create(&PThreadKey, teardownThread<Allocator>), 0);
-    FallbackTSD.initLinkerInitialized(Instance);
+    FallbackTSD = reinterpret_cast<TSD<Allocator> *>(
+        map(nullptr, sizeof(TSD<Allocator>), "scudo:tsd"));
+    FallbackTSD->initLinkerInitialized(Instance);
     Initialized = true;
   }
   void init(Allocator *Instance) {
@@ -33,7 +35,9 @@ template <class Allocator> struct TSDRegistryExT {
     initLinkerInitialized(Instance);
   }
 
-  void unmapTestOnly() {}
+  void unmapTestOnly() {
+    unmap(reinterpret_cast<void *>(FallbackTSD), sizeof(TSD<Allocator>));
+  }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
     if (LIKELY(State != ThreadState::NotInitialized))
@@ -47,22 +51,23 @@ template <class Allocator> struct TSDRegistryExT {
       *UnlockRequired = false;
       return &ThreadTSD;
     }
-    FallbackTSD.lock();
+    DCHECK(FallbackTSD);
+    FallbackTSD->lock();
     *UnlockRequired = true;
-    return &FallbackTSD;
+    return FallbackTSD;
   }
 
   // To disable the exclusive TSD registry, we effectively lock the fallback TSD
   // and force all threads to attempt to use it instead of their local one.
   void disable() {
     Mutex.lock();
-    FallbackTSD.lock();
+    FallbackTSD->lock();
     atomic_store(&Disabled, 1U, memory_order_release);
   }
 
   void enable() {
     atomic_store(&Disabled, 0U, memory_order_release);
-    FallbackTSD.unlock();
+    FallbackTSD->unlock();
     Mutex.unlock();
   }
 
@@ -91,7 +96,7 @@ private:
   pthread_key_t PThreadKey;
   bool Initialized;
   atomic_u8 Disabled;
-  TSD<Allocator> FallbackTSD;
+  TSD<Allocator> *FallbackTSD;
   HybridMutex Mutex;
   static THREADLOCAL ThreadState State;
   static THREADLOCAL TSD<Allocator> ThreadTSD;

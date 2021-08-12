@@ -41,7 +41,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnModule(Module &M) override;
 
-    static bool MayAutorelease(const CallBase &CB, unsigned Depth = 0);
+    static bool MayAutorelease(ImmutableCallSite CS, unsigned Depth = 0);
     static bool OptimizeBB(BasicBlock *BB);
 
   public:
@@ -68,17 +68,18 @@ void ObjCARCAPElim::getAnalysisUsage(AnalysisUsage &AU) const {
 
 /// Interprocedurally determine if calls made by the given call site can
 /// possibly produce autoreleases.
-bool ObjCARCAPElim::MayAutorelease(const CallBase &CB, unsigned Depth) {
-  if (const Function *Callee = CB.getCalledFunction()) {
+bool ObjCARCAPElim::MayAutorelease(ImmutableCallSite CS, unsigned Depth) {
+  if (const Function *Callee = CS.getCalledFunction()) {
     if (!Callee->hasExactDefinition())
       return true;
     for (const BasicBlock &BB : *Callee) {
       for (const Instruction &I : BB)
-        if (const CallBase *JCB = dyn_cast<CallBase>(&I))
+        if (ImmutableCallSite JCS = ImmutableCallSite(&I))
           // This recursion depth limit is arbitrary. It's just great
           // enough to cover known interesting testcases.
-          if (Depth < 3 && !JCB->onlyReadsMemory() &&
-              MayAutorelease(*JCB, Depth + 1))
+          if (Depth < 3 &&
+              !JCS.onlyReadsMemory() &&
+              MayAutorelease(JCS, Depth + 1))
             return true;
     }
     return false;
@@ -114,7 +115,7 @@ bool ObjCARCAPElim::OptimizeBB(BasicBlock *BB) {
       Push = nullptr;
       break;
     case ARCInstKind::CallOrUser:
-      if (MayAutorelease(cast<CallBase>(*Inst)))
+      if (MayAutorelease(ImmutableCallSite(Inst)))
         Push = nullptr;
       break;
     default:

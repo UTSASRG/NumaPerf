@@ -1,17 +1,27 @@
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
+#TODO: The sources and target listed here should ideally live in config/linux.
 
 add_entrypoint_object(
   mmap
-  ALIAS
+  SRCS
+    mmap.cpp
+  HDRS
+    mmap.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mmap
+    sys_mman_h
+    sys_syscall_h
+    syscall_impl_h
+    __errno_location
 )
 
 add_entrypoint_object(
   munmap
-  ALIAS
+  SRCS
+    munmap.cpp
+  HDRS
+    munmap.h
   DEPENDS
-    .${LIBC_TARGET_OS}.munmap
+    sys_mman_h
+    sys_syscall_h
+    syscall_impl_h
+    __errno_location
 )

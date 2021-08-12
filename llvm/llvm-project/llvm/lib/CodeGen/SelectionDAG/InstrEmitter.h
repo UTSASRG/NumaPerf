@@ -17,15 +17,13 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 
 namespace llvm {
 
 class MachineInstrBuilder;
 class MCInstrDesc;
-class SDDbgLabel;
 class SDDbgValue;
-class TargetLowering;
 
 class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   MachineFunction *MF;
@@ -41,19 +39,19 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   /// implicit physical register output.
   void EmitCopyFromReg(SDNode *Node, unsigned ResNo,
                        bool IsClone, bool IsCloned,
-                       Register SrcReg,
-                       DenseMap<SDValue, Register> &VRBaseMap);
+                       unsigned SrcReg,
+                       DenseMap<SDValue, unsigned> &VRBaseMap);
 
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
                               const MCInstrDesc &II,
                               bool IsClone, bool IsCloned,
-                              DenseMap<SDValue, Register> &VRBaseMap);
+                              DenseMap<SDValue, unsigned> &VRBaseMap);
 
   /// getVR - Return the virtual register corresponding to the specified result
   /// of the specified node.
-  Register getVR(SDValue Op,
-                 DenseMap<SDValue, Register> &VRBaseMap);
+  unsigned getVR(SDValue Op,
+                 DenseMap<SDValue, unsigned> &VRBaseMap);
 
   /// AddRegisterOperand - Add the specified register as an operand to the
   /// specified machine instr. Insert register copies if the register is
@@ -62,7 +60,7 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
                           SDValue Op,
                           unsigned IIOpNum,
                           const MCInstrDesc *II,
-                          DenseMap<SDValue, Register> &VRBaseMap,
+                          DenseMap<SDValue, unsigned> &VRBaseMap,
                           bool IsDebug, bool IsClone, bool IsCloned);
 
   /// AddOperand - Add the specified operand to the specified machine instr.  II
@@ -73,18 +71,18 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
                   SDValue Op,
                   unsigned IIOpNum,
                   const MCInstrDesc *II,
-                  DenseMap<SDValue, Register> &VRBaseMap,
+                  DenseMap<SDValue, unsigned> &VRBaseMap,
                   bool IsDebug, bool IsClone, bool IsCloned);
 
   /// ConstrainForSubReg - Try to constrain VReg to a register class that
   /// supports SubIdx sub-registers.  Emit a copy if that isn't possible.
   /// Return the virtual register to use.
-  Register ConstrainForSubReg(Register VReg, unsigned SubIdx, MVT VT,
+  unsigned ConstrainForSubReg(unsigned VReg, unsigned SubIdx, MVT VT,
                               bool isDivergent, const DebugLoc &DL);
 
   /// EmitSubregNode - Generate machine code for subreg nodes.
   ///
-  void EmitSubregNode(SDNode *Node, DenseMap<SDValue, Register> &VRBaseMap,
+  void EmitSubregNode(SDNode *Node, DenseMap<SDValue, unsigned> &VRBaseMap,
                       bool IsClone, bool IsCloned);
 
   /// EmitCopyToRegClassNode - Generate machine code for COPY_TO_REGCLASS nodes.
@@ -92,11 +90,11 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   /// register is constrained to be in a particular register class.
   ///
   void EmitCopyToRegClassNode(SDNode *Node,
-                              DenseMap<SDValue, Register> &VRBaseMap);
+                              DenseMap<SDValue, unsigned> &VRBaseMap);
 
   /// EmitRegSequence - Generate machine code for REG_SEQUENCE nodes.
   ///
-  void EmitRegSequence(SDNode *Node, DenseMap<SDValue, Register> &VRBaseMap,
+  void EmitRegSequence(SDNode *Node, DenseMap<SDValue, unsigned> &VRBaseMap,
                        bool IsClone, bool IsCloned);
 public:
   /// CountResults - The results of target nodes have register or immediate
@@ -107,7 +105,7 @@ public:
   /// EmitDbgValue - Generate machine instruction for a dbg_value node.
   ///
   MachineInstr *EmitDbgValue(SDDbgValue *SD,
-                             DenseMap<SDValue, Register> &VRBaseMap);
+                             DenseMap<SDValue, unsigned> &VRBaseMap);
 
   /// Generate machine instruction for a dbg_label node.
   MachineInstr *EmitDbgLabel(SDDbgLabel *SD);
@@ -115,7 +113,7 @@ public:
   /// EmitNode - Generate machine code for a node and needed dependencies.
   ///
   void EmitNode(SDNode *Node, bool IsClone, bool IsCloned,
-                DenseMap<SDValue, Register> &VRBaseMap) {
+                DenseMap<SDValue, unsigned> &VRBaseMap) {
     if (Node->isMachineOpcode())
       EmitMachineNode(Node, IsClone, IsCloned, VRBaseMap);
     else
@@ -134,9 +132,9 @@ public:
 
 private:
   void EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
-                       DenseMap<SDValue, Register> &VRBaseMap);
+                       DenseMap<SDValue, unsigned> &VRBaseMap);
   void EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
-                       DenseMap<SDValue, Register> &VRBaseMap);
+                       DenseMap<SDValue, unsigned> &VRBaseMap);
 };
 
 }

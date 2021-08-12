@@ -33,7 +33,6 @@
 #ifndef LLVM_SUPPORT_MSGPACKREADER_H
 #define LLVM_SUPPORT_MSGPACKREADER_H
 
-#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -57,7 +56,6 @@ enum class Type : uint8_t {
   Array,
   Map,
   Extension,
-  Empty, // Used by MsgPackDocument to represent an empty node
 };
 
 /// Extension types are composed of a user-defined type ID and an uninterpreted

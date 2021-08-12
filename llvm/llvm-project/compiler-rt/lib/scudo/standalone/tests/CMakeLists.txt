@@ -10,7 +10,6 @@ set(SCUDO_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone
-  -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone/include
   -DGTEST_HAS_RTTI=0
   -DSCUDO_DEBUG=1
   # Extra flags for the C++ tests
@@ -21,7 +20,8 @@ if(ANDROID)
   list(APPEND SCUDO_UNITTEST_CFLAGS -fno-emulated-tls)
 endif()
 
-if (COMPILER_RT_HAS_GWP_ASAN)
+# FIXME: GWP-ASan is temporarily disabled, re-enable once issues are fixed.
+if (FALSE AND COMPILER_RT_HAS_GWP_ASAN)
   list(APPEND SCUDO_UNITTEST_CFLAGS -DGWP_ASAN_HOOKS)
 endif()
 
@@ -43,9 +43,8 @@ endforeach()
 
 macro(add_scudo_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;ADDITIONAL_RTOBJECTS" ${ARGN})
-  if (COMPILER_RT_HAS_GWP_ASAN)
-    list(APPEND TEST_ADDITIONAL_RTOBJECTS
-         RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
+  if (FALSE AND COMPILER_RT_HAS_GWP_ASAN)
+    list(APPEND TEST_ADDITIONAL_RTOBJECTS RTGwpAsan)
   endif()
 
   if(COMPILER_RT_HAS_SCUDO_STANDALONE)

@@ -8,7 +8,6 @@
 
 #ifndef LLVM_LIB_TARGET_XCORE_XCOREMCINSTLOWER_H
 #define LLVM_LIB_TARGET_XCORE_XCOREMCINSTLOWER_H
-
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Support/Compiler.h"
 
@@ -17,6 +16,8 @@ namespace llvm {
   class MCInst;
   class MCOperand;
   class MachineInstr;
+  class MachineFunction;
+  class Mangler;
   class AsmPrinter;
 
 /// This class is used to lower an MachineInstr into an MCInst.

@@ -200,7 +200,6 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++17": int(201703),
    },
    "headers": ["new"],
-   "unimplemented": True,
    },
   {"name": "__cpp_lib_launder",
    "values": {
@@ -409,7 +408,6 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
   {"name": "__cpp_lib_array_constexpr",
    "values": {
      "c++17": int(201603),
-     "c++2a": int(201811),
    },
    "headers": ["iterator", "array"],
    },
@@ -477,7 +475,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_erase_if",
    "values": {
-     "c++2a": int(202002),
+     "c++2a": int(201811),
    },
    "headers": ["string", "deque", "forward_list", "list", "vector", "map",
                "set", "unordered_map", "unordered_set"]
@@ -544,6 +542,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++2a": int(201806),
    },
    "headers": ["forward_list", "list"],
+   "unimplemented": True,
    },
   {"name": "__cpp_lib_generic_unordered_lookup",
    "values": {
@@ -586,18 +585,6 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++2a": int(201907),
    },
    "headers": ["bit"],
-   },
-  {"name": "__cpp_lib_to_array",
-   "values": {
-     "c++2a": int(201907),
-   },
-   "headers": ["array"],
-   },
-  {"name": "__cpp_lib_span",
-   "values": {
-     "c++2a": int(202002),
-   },
-   "headers": ["span"],
    },
 ]], key=lambda tc: tc["name"])
 

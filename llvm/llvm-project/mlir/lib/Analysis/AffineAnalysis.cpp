@@ -1,6 +1,6 @@
 //===- AffineAnalysis.cpp - Affine structures analysis routines -----------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,14 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineAnalysis.h"
+#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/AffineExprVisitor.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Support/MathExtras.h"
+#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -453,7 +456,7 @@ addMemRefAccessConstraints(const AffineValueMap &srcAccessMap,
       auto symbol = operands[i];
       assert(isValidSymbol(symbol));
       // Check if the symbol is a constant.
-      if (auto cOp = symbol.getDefiningOp<ConstantIndexOp>())
+      if (auto cOp = dyn_cast_or_null<ConstantIndexOp>(symbol.getDefiningOp()))
         dependenceDomain->setIdToConstant(valuePosMap.getSymPos(symbol),
                                           cOp.getValue());
     }
@@ -660,11 +663,10 @@ static void computeDirectionVector(
 void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
   // Get affine map from AffineLoad/Store.
   AffineMap map;
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(opInst))
+  if (auto loadOp = dyn_cast<AffineLoadOp>(opInst))
     map = loadOp.getAffineMap();
-  else
-    map = cast<AffineWriteOpInterface>(opInst).getAffineMap();
-
+  else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst))
+    map = storeOp.getAffineMap();
   SmallVector<Value, 8> operands(indices.begin(), indices.end());
   fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
@@ -772,10 +774,9 @@ DependenceResult mlir::checkMemrefAccessDependence(
   if (srcAccess.memref != dstAccess.memref)
     return DependenceResult::NoDependence;
 
-  // Return 'NoDependence' if one of these accesses is not an
-  // AffineWriteOpInterface.
-  if (!allowRAR && !isa<AffineWriteOpInterface>(srcAccess.opInst) &&
-      !isa<AffineWriteOpInterface>(dstAccess.opInst))
+  // Return 'NoDependence' if one of these accesses is not an AffineStoreOp.
+  if (!allowRAR && !isa<AffineStoreOp>(srcAccess.opInst) &&
+      !isa<AffineStoreOp>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
   // Get composed access function for 'srcAccess'.
@@ -859,8 +860,7 @@ void mlir::getDependenceComponents(
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
   forOp.getOperation()->walk([&](Operation *opInst) {
-    if (isa<AffineReadOpInterface>(opInst) ||
-        isa<AffineWriteOpInterface>(opInst))
+    if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
   });
 

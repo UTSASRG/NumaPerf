@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_ADDRESS_H
-#define LLDB_CORE_ADDRESS_H
+#ifndef liblldb_Address_h_
+#define liblldb_Address_h_
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
@@ -515,4 +515,4 @@ bool operator!=(const Address &lhs, const Address &rhs);
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_ADDRESS_H
+#endif // liblldb_Address_h_

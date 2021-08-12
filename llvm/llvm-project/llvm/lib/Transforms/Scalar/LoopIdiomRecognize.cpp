@@ -51,11 +51,9 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/MemorySSAUpdater.h"
-#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -93,7 +91,6 @@
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -126,19 +123,15 @@ class LoopIdiomRecognize {
   const DataLayout *DL;
   OptimizationRemarkEmitter &ORE;
   bool ApplyCodeSizeHeuristics;
-  std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
   explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
                               LoopInfo *LI, ScalarEvolution *SE,
                               TargetLibraryInfo *TLI,
-                              const TargetTransformInfo *TTI, MemorySSA *MSSA,
+                              const TargetTransformInfo *TTI,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {
-    if (MSSA)
-      MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
-  }
+      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {}
 
   bool runOnLoop(Loop *L);
 
@@ -231,17 +224,13 @@ public:
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
             *L->getHeader()->getParent());
     const DataLayout *DL = &L->getHeader()->getModule()->getDataLayout();
-    auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    MemorySSA *MSSA = nullptr;
-    if (MSSAAnalysis)
-      MSSA = &MSSAAnalysis->getMSSA();
 
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass.  Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
 
-    LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, MSSA, DL, ORE);
+    LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, DL, ORE);
     return LIR.runOnLoop(L);
   }
 
@@ -250,7 +239,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 };
@@ -264,20 +252,23 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LPMUpdater &) {
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
 
-  // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
-  // pass.  Function analyses need to be preserved across loop transformations
-  // but ORE cannot be preserved (see comment before the pass definition).
-  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  const auto &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
+  Function *F = L.getHeader()->getParent();
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
-                         AR.MSSA, DL, ORE);
+  auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
+  // FIXME: This should probably be optional rather than required.
+  if (!ORE)
+    report_fatal_error(
+        "LoopIdiomRecognizePass: OptimizationRemarkEmitterAnalysis not cached "
+        "at a higher level");
+
+  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI, DL,
+                         *ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
 
-  auto PA = getLoopPassPreservedAnalyses();
-  if (AR.MSSA)
-    PA.preserve<MemorySSAAnalysis>();
-  return PA;
+  return getLoopPassPreservedAnalyses();
 }
 
 INITIALIZE_PASS_BEGIN(LoopIdiomRecognizeLegacyPass, "loop-idiom",
@@ -348,14 +339,14 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
                     << "] Countable Loop %" << CurLoop->getHeader()->getName()
                     << "\n");
 
+  bool MadeChange = false;
+
   // The following transforms hoist stores/memsets into the loop pre-header.
-  // Give up if the loop has instructions that may throw.
+  // Give up if the loop has instructions may throw.
   SimpleLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
-    return false;
-
-  bool MadeChange = false;
+    return MadeChange;
 
   // Scan all the blocks in the loop that are not in subloops.
   for (auto *BB : CurLoop->getBlocks()) {
@@ -977,17 +968,11 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *PatternPtr = ConstantExpr::getBitCast(GV, Int8PtrTy);
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
   }
-  NewCall->setDebugLoc(TheStore->getDebugLoc());
-
-  if (MSSAU) {
-    MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
-        NewCall, nullptr, NewCall->getParent(), MemorySSA::BeforeTerminator);
-    MSSAU->insertDef(cast<MemoryDef>(NewMemAcc), true);
-  }
 
   LLVM_DEBUG(dbgs() << "  Formed memset: " << *NewCall << "\n"
                     << "    from store to: " << *Ev << " at: " << *TheStore
                     << "\n");
+  NewCall->setDebugLoc(TheStore->getDebugLoc());
 
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStridedStore",
@@ -999,13 +984,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   // Okay, the memset has been formed.  Zap the original store and anything that
   // feeds into it.
-  for (auto *I : Stores) {
-    if (MSSAU)
-      MSSAU->removeMemoryAccess(I, true);
+  for (auto *I : Stores)
     deleteDeadInstruction(I);
-  }
-  if (MSSAU && VerifyMemorySSA)
-    MSSAU->getMemorySSA()->verifyMemorySSA();
   ++NumMemSet;
   return true;
 }
@@ -1109,11 +1089,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   else {
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
-    const MaybeAlign StoreAlign = SI->getAlign();
-    const MaybeAlign LoadAlign = LI->getAlign();
-    if (StoreAlign == None || LoadAlign == None)
-      return false;
-    if (*StoreAlign < StoreSize || *LoadAlign < StoreSize)
+    unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
+    if (Align < StoreSize)
       return false;
 
     // If the element.atomic memcpy is not lowered into explicit
@@ -1127,16 +1104,10 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes,
-        StoreSize);
+        StoreBasePtr, SI->getAlignment(), LoadBasePtr, LI->getAlignment(),
+        NumBytes, StoreSize);
   }
   NewCall->setDebugLoc(SI->getDebugLoc());
-
-  if (MSSAU) {
-    MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
-        NewCall, nullptr, NewCall->getParent(), MemorySSA::BeforeTerminator);
-    MSSAU->insertDef(cast<MemoryDef>(NewMemAcc), true);
-  }
 
   LLVM_DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"
                     << "    from load ptr=" << *LoadEv << " at: " << *LI << "\n"
@@ -1153,11 +1124,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   // Okay, the memcpy has been formed.  Zap the original store and anything that
   // feeds into it.
-  if (MSSAU)
-    MSSAU->removeMemoryAccess(SI, true);
   deleteDeadInstruction(SI);
-  if (MSSAU && VerifyMemorySSA)
-    MSSAU->getMemorySSA()->verifyMemorySSA();
   ++NumMemCpy;
   return true;
 }
@@ -1535,7 +1502,7 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
 
-  Value *Args[] =
+  const Value *Args[] =
       {InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
                         : ConstantInt::getFalse(InitX->getContext())};
 
@@ -1544,11 +1511,9 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   uint32_t HeaderSize =
       std::distance(InstWithoutDebugIt.begin(), InstWithoutDebugIt.end());
 
-  IntrinsicCostAttributes Attrs(IntrinID, InitX->getType(), Args);
-  int Cost =
-    TTI->getIntrinsicInstrCost(Attrs, TargetTransformInfo::TCK_SizeAndLatency);
   if (HeaderSize != IdiomCanonicalSize &&
-      Cost > TargetTransformInfo::TCC_Basic)
+      TTI->getIntrinsicCost(IntrinID, InitX->getType(), Args) >
+          TargetTransformInfo::TCC_Basic)
     return false;
 
   transformLoopToCountable(IntrinID, PH, CntInst, CntPhi, InitX, DefX,

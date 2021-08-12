@@ -5,16 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++98, c++03
 // UNSUPPORTED: windows
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// MODULES_DEFINES: _LIBCPP_DEBUG=1
 
 // Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
+// UNSUPPORTED: with_system_cxx_lib
 
 // test array<T, 0>::front() raises a debug error.
 
+#define _LIBCPP_DEBUG 1
 #include <array>
 #include "test_macros.h"
 #include "debug_mode_helper.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
+#ifndef SymbolFileDWARF_DWARFDeclContext_h_
+#define SymbolFileDWARF_DWARFDeclContext_h_
 
 #include <string>
 #include <vector>
@@ -48,7 +48,6 @@ public:
   }
 
   bool operator==(const DWARFDeclContext &rhs) const;
-  bool operator!=(const DWARFDeclContext &rhs) const { return !(*this == rhs); }
 
   uint32_t GetSize() const { return m_entries.size(); }
 
@@ -86,4 +85,4 @@ protected:
   lldb::LanguageType m_language;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
+#endif // SymbolFileDWARF_DWARFDeclContext_h_

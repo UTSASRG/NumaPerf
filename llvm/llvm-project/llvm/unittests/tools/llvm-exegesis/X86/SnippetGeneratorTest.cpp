@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "../Common/AssemblerUtils.h"
+#include "Latency.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
-#include "ParallelSnippetGenerator.h"
 #include "RegisterAliasing.h"
-#include "SerialSnippetGenerator.h"
 #include "TestBase.h"
+#include "Uops.h"
 #include "X86InstrInfo.h"
 
 #include <unordered_set>
@@ -51,7 +51,7 @@ protected:
     randomGenerator().seed(0); // Initialize seed.
     const Instruction &Instr = State.getIC().getInstr(Opcode);
     auto CodeTemplateOrError = Generator.generateCodeTemplates(
-        &Instr, State.getRATC().emptyRegisters());
+        Instr, State.getRATC().emptyRegisters());
     EXPECT_FALSE(CodeTemplateOrError.takeError()); // Valid configuration.
     return std::move(CodeTemplateOrError.get());
   }
@@ -59,12 +59,12 @@ protected:
   SnippetGeneratorT Generator;
 };
 
-using SerialSnippetGeneratorTest = SnippetGeneratorTest<SerialSnippetGenerator>;
+using LatencySnippetGeneratorTest =
+    SnippetGeneratorTest<LatencySnippetGenerator>;
 
-using ParallelSnippetGeneratorTest =
-    SnippetGeneratorTest<ParallelSnippetGenerator>;
+using UopsSnippetGeneratorTest = SnippetGeneratorTest<UopsSnippetGenerator>;
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
+TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   // - ADC16i16
   // - Op0 Explicit Use Immediate
   // - Op1 Implicit Def Reg(AX)
@@ -90,7 +90,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   EXPECT_THAT(IT.getVariableValues()[0], IsInvalid()) << "Immediate is not set";
 }
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
+TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - ADD16ri
   // - Op0 Explicit Def RegClass(GR16)
   // - Op1 Explicit Use RegClass(GR16) TiedToOp0
@@ -114,7 +114,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   EXPECT_THAT(IT.getVariableValues()[1], IsInvalid()) << "Operand 2 is not set";
 }
 
-TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
+TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
   // - VXORPSrr
   // - Op0 Explicit Def RegClass(VR128)
   // - Op1 Explicit Use RegClass(VR128)
@@ -138,7 +138,7 @@ TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
       << "Op0 is either set to Op1 or to Op2";
 }
 
-TEST_F(SerialSnippetGeneratorTest,
+TEST_F(LatencySnippetGeneratorTest,
        ImplicitSelfDependencyThroughExplicitRegsForbidAll) {
   // - VXORPSrr
   // - Op0 Explicit Def RegClass(VR128)
@@ -153,13 +153,12 @@ TEST_F(SerialSnippetGeneratorTest,
   const Instruction &Instr = State.getIC().getInstr(Opcode);
   auto AllRegisters = State.getRATC().emptyRegisters();
   AllRegisters.flip();
-  auto Error =
-      Generator.generateCodeTemplates(&Instr, AllRegisters).takeError();
+  auto Error = Generator.generateCodeTemplates(Instr, AllRegisters).takeError();
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }
 
-TEST_F(SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {
+TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
   // - CMP64rr
   // - Op0 Explicit Use RegClass(GR64)
   // - Op1 Explicit Use RegClass(GR64)
@@ -183,7 +182,7 @@ TEST_F(SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {
   }
 }
 
-TEST_F(SerialSnippetGeneratorTest, LAHF) {
+TEST_F(LatencySnippetGeneratorTest, LAHF) {
   // - LAHF
   // - Op0 Implicit Def Reg(AH)
   // - Op1 Implicit Use Reg(EFLAGS)
@@ -199,26 +198,7 @@ TEST_F(SerialSnippetGeneratorTest, LAHF) {
   }
 }
 
-TEST_F(SerialSnippetGeneratorTest, VCVTUSI642SDZrrb_Int) {
-  // - VCVTUSI642SDZrrb_Int
-  // - Op0 Explicit Def RegClass(VR128X)
-  // - Op1 Explicit Use RegClass(VR128X)
-  // - Op2 Explicit Use STATIC_ROUNDING
-  // - Op2 Explicit Use RegClass(GR64)
-  // - Op4 Implicit Use Reg(MXSCR)
-  const unsigned Opcode = X86::VCVTUSI642SDZrrb_Int;
-  const Instruction &Instr = State.getIC().getInstr(Opcode);
-  std::vector<BenchmarkCode> Configs;
-  auto Error = Generator.generateConfigurations(
-      &Instr, Configs, State.getRATC().emptyRegisters());
-  ASSERT_FALSE(Error);
-  ASSERT_THAT(Configs, SizeIs(1));
-  const BenchmarkCode &BC = Configs[0];
-  ASSERT_THAT(BC.Key.Instructions, SizeIs(1));
-  ASSERT_TRUE(BC.Key.Instructions[0].getOperand(3).isImm());
-}
-
-TEST_F(ParallelSnippetGeneratorTest, ParallelInstruction) {
+TEST_F(UopsSnippetGeneratorTest, ParallelInstruction) {
   // - BNDCL32rr
   // - Op0 Explicit Use RegClass(BNDR)
   // - Op1 Explicit Use RegClass(GR32)
@@ -238,7 +218,7 @@ TEST_F(ParallelSnippetGeneratorTest, ParallelInstruction) {
   EXPECT_THAT(IT.getVariableValues()[1], IsInvalid());
 }
 
-TEST_F(ParallelSnippetGeneratorTest, SerialInstruction) {
+TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
   // - CDQ
   // - Op0 Implicit Def Reg(EAX)
   // - Op1 Implicit Def Reg(EDX)
@@ -257,7 +237,7 @@ TEST_F(ParallelSnippetGeneratorTest, SerialInstruction) {
   ASSERT_THAT(IT.getVariableValues(), SizeIs(0));
 }
 
-TEST_F(ParallelSnippetGeneratorTest, StaticRenaming) {
+TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
   // CMOV32rr has tied variables, we enumerate the possible values to execute
   // as many in parallel as possible.
 
@@ -288,7 +268,7 @@ TEST_F(ParallelSnippetGeneratorTest, StaticRenaming) {
       << "Each instruction writes to a different register";
 }
 
-TEST_F(ParallelSnippetGeneratorTest, NoTiedVariables) {
+TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   // CMOV_GR32 has no tied variables, we make sure def and use are different
   // from each other.
 
@@ -322,7 +302,7 @@ TEST_F(ParallelSnippetGeneratorTest, NoTiedVariables) {
   EXPECT_THAT(IT.getVariableValues()[3], IsInvalid());
 }
 
-TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
+TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
   // Mov32rm reads from memory.
   // - MOV32rm
   // - Op0 Explicit Def RegClass(GR32)
@@ -346,7 +326,7 @@ TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
   EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
   EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
   ASSERT_THAT(CT.Instructions,
-              SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
+              SizeIs(UopsSnippetGenerator::kMinNumDifferentAddresses));
   const InstructionTemplate &IT = CT.Instructions[0];
   EXPECT_THAT(IT.getOpcode(), Opcode);
   ASSERT_THAT(IT.getVariableValues(), SizeIs(6));
@@ -354,17 +334,6 @@ TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
   EXPECT_EQ(IT.getVariableValues()[3].getReg(), 0u);
   EXPECT_EQ(IT.getVariableValues()[4].getImm(), 0);
   EXPECT_EQ(IT.getVariableValues()[5].getReg(), 0u);
-}
-
-TEST_F(ParallelSnippetGeneratorTest, MOV16ms) {
-  const unsigned Opcode = X86::MOV16ms;
-  const Instruction &Instr = State.getIC().getInstr(Opcode);
-  std::vector<BenchmarkCode> Benchmarks;
-  auto Err = Generator.generateConfigurations(&Instr, Benchmarks,
-                                              State.getRATC().emptyRegisters());
-  EXPECT_TRUE((bool)Err);
-  EXPECT_THAT(toString(std::move(Err)),
-              testing::HasSubstr("no available registers"));
 }
 
 class FakeSnippetGenerator : public SnippetGenerator {
@@ -382,7 +351,7 @@ public:
 
 private:
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(InstructionTemplate, const BitVector &) const override {
+  generateCodeTemplates(const Instruction &, const BitVector &) const override {
     return make_error<StringError>("not implemented", inconvertibleErrorCode());
   }
 };
@@ -414,9 +383,9 @@ TEST_F(FakeSnippetGeneratorTest, MemoryUse_Movsb) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::MOVSB;
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  std::vector<BenchmarkCode> Benchmarks;
-  auto Error = Generator.generateConfigurations(
-      &Instr, Benchmarks, State.getRATC().emptyRegisters());
+  auto Error =
+      Generator.generateConfigurations(Instr, State.getRATC().emptyRegisters())
+          .takeError();
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }

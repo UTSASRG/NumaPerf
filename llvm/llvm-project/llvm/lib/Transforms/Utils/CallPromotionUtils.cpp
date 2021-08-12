@@ -12,10 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
-#include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -161,31 +158,32 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
 ///     %t1 = bitcast i32 %t0 to ...
 ///     br label %normal_dst
 ///
-static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
+static void createRetBitCast(CallSite CS, Type *RetTy, CastInst **RetBitCast) {
 
   // Save the users of the calling instruction. These uses will be changed to
   // use the bitcast after we create it.
   SmallVector<User *, 16> UsersToUpdate;
-  for (User *U : CB.users())
+  for (User *U : CS.getInstruction()->users())
     UsersToUpdate.push_back(U);
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
   Instruction *InsertBefore = nullptr;
-  if (auto *Invoke = dyn_cast<InvokeInst>(&CB))
+  if (auto *Invoke = dyn_cast<InvokeInst>(CS.getInstruction()))
     InsertBefore =
         &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
   else
-    InsertBefore = &*std::next(CB.getIterator());
+    InsertBefore = &*std::next(CS.getInstruction()->getIterator());
 
   // Bitcast the return value to the correct type.
-  auto *Cast = CastInst::CreateBitOrPointerCast(&CB, RetTy, "", InsertBefore);
+  auto *Cast = CastInst::CreateBitOrPointerCast(CS.getInstruction(), RetTy, "",
+                                                InsertBefore);
   if (RetBitCast)
     *RetBitCast = Cast;
 
   // Replace all the original uses of the calling instruction with the bitcast.
   for (User *U : UsersToUpdate)
-    U->replaceUsesOfWith(&CB, Cast);
+    U->replaceUsesOfWith(CS.getInstruction(), Cast);
 }
 
 /// Predicate and clone the given call site.
@@ -255,91 +253,26 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     %t2 = phi i32 [ %t0, %else_bb ], [ %t1, %then_bb ]
 ///     br %normal_dst
 ///
-/// An indirect musttail call is processed slightly differently in that:
-/// 1. No merge block needed for the orginal and the cloned callsite, since
-///    either one ends the flow. No phi node is needed either.
-/// 2. The return statement following the original call site is duplicated too
-///    and placed immediately after the cloned call site per the IR convention.
-///
-/// For example, the musttail call instruction below:
-///
-///   orig_bb:
-///     %t0 = musttail call i32 %ptr()
-///     ...
-///
-/// Is replaced by the following:
-///
-///   cond_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
-///     br i1 %cond, %then_bb, %orig_bb
-///
-///   then_bb:
-///     ; The clone of the original call instruction is placed in the "then"
-///     ; block. It is not yet promoted.
-///     %t1 = musttail call i32 %ptr()
-///     ret %t1
-///
-///   orig_bb:
-///     ; The original call instruction stays in its original block.
-///     %t0 = musttail call i32 %ptr()
-///     ret %t0
-static CallBase &versionCallSite(CallBase &CB, Value *Callee,
-                                 MDNode *BranchWeights) {
+static Instruction *versionCallSite(CallSite CS, Value *Callee,
+                                    MDNode *BranchWeights) {
 
-  IRBuilder<> Builder(&CB);
-  CallBase *OrigInst = &CB;
+  IRBuilder<> Builder(CS.getInstruction());
+  Instruction *OrigInst = CS.getInstruction();
   BasicBlock *OrigBlock = OrigInst->getParent();
 
   // Create the compare. The called value and callee must have the same type to
   // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
-  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
-
-  if (OrigInst->isMustTailCall()) {
-    // Create an if-then structure. The original instruction stays in its block,
-    // and a clone of the original instruction is placed in the "then" block.
-    Instruction *ThenTerm =
-        SplitBlockAndInsertIfThen(Cond, &CB, false, BranchWeights);
-    BasicBlock *ThenBlock = ThenTerm->getParent();
-    ThenBlock->setName("if.true.direct_targ");
-    CallBase *NewInst = cast<CallBase>(OrigInst->clone());
-    NewInst->insertBefore(ThenTerm);
-
-    // Place a clone of the optional bitcast after the new call site.
-    Value *NewRetVal = NewInst;
-    auto Next = OrigInst->getNextNode();
-    if (auto *BitCast = dyn_cast_or_null<BitCastInst>(Next)) {
-      assert(BitCast->getOperand(0) == OrigInst &&
-             "bitcast following musttail call must use the call");
-      auto NewBitCast = BitCast->clone();
-      NewBitCast->replaceUsesOfWith(OrigInst, NewInst);
-      NewBitCast->insertBefore(ThenTerm);
-      NewRetVal = NewBitCast;
-      Next = BitCast->getNextNode();
-    }
-
-    // Place a clone of the return instruction after the new call site.
-    ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
-    assert(Ret && "musttail call must precede a ret with an optional bitcast");
-    auto NewRet = Ret->clone();
-    if (Ret->getReturnValue())
-      NewRet->replaceUsesOfWith(Ret->getReturnValue(), NewRetVal);
-    NewRet->insertBefore(ThenTerm);
-
-    // A return instructions is terminating, so we don't need the terminator
-    // instruction just created.
-    ThenTerm->eraseFromParent();
-
-    return *NewInst;
-  }
+  if (CS.getCalledValue()->getType() != Callee->getType())
+    Callee = Builder.CreateBitCast(Callee, CS.getCalledValue()->getType());
+  auto *Cond = Builder.CreateICmpEQ(CS.getCalledValue(), Callee);
 
   // Create an if-then-else structure. The original instruction is moved into
   // the "else" block, and a clone of the original instruction is placed in the
   // "then" block.
   Instruction *ThenTerm = nullptr;
   Instruction *ElseTerm = nullptr;
-  SplitBlockAndInsertIfThenElse(Cond, &CB, &ThenTerm, &ElseTerm, BranchWeights);
+  SplitBlockAndInsertIfThenElse(Cond, CS.getInstruction(), &ThenTerm, &ElseTerm,
+                                BranchWeights);
   BasicBlock *ThenBlock = ThenTerm->getParent();
   BasicBlock *ElseBlock = ElseTerm->getParent();
   BasicBlock *MergeBlock = OrigInst->getParent();
@@ -348,7 +281,7 @@ static CallBase &versionCallSite(CallBase &CB, Value *Callee,
   ElseBlock->setName("if.false.orig_indirect");
   MergeBlock->setName("if.end.icp");
 
-  CallBase *NewInst = cast<CallBase>(OrigInst->clone());
+  Instruction *NewInst = OrigInst->clone();
   OrigInst->moveBefore(ElseTerm);
   NewInst->insertBefore(ThenTerm);
 
@@ -380,18 +313,18 @@ static CallBase &versionCallSite(CallBase &CB, Value *Callee,
   // Create a phi node for the returned value of the call site.
   createRetPHINode(OrigInst, NewInst, MergeBlock, Builder);
 
-  return *NewInst;
+  return NewInst;
 }
 
-bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
+bool llvm::isLegalToPromote(CallSite CS, Function *Callee,
                             const char **FailureReason) {
-  assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
+  assert(!CS.getCalledFunction() && "Only indirect call sites can be promoted");
 
   auto &DL = Callee->getParent()->getDataLayout();
 
   // Check the return type. The callee's return value type must be bitcast
   // compatible with the call site's type.
-  Type *CallRetTy = CB.getType();
+  Type *CallRetTy = CS.getInstruction()->getType();
   Type *FuncRetTy = Callee->getReturnType();
   if (CallRetTy != FuncRetTy)
     if (!CastInst::isBitOrNoopPointerCastable(FuncRetTy, CallRetTy, DL)) {
@@ -405,7 +338,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
 
   // Check the number of arguments. The callee and call site must agree on the
   // number of arguments.
-  if (CB.arg_size() != NumParams && !Callee->isVarArg()) {
+  if (CS.arg_size() != NumParams && !Callee->isVarArg()) {
     if (FailureReason)
       *FailureReason = "The number of arguments mismatch";
     return false;
@@ -416,7 +349,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   // site.
   for (unsigned I = 0; I < NumParams; ++I) {
     Type *FormalTy = Callee->getFunctionType()->getFunctionParamType(I);
-    Type *ActualTy = CB.getArgOperand(I)->getType();
+    Type *ActualTy = CS.getArgument(I)->getType();
     if (FormalTy == ActualTy)
       continue;
     if (!CastInst::isBitOrNoopPointerCastable(ActualTy, FormalTy, DL)) {
@@ -429,31 +362,31 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   return true;
 }
 
-CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
-                            CastInst **RetBitCast) {
-  assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
+Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
+                               CastInst **RetBitCast) {
+  assert(!CS.getCalledFunction() && "Only indirect call sites can be promoted");
 
   // Set the called function of the call site to be the given callee (but don't
   // change the type).
-  CB.setCalledOperand(Callee);
+  cast<CallBase>(CS.getInstruction())->setCalledOperand(Callee);
 
   // Since the call site will no longer be direct, we must clear metadata that
   // is only appropriate for indirect calls. This includes !prof and !callees
   // metadata.
-  CB.setMetadata(LLVMContext::MD_prof, nullptr);
-  CB.setMetadata(LLVMContext::MD_callees, nullptr);
+  CS.getInstruction()->setMetadata(LLVMContext::MD_prof, nullptr);
+  CS.getInstruction()->setMetadata(LLVMContext::MD_callees, nullptr);
 
   // If the function type of the call site matches that of the callee, no
   // additional work is required.
-  if (CB.getFunctionType() == Callee->getFunctionType())
-    return CB;
+  if (CS.getFunctionType() == Callee->getFunctionType())
+    return CS.getInstruction();
 
   // Save the return types of the call site and callee.
-  Type *CallSiteRetTy = CB.getType();
+  Type *CallSiteRetTy = CS.getInstruction()->getType();
   Type *CalleeRetTy = Callee->getReturnType();
 
   // Change the function type of the call site the match that of the callee.
-  CB.mutateFunctionType(Callee->getFunctionType());
+  CS.mutateFunctionType(Callee->getFunctionType());
 
   // Inspect the arguments of the call site. If an argument's type doesn't
   // match the corresponding formal argument's type in the callee, bitcast it
@@ -462,18 +395,19 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
   auto CalleeParamNum = CalleeType->getNumParams();
 
   LLVMContext &Ctx = Callee->getContext();
-  const AttributeList &CallerPAL = CB.getAttributes();
+  const AttributeList &CallerPAL = CS.getAttributes();
   // The new list of argument attributes.
   SmallVector<AttributeSet, 4> NewArgAttrs;
   bool AttributeChanged = false;
 
   for (unsigned ArgNo = 0; ArgNo < CalleeParamNum; ++ArgNo) {
-    auto *Arg = CB.getArgOperand(ArgNo);
+    auto *Arg = CS.getArgument(ArgNo);
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", &CB);
-      CB.setArgOperand(ArgNo, Cast);
+      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "",
+                                                    CS.getInstruction());
+      CS.setArgument(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
       AttrBuilder ArgAttrs(CallerPAL.getParamAttributes(ArgNo));
@@ -498,89 +432,30 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
   // Remove any incompatible return value attribute.
   AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
   if (!CallSiteRetTy->isVoidTy() && CallSiteRetTy != CalleeRetTy) {
-    createRetBitCast(CB, CallSiteRetTy, RetBitCast);
+    createRetBitCast(CS, CallSiteRetTy, RetBitCast);
     RAttrs.remove(AttributeFuncs::typeIncompatible(CalleeRetTy));
     AttributeChanged = true;
   }
 
   // Set the new callsite attribute.
   if (AttributeChanged)
-    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttributes(),
+    CS.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttributes(),
                                         AttributeSet::get(Ctx, RAttrs),
                                         NewArgAttrs));
 
-  return CB;
+  return CS.getInstruction();
 }
 
-CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
-                                          MDNode *BranchWeights) {
+Instruction *llvm::promoteCallWithIfThenElse(CallSite CS, Function *Callee,
+                                             MDNode *BranchWeights) {
 
   // Version the indirect call site. If the called value is equal to the given
   // callee, 'NewInst' will be executed, otherwise the original call site will
   // be executed.
-  CallBase &NewInst = versionCallSite(CB, Callee, BranchWeights);
+  Instruction *NewInst = versionCallSite(CS, Callee, BranchWeights);
 
   // Promote 'NewInst' so that it directly calls the desired function.
-  return promoteCall(NewInst, Callee);
-}
-
-bool llvm::tryPromoteCall(CallBase &CB) {
-  assert(!CB.getCalledFunction());
-  Module *M = CB.getCaller()->getParent();
-  const DataLayout &DL = M->getDataLayout();
-  Value *Callee = CB.getCalledOperand();
-
-  LoadInst *VTableEntryLoad = dyn_cast<LoadInst>(Callee);
-  if (!VTableEntryLoad)
-    return false; // Not a vtable entry load.
-  Value *VTableEntryPtr = VTableEntryLoad->getPointerOperand();
-  APInt VTableOffset(DL.getTypeSizeInBits(VTableEntryPtr->getType()), 0);
-  Value *VTableBasePtr = VTableEntryPtr->stripAndAccumulateConstantOffsets(
-      DL, VTableOffset, /* AllowNonInbounds */ true);
-  LoadInst *VTablePtrLoad = dyn_cast<LoadInst>(VTableBasePtr);
-  if (!VTablePtrLoad)
-    return false; // Not a vtable load.
-  Value *Object = VTablePtrLoad->getPointerOperand();
-  APInt ObjectOffset(DL.getTypeSizeInBits(Object->getType()), 0);
-  Value *ObjectBase = Object->stripAndAccumulateConstantOffsets(
-      DL, ObjectOffset, /* AllowNonInbounds */ true);
-  if (!(isa<AllocaInst>(ObjectBase) && ObjectOffset == 0))
-    // Not an Alloca or the offset isn't zero.
-    return false;
-
-  // Look for the vtable pointer store into the object by the ctor.
-  BasicBlock::iterator BBI(VTablePtrLoad);
-  Value *VTablePtr = FindAvailableLoadedValue(
-      VTablePtrLoad, VTablePtrLoad->getParent(), BBI, 0, nullptr, nullptr);
-  if (!VTablePtr)
-    return false; // No vtable found.
-  APInt VTableOffsetGVBase(DL.getTypeSizeInBits(VTablePtr->getType()), 0);
-  Value *VTableGVBase = VTablePtr->stripAndAccumulateConstantOffsets(
-      DL, VTableOffsetGVBase, /* AllowNonInbounds */ true);
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(VTableGVBase);
-  if (!(GV && GV->isConstant() && GV->hasDefinitiveInitializer()))
-    // Not in the form of a global constant variable with an initializer.
-    return false;
-
-  Constant *VTableGVInitializer = GV->getInitializer();
-  APInt VTableGVOffset = VTableOffsetGVBase + VTableOffset;
-  if (!(VTableGVOffset.getActiveBits() <= 64))
-    return false; // Out of range.
-  Constant *Ptr = getPointerAtOffset(VTableGVInitializer,
-                                     VTableGVOffset.getZExtValue(),
-                                     *M);
-  if (!Ptr)
-    return false; // No constant (function) pointer found.
-  Function *DirectCallee = dyn_cast<Function>(Ptr->stripPointerCasts());
-  if (!DirectCallee)
-    return false; // No function pointer found.
-
-  if (!isLegalToPromote(CB, DirectCallee))
-    return false;
-
-  // Success.
-  promoteCall(CB, DirectCallee);
-  return true;
+  return promoteCall(CallSite(NewInst), Callee);
 }
 
 #undef DEBUG_TYPE

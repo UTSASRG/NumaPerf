@@ -89,6 +89,9 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonVectorPrint.cpp",
     "RDFCopy.cpp",
     "RDFDeadCode.cpp",
+    "RDFGraph.cpp",
+    "RDFLiveness.cpp",
+    "RDFRegisters.cpp",
   ]
 }
 

@@ -1,10 +1,10 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o - | \
-# RUN: not llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
+# RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: unsupported address size 3 (4 and 8 are supported)
+# ERR: unsupported address size 3
 # ERR-NOT: {{.}}
 
 # invalid addr size

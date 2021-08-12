@@ -38,10 +38,7 @@ class UseEqualsDeleteCheck : public ClangTidyCheck {
 public:
   UseEqualsDeleteCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
-  }
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", 1) != 0) {}
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

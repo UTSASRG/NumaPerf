@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_TYPECATEGORY_H
-#define LLDB_DATAFORMATTERS_TYPECATEGORY_H
+#ifndef lldb_TypeCategory_h_
+#define lldb_TypeCategory_h_
 
 #include <initializer_list>
 #include <memory>
@@ -285,13 +285,13 @@ public:
   }
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::TypeFormatImplSP &entry);
+           lldb::TypeFormatImplSP &entry, uint32_t *reason = nullptr);
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::TypeSummaryImplSP &entry);
+           lldb::TypeSummaryImplSP &entry, uint32_t *reason = nullptr);
 
   bool Get(lldb::LanguageType lang, const FormattersMatchVector &candidates,
-           lldb::SyntheticChildrenSP &entry);
+           lldb::SyntheticChildrenSP &entry, uint32_t *reason = nullptr);
 
   void Clear(FormatCategoryItems items = ALL_ITEM_TYPES);
 
@@ -366,4 +366,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_TYPECATEGORY_H
+#endif // lldb_TypeCategory_h_

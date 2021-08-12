@@ -305,7 +305,6 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FS, CFI_FUNCTION_DECLS)
       STRINGIFY_CODE(FS, TYPE_ID)
       STRINGIFY_CODE(FS, TYPE_ID_METADATA)
-      STRINGIFY_CODE(FS, BLOCK_COUNT)
     }
   case bitc::METADATA_ATTACHMENT_ID:
     switch (CodeID) {
@@ -911,14 +910,17 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
             Hasher.update(ArrayRef<uint8_t>(Ptr, BlockSize));
             Hash = Hasher.result();
           }
-          std::array<char, 20> RecordedHash;
+          SmallString<20> RecordedHash;
+          RecordedHash.resize(20);
           int Pos = 0;
           for (auto &Val : Record) {
             assert(!(Val >> 32) && "Unexpected high bits set");
-            support::endian::write32be(&RecordedHash[Pos], Val);
-            Pos += 4;
+            RecordedHash[Pos++] = (Val >> 24) & 0xFF;
+            RecordedHash[Pos++] = (Val >> 16) & 0xFF;
+            RecordedHash[Pos++] = (Val >> 8) & 0xFF;
+            RecordedHash[Pos++] = (Val >> 0) & 0xFF;
           }
-          if (Hash == StringRef(RecordedHash.data(), RecordedHash.size()))
+          if (Hash == RecordedHash)
             O->OS << " (match)";
           else
             O->OS << " (!mismatch!)";

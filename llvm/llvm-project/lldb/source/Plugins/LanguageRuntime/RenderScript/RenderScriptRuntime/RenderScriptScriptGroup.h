@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTSCRIPTGROUP_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTSCRIPTGROUP_H
+#ifndef liblldb_RenderScriptScriptGroup_h_
+#define liblldb_RenderScriptScriptGroup_h_
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 
 lldb::CommandObjectSP NewCommandObjectRenderScriptScriptGroup(
     lldb_private::CommandInterpreter &interpreter);
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTSCRIPTGROUP_H
+#endif // liblldb_RenderScriptScriptGroup_h_

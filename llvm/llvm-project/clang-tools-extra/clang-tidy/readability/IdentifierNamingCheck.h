@@ -9,7 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H
 
-#include "../utils/RenamerClangTidyCheck.h"
+#include "../ClangTidyCheck.h"
+
 namespace clang {
 
 class MacroInfo;
@@ -30,12 +31,17 @@ namespace readability {
 /// different rules for different kind of identifier. In general, the
 /// rules are falling back to a more generic rule if the specific case is not
 /// configured.
-class IdentifierNamingCheck final : public RenamerClangTidyCheck {
+class IdentifierNamingCheck : public ClangTidyCheck {
 public:
   IdentifierNamingCheck(StringRef Name, ClangTidyContext *Context);
   ~IdentifierNamingCheck();
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
+  void onEndOfTranslationUnit() override;
 
   enum CaseType {
     CT_AnyCase = 0,
@@ -59,19 +65,66 @@ public:
     std::string Suffix;
   };
 
-private:
-  llvm::Optional<FailureInfo>
-  GetDeclFailureInfo(const NamedDecl *Decl,
-                     const SourceManager &SM) const override;
-  llvm::Optional<FailureInfo>
-  GetMacroFailureInfo(const Token &MacroNameTok,
-                      const SourceManager &SM) const override;
-  DiagInfo GetDiagInfo(const NamingCheckId &ID,
-                       const NamingCheckFailure &Failure) const override;
+  /// This enum will be used in %select of the diagnostic message.
+  /// Each value below IgnoreFailureThreshold should have an error message.
+  enum class ShouldFixStatus {
+    ShouldFix,
+    ConflictsWithKeyword, /// The fixup will conflict with a language keyword,
+                          /// so we can't fix it automatically.
+    ConflictsWithMacroDefinition, /// The fixup will conflict with a macro
+                                  /// definition, so we can't fix it
+                                  /// automatically.
 
+    /// Values pass this threshold will be ignored completely
+    /// i.e no message, no fixup.
+    IgnoreFailureThreshold,
+
+    InsideMacro, /// If the identifier was used or declared within a macro we
+                 /// won't offer a fixup for safety reasons.
+  };
+
+  /// Holds an identifier name check failure, tracking the kind of the
+  /// identifier, its possible fixup and the starting locations of all the
+  /// identifier usages.
+  struct NamingCheckFailure {
+    std::string KindName;
+    std::string Fixup;
+
+    /// Whether the failure should be fixed or not.
+    ///
+    /// ie: if the identifier was used or declared within a macro we won't offer
+    /// a fixup for safety reasons.
+    bool ShouldFix() const { return FixStatus == ShouldFixStatus::ShouldFix; }
+
+    bool ShouldNotify() const {
+      return FixStatus < ShouldFixStatus::IgnoreFailureThreshold;
+    }
+
+    ShouldFixStatus FixStatus = ShouldFixStatus::ShouldFix;
+
+    /// A set of all the identifier usages starting SourceLocation, in
+    /// their encoded form.
+    llvm::DenseSet<unsigned> RawUsageLocs;
+
+    NamingCheckFailure() = default;
+  };
+
+  typedef std::pair<SourceLocation, std::string> NamingCheckId;
+
+  typedef llvm::DenseMap<NamingCheckId, NamingCheckFailure>
+      NamingCheckFailureMap;
+
+  /// Check Macros for style violations.
+  void checkMacro(SourceManager &sourceMgr, const Token &MacroNameTok,
+                  const MacroInfo *MI);
+
+  /// Add a usage of a macro if it already has a violation.
+  void expandMacro(const Token &MacroNameTok, const MacroInfo *MI);
+
+private:
   std::vector<llvm::Optional<NamingStyle>> NamingStyles;
-  const bool IgnoreFailedSplit;
-  const bool IgnoreMainLikeFunctions;
+  bool IgnoreFailedSplit;
+  NamingCheckFailureMap NamingCheckFailures;
 };
 
 } // namespace readability

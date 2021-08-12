@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONVALUELANGUAGE_H
-#define LLDB_INTERPRETER_OPTIONVALUELANGUAGE_H
+#ifndef liblldb_OptionValueLanguage_h_
+#define liblldb_OptionValueLanguage_h_
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/lldb-enumerations.h"
@@ -66,4 +66,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONVALUELANGUAGE_H
+#endif // liblldb_OptionValueLanguage_h_

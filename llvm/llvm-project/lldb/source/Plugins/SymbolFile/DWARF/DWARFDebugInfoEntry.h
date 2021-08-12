@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
+#ifndef SymbolFileDWARF_DWARFDebugInfoEntry_h_
+#define SymbolFileDWARF_DWARFDebugInfoEntry_h_
 
 #include "SymbolFileDWARF.h"
 #include "llvm/ADT/SmallVector.h"
@@ -41,11 +41,18 @@ public:
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
   bool operator!=(const DWARFDebugInfoEntry &rhs) const;
 
+  void BuildAddressRangeTable(const DWARFUnit *cu,
+                              DWARFDebugAranges *debug_aranges) const;
+
   void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
   bool Extract(const lldb_private::DWARFDataExtractor &data,
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
+
+  bool LookupAddress(const dw_addr_t address, DWARFUnit *cu,
+                     DWARFDebugInfoEntry **function_die,
+                     DWARFDebugInfoEntry **block_die);
 
   size_t GetAttributes(const DWARFUnit *cu,
                        DWARFAttributes &attrs,
@@ -99,6 +106,15 @@ public:
   const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,
                                std::string &storage) const;
 
+  void Dump(const DWARFUnit *cu, lldb_private::Stream &s,
+            uint32_t recurse_depth) const;
+
+  static void
+  DumpAttribute(const DWARFUnit *cu,
+                const lldb_private::DWARFDataExtractor &data,
+                lldb::offset_t *offset_ptr, lldb_private::Stream &s,
+                dw_attr_t attr, DWARFFormValue &form_value);
+
   bool GetDIENamesAndRanges(
       DWARFUnit *cu, const char *&name, const char *&mangled,
       DWARFRangeList &rangeList, int &decl_file, int &decl_line,
@@ -146,7 +162,8 @@ public:
     return HasChildren() ? this + 1 : nullptr;
   }
 
-  DWARFDeclContext GetDWARFDeclContext(DWARFUnit *cu) const;
+  void GetDWARFDeclContext(DWARFUnit *cu,
+                           DWARFDeclContext &dwarf_decl_ctx) const;
 
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu) const;
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu,
@@ -155,15 +172,7 @@ public:
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
-  // This function returns true if the variable scope is either
-  // global or (file-static). It will return false for static variables
-  // that are local to a function, as they have local scope.
-  bool IsGlobalOrStaticScopeVariable() const;
-
 protected:
-  static DWARFDeclContext
-  GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnit *cu);
-
   dw_offset_t m_offset; // Offset within the .debug_info/.debug_types
   uint32_t m_parent_idx; // How many to subtract from "this" to get the parent.
                          // If zero this die has no parent
@@ -178,4 +187,4 @@ protected:
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
+#endif // SymbolFileDWARF_DWARFDebugInfoEntry_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_TYPECATEGORYMAP_H
-#define LLDB_DATAFORMATTERS_TYPECATEGORYMAP_H
+#ifndef lldb_TypeCategoryMap_h_
+#define lldb_TypeCategoryMap_h_
 
 #include <functional>
 #include <list>
@@ -108,4 +108,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_TYPECATEGORYMAP_H
+#endif // lldb_TypeCategoryMap_h_

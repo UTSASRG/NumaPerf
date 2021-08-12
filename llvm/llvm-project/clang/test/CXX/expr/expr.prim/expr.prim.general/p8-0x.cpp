@@ -68,12 +68,11 @@ namespace PR10127 {
   
   foo m = decltype(foo::bar)::baz;
 
-  enum E {};
-  enum H {};
+  enum E {
+  };
   struct bar {
-    enum E : decltype(outer())::td_int(4); // expected-error{{anonymous bit-field}}
+    enum E : decltype(outer())::td_int(4);
     enum F : decltype(outer())::td_int;
     enum G : decltype; // expected-error{{expected '(' after 'decltype'}}
-    enum H : 4; // expected-error {{anonymous bit-field}}
   };
 }

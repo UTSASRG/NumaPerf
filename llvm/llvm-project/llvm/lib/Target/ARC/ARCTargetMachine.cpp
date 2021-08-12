@@ -39,7 +39,7 @@ ARCTargetMachine::ARCTargetMachine(const Target &T, const Triple &TT,
                         TT, CPU, FS, Options, getRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
-      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
+      Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }
 

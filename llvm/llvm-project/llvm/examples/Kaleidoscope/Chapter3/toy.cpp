@@ -497,7 +497,7 @@ Function *FunctionAST::codegen() {
   // Record the function arguments in the NamedValues map.
   NamedValues.clear();
   for (auto &Arg : TheFunction->args())
-    NamedValues[std::string(Arg.getName())] = &Arg;
+    NamedValues[Arg.getName()] = &Arg;
 
   if (Value *RetVal = Body->codegen()) {
     // Finish off the function.

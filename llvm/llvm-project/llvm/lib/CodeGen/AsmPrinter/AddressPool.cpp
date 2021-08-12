@@ -30,9 +30,9 @@ MCSymbol *AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
   MCSymbol *EndLabel = Asm.createTempSymbol(Prefix + "end");
 
   Asm.OutStreamer->AddComment("Length of contribution");
-  Asm.emitLabelDifference(EndLabel, BeginLabel,
+  Asm.EmitLabelDifference(EndLabel, BeginLabel,
                           4); // TODO: Support DWARF64 format.
-  Asm.OutStreamer->emitLabel(BeginLabel);
+  Asm.OutStreamer->EmitLabel(BeginLabel);
   Asm.OutStreamer->AddComment("DWARF version number");
   Asm.emitInt16(Asm.getDwarfVersion());
   Asm.OutStreamer->AddComment("Address size");
@@ -58,7 +58,7 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
 
   // Define the symbol that marks the start of the contribution.
   // It is referenced via DW_AT_addr_base.
-  Asm.OutStreamer->emitLabel(AddressTableBaseSym);
+  Asm.OutStreamer->EmitLabel(AddressTableBaseSym);
 
   // Order the address pool entries by ID
   SmallVector<const MCExpr *, 64> Entries(Pool.size());
@@ -70,8 +70,8 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
             : MCSymbolRefExpr::create(I.first, Asm.OutContext);
 
   for (const MCExpr *Entry : Entries)
-    Asm.OutStreamer->emitValue(Entry, Asm.getDataLayout().getPointerSize());
+    Asm.OutStreamer->EmitValue(Entry, Asm.getDataLayout().getPointerSize());
 
   if (EndLabel)
-    Asm.OutStreamer->emitLabel(EndLabel);
+    Asm.OutStreamer->EmitLabel(EndLabel);
 }

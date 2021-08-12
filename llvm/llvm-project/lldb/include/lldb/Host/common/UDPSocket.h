@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_COMMON_UDPSOCKET_H
-#define LLDB_HOST_COMMON_UDPSOCKET_H
+#ifndef liblldb_UDPSocket_h_
+#define liblldb_UDPSocket_h_
 
 #include "lldb/Host/Socket.h"
 
@@ -16,8 +16,8 @@ class UDPSocket : public Socket {
 public:
   UDPSocket(bool should_close, bool child_processes_inherit);
 
-  static llvm::Expected<std::unique_ptr<UDPSocket>>
-  Connect(llvm::StringRef name, bool child_processes_inherit);
+  static Status Connect(llvm::StringRef name, bool child_processes_inherit,
+                        Socket *&socket);
 
   std::string GetRemoteConnectionURI() const override;
 
@@ -33,4 +33,4 @@ private:
 };
 }
 
-#endif // LLDB_HOST_COMMON_UDPSOCKET_H
+#endif // ifndef liblldb_UDPSocket_h_

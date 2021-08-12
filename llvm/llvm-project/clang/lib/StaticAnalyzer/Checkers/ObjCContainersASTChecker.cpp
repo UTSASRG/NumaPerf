@@ -172,6 +172,6 @@ void ento::registerObjCContainersASTChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersASTChecker>();
 }
 
-bool ento::shouldRegisterObjCContainersASTChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterObjCContainersASTChecker(const LangOptions &LO) {
   return true;
 }

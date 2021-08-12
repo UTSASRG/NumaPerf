@@ -27,14 +27,13 @@ public:
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
-                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const std::vector<CalleeSavedInfo> &CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
-  bool
-  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MI,
-                              MutableArrayRef<CalleeSavedInfo> CSI,
-                              const TargetRegisterInfo *TRI) const override;
+  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI,
+                                  std::vector<CalleeSavedInfo> &CSI,
+                                  const TargetRegisterInfo *TRI) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 

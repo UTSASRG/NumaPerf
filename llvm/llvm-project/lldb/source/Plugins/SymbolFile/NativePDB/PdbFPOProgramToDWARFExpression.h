@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBFPOPROGRAMTODWARFEXPRESSION_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBFPOPROGRAMTODWARFEXPRESSION_H
+#ifndef lldb_Plugins_SymbolFile_PDB_PDBFPOProgramToDWARFExpression_h_
+#define lldb_Plugins_SymbolFile_PDB_PDBFPOProgramToDWARFExpression_h_
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"

@@ -24,16 +24,12 @@
 namespace clang {
 namespace clangd {
 namespace {
-using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
-// front() is SR.range, back() is outermost range.
-std::vector<Range> gatherRanges(const SelectionRange &SR) {
-  std::vector<Range> Ranges;
-  for (const SelectionRange *S = &SR; S; S = S->parent.get())
-    Ranges.push_back(S->range);
-  return Ranges;
-}
+class IgnoreDiagnostics : public DiagnosticsConsumer {
+  void onDiagnosticsReady(PathRef File,
+                          std::vector<Diag> Diagnostics) override {}
+};
 
 TEST(SemanticSelection, All) {
   const char *Tests[] = {
@@ -87,7 +83,7 @@ TEST(SemanticSelection, All) {
         }]]]]
        )cpp",
       // Empty file.
-      "[[^]]",
+      "^",
       // FIXME: We should get the whole DeclStmt as a range.
       R"cpp( // Single statement in TU.
         [[int v = [[1^00]]]];
@@ -98,7 +94,7 @@ TEST(SemanticSelection, All) {
       // FIXME: No node found associated to the position.
       R"cpp( // Cursor in between spaces.
         void func() {
-          int v = 100 + [[^]]  100;
+          int v = 100 + ^  100;
         }
       )cpp",
       // Structs.
@@ -142,16 +138,17 @@ TEST(SemanticSelection, All) {
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
     auto AST = TestTU::withCode(T.code()).build();
-    EXPECT_THAT(gatherRanges(llvm::cantFail(getSemanticRanges(AST, T.point()))),
+    EXPECT_THAT(llvm::cantFail(getSemanticRanges(AST, T.point())),
                 ElementsAreArray(T.ranges()))
         << Test;
   }
 }
 
-TEST(SemanticSelection, RunViaClangdServer) {
+TEST(SemanticSelection, RunViaClangDServer) {
   MockFSProvider FS;
+  IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   auto FooH = testPath("foo.h");
   FS.Files[FooH] = R"cpp(
@@ -166,20 +163,15 @@ TEST(SemanticSelection, RunViaClangdServer) {
     // inp = HASH(foo(inp));
     [[inp = [[HASH([[foo([[in^p]])]])]]]];
   }]]]]
-  $empty[[^]]
   )cpp";
   Annotations SourceAnnotations(SourceContents);
-  FS.Files[FooCpp] = std::string(SourceAnnotations.code());
+  FS.Files[FooCpp] = SourceAnnotations.code();
   Server.addDocument(FooCpp, SourceAnnotations.code());
 
-  auto Ranges = runSemanticRanges(Server, FooCpp, SourceAnnotations.points());
+  auto Ranges = runSemanticRanges(Server, FooCpp, SourceAnnotations.point());
   ASSERT_TRUE(bool(Ranges))
       << "getSemanticRange returned an error: " << Ranges.takeError();
-  ASSERT_EQ(Ranges->size(), SourceAnnotations.points().size());
-  EXPECT_THAT(gatherRanges(Ranges->front()),
-              ElementsAreArray(SourceAnnotations.ranges()));
-  EXPECT_THAT(gatherRanges(Ranges->back()),
-              ElementsAre(SourceAnnotations.range("empty")));
+  EXPECT_THAT(*Ranges, ElementsAreArray(SourceAnnotations.ranges()));
 }
 } // namespace
 } // namespace clangd

@@ -334,7 +334,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, Function *F) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
   if (F->isVirtual()) {
-    if (!S.getLangOpts().CPlusPlus20) {
+    if (!S.getLangOpts().CPlusPlus2a) {
       S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
       return false;
     }

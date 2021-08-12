@@ -33,10 +33,6 @@ add_llvm_tool(llvm-objcopy
   MachO/MachOWriter.cpp
   MachO/MachOLayoutBuilder.cpp
   MachO/Object.cpp
-  wasm/Object.cpp
-  wasm/Reader.cpp
-  wasm/Writer.cpp
-  wasm/WasmObjcopy.cpp
   DEPENDS
   ObjcopyOptsTableGen
   InstallNameToolOptsTableGen

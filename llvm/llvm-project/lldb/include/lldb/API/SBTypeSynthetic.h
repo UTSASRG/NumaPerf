@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBTYPESYNTHETIC_H
-#define LLDB_API_SBTYPESYNTHETIC_H
+#ifndef LLDB_SBTypeSynthetic_h_
+#define LLDB_SBTypeSynthetic_h_
 
 #include "lldb/API/SBDefines.h"
 
@@ -77,4 +77,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBTYPESYNTHETIC_H
+#endif // LLDB_SBTypeSynthetic_h_

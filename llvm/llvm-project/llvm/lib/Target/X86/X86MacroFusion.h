@@ -14,11 +14,9 @@
 #ifndef LLVM_LIB_TARGET_X86_X86MACROFUSION_H
 #define LLVM_LIB_TARGET_X86_X86MACROFUSION_H
 
-#include <memory>
+#include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
-
-class ScheduleDAGMutation;
 
 /// Note that you have to add:
 ///   DAG.addMutation(createX86MacroFusionDAGMutation());

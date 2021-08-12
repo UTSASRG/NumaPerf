@@ -50,8 +50,6 @@ public:
   bool isMachineVerifierClean() const override { return false; }
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
-
-  unsigned getSjLjDataSize() const override { return 64; }
 };
 
 } // namespace llvm

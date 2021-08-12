@@ -36,11 +36,6 @@ glob1:
 # CHECK:   Address: [[DATA_ADDR:[0-9xa-f]+]]
 # CHECK: }
 
-# CHECK: ProgramHeader {
-# CHECK:   Type: PT_LOAD
-# CHECK: ProgramHeader {
-# CHECK:   Type: PT_LOAD
-
 # CHECK: Symbol {
 # CHECK:   Name: glob0
 # CHECK:   Value: [[DATA_ADDR]]
@@ -55,4 +50,14 @@ glob1:
 # CHECK:   Size: 4
 # CHECK:   Type: Object
 # CHECK:   Section: .rodata
+# CHECK: }
+
+# CHECK: ProgramHeader {
+# CHECK: Type: PT_LOAD
+# CHECK: VirtualAddress:
+# CHECK: }
+
+# CHECK: ProgramHeader {
+# CHECK: Type: PT_LOAD
+# CHECK: VirtualAddress:
 # CHECK: }

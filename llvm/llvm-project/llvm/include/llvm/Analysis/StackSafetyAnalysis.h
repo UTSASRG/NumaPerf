@@ -18,53 +18,23 @@
 
 namespace llvm {
 
-class AllocaInst;
-class ScalarEvolution;
-
 /// Interface to access stack safety analysis results for single function.
 class StackSafetyInfo {
 public:
-  struct InfoTy;
+  struct FunctionInfo;
 
 private:
-  Function *F = nullptr;
-  std::function<ScalarEvolution &()> GetSE;
-  mutable std::unique_ptr<InfoTy> Info;
+  std::unique_ptr<FunctionInfo> Info;
 
 public:
   StackSafetyInfo();
-  StackSafetyInfo(Function *F, std::function<ScalarEvolution &()> GetSE);
+  StackSafetyInfo(FunctionInfo &&Info);
   StackSafetyInfo(StackSafetyInfo &&);
   StackSafetyInfo &operator=(StackSafetyInfo &&);
   ~StackSafetyInfo();
 
-  const InfoTy &getInfo() const;
-
   // TODO: Add useful for client methods.
   void print(raw_ostream &O) const;
-};
-
-class StackSafetyGlobalInfo {
-public:
-  struct InfoTy;
-
-private:
-  Module *M = nullptr;
-  std::function<const StackSafetyInfo &(Function &F)> GetSSI;
-  mutable std::unique_ptr<InfoTy> Info;
-  const InfoTy &getInfo() const;
-
-public:
-  StackSafetyGlobalInfo();
-  StackSafetyGlobalInfo(
-      Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI);
-  StackSafetyGlobalInfo(StackSafetyGlobalInfo &&);
-  StackSafetyGlobalInfo &operator=(StackSafetyGlobalInfo &&);
-  ~StackSafetyGlobalInfo();
-
-  bool isSafe(const AllocaInst &AI) const;
-  void print(raw_ostream &O) const;
-  void dump() const;
 };
 
 /// StackSafetyInfo wrapper for the new pass manager.
@@ -102,6 +72,8 @@ public:
   bool runOnFunction(Function &F) override;
 };
 
+using StackSafetyGlobalInfo = std::map<const GlobalValue *, StackSafetyInfo>;
+
 /// This pass performs the global (interprocedural) stack safety analysis (new
 /// pass manager).
 class StackSafetyGlobalAnalysis
@@ -127,15 +99,14 @@ public:
 /// This pass performs the global (interprocedural) stack safety analysis
 /// (legacy pass manager).
 class StackSafetyGlobalInfoWrapperPass : public ModulePass {
-  StackSafetyGlobalInfo SSGI;
+  StackSafetyGlobalInfo SSI;
 
 public:
   static char ID;
 
   StackSafetyGlobalInfoWrapperPass();
-  ~StackSafetyGlobalInfoWrapperPass();
 
-  const StackSafetyGlobalInfo &getResult() const { return SSGI; }
+  const StackSafetyGlobalInfo &getResult() const { return SSI; }
 
   void print(raw_ostream &O, const Module *M) const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

@@ -414,7 +414,7 @@ public:
 
     auto visitSyntacticDesignatedInitExpr = [&](DesignatedInitExpr *E) -> bool {
       for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-        if (D.isFieldDesignator() && D.getField())
+        if (D.isFieldDesignator())
           return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
                                           Parent, ParentDC, SymbolRoleSet(),
                                           {}, E);

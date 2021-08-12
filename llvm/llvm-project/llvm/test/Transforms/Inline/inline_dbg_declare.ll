@@ -42,8 +42,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define void @bar(float* %dst) #0 !dbg !9 {
 entry:
 
-; CHECK: [[x_addr_i:%.+]] = alloca float, align 4
-; CHECK: store float {{.*}}, float* [[x_addr_i]]
+; CHECK: [[x_addr_i:%[a-zA-Z0-9.]+]] = alloca float, align 4
 ; CHECK-NEXT: void @llvm.dbg.declare(metadata float* [[x_addr_i]], metadata [[m23:![0-9]+]], metadata !DIExpression()), !dbg [[m24:![0-9]+]]
 
   %dst.addr = alloca float*, align 4

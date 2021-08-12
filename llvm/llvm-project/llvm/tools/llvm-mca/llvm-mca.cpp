@@ -39,7 +39,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
 #include "llvm/MCA/CodeEmitter.h"
 #include "llvm/MCA/Context.h"
 #include "llvm/MCA/InstrBuilder.h"
@@ -61,8 +61,6 @@
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static cl::OptionCategory ToolOptions("Tool Options");
 static cl::OptionCategory ViewOptions("View Options");
@@ -326,7 +324,7 @@ int main(int argc, char **argv) {
   processViewOptions();
 
   if (!MCPU.compare("native"))
-    MCPU = std::string(llvm::sys::getHostCPUName());
+    MCPU = llvm::sys::getHostCPUName();
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, MATTR));
@@ -355,7 +353,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   assert(MRI && "Unable to create target register info!");
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI && "Unable to create target asm info!");
@@ -445,7 +443,7 @@ int main(int argc, char **argv) {
       TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
 
   std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
-      *STI, *MRI, mc::InitMCTargetOptionsFromFlags()));
+      *STI, *MRI, InitMCTargetOptionsFromFlags()));
 
   for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
     // Skip empty code regions.

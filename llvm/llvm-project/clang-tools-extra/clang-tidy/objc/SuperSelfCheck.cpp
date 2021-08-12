@@ -75,6 +75,10 @@ AST_MATCHER(ObjCMessageExpr, isMessagingSuperInstance) {
 } // namespace
 
 void SuperSelfCheck::registerMatchers(MatchFinder *Finder) {
+  // This check should only be applied to Objective-C sources.
+  if (!getLangOpts().ObjC)
+    return;
+
   Finder->addMatcher(
       objcMessageExpr(hasSelector("self"), isMessagingSuperInstance(),
                       hasAncestor(objcMethodDecl(

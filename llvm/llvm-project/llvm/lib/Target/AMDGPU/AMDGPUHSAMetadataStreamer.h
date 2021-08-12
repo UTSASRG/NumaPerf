@@ -27,7 +27,6 @@ class AMDGPUTargetStreamer;
 class Argument;
 class DataLayout;
 class Function;
-class MachineFunction;
 class MDNode;
 class Module;
 struct SIProgramInfo;

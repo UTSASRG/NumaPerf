@@ -426,8 +426,7 @@ void AdjustStackSize(void *attr_) {
 #endif // !SANITIZER_GO
 
 pid_t StartSubprocess(const char *program, const char *const argv[],
-                      const char *const envp[], fd_t stdin_fd, fd_t stdout_fd,
-                      fd_t stderr_fd) {
+                      fd_t stdin_fd, fd_t stdout_fd, fd_t stderr_fd) {
   auto file_closer = at_scope_exit([&] {
     if (stdin_fd != kInvalidFd) {
       internal_close(stdin_fd);
@@ -470,8 +469,7 @@ pid_t StartSubprocess(const char *program, const char *const argv[],
 
     for (int fd = sysconf(_SC_OPEN_MAX); fd > 2; fd--) internal_close(fd);
 
-    internal_execve(program, const_cast<char **>(&argv[0]),
-                    const_cast<char *const *>(envp));
+    execv(program, const_cast<char **>(&argv[0]));
     internal__exit(1);
   }
 

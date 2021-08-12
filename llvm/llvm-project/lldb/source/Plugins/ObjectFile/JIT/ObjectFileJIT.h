@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_JIT_OBJECTFILEJIT_H
-#define LLDB_SOURCE_PLUGINS_OBJECTFILE_JIT_OBJECTFILEJIT_H
+#ifndef liblldb_ObjectFileJIT_h_
+#define liblldb_ObjectFileJIT_h_
 
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -104,4 +104,4 @@ protected:
   lldb::ObjectFileJITDelegateWP m_delegate_wp;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_JIT_OBJECTFILEJIT_H
+#endif // liblldb_ObjectFileJIT_h_

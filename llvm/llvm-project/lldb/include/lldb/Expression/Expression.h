@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_EXPRESSION_H
-#define LLDB_EXPRESSION_EXPRESSION_H
+#ifndef liblldb_Expression_h_
+#define liblldb_Expression_h_
 
 #include <map>
 #include <string>
@@ -51,9 +51,7 @@ public:
 
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  virtual lldb::LanguageType Language() const {
-    return lldb::eLanguageTypeUnknown;
-  }
+  virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
 
   /// Return the Materializer that the parser should use when registering
   /// external values.
@@ -103,4 +101,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_EXPRESSION_EXPRESSION_H
+#endif // liblldb_Expression_h_

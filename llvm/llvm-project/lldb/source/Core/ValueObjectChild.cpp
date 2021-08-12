@@ -1,4 +1,4 @@
-//===-- ValueObjectChild.cpp ----------------------------------------------===//
+//===-- ValueObjectChild.cpp ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,14 +70,14 @@ static void AdjustForBitfieldness(ConstString &name,
 
 ConstString ValueObjectChild::GetTypeName() {
   if (m_type_name.IsEmpty()) {
-    m_type_name = GetCompilerType().GetTypeName();
+    m_type_name = GetCompilerType().GetConstTypeName();
     AdjustForBitfieldness(m_type_name, m_bitfield_bit_size);
   }
   return m_type_name;
 }
 
 ConstString ValueObjectChild::GetQualifiedTypeName() {
-  ConstString qualified_name = GetCompilerType().GetTypeName();
+  ConstString qualified_name = GetCompilerType().GetConstTypeName();
   AdjustForBitfieldness(qualified_name, m_bitfield_bit_size);
   return qualified_name;
 }

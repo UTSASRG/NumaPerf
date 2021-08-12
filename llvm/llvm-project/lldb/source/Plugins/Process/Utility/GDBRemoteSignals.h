@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_GDBREMOTESIGNALS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_GDBREMOTESIGNALS_H
+#ifndef liblldb_GDBRemoteSignals_H_
+#define liblldb_GDBRemoteSignals_H_
 
 #include "lldb/Target/UnixSignals.h"
 
@@ -26,4 +26,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_GDBREMOTESIGNALS_H
+#endif // liblldb_GDBRemoteSignals_H_

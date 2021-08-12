@@ -49,4 +49,4 @@ $ DESTDIR=/path/for/staged/install ninja install
 Website
 -------
 
-https://libclc.llvm.org/
+http://www.pcc.me.uk/~peter/libclc/

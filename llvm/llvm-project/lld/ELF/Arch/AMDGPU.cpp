@@ -17,16 +17,16 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class AMDGPU final : public TargetInfo {
 public:
   AMDGPU();
   uint32_t calcEFlags() const override;
-  void relocate(uint8_t *loc, const Relocation &rel,
-                uint64_t val) const override;
+  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -58,8 +58,8 @@ uint32_t AMDGPU::calcEFlags() const {
   return ret;
 }
 
-void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
-  switch (rel.type) {
+void AMDGPU::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
+  switch (type) {
   case R_AMDGPU_ABS32:
   case R_AMDGPU_GOTPCREL:
   case R_AMDGPU_GOTPCREL32_LO:
@@ -108,7 +108,10 @@ RelType AMDGPU::getDynRel(RelType type) const {
   return R_AMDGPU_NONE;
 }
 
-TargetInfo *elf::getAMDGPUTargetInfo() {
+TargetInfo *getAMDGPUTargetInfo() {
   static AMDGPU target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

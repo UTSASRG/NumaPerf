@@ -54,7 +54,6 @@ namespace {
   class GVExtractorPass : public ModulePass {
     SetVector<GlobalValue *> Named;
     bool deleteStuff;
-    bool keepConstInit;
   public:
     static char ID; // Pass identification, replacement for typeid
 
@@ -62,9 +61,8 @@ namespace {
     /// Otherwise, it deletes as much of the module as possible, except for the
     /// global values specified.
     explicit GVExtractorPass(std::vector<GlobalValue*> &GVs,
-                             bool deleteS = true, bool keepConstInit = false)
-      : ModulePass(ID), Named(GVs.begin(), GVs.end()), deleteStuff(deleteS),
-        keepConstInit(keepConstInit) {}
+                             bool deleteS = true)
+      : ModulePass(ID), Named(GVs.begin(), GVs.end()), deleteStuff(deleteS) {}
 
     bool runOnModule(Module &M) override {
       if (skipModule(M))
@@ -85,8 +83,7 @@ namespace {
       for (Module::global_iterator I = M.global_begin(), E = M.global_end();
            I != E; ++I) {
         bool Delete =
-            deleteStuff == (bool)Named.count(&*I) && !I->isDeclaration() &&
-            (!I->isConstant() || !keepConstInit);
+            deleteStuff == (bool)Named.count(&*I) && !I->isDeclaration();
         if (!Delete) {
           if (I->hasAvailableExternallyLinkage())
             continue;
@@ -159,6 +156,6 @@ namespace {
 }
 
 ModulePass *llvm::createGVExtractionPass(std::vector<GlobalValue *> &GVs,
-                                         bool deleteFn, bool keepConstInit) {
-  return new GVExtractorPass(GVs, deleteFn, keepConstInit);
+                                         bool deleteFn) {
+  return new GVExtractorPass(GVs, deleteFn);
 }

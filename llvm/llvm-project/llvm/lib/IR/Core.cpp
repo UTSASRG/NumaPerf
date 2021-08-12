@@ -127,8 +127,11 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
   return LLVMGetMDKindIDInContext(LLVMGetGlobalContext(), Name, SLen);
 }
 
+#define GET_ATTR_KIND_FROM_NAME
+#include "AttributesCompatFunc.inc"
+
 unsigned LLVMGetEnumAttributeKindForName(const char *Name, size_t SLen) {
-  return Attribute::getAttrKindFromName(StringRef(Name, SLen));
+  return getAttrKindFromName(StringRef(Name, SLen));
 }
 
 unsigned LLVMGetLastEnumAttributeKind(void) {
@@ -477,8 +480,6 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMVoidTypeKind;
   case Type::HalfTyID:
     return LLVMHalfTypeKind;
-  case Type::BFloatTyID:
-    return LLVMBFloatTypeKind;
   case Type::FloatTyID:
     return LLVMFloatTypeKind;
   case Type::DoubleTyID:
@@ -503,14 +504,12 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMArrayTypeKind;
   case Type::PointerTyID:
     return LLVMPointerTypeKind;
-  case Type::FixedVectorTyID:
+  case Type::VectorTyID:
     return LLVMVectorTypeKind;
   case Type::X86_MMXTyID:
     return LLVMX86_MMXTypeKind;
   case Type::TokenTyID:
     return LLVMTokenTypeKind;
-  case Type::ScalableVectorTyID:
-    return LLVMScalableVectorTypeKind;
   }
   llvm_unreachable("Unhandled TypeID.");
 }
@@ -597,9 +596,6 @@ unsigned LLVMGetIntTypeWidth(LLVMTypeRef IntegerTy) {
 LLVMTypeRef LLVMHalfTypeInContext(LLVMContextRef C) {
   return (LLVMTypeRef) Type::getHalfTy(*unwrap(C));
 }
-LLVMTypeRef LLVMBFloatTypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef) Type::getBFloatTy(*unwrap(C));
-}
 LLVMTypeRef LLVMFloatTypeInContext(LLVMContextRef C) {
   return (LLVMTypeRef) Type::getFloatTy(*unwrap(C));
 }
@@ -621,9 +617,6 @@ LLVMTypeRef LLVMX86MMXTypeInContext(LLVMContextRef C) {
 
 LLVMTypeRef LLVMHalfType(void) {
   return LLVMHalfTypeInContext(LLVMGetGlobalContext());
-}
-LLVMTypeRef LLVMBFloatType(void) {
-  return LLVMBFloatTypeInContext(LLVMGetGlobalContext());
 }
 LLVMTypeRef LLVMFloatType(void) {
   return LLVMFloatTypeInContext(LLVMGetGlobalContext());
@@ -756,16 +749,14 @@ LLVMTypeRef LLVMPointerType(LLVMTypeRef ElementType, unsigned AddressSpace) {
 }
 
 LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount) {
-  return wrap(FixedVectorType::get(unwrap(ElementType), ElementCount));
+  return wrap(VectorType::get(unwrap(ElementType), ElementCount));
 }
 
 LLVMTypeRef LLVMGetElementType(LLVMTypeRef WrappedTy) {
   auto *Ty = unwrap<Type>(WrappedTy);
   if (auto *PTy = dyn_cast<PointerType>(Ty))
     return wrap(PTy->getElementType());
-  if (auto *ATy = dyn_cast<ArrayType>(Ty))
-    return wrap(ATy->getElementType());
-  return wrap(cast<VectorType>(Ty)->getElementType());
+  return wrap(cast<SequentialType>(Ty)->getElementType());
 }
 
 unsigned LLVMGetNumContainedTypes(LLVMTypeRef Tp) {
@@ -1793,11 +1784,9 @@ LLVMValueRef LLVMConstInsertElement(LLVMValueRef VectorConstant,
 LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
                                     LLVMValueRef VectorBConstant,
                                     LLVMValueRef MaskConstant) {
-  SmallVector<int, 16> IntMask;
-  ShuffleVectorInst::getShuffleMask(unwrap<Constant>(MaskConstant), IntMask);
   return wrap(ConstantExpr::getShuffleVector(unwrap<Constant>(VectorAConstant),
                                              unwrap<Constant>(VectorBConstant),
-                                             IntMask));
+                                             unwrap<Constant>(MaskConstant)));
 }
 
 LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,
@@ -2021,11 +2010,11 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   if (GlobalObject *GV = dyn_cast<GlobalObject>(P))
     GV->setAlignment(MaybeAlign(Bytes));
   else if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
-    AI->setAlignment(Align(Bytes));
+    AI->setAlignment(MaybeAlign(Bytes));
   else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    LI->setAlignment(Align(Bytes));
+    LI->setAlignment(MaybeAlign(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    SI->setAlignment(Align(Bytes));
+    SI->setAlignment(MaybeAlign(Bytes));
   else
     llvm_unreachable(
         "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");
@@ -2848,7 +2837,7 @@ void LLVMRemoveCallSiteStringAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
 }
 
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr) {
-  return wrap(unwrap<CallBase>(Instr)->getCalledOperand());
+  return wrap(unwrap<CallBase>(Instr)->getCalledValue());
 }
 
 LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef Instr) {
@@ -3450,14 +3439,14 @@ LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
   return wrap(unwrap(B)->Insert(Malloc, Twine(Name)));
 }
 
-LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr,
+LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr, 
                              LLVMValueRef Val, LLVMValueRef Len,
                              unsigned Align) {
   return wrap(unwrap(B)->CreateMemSet(unwrap(Ptr), unwrap(Val), unwrap(Len),
                                       MaybeAlign(Align)));
 }
 
-LLVMValueRef LLVMBuildMemCpy(LLVMBuilderRef B,
+LLVMValueRef LLVMBuildMemCpy(LLVMBuilderRef B, 
                              LLVMValueRef Dst, unsigned DstAlign,
                              LLVMValueRef Src, unsigned SrcAlign,
                              LLVMValueRef Size) {

@@ -406,7 +406,6 @@ public:
   unsigned getUnwindWordWidth() const override;
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
-  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

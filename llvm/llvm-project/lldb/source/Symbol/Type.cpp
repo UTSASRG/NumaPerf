@@ -1,4 +1,4 @@
-//===-- Type.cpp ----------------------------------------------------------===//
+//===-- Type.cpp ------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -143,14 +143,15 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
            llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
            user_id_t encoding_uid, EncodingDataType encoding_uid_type,
            const Declaration &decl, const CompilerType &compiler_type,
-           ResolveState compiler_type_resolve_state, uint32_t opaque_payload)
+           ResolveState compiler_type_resolve_state)
     : std::enable_shared_from_this<Type>(), UserID(uid), m_name(name),
       m_symbol_file(symbol_file), m_context(context), m_encoding_type(nullptr),
       m_encoding_uid(encoding_uid), m_encoding_uid_type(encoding_uid_type),
       m_decl(decl), m_compiler_type(compiler_type),
-      m_compiler_type_resolve_state(compiler_type ? compiler_type_resolve_state
-                                                  : ResolveState::Unresolved),
-      m_payload(opaque_payload) {
+      m_compiler_type_resolve_state(
+          compiler_type ? compiler_type_resolve_state
+                        : ResolveState::Unresolved),
+      m_is_complete_objc_class(false) {
   if (byte_size) {
     m_byte_size = *byte_size;
     m_byte_size_has_value = true;
@@ -234,7 +235,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 }
 
-void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
+void Type::Dump(Stream *s, bool show_context) {
   s->Printf("%p: ", static_cast<void *>(this));
   s->Indent();
   *s << "Type" << static_cast<const UserID &>(*this) << ' ';
@@ -255,7 +256,7 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
 
   if (m_compiler_type.IsValid()) {
     *s << ", compiler_type = " << m_compiler_type.GetOpaqueQualType() << ' ';
-    GetForwardCompilerType().DumpTypeDescription(s, level);
+    GetForwardCompilerType().DumpTypeDescription(s);
   } else if (m_encoding_uid != LLDB_INVALID_UID) {
     s->Format(", type_data = {0:x-16}", m_encoding_uid);
     switch (m_encoding_uid_type) {
@@ -302,7 +303,7 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
 
 ConstString Type::GetName() {
   if (!m_name)
-    m_name = GetForwardCompilerType().GetTypeName();
+    m_name = GetForwardCompilerType().GetConstTypeName();
   return m_name;
 }
 
@@ -312,7 +313,7 @@ void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                      const DataExtractor &data, uint32_t data_byte_offset,
                      bool show_types, bool show_summary, bool verbose,
                      lldb::Format format) {
-  if (ResolveCompilerType(ResolveState::Forward)) {
+  if (ResolveClangType(ResolveState::Forward)) {
     if (show_types) {
       s->PutChar('(');
       if (verbose)
@@ -465,7 +466,7 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
-bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
+bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
   // TODO: This needs to consider the correct type system to use.
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
@@ -505,7 +506,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
       case eEncodingIsTypedefUID:
         m_compiler_type = encoding_type->GetForwardCompilerType().CreateTypedef(
             m_name.AsCString("__lldb_invalid_typedef_name"),
-            GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
+            GetSymbolFile()->GetDeclContextContainingUID(GetID()));
         m_name.Clear();
         break;
 
@@ -535,7 +536,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         LLDB_LOG_ERROR(
             lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
             std::move(err),
-            "Unable to construct void type from TypeSystemClang");
+            "Unable to construct void type from ClangASTContext");
       } else {
         CompilerType void_compiler_type =
             type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid);
@@ -563,7 +564,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         case eEncodingIsTypedefUID:
           m_compiler_type = void_compiler_type.CreateTypedef(
               m_name.AsCString("__lldb_invalid_typedef_name"),
-              GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
+              GetSymbolFile()->GetDeclContextContainingUID(GetID()));
           break;
 
         case eEncodingIsPointerUID:
@@ -626,7 +627,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
           break;
         }
       }
-      encoding_type->ResolveCompilerType(encoding_compiler_type_resolve_state);
+      encoding_type->ResolveClangType(encoding_compiler_type_resolve_state);
     }
   }
   return m_compiler_type.IsValid();
@@ -641,22 +642,22 @@ uint32_t Type::GetEncodingMask() {
 }
 
 CompilerType Type::GetFullCompilerType() {
-  ResolveCompilerType(ResolveState::Full);
+  ResolveClangType(ResolveState::Full);
   return m_compiler_type;
 }
 
 CompilerType Type::GetLayoutCompilerType() {
-  ResolveCompilerType(ResolveState::Layout);
+  ResolveClangType(ResolveState::Layout);
   return m_compiler_type;
 }
 
 CompilerType Type::GetForwardCompilerType() {
-  ResolveCompilerType(ResolveState::Forward);
+  ResolveClangType(ResolveState::Forward);
   return m_compiler_type;
 }
 
 ConstString Type::GetQualifiedName() {
-  return GetForwardCompilerType().GetTypeName();
+  return GetForwardCompilerType().GetConstTypeName();
 }
 
 bool Type::GetTypeScopeAndBasename(const llvm::StringRef& name,

@@ -188,6 +188,6 @@ void ento::registerObjCContainersChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersChecker>();
 }
 
-bool ento::shouldRegisterObjCContainersChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterObjCContainersChecker(const LangOptions &LO) {
   return true;
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_COMMANDINTERPRETER_H
-#define LLDB_INTERPRETER_COMMANDINTERPRETER_H
+#ifndef liblldb_CommandInterpreter_h_
+#define liblldb_CommandInterpreter_h_
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
@@ -26,32 +26,6 @@
 #include <mutex>
 
 namespace lldb_private {
-class CommandInterpreter;
-
-class CommandInterpreterRunResult {
-public:
-  CommandInterpreterRunResult()
-      : m_num_errors(0), m_result(lldb::eCommandInterpreterResultSuccess) {}
-
-  uint32_t GetNumErrors() const { return m_num_errors; }
-
-  lldb::CommandInterpreterResult GetResult() const { return m_result; }
-
-  bool IsResult(lldb::CommandInterpreterResult result) {
-    return m_result == result;
-  }
-
-protected:
-  friend CommandInterpreter;
-
-  void IncrementNumberOfErrors() { m_num_errors++; }
-
-  void SetResult(lldb::CommandInterpreterResult result) { m_result = result; }
-
-private:
-  int m_num_errors;
-  lldb::CommandInterpreterResult m_result;
-};
 
 class CommandInterpreterRunOptions {
 public:
@@ -170,20 +144,6 @@ public:
     m_add_to_history = add_to_history ? eLazyBoolYes : eLazyBoolNo;
   }
 
-  bool GetAutoHandleEvents() const {
-    return DefaultToYes(m_auto_handle_events);
-  }
-
-  void SetAutoHandleEvents(bool auto_handle_events) {
-    m_auto_handle_events = auto_handle_events ? eLazyBoolYes : eLazyBoolNo;
-  }
-
-  bool GetSpawnThread() const { return DefaultToNo(m_spawn_thread); }
-
-  void SetSpawnThread(bool spawn_thread) {
-    m_spawn_thread = spawn_thread ? eLazyBoolYes : eLazyBoolNo;
-  }
-
   LazyBool m_stop_on_continue;
   LazyBool m_stop_on_error;
   LazyBool m_stop_on_crash;
@@ -192,8 +152,6 @@ public:
   LazyBool m_print_results;
   LazyBool m_print_errors;
   LazyBool m_add_to_history;
-  LazyBool m_auto_handle_events;
-  LazyBool m_spawn_thread;
 
 private:
   static bool DefaultToYes(LazyBool flag) {
@@ -468,8 +426,8 @@ public:
 
   bool IsActive();
 
-  CommandInterpreterRunResult
-  RunCommandInterpreter(CommandInterpreterRunOptions &options);
+  void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread,
+                             CommandInterpreterRunOptions &options);
 
   void GetLLDBCommandsFromIOHandler(const char *prompt,
                                     IOHandlerDelegate &delegate,
@@ -516,9 +474,15 @@ public:
 
   bool GetStopCmdSourceOnError() const;
 
+  uint32_t GetNumErrors() const { return m_num_errors; }
+
+  bool GetQuitRequested() const { return m_quit_requested; }
+
   lldb::IOHandlerSP
   GetIOHandler(bool force_create = false,
                CommandInterpreterRunOptions *options = nullptr);
+
+  bool GetStoppedForCrash() const { return m_stopped_for_crash; }
 
   bool GetSpaceReplPrompts() const;
 
@@ -610,7 +574,9 @@ private:
                                                        // the user has been told
   uint32_t m_command_source_depth;
   std::vector<uint32_t> m_command_source_flags;
-  CommandInterpreterRunResult m_result;
+  uint32_t m_num_errors;
+  bool m_quit_requested;
+  bool m_stopped_for_crash;
 
   // The exit code the user has requested when calling the 'quit' command.
   // No value means the user hasn't set a custom exit code so far.
@@ -621,4 +587,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_COMMANDINTERPRETER_H
+#endif // liblldb_CommandInterpreter_h_

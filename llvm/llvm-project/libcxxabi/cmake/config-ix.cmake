@@ -6,12 +6,8 @@ include(CheckCSourceCompiles)
 
 check_library_exists(c fopen "" LIBCXXABI_HAS_C_LIB)
 if (NOT LIBCXXABI_USE_COMPILER_RT)
-  if (ANDROID)
-    check_library_exists(gcc __gcc_personality_v0 "" LIBCXXABI_HAS_GCC_LIB)
-  else ()
-    check_library_exists(gcc_s __gcc_personality_v0 "" LIBCXXABI_HAS_GCC_S_LIB)
-    check_library_exists(gcc __aeabi_uldivmod "" LIBCXXABI_HAS_GCC_LIB)
-  endif ()
+  check_library_exists(gcc_s __gcc_personality_v0 "" LIBCXXABI_HAS_GCC_S_LIB)
+  check_library_exists(gcc __aeabi_uldivmod "" LIBCXXABI_HAS_GCC_LIB)
 endif ()
 
 # libc++abi is built with -nodefaultlibs, so we want all our checks to also

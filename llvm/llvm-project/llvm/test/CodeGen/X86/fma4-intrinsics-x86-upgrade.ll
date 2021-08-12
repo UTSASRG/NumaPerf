@@ -6,7 +6,6 @@ define <4 x float> @test_x86_fma_vfmadd_ps(<4 x float> %a0, <4 x float> %a1, <4 
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddps %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x68,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.fma.vfmadd.ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)
   ret <4 x float> %res
@@ -17,7 +16,6 @@ define <2 x double> @test_x86_fma_vfmadd_pd(<2 x double> %a0, <2 x double> %a1, 
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddpd %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x69,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.fma.vfmadd.pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
   ret <2 x double> %res
@@ -28,7 +26,6 @@ define <8 x float> @test_x86_fma_vfmadd_ps_256(<8 x float> %a0, <8 x float> %a1,
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddps %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x68,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) + ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.fma.vfmadd.ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2)
   ret <8 x float> %res
@@ -39,7 +36,6 @@ define <4 x double> @test_x86_fma_vfmadd_pd_256(<4 x double> %a0, <4 x double> %
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddpd %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x69,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) + ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.fma.vfmadd.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2)
   ret <4 x double> %res
@@ -51,7 +47,6 @@ define <4 x float> @test_x86_fma_vfmsub_ps(<4 x float> %a0, <4 x float> %a1, <4 
 ; CHECK-LABEL: test_x86_fma_vfmsub_ps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubps %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x6c,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.fma.vfmsub.ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)
   ret <4 x float> %res
@@ -62,7 +57,6 @@ define <2 x double> @test_x86_fma_vfmsub_pd(<2 x double> %a0, <2 x double> %a1, 
 ; CHECK-LABEL: test_x86_fma_vfmsub_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubpd %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x6d,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.fma.vfmsub.pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
   ret <2 x double> %res
@@ -73,7 +67,6 @@ define <8 x float> @test_x86_fma_vfmsub_ps_256(<8 x float> %a0, <8 x float> %a1,
 ; CHECK-LABEL: test_x86_fma_vfmsub_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubps %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x6c,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) - ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2)
   ret <8 x float> %res
@@ -84,7 +77,6 @@ define <4 x double> @test_x86_fma_vfmsub_pd_256(<4 x double> %a0, <4 x double> %
 ; CHECK-LABEL: test_x86_fma_vfmsub_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubpd %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x6d,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) - ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.fma.vfmsub.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2)
   ret <4 x double> %res
@@ -96,7 +88,6 @@ define <4 x float> @test_x86_fma_vfnmadd_ps(<4 x float> %a0, <4 x float> %a1, <4
 ; CHECK-LABEL: test_x86_fma_vfnmadd_ps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmaddps %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x78,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = -(xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.fma.vfnmadd.ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)
   ret <4 x float> %res
@@ -107,7 +98,6 @@ define <2 x double> @test_x86_fma_vfnmadd_pd(<2 x double> %a0, <2 x double> %a1,
 ; CHECK-LABEL: test_x86_fma_vfnmadd_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmaddpd %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x79,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = -(xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.fma.vfnmadd.pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
   ret <2 x double> %res
@@ -118,7 +108,6 @@ define <8 x float> @test_x86_fma_vfnmadd_ps_256(<8 x float> %a0, <8 x float> %a1
 ; CHECK-LABEL: test_x86_fma_vfnmadd_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmaddps %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x78,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = -(ymm0 * ymm1) + ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.fma.vfnmadd.ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2)
   ret <8 x float> %res
@@ -129,7 +118,6 @@ define <4 x double> @test_x86_fma_vfnmadd_pd_256(<4 x double> %a0, <4 x double> 
 ; CHECK-LABEL: test_x86_fma_vfnmadd_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmaddpd %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x79,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = -(ymm0 * ymm1) + ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.fma.vfnmadd.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2)
   ret <4 x double> %res
@@ -141,7 +129,6 @@ define <4 x float> @test_x86_fma_vfnmsub_ps(<4 x float> %a0, <4 x float> %a1, <4
 ; CHECK-LABEL: test_x86_fma_vfnmsub_ps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsubps %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x7c,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = -(xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.fma.vfnmsub.ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)
   ret <4 x float> %res
@@ -152,7 +139,6 @@ define <2 x double> @test_x86_fma_vfnmsub_pd(<2 x double> %a0, <2 x double> %a1,
 ; CHECK-LABEL: test_x86_fma_vfnmsub_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsubpd %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x7d,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = -(xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.fma.vfnmsub.pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
   ret <2 x double> %res
@@ -163,7 +149,6 @@ define <8 x float> @test_x86_fma_vfnmsub_ps_256(<8 x float> %a0, <8 x float> %a1
 ; CHECK-LABEL: test_x86_fma_vfnmsub_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsubps %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x7c,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = -(ymm0 * ymm1) - ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.fma.vfnmsub.ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2)
   ret <8 x float> %res
@@ -174,7 +159,6 @@ define <4 x double> @test_x86_fma_vfnmsub_pd_256(<4 x double> %a0, <4 x double> 
 ; CHECK-LABEL: test_x86_fma_vfnmsub_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsubpd %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x7d,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = -(ymm0 * ymm1) - ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.fma.vfnmsub.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2)
   ret <4 x double> %res
@@ -186,7 +170,6 @@ define <4 x float> @test_x86_fma_vfmaddsub_ps(<4 x float> %a0, <4 x float> %a1, 
 ; CHECK-LABEL: test_x86_fma_vfmaddsub_ps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsubps %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x5c,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) +/- xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.fma.vfmaddsub.ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)
   ret <4 x float> %res
@@ -197,7 +180,6 @@ define <2 x double> @test_x86_fma_vfmaddsub_pd(<2 x double> %a0, <2 x double> %a
 ; CHECK-LABEL: test_x86_fma_vfmaddsub_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsubpd %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x5d,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) +/- xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.fma.vfmaddsub.pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
   ret <2 x double> %res
@@ -208,7 +190,6 @@ define <8 x float> @test_x86_fma_vfmaddsub_ps_256(<8 x float> %a0, <8 x float> %
 ; CHECK-LABEL: test_x86_fma_vfmaddsub_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsubps %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x5c,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) +/- ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.fma.vfmaddsub.ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2)
   ret <8 x float> %res
@@ -219,7 +200,6 @@ define <4 x double> @test_x86_fma_vfmaddsub_pd_256(<4 x double> %a0, <4 x double
 ; CHECK-LABEL: test_x86_fma_vfmaddsub_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsubpd %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x5d,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) +/- ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.fma.vfmaddsub.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2)
   ret <4 x double> %res
@@ -231,7 +211,6 @@ define <4 x float> @test_x86_fma_vfmsubadd_ps(<4 x float> %a0, <4 x float> %a1, 
 ; CHECK-LABEL: test_x86_fma_vfmsubadd_ps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubaddps %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x5e,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) -/+ xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.fma.vfmsubadd.ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)
   ret <4 x float> %res
@@ -242,7 +221,6 @@ define <2 x double> @test_x86_fma_vfmsubadd_pd(<2 x double> %a0, <2 x double> %a
 ; CHECK-LABEL: test_x86_fma_vfmsubadd_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubaddpd %xmm2, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x5f,0xc2,0x10]
-; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) -/+ xmm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.fma.vfmsubadd.pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
   ret <2 x double> %res
@@ -253,7 +231,6 @@ define <8 x float> @test_x86_fma_vfmsubadd_ps_256(<8 x float> %a0, <8 x float> %
 ; CHECK-LABEL: test_x86_fma_vfmsubadd_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubaddps %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x5e,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) -/+ ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.fma.vfmsubadd.ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2)
   ret <8 x float> %res
@@ -264,7 +241,6 @@ define <4 x double> @test_x86_fma_vfmsubadd_pd_256(<4 x double> %a0, <4 x double
 ; CHECK-LABEL: test_x86_fma_vfmsubadd_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsubaddpd %ymm2, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0xfd,0x5f,0xc2,0x10]
-; CHECK-NEXT:    # ymm0 = (ymm0 * ymm1) -/+ ymm2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.fma.vfmsubadd.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2)
   ret <4 x double> %res

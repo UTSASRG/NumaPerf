@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_LOGCHANNELDWARF_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_LOGCHANNELDWARF_H
+#ifndef SymbolFileDWARF_LogChannelDWARF_h_
+#define SymbolFileDWARF_LogChannelDWARF_h_
 
 #include "lldb/Utility/Log.h"
 
@@ -32,4 +32,4 @@ public:
 };
 }
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_LOGCHANNELDWARF_H
+#endif // SymbolFileDWARF_LogChannelDWARF_h_

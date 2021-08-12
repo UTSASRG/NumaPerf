@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEWATCH_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEWATCH_H
+#ifndef liblldb_PlatformRemoteAppleWatch_h_
+#define liblldb_PlatformRemoteAppleWatch_h_
 
 #include <string>
 #include <vector>
@@ -61,9 +61,7 @@ protected:
   std::string GetPlatformName () override;
 
 private:
-  PlatformRemoteAppleWatch(const PlatformRemoteAppleWatch &) = delete;
-  const PlatformRemoteAppleWatch &
-  operator=(const PlatformRemoteAppleWatch &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteAppleWatch);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEWATCH_H
+#endif // liblldb_PlatformRemoteAppleWatch_h_

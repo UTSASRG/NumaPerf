@@ -1,12 +1,12 @@
 //===- TestOpaqueLoc.cpp - Pass to test opaque locations ------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 
@@ -17,8 +17,7 @@ namespace {
 /// It also takes all operations that are not function operations or
 /// terminators and clones them with opaque locations which store the initial
 /// locations.
-struct TestOpaqueLoc
-    : public PassWrapper<TestOpaqueLoc, OperationPass<ModuleOp>> {
+struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
 
   /// A simple structure which is used for testing as an underlying location in
   /// OpaqueLoc.
@@ -30,11 +29,11 @@ struct TestOpaqueLoc
     int id;
   };
 
-  void runOnOperation() override {
+  void runOnModule() override {
     std::vector<std::unique_ptr<MyLocation>> myLocs;
     int last_it = 0;
 
-    getOperation().walk([&](Operation *op) {
+    getModule().walk([&](Operation *op) {
       myLocs.push_back(std::make_unique<MyLocation>(last_it++));
 
       Location loc = op->getLoc();
@@ -75,15 +74,11 @@ struct TestOpaqueLoc
       os.flush();
     });
 
-    getOperation().walk([&](Operation *op) { op->emitOpError(); });
+    getModule().walk([&](Operation *op) { op->emitOpError(); });
   }
 };
 
 } // end anonymous namespace
 
-namespace mlir {
-void registerTestOpaqueLoc() {
-  PassRegistration<TestOpaqueLoc> pass(
-      "test-opaque-loc", "Changes all leaf locations to opaque locations");
-}
-} // namespace mlir
+static PassRegistration<TestOpaqueLoc>
+    pass("test-opaque-loc", "Changes all leaf locations to opaque locations");

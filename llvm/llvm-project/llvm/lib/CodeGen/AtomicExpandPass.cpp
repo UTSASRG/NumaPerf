@@ -383,7 +383,7 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
   auto *NewLI = Builder.CreateLoad(NewTy, NewAddr);
-  NewLI->setAlignment(LI->getAlign());
+  NewLI->setAlignment(MaybeAlign(LI->getAlignment()));
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
@@ -470,7 +470,7 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
   StoreInst *NewSI = Builder.CreateStore(NewVal, NewAddr);
-  NewSI->setAlignment(SI->getAlign());
+  NewSI->setAlignment(MaybeAlign(SI->getAlignment()));
   NewSI->setVolatile(SI->isVolatile());
   NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
@@ -570,8 +570,8 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
     unsigned ValueSize = getAtomicOpSize(AI);
     if (ValueSize < MinCASSize) {
-      expandPartwordAtomicRMW(AI,
-                              TargetLoweringBase::AtomicExpansionKind::LLSC);
+      llvm_unreachable(
+          "MinCmpXchgSizeInBits not yet supported for LL/SC architectures.");
     } else {
       auto PerformOp = [&](IRBuilder<> &Builder, Value *Loaded) {
         return performAtomicOp(AI->getOperation(), Builder, Loaded,
@@ -608,42 +608,15 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
 
 namespace {
 
+/// Result values from createMaskInstrs helper.
 struct PartwordMaskValues {
-  // These three fields are guaranteed to be set by createMaskInstrs.
-  Type *WordType = nullptr;
-  Type *ValueType = nullptr;
-  Value *AlignedAddr = nullptr;
-  // The remaining fields can be null.
-  Value *ShiftAmt = nullptr;
-  Value *Mask = nullptr;
-  Value *Inv_Mask = nullptr;
+  Type *WordType;
+  Type *ValueType;
+  Value *AlignedAddr;
+  Value *ShiftAmt;
+  Value *Mask;
+  Value *Inv_Mask;
 };
-
-LLVM_ATTRIBUTE_UNUSED
-raw_ostream &operator<<(raw_ostream &O, const PartwordMaskValues &PMV) {
-  auto PrintObj = [&O](auto *V) {
-    if (V)
-      O << *V;
-    else
-      O << "nullptr";
-    O << '\n';
-  };
-  O << "PartwordMaskValues {\n";
-  O << "  WordType: ";
-  PrintObj(PMV.WordType);
-  O << "  ValueType: ";
-  PrintObj(PMV.ValueType);
-  O << "  AlignedAddr: ";
-  PrintObj(PMV.AlignedAddr);
-  O << "  ShiftAmt: ";
-  PrintObj(PMV.ShiftAmt);
-  O << "  Mask: ";
-  PrintObj(PMV.Mask);
-  O << "  Inv_Mask: ";
-  PrintObj(PMV.Inv_Mask);
-  O << "}\n";
-  return O;
-}
 
 } // end anonymous namespace
 
@@ -665,74 +638,48 @@ raw_ostream &operator<<(raw_ostream &O, const PartwordMaskValues &PMV) {
 /// Inv_Mask: The inverse of Mask.
 static PartwordMaskValues createMaskInstrs(IRBuilder<> &Builder, Instruction *I,
                                            Type *ValueType, Value *Addr,
-                                           unsigned MinWordSize) {
-  PartwordMaskValues PMV;
+                                           unsigned WordSize) {
+  PartwordMaskValues Ret;
 
+  BasicBlock *BB = I->getParent();
+  Function *F = BB->getParent();
   Module *M = I->getModule();
-  LLVMContext &Ctx = M->getContext();
+
+  LLVMContext &Ctx = F->getContext();
   const DataLayout &DL = M->getDataLayout();
+
   unsigned ValueSize = DL.getTypeStoreSize(ValueType);
 
-  PMV.ValueType = ValueType;
-  PMV.WordType = MinWordSize > ValueSize ? Type::getIntNTy(Ctx, MinWordSize * 8)
-                                         : ValueType;
-  if (PMV.ValueType == PMV.WordType) {
-    PMV.AlignedAddr = Addr;
-    return PMV;
-  }
+  assert(ValueSize < WordSize);
 
-  assert(ValueSize < MinWordSize);
+  Ret.ValueType = ValueType;
+  Ret.WordType = Type::getIntNTy(Ctx, WordSize * 8);
 
   Type *WordPtrType =
-      PMV.WordType->getPointerTo(Addr->getType()->getPointerAddressSpace());
+      Ret.WordType->getPointerTo(Addr->getType()->getPointerAddressSpace());
 
   Value *AddrInt = Builder.CreatePtrToInt(Addr, DL.getIntPtrType(Ctx));
-  PMV.AlignedAddr = Builder.CreateIntToPtr(
-      Builder.CreateAnd(AddrInt, ~(uint64_t)(MinWordSize - 1)), WordPtrType,
+  Ret.AlignedAddr = Builder.CreateIntToPtr(
+      Builder.CreateAnd(AddrInt, ~(uint64_t)(WordSize - 1)), WordPtrType,
       "AlignedAddr");
 
-  Value *PtrLSB = Builder.CreateAnd(AddrInt, MinWordSize - 1, "PtrLSB");
+  Value *PtrLSB = Builder.CreateAnd(AddrInt, WordSize - 1, "PtrLSB");
   if (DL.isLittleEndian()) {
     // turn bytes into bits
-    PMV.ShiftAmt = Builder.CreateShl(PtrLSB, 3);
+    Ret.ShiftAmt = Builder.CreateShl(PtrLSB, 3);
   } else {
     // turn bytes into bits, and count from the other side.
-    PMV.ShiftAmt = Builder.CreateShl(
-        Builder.CreateXor(PtrLSB, MinWordSize - ValueSize), 3);
+    Ret.ShiftAmt =
+        Builder.CreateShl(Builder.CreateXor(PtrLSB, WordSize - ValueSize), 3);
   }
 
-  PMV.ShiftAmt = Builder.CreateTrunc(PMV.ShiftAmt, PMV.WordType, "ShiftAmt");
-  PMV.Mask = Builder.CreateShl(
-      ConstantInt::get(PMV.WordType, (1 << (ValueSize * 8)) - 1), PMV.ShiftAmt,
+  Ret.ShiftAmt = Builder.CreateTrunc(Ret.ShiftAmt, Ret.WordType, "ShiftAmt");
+  Ret.Mask = Builder.CreateShl(
+      ConstantInt::get(Ret.WordType, (1 << (ValueSize * 8)) - 1), Ret.ShiftAmt,
       "Mask");
-  PMV.Inv_Mask = Builder.CreateNot(PMV.Mask, "Inv_Mask");
-  return PMV;
-}
+  Ret.Inv_Mask = Builder.CreateNot(Ret.Mask, "Inv_Mask");
 
-static Value *extractMaskedValue(IRBuilder<> &Builder, Value *WideWord,
-                                 const PartwordMaskValues &PMV) {
-  assert(WideWord->getType() == PMV.WordType && "Widened type mismatch");
-  if (PMV.WordType == PMV.ValueType)
-    return WideWord;
-
-  Value *Shift = Builder.CreateLShr(WideWord, PMV.ShiftAmt, "shifted");
-  Value *Trunc = Builder.CreateTrunc(Shift, PMV.ValueType, "extracted");
-  return Trunc;
-}
-
-static Value *insertMaskedValue(IRBuilder<> &Builder, Value *WideWord,
-                                Value *Updated, const PartwordMaskValues &PMV) {
-  assert(WideWord->getType() == PMV.WordType && "Widened type mismatch");
-  assert(Updated->getType() == PMV.ValueType && "Value type mismatch");
-  if (PMV.WordType == PMV.ValueType)
-    return Updated;
-
-  Value *ZExt = Builder.CreateZExt(Updated, PMV.WordType, "extended");
-  Value *Shift =
-      Builder.CreateShl(ZExt, PMV.ShiftAmt, "shifted", /*HasNUW*/ true);
-  Value *And = Builder.CreateAnd(WideWord, PMV.Inv_Mask, "unmasked");
-  Value *Or = Builder.CreateOr(And, Shift, "inserted");
-  return Or;
+  return Ret;
 }
 
 /// Emit IR to implement a masked version of a given atomicrmw
@@ -772,9 +719,13 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
     // Finally, comparison ops will operate on the full value, so
     // truncate down to the original size, and expand out again after
     // doing the operation.
-    Value *Loaded_Extract = extractMaskedValue(Builder, Loaded, PMV);
-    Value *NewVal = performAtomicOp(Op, Builder, Loaded_Extract, Inc);
-    Value *FinalVal = insertMaskedValue(Builder, Loaded, NewVal, PMV);
+    Value *Loaded_Shiftdown = Builder.CreateTrunc(
+        Builder.CreateLShr(Loaded, PMV.ShiftAmt), PMV.ValueType);
+    Value *NewVal = performAtomicOp(Op, Builder, Loaded_Shiftdown, Inc);
+    Value *NewVal_Shiftup = Builder.CreateShl(
+        Builder.CreateZExt(NewVal, PMV.WordType), PMV.ShiftAmt);
+    Value *Loaded_MaskOut = Builder.CreateAnd(Loaded, PMV.Inv_Mask);
+    Value *FinalVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Shiftup);
     return FinalVal;
   }
   default:
@@ -787,10 +738,12 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
 ///
 /// It will create an LL/SC or cmpxchg loop, as appropriate, the same
 /// way as a typical atomicrmw expansion. The only difference here is
-/// that the operation inside of the loop may operate upon only a
+/// that the operation inside of the loop must operate only upon a
 /// part of the value.
 void AtomicExpand::expandPartwordAtomicRMW(
     AtomicRMWInst *AI, TargetLoweringBase::AtomicExpansionKind ExpansionKind) {
+  assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg);
+
   AtomicOrdering MemOpOrder = AI->getOrdering();
 
   IRBuilder<> Builder(AI);
@@ -808,18 +761,13 @@ void AtomicExpand::expandPartwordAtomicRMW(
                                  ValOperand_Shifted, AI->getValOperand(), PMV);
   };
 
-  Value *OldResult;
-  if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg) {
-    OldResult =
-        insertRMWCmpXchgLoop(Builder, PMV.WordType, PMV.AlignedAddr, MemOpOrder,
-                             PerformPartwordOp, createCmpXchgInstFun);
-  } else {
-    assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::LLSC);
-    OldResult = insertRMWLLSCLoop(Builder, PMV.WordType, PMV.AlignedAddr,
-                                  MemOpOrder, PerformPartwordOp);
-  }
-
-  Value *FinalOldResult = extractMaskedValue(Builder, OldResult, PMV);
+  // TODO: When we're ready to support LLSC conversions too, use
+  // insertRMWLLSCLoop here for ExpansionKind==LLSC.
+  Value *OldResult =
+      insertRMWCmpXchgLoop(Builder, PMV.WordType, PMV.AlignedAddr, MemOpOrder,
+                           PerformPartwordOp, createCmpXchgInstFun);
+  Value *FinalOldResult = Builder.CreateTrunc(
+      Builder.CreateLShr(OldResult, PMV.ShiftAmt), PMV.ValueType);
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
 }
@@ -852,7 +800,8 @@ AtomicRMWInst *AtomicExpand::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(Op, PMV.AlignedAddr,
                                                  NewOperand, AI->getOrdering());
 
-  Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
+  Value *FinalOldResult = Builder.CreateTrunc(
+      Builder.CreateLShr(NewAI, PMV.ShiftAmt), PMV.ValueType);
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
   return NewAI;
@@ -974,7 +923,8 @@ void AtomicExpand::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // partword.cmpxchg.end:
   Builder.SetInsertPoint(CI);
 
-  Value *FinalOldVal = extractMaskedValue(Builder, OldVal, PMV);
+  Value *FinalOldVal = Builder.CreateTrunc(
+      Builder.CreateLShr(OldVal, PMV.ShiftAmt), PMV.ValueType);
   Value *Res = UndefValue::get(CI->getType());
   Res = Builder.CreateInsertValue(Res, FinalOldVal, 0);
   Res = Builder.CreateInsertValue(Res, Success, 1);
@@ -1015,7 +965,8 @@ void AtomicExpand::expandAtomicRMWToMaskedIntrinsic(AtomicRMWInst *AI) {
   Value *OldResult = TLI->emitMaskedAtomicRMWIntrinsic(
       Builder, AI, PMV.AlignedAddr, ValOperand_Shifted, PMV.Mask, PMV.ShiftAmt,
       AI->getOrdering());
-  Value *FinalOldResult = extractMaskedValue(Builder, OldResult, PMV);
+  Value *FinalOldResult = Builder.CreateTrunc(
+      Builder.CreateLShr(OldResult, PMV.ShiftAmt), PMV.ValueType);
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
 }
@@ -1036,7 +987,9 @@ void AtomicExpand::expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI) {
   Value *OldVal = TLI->emitMaskedAtomicCmpXchgIntrinsic(
       Builder, CI, PMV.AlignedAddr, CmpVal_Shifted, NewVal_Shifted, PMV.Mask,
       CI->getSuccessOrdering());
-  Value *FinalOldVal = extractMaskedValue(Builder, OldVal, PMV);
+  Value *FinalOldVal = Builder.CreateTrunc(
+      Builder.CreateLShr(OldVal, PMV.ShiftAmt), PMV.ValueType);
+
   Value *Res = UndefValue::get(CI->getType());
   Res = Builder.CreateInsertValue(Res, FinalOldVal, 0);
   Value *Success = Builder.CreateICmpEQ(
@@ -1173,28 +1126,24 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   //
   // The full expansion we produce is:
   //     [...]
-  // %aligned.addr = ...
   // cmpxchg.start:
-  //     %unreleasedload = @load.linked(%aligned.addr)
-  //     %unreleasedload.extract = extract value from %unreleasedload
-  //     %should_store = icmp eq %unreleasedload.extract, %desired
-  //     br i1 %should_store, label %cmpxchg.releasingstore,
+  //     %unreleasedload = @load.linked(%addr)
+  //     %should_store = icmp eq %unreleasedload, %desired
+  //     br i1 %should_store, label %cmpxchg.fencedstore,
   //                          label %cmpxchg.nostore
   // cmpxchg.releasingstore:
   //     fence?
   //     br label cmpxchg.trystore
   // cmpxchg.trystore:
-  //     %loaded.trystore = phi [%unreleasedload, %cmpxchg.releasingstore],
+  //     %loaded.trystore = phi [%unreleasedload, %releasingstore],
   //                            [%releasedload, %cmpxchg.releasedload]
-  //     %updated.new = insert %new into %loaded.trystore
-  //     %stored = @store_conditional(%updated.new, %aligned.addr)
+  //     %stored = @store_conditional(%new, %addr)
   //     %success = icmp eq i32 %stored, 0
   //     br i1 %success, label %cmpxchg.success,
   //                     label %cmpxchg.releasedload/%cmpxchg.failure
   // cmpxchg.releasedload:
-  //     %releasedload = @load.linked(%aligned.addr)
-  //     %releasedload.extract = extract value from %releasedload
-  //     %should_store = icmp eq %releasedload.extract, %desired
+  //     %releasedload = @load.linked(%addr)
+  //     %should_store = icmp eq %releasedload, %desired
   //     br i1 %should_store, label %cmpxchg.trystore,
   //                          label %cmpxchg.failure
   // cmpxchg.success:
@@ -1210,10 +1159,9 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   //     fence?
   //     br label %cmpxchg.end
   // cmpxchg.end:
-  //     %loaded.exit = phi [%loaded.nostore, %cmpxchg.failure],
-  //                        [%loaded.trystore, %cmpxchg.trystore]
+  //     %loaded = phi [%loaded.nostore, %cmpxchg.failure],
+  //                   [%loaded.trystore, %cmpxchg.trystore]
   //     %success = phi i1 [true, %cmpxchg.success], [false, %cmpxchg.failure]
-  //     %loaded = extract value from %loaded.exit
   //     %restmp = insertvalue { iN, i1 } undef, iN %loaded, 0
   //     %res = insertvalue { iN, i1 } %restmp, i1 %success, 1
   //     [...]
@@ -1239,20 +1187,13 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.SetInsertPoint(BB);
   if (ShouldInsertFencesForAtomic && UseUnconditionalReleaseBarrier)
     TLI->emitLeadingFence(Builder, CI, SuccessOrder);
-
-  PartwordMaskValues PMV =
-      createMaskInstrs(Builder, CI, CI->getCompareOperand()->getType(), Addr,
-                       TLI->getMinCmpXchgSizeInBits() / 8);
   Builder.CreateBr(StartBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
   Builder.SetInsertPoint(StartBB);
-  Value *UnreleasedLoad =
-      TLI->emitLoadLinked(Builder, PMV.AlignedAddr, MemOpOrder);
-  Value *UnreleasedLoadExtract =
-      extractMaskedValue(Builder, UnreleasedLoad, PMV);
+  Value *UnreleasedLoad = TLI->emitLoadLinked(Builder, Addr, MemOpOrder);
   Value *ShouldStore = Builder.CreateICmpEQ(
-      UnreleasedLoadExtract, CI->getCompareOperand(), "should_store");
+      UnreleasedLoad, CI->getCompareOperand(), "should_store");
 
   // If the cmpxchg doesn't actually need any ordering when it fails, we can
   // jump straight past that fence instruction (if it exists).
@@ -1264,13 +1205,8 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.CreateBr(TryStoreBB);
 
   Builder.SetInsertPoint(TryStoreBB);
-  PHINode *LoadedTryStore =
-      Builder.CreatePHI(PMV.WordType, 2, "loaded.trystore");
-  LoadedTryStore->addIncoming(UnreleasedLoad, ReleasingStoreBB);
-  Value *NewValueInsert =
-      insertMaskedValue(Builder, LoadedTryStore, CI->getNewValOperand(), PMV);
-  Value *StoreSuccess =
-      TLI->emitStoreConditional(Builder, NewValueInsert, Addr, MemOpOrder);
+  Value *StoreSuccess = TLI->emitStoreConditional(
+      Builder, CI->getNewValOperand(), Addr, MemOpOrder);
   StoreSuccess = Builder.CreateICmpEQ(
       StoreSuccess, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "success");
   BasicBlock *RetryBB = HasReleasedLoadBB ? ReleasedLoadBB : StartBB;
@@ -1280,16 +1216,13 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.SetInsertPoint(ReleasedLoadBB);
   Value *SecondLoad;
   if (HasReleasedLoadBB) {
-    SecondLoad = TLI->emitLoadLinked(Builder, PMV.AlignedAddr, MemOpOrder);
-    Value *SecondLoadExtract = extractMaskedValue(Builder, SecondLoad, PMV);
-    ShouldStore = Builder.CreateICmpEQ(SecondLoadExtract,
-                                       CI->getCompareOperand(), "should_store");
+    SecondLoad = TLI->emitLoadLinked(Builder, Addr, MemOpOrder);
+    ShouldStore = Builder.CreateICmpEQ(SecondLoad, CI->getCompareOperand(),
+                                       "should_store");
 
     // If the cmpxchg doesn't actually need any ordering when it fails, we can
     // jump straight past that fence instruction (if it exists).
     Builder.CreateCondBr(ShouldStore, TryStoreBB, NoStoreBB);
-    // Update PHI node in TryStoreBB.
-    LoadedTryStore->addIncoming(SecondLoad, ReleasedLoadBB);
   } else
     Builder.CreateUnreachable();
 
@@ -1301,12 +1234,6 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.CreateBr(ExitBB);
 
   Builder.SetInsertPoint(NoStoreBB);
-  PHINode *LoadedNoStore =
-      Builder.CreatePHI(UnreleasedLoad->getType(), 2, "loaded.nostore");
-  LoadedNoStore->addIncoming(UnreleasedLoad, StartBB);
-  if (HasReleasedLoadBB)
-    LoadedNoStore->addIncoming(SecondLoad, ReleasedLoadBB);
-
   // In the failing case, where we don't execute the store-conditional, the
   // target might want to balance out the load-linked with a dedicated
   // instruction (e.g., on ARM, clearing the exclusive monitor).
@@ -1314,11 +1241,6 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.CreateBr(FailureBB);
 
   Builder.SetInsertPoint(FailureBB);
-  PHINode *LoadedFailure =
-      Builder.CreatePHI(UnreleasedLoad->getType(), 2, "loaded.failure");
-  LoadedFailure->addIncoming(LoadedNoStore, NoStoreBB);
-  if (CI->isWeak())
-    LoadedFailure->addIncoming(LoadedTryStore, TryStoreBB);
   if (ShouldInsertFencesForAtomic)
     TLI->emitTrailingFence(Builder, CI, FailureOrder);
   Builder.CreateBr(ExitBB);
@@ -1328,20 +1250,32 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // subsequent "icmp eq/ne %loaded, %oldval" into a use of an appropriate
   // PHI.
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
-  PHINode *LoadedExit =
-      Builder.CreatePHI(UnreleasedLoad->getType(), 2, "loaded.exit");
-  LoadedExit->addIncoming(LoadedTryStore, SuccessBB);
-  LoadedExit->addIncoming(LoadedFailure, FailureBB);
-  PHINode *Success = Builder.CreatePHI(Type::getInt1Ty(Ctx), 2, "success");
+  PHINode *Success = Builder.CreatePHI(Type::getInt1Ty(Ctx), 2);
   Success->addIncoming(ConstantInt::getTrue(Ctx), SuccessBB);
   Success->addIncoming(ConstantInt::getFalse(Ctx), FailureBB);
 
-  // This is the "exit value" from the cmpxchg expansion. It may be of
-  // a type wider than the one in the cmpxchg instruction.
-  Value *LoadedFull = LoadedExit;
+  // Setup the builder so we can create any PHIs we need.
+  Value *Loaded;
+  if (!HasReleasedLoadBB)
+    Loaded = UnreleasedLoad;
+  else {
+    Builder.SetInsertPoint(TryStoreBB, TryStoreBB->begin());
+    PHINode *TryStoreLoaded = Builder.CreatePHI(UnreleasedLoad->getType(), 2);
+    TryStoreLoaded->addIncoming(UnreleasedLoad, ReleasingStoreBB);
+    TryStoreLoaded->addIncoming(SecondLoad, ReleasedLoadBB);
 
-  Builder.SetInsertPoint(ExitBB, std::next(Success->getIterator()));
-  Value *Loaded = extractMaskedValue(Builder, LoadedFull, PMV);
+    Builder.SetInsertPoint(NoStoreBB, NoStoreBB->begin());
+    PHINode *NoStoreLoaded = Builder.CreatePHI(UnreleasedLoad->getType(), 2);
+    NoStoreLoaded->addIncoming(UnreleasedLoad, StartBB);
+    NoStoreLoaded->addIncoming(SecondLoad, ReleasedLoadBB);
+
+    Builder.SetInsertPoint(ExitBB, ++ExitBB->begin());
+    PHINode *ExitLoaded = Builder.CreatePHI(UnreleasedLoad->getType(), 2);
+    ExitLoaded->addIncoming(TryStoreLoaded, SuccessBB);
+    ExitLoaded->addIncoming(NoStoreLoaded, FailureBB);
+
+    Loaded = ExitLoaded;
+  }
 
   // Look for any users of the cmpxchg that are just comparing the loaded value
   // against the desired one, and replace them with the CFG-derived version.
@@ -1443,7 +1377,7 @@ Value *AtomicExpand::insertRMWCmpXchgLoop(
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateLoad(ResultTy, Addr);
   // Atomics require at least natural alignment.
-  InitLoaded->setAlignment(Align(ResultTy->getPrimitiveSizeInBits() / 8));
+  InitLoaded->setAlignment(MaybeAlign(ResultTy->getPrimitiveSizeInBits() / 8));
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
@@ -1483,6 +1417,8 @@ bool AtomicExpand::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
       expandPartwordCmpXchg(CI);
     return false;
   case TargetLoweringBase::AtomicExpansionKind::LLSC: {
+    assert(ValueSize >= MinCASSize &&
+           "MinCmpXchgSizeInBits not yet supported for LL/SC expansions.");
     return expandAtomicCmpXchg(CI);
   }
   case TargetLoweringBase::AtomicExpansionKind::MaskedIntrinsic:
@@ -1686,7 +1622,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Align, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
 
-  const llvm::Align AllocaAlignment(DL.getPrefTypeAlignment(SizedIntTy));
+  unsigned AllocaAlignment = DL.getPrefTypeAlignment(SizedIntTy);
 
   // TODO: the "order" argument type is "int", not int32. So
   // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
@@ -1776,7 +1712,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   // 'expected' argument, if present.
   if (CASExpected) {
     AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
-    AllocaCASExpected->setAlignment(AllocaAlignment);
+    AllocaCASExpected->setAlignment(MaybeAlign(AllocaAlignment));
     unsigned AllocaAS =  AllocaCASExpected->getType()->getPointerAddressSpace();
 
     AllocaCASExpected_i8 =
@@ -1795,7 +1731,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
       Args.push_back(IntValue);
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
-      AllocaValue->setAlignment(AllocaAlignment);
+      AllocaValue->setAlignment(MaybeAlign(AllocaAlignment));
       AllocaValue_i8 =
           Builder.CreateBitCast(AllocaValue, Type::getInt8PtrTy(Ctx));
       Builder.CreateLifetimeStart(AllocaValue_i8, SizeVal64);
@@ -1807,7 +1743,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   // 'ret' argument.
   if (!CASExpected && HasResult && !UseSizedLibcall) {
     AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
-    AllocaResult->setAlignment(AllocaAlignment);
+    AllocaResult->setAlignment(MaybeAlign(AllocaAlignment));
     unsigned AllocaAS =  AllocaResult->getType()->getPointerAddressSpace();
     AllocaResult_i8 =
       Builder.CreateBitCast(AllocaResult, Type::getInt8PtrTy(Ctx, AllocaAS));

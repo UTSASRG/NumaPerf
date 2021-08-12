@@ -1,6 +1,6 @@
-//===- mlir-cuda-runner.cpp - MLIR CUDA Execution Driver-------------------===//
+//===- mlir-cpu-runner.cpp - MLIR CPU Execution Driver---------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,7 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
@@ -22,18 +22,12 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/ExecutionEngine/JitRunner.h"
-#include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/NVVMIR.h"
+#include "mlir/Support/JitRunner.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/Passes.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/TargetSelect.h"
 
 #include "cuda.h"
 
@@ -57,8 +51,8 @@ inline void emit_cuda_error(const llvm::Twine &message, const char *buffer,
     }                                                                          \
   }
 
-OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
-                            StringRef name) {
+OwnedCubin compilePtxToCubin(const std::string ptx, Location loc,
+                             StringRef name) {
   char jitErrorBuffer[4096] = {0};
 
   RETURN_ON_CUDA_ERROR(cuInit(0), "cuInit");
@@ -97,7 +91,7 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
                        "cuLinkComplete");
 
   char *cubinAsChar = static_cast<char *>(cubinData);
-  OwnedBlob result =
+  OwnedCubin result =
       std::make_unique<std::vector<char>>(cubinAsChar, cubinAsChar + cubinSize);
 
   // This will also destroy the cubin data.
@@ -111,31 +105,16 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   applyPassManagerCLOptions(pm);
 
   pm.addPass(createGpuKernelOutliningPass());
-  auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
-  kernelPm.addPass(createStripDebugInfoPass());
+  auto &kernelPm = pm.nest<ModuleOp>();
   kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
-  kernelPm.addPass(createConvertGPUKernelToBlobPass(
-      translateModuleToNVVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
-      "sm_35", "+ptx60", "nvvm.cubin"));
+  kernelPm.addPass(createConvertGPUKernelToCubinPass(&compilePtxToCubin));
   pm.addPass(createLowerToLLVMPass());
-  pm.addPass(createConvertGpuLaunchFuncToGpuRuntimeCallsPass());
+  pm.addPass(createConvertGpuLaunchFuncToCudaCallsPass());
 
   return pm.run(m);
 }
 
 int main(int argc, char **argv) {
   registerPassManagerCLOptions();
-  mlir::registerAllDialects();
-  llvm::InitLLVM y(argc, argv);
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-
-  // Initialize LLVM NVPTX backend.
-  LLVMInitializeNVPTXTarget();
-  LLVMInitializeNVPTXTargetInfo();
-  LLVMInitializeNVPTXTargetMC();
-  LLVMInitializeNVPTXAsmPrinter();
-
-  mlir::initializeLLVMPasses();
   return mlir::JitRunnerMain(argc, argv, &runMLIRPasses);
 }

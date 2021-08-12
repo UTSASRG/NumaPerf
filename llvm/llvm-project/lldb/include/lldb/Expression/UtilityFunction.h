@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_UTILITYFUNCTION_H
-#define LLDB_EXPRESSION_UTILITYFUNCTION_H
+#ifndef liblldb_UtilityFunction_h_
+#define liblldb_UtilityFunction_h_
 
 #include <memory>
 #include <string>
@@ -118,4 +118,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_EXPRESSION_UTILITYFUNCTION_H
+#endif // liblldb_UtilityFunction_h_

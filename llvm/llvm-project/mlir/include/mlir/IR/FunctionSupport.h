@@ -1,6 +1,6 @@
 //===- FunctionSupport.h - Utility types for function-like ops --*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -28,13 +28,6 @@ inline StringRef getTypeAttrName() { return "type"; }
 inline StringRef getArgAttrName(unsigned arg, SmallVectorImpl<char> &out) {
   out.clear();
   return ("arg" + Twine(arg)).toStringRef(out);
-}
-
-/// Returns true if the given name is a valid argument attribute name.
-inline bool isArgAttrName(StringRef name) {
-  APInt unused;
-  return name.startswith("arg") &&
-         !name.drop_front(3).getAsInteger(/*Radix=*/10, unused);
 }
 
 /// Return the name of the attribute used for function results.
@@ -144,19 +137,6 @@ public:
   Block &back() { return getBody().back(); }
   Block &front() { return getBody().front(); }
 
-  /// Add an entry block to an empty function, and set up the block arguments
-  /// to match the signature of the function. The newly inserted entry block
-  /// is returned.
-  ///
-  /// Note that the concrete class must define a method with the same name to
-  /// hide this one if the concrete class does not use FunctionType for the
-  /// function type under the hood.
-  Block *addEntryBlock();
-
-  /// Add a normal block to the end of the function's block list. The function
-  /// should at least already have an entry block.
-  Block *addBlock();
-
   /// Hook for concrete ops to verify the contents of the body. Called as a
   /// part of trait verification, after type verification and ensuring that a
   /// region exists.
@@ -174,34 +154,12 @@ public:
         getTypeAttrName());
   }
 
-  /// Return the type of this function.
-  ///
-  /// Note that the concrete class must define a method with the same name to
-  /// hide this one if the concrete class does not use FunctionType for the
-  /// function type under the hood.
-  FunctionType getType() {
-    return getTypeAttr().getValue().template cast<FunctionType>();
-  }
-
   bool isTypeAttrValid() {
     auto typeAttr = getTypeAttr();
     if (!typeAttr)
       return false;
     return typeAttr.getValue() != Type{};
   }
-
-  /// Change the type of this function in place. This is an extremely dangerous
-  /// operation and it is up to the caller to ensure that this is legal for this
-  /// function, and to restore invariants:
-  ///  - the entry block args must be updated to match the function params.
-  ///  - the argument/result attributes may need an update: if the new type
-  ///    has less parameters we drop the extra attributes, if there are more
-  ///    parameters they won't have any attributes.
-  ///
-  /// Note that the concrete class must define a method with the same name to
-  /// hide this one if the concrete class does not use FunctionType for the
-  /// function type under the hood.
-  void setType(FunctionType newType);
 
   //===--------------------------------------------------------------------===//
   // Argument Handling
@@ -220,11 +178,13 @@ public:
     return getBlocks().front().getArgument(idx);
   }
 
-  /// Support argument iteration.
+  // Supports non-const operand iteration.
   using args_iterator = Block::args_iterator;
   args_iterator args_begin() { return front().args_begin(); }
   args_iterator args_end() { return front().args_end(); }
-  Block::BlockArgListType getArguments() { return front().getArguments(); }
+  iterator_range<args_iterator> getArguments() {
+    return {args_begin(), args_end()};
+  }
 
   //===--------------------------------------------------------------------===//
   // Argument Attributes
@@ -243,7 +203,7 @@ public:
   }
 
   /// Return all argument attributes of this function.
-  void getAllArgAttrs(SmallVectorImpl<MutableDictionaryAttr> &result) {
+  void getAllArgAttrs(SmallVectorImpl<NamedAttributeList> &result) {
     for (unsigned i = 0, e = getNumArguments(); i != e; ++i)
       result.emplace_back(getArgAttrDict(i));
   }
@@ -270,8 +230,8 @@ public:
 
   /// Set the attributes held by the argument at 'index'.
   void setArgAttrs(unsigned index, ArrayRef<NamedAttribute> attributes);
-  void setArgAttrs(unsigned index, MutableDictionaryAttr attributes);
-  void setAllArgAttrs(ArrayRef<MutableDictionaryAttr> attributes) {
+  void setArgAttrs(unsigned index, NamedAttributeList attributes);
+  void setAllArgAttrs(ArrayRef<NamedAttributeList> attributes) {
     assert(attributes.size() == getNumArguments());
     for (unsigned i = 0, e = attributes.size(); i != e; ++i)
       setArgAttrs(i, attributes[i]);
@@ -286,8 +246,8 @@ public:
   }
 
   /// Remove the attribute 'name' from the argument at 'index'.
-  MutableDictionaryAttr::RemoveResult removeArgAttr(unsigned index,
-                                                    Identifier name);
+  NamedAttributeList::RemoveResult removeArgAttr(unsigned index,
+                                                 Identifier name);
 
   //===--------------------------------------------------------------------===//
   // Result Attributes
@@ -306,7 +266,7 @@ public:
   }
 
   /// Return all result attributes of this function.
-  void getAllResultAttrs(SmallVectorImpl<MutableDictionaryAttr> &result) {
+  void getAllResultAttrs(SmallVectorImpl<NamedAttributeList> &result) {
     for (unsigned i = 0, e = getNumResults(); i != e; ++i)
       result.emplace_back(getResultAttrDict(i));
   }
@@ -333,8 +293,8 @@ public:
 
   /// Set the attributes held by the result at 'index'.
   void setResultAttrs(unsigned index, ArrayRef<NamedAttribute> attributes);
-  void setResultAttrs(unsigned index, MutableDictionaryAttr attributes);
-  void setAllResultAttrs(ArrayRef<MutableDictionaryAttr> attributes) {
+  void setResultAttrs(unsigned index, NamedAttributeList attributes);
+  void setAllResultAttrs(ArrayRef<NamedAttributeList> attributes) {
     assert(attributes.size() == getNumResults());
     for (unsigned i = 0, e = attributes.size(); i != e; ++i)
       setResultAttrs(i, attributes[i]);
@@ -350,8 +310,8 @@ public:
   }
 
   /// Remove the attribute 'name' from the result at 'index'.
-  MutableDictionaryAttr::RemoveResult removeResultAttr(unsigned index,
-                                                       Identifier name);
+  NamedAttributeList::RemoveResult removeResultAttr(unsigned index,
+                                                    Identifier name);
 
 protected:
   /// Returns the attribute entry name for the set of argument attributes at
@@ -458,43 +418,6 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
-// Function Body.
-//===----------------------------------------------------------------------===//
-
-template <typename ConcreteType>
-Block *FunctionLike<ConcreteType>::addEntryBlock() {
-  assert(empty() && "function already has an entry block");
-  auto *entry = new Block();
-  push_back(entry);
-  entry->addArguments(getType().getInputs());
-  return entry;
-}
-
-template <typename ConcreteType>
-Block *FunctionLike<ConcreteType>::addBlock() {
-  assert(!empty() && "function should at least have an entry block");
-  push_back(new Block());
-  return &back();
-}
-
-//===----------------------------------------------------------------------===//
-// Function Type Attribute.
-//===----------------------------------------------------------------------===//
-
-template <typename ConcreteType>
-void FunctionLike<ConcreteType>::setType(FunctionType newType) {
-  SmallVector<char, 16> nameBuf;
-  auto oldType = getType();
-  auto *concreteOp = static_cast<ConcreteType *>(this);
-
-  for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
-    concreteOp->removeAttr(getArgAttrName(i, nameBuf));
-  for (int i = newType.getNumResults(), e = oldType.getNumResults(); i < e; i++)
-    concreteOp->removeAttr(getResultAttrName(i, nameBuf));
-  concreteOp->setAttr(getTypeAttrName(), TypeAttr::get(newType));
-}
-
-//===----------------------------------------------------------------------===//
 // Function Argument Attribute.
 //===----------------------------------------------------------------------===//
 
@@ -514,17 +437,13 @@ void FunctionLike<ConcreteType>::setArgAttrs(
 
 template <typename ConcreteType>
 void FunctionLike<ConcreteType>::setArgAttrs(unsigned index,
-                                             MutableDictionaryAttr attributes) {
+                                             NamedAttributeList attributes) {
   assert(index < getNumArguments() && "invalid argument number");
   SmallString<8> nameOut;
-  if (attributes.getAttrs().empty()) {
-    this->getOperation()->removeAttr(getArgAttrName(index, nameOut));
-  } else {
-    auto newAttr = attributes.getDictionary(
-        attributes.getAttrs().front().second.getContext());
+  if (auto newAttr = attributes.getDictionary())
     return this->getOperation()->setAttr(getArgAttrName(index, nameOut),
                                          newAttr);
-  }
+  static_cast<ConcreteType *>(this)->removeAttr(getArgAttrName(index, nameOut));
 }
 
 /// If the an attribute exists with the specified name, change it to the new
@@ -533,25 +452,25 @@ template <typename ConcreteType>
 void FunctionLike<ConcreteType>::setArgAttr(unsigned index, Identifier name,
                                             Attribute value) {
   auto curAttr = getArgAttrDict(index);
-  MutableDictionaryAttr attrDict(curAttr);
-  attrDict.set(name, value);
+  NamedAttributeList attrList(curAttr);
+  attrList.set(name, value);
 
   // If the attribute changed, then set the new arg attribute list.
-  if (curAttr != attrDict.getDictionary(value.getContext()))
-    setArgAttrs(index, attrDict);
+  if (curAttr != attrList.getDictionary())
+    setArgAttrs(index, attrList);
 }
 
 /// Remove the attribute 'name' from the argument at 'index'.
 template <typename ConcreteType>
-MutableDictionaryAttr::RemoveResult
+NamedAttributeList::RemoveResult
 FunctionLike<ConcreteType>::removeArgAttr(unsigned index, Identifier name) {
   // Build an attribute list and remove the attribute at 'name'.
-  MutableDictionaryAttr attrDict(getArgAttrDict(index));
-  auto result = attrDict.remove(name);
+  NamedAttributeList attrList(getArgAttrDict(index));
+  auto result = attrList.remove(name);
 
   // If the attribute was removed, then update the argument dictionary.
-  if (result == MutableDictionaryAttr::RemoveResult::Removed)
-    setArgAttrs(index, attrDict);
+  if (result == NamedAttributeList::RemoveResult::Removed)
+    setArgAttrs(index, attrList);
   return result;
 }
 
@@ -568,23 +487,21 @@ void FunctionLike<ConcreteType>::setResultAttrs(
   getResultAttrName(index, nameOut);
 
   if (attributes.empty())
-    return (void)this->getOperation()->removeAttr(nameOut);
+    return (void)static_cast<ConcreteType *>(this)->removeAttr(nameOut);
   Operation *op = this->getOperation();
   op->setAttr(nameOut, DictionaryAttr::get(attributes, op->getContext()));
 }
 
 template <typename ConcreteType>
-void FunctionLike<ConcreteType>::setResultAttrs(
-    unsigned index, MutableDictionaryAttr attributes) {
+void FunctionLike<ConcreteType>::setResultAttrs(unsigned index,
+                                                NamedAttributeList attributes) {
   assert(index < getNumResults() && "invalid result number");
   SmallString<8> nameOut;
-  if (attributes.empty()) {
-    this->getOperation()->removeAttr(getResultAttrName(index, nameOut));
-  } else {
-    auto newAttr = attributes.getDictionary(this->getOperation()->getContext());
+  if (auto newAttr = attributes.getDictionary())
     return this->getOperation()->setAttr(getResultAttrName(index, nameOut),
                                          newAttr);
-  }
+  static_cast<ConcreteType *>(this)->removeAttr(
+      getResultAttrName(index, nameOut));
 }
 
 /// If the an attribute exists with the specified name, change it to the new
@@ -593,25 +510,25 @@ template <typename ConcreteType>
 void FunctionLike<ConcreteType>::setResultAttr(unsigned index, Identifier name,
                                                Attribute value) {
   auto curAttr = getResultAttrDict(index);
-  MutableDictionaryAttr attrDict(curAttr);
-  attrDict.set(name, value);
+  NamedAttributeList attrList(curAttr);
+  attrList.set(name, value);
 
   // If the attribute changed, then set the new arg attribute list.
-  if (curAttr != attrDict.getDictionary(value.getContext()))
-    setResultAttrs(index, attrDict);
+  if (curAttr != attrList.getDictionary())
+    setResultAttrs(index, attrList);
 }
 
 /// Remove the attribute 'name' from the result at 'index'.
 template <typename ConcreteType>
-MutableDictionaryAttr::RemoveResult
+NamedAttributeList::RemoveResult
 FunctionLike<ConcreteType>::removeResultAttr(unsigned index, Identifier name) {
   // Build an attribute list and remove the attribute at 'name'.
-  MutableDictionaryAttr attrDict(getResultAttrDict(index));
-  auto result = attrDict.remove(name);
+  NamedAttributeList attrList(getResultAttrDict(index));
+  auto result = attrList.remove(name);
 
   // If the attribute was removed, then update the result dictionary.
-  if (result == MutableDictionaryAttr::RemoveResult::Removed)
-    setResultAttrs(index, attrDict);
+  if (result == NamedAttributeList::RemoveResult::Removed)
+    setResultAttrs(index, attrList);
   return result;
 }
 

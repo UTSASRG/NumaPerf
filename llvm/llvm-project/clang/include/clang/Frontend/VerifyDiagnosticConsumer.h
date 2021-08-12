@@ -10,7 +10,6 @@
 #define LLVM_CLANG_FRONTEND_VERIFYDIAGNOSTICCONSUMER_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
@@ -190,10 +189,11 @@ public:
   ///
   class Directive {
   public:
-    static std::unique_ptr<Directive>
-    create(bool RegexKind, SourceLocation DirectiveLoc,
-           SourceLocation DiagnosticLoc, bool MatchAnyFileAndLine,
-           bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max);
+    static std::unique_ptr<Directive> create(bool RegexKind,
+                                             SourceLocation DirectiveLoc,
+                                             SourceLocation DiagnosticLoc,
+                                             bool MatchAnyLine, StringRef Text,
+                                             unsigned Min, unsigned Max);
 
   public:
     /// Constant representing n or more matches.
@@ -204,7 +204,6 @@ public:
     const std::string Text;
     unsigned Min, Max;
     bool MatchAnyLine;
-    bool MatchAnyFileAndLine; // `MatchAnyFileAndLine` implies `MatchAnyLine`.
 
     Directive(const Directive &) = delete;
     Directive &operator=(const Directive &) = delete;
@@ -219,11 +218,9 @@ public:
 
   protected:
     Directive(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-              bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-              unsigned Min, unsigned Max)
-        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc), Text(Text),
-          Min(Min), Max(Max), MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
-          MatchAnyFileAndLine(MatchAnyFileAndLine) {
+              bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max)
+        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc),
+          Text(Text), Min(Min), Max(Max), MatchAnyLine(MatchAnyLine) {
       assert(!DirectiveLoc.isInvalid() && "DirectiveLoc is invalid!");
       assert((!DiagnosticLoc.isInvalid() || MatchAnyLine) &&
              "DiagnosticLoc is invalid!");

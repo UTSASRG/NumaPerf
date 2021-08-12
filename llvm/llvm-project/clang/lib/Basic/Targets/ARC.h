@@ -65,8 +65,6 @@ public:
                              TargetInfo::ConstraintInfo &Info) const override {
     return false;
   }
-
-  bool hasExtIntType() const override { return true; }
 };
 
 } // namespace targets

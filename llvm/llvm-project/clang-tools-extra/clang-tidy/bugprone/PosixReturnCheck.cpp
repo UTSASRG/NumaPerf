@@ -48,7 +48,8 @@ void PosixReturnCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(
       binaryOperator(
-          hasAnyOperatorName("==", "!=", "<=", "<"),
+          anyOf(hasOperatorName("=="), hasOperatorName("!="),
+                hasOperatorName("<="), hasOperatorName("<")),
           hasLHS(callExpr(callee(functionDecl(
               anyOf(matchesName("^::posix_"), matchesName("^::pthread_")),
               unless(hasName("::posix_openpt")))))),

@@ -1,6 +1,6 @@
 //===- Parser.h - Toy Language Parser -------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -257,15 +257,14 @@ private:
     }
 
     // Call to a user-defined function
-    return std::make_unique<CallExprAST>(std::move(loc), std::string(name),
-                                         std::move(args));
+    return std::make_unique<CallExprAST>(std::move(loc), name, std::move(args));
   }
 
   /// identifierexpr
   ///   ::= identifier
   ///   ::= identifier '(' expression ')'
   std::unique_ptr<ExprAST> parseIdentifierExpr() {
-    std::string name(lexer.getId());
+    std::string name = lexer.getId();
 
     auto loc = lexer.getLastLocation();
     lexer.getNextToken(); // eat identifier.
@@ -379,7 +378,7 @@ private:
   /// Parse either a variable declaration or a call expression.
   std::unique_ptr<ExprAST> parseDeclarationOrCallExpr() {
     auto loc = lexer.getLastLocation();
-    std::string id(lexer.getId());
+    std::string id = lexer.getId();
     lexer.consume(tok_identifier);
 
     // Check for a call expression.
@@ -397,7 +396,7 @@ private:
     // Parse the variable name.
     if (lexer.getCurToken() != tok_identifier)
       return parseError<VarDeclExprAST>("name", "in variable declaration");
-    std::string id(lexer.getId());
+    std::string id = lexer.getId();
     lexer.getNextToken(); // eat id
 
     // Parse the initializer.
@@ -411,7 +410,7 @@ private:
     }
 
     VarType type;
-    type.name = std::string(typeName);
+    type.name = typeName;
     return std::make_unique<VarDeclExprAST>(loc, std::move(id), std::move(type),
                                             std::move(expr));
   }
@@ -429,7 +428,7 @@ private:
     if (lexer.getCurToken() != tok_identifier)
       return parseError<VarDeclExprAST>("type name", "in variable declaration");
     auto loc = lexer.getLastLocation();
-    std::string typeName(lexer.getId());
+    std::string typeName = lexer.getId();
     lexer.getNextToken(); // eat id
 
     // Parse the rest of the declaration.
@@ -450,7 +449,7 @@ private:
     if (lexer.getCurToken() != tok_identifier)
       return parseError<VarDeclExprAST>("identified",
                                         "after 'var' declaration");
-    std::string id(lexer.getId());
+    std::string id = lexer.getId();
     lexer.getNextToken(); // eat id
 
     std::unique_ptr<VarType> type; // Type is optional, it can be inferred
@@ -534,15 +533,11 @@ private:
   /// decl_list ::= identifier | identifier, decl_list
   std::unique_ptr<PrototypeAST> parsePrototype() {
     auto loc = lexer.getLastLocation();
-
-    if (lexer.getCurToken() != tok_def)
-      return parseError<PrototypeAST>("def", "in prototype");
     lexer.consume(tok_def);
-
     if (lexer.getCurToken() != tok_identifier)
       return parseError<PrototypeAST>("function name", "in prototype");
 
-    std::string fnName(lexer.getId());
+    std::string fnName = lexer.getId();
     lexer.consume(tok_identifier);
 
     if (lexer.getCurToken() != '(')
@@ -556,7 +551,7 @@ private:
         std::string name;
 
         // Parse either the name of the variable, or its type.
-        std::string nameOrType(lexer.getId());
+        std::string nameOrType = lexer.getId();
         auto loc = lexer.getLastLocation();
         lexer.consume(tok_identifier);
 
@@ -565,7 +560,7 @@ private:
           type.name = std::move(nameOrType);
 
           // Parse the name.
-          name = std::string(lexer.getId());
+          name = lexer.getId();
           lexer.consume(tok_identifier);
         } else {
           // Otherwise, we just parsed the name.
@@ -583,7 +578,7 @@ private:
       } while (true);
     }
     if (lexer.getCurToken() != ')')
-      return parseError<PrototypeAST>(")", "to end function prototype");
+      return parseError<PrototypeAST>("}", "to end function prototype");
 
     // success.
     lexer.consume(Token(')'));
@@ -615,7 +610,7 @@ private:
     lexer.consume(tok_struct);
     if (lexer.getCurToken() != tok_identifier)
       return parseError<StructAST>("name", "in struct definition");
-    std::string name(lexer.getId());
+    std::string name = lexer.getId();
     lexer.consume(tok_identifier);
 
     // Parse: '{'

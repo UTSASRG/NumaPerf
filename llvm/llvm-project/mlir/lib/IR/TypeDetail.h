@@ -1,6 +1,6 @@
 //===- TypeDetail.h - MLIR Type storage details -----------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,8 +15,8 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
-#include "llvm/ADT/bit.h"
+#include "mlir/IR/TypeSupport.h"
+#include "mlir/IR/Types.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace mlir {
@@ -52,49 +52,19 @@ struct OpaqueTypeStorage : public TypeStorage {
 
 /// Integer Type Storage and Uniquing.
 struct IntegerTypeStorage : public TypeStorage {
-  IntegerTypeStorage(unsigned width,
-                     IntegerType::SignednessSemantics signedness)
-      : TypeStorage(packKeyBits(width, signedness)) {}
+  IntegerTypeStorage(unsigned width) : width(width) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::pair<unsigned, IntegerType::SignednessSemantics>;
-
-  static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_value(packKeyBits(key.first, key.second));
-  }
-
-  bool operator==(const KeyTy &key) const {
-    return getSubclassData() == packKeyBits(key.first, key.second);
-  }
+  using KeyTy = unsigned;
+  bool operator==(const KeyTy &key) const { return key == width; }
 
   static IntegerTypeStorage *construct(TypeStorageAllocator &allocator,
-                                       KeyTy key) {
+                                       KeyTy bitwidth) {
     return new (allocator.allocate<IntegerTypeStorage>())
-        IntegerTypeStorage(key.first, key.second);
+        IntegerTypeStorage(bitwidth);
   }
 
-  struct KeyBits {
-    unsigned width : 30;
-    unsigned signedness : 2;
-  };
-
-  /// Pack the given `width` and `signedness` as a key.
-  static unsigned packKeyBits(unsigned width,
-                              IntegerType::SignednessSemantics signedness) {
-    KeyBits bits{width, static_cast<unsigned>(signedness)};
-    return llvm::bit_cast<unsigned>(bits);
-  }
-
-  static KeyBits unpackKeyBits(unsigned bits) {
-    return llvm::bit_cast<KeyBits>(bits);
-  }
-
-  unsigned getWidth() { return unpackKeyBits(getSubclassData()).width; }
-
-  IntegerType::SignednessSemantics getSignedness() {
-    return static_cast<IntegerType::SignednessSemantics>(
-        unpackKeyBits(getSubclassData()).signedness);
-  }
+  unsigned width;
 };
 
 /// Function Type Storage and Uniquing.
@@ -351,5 +321,4 @@ struct TupleTypeStorage final
 
 } // namespace detail
 } // namespace mlir
-
 #endif // TYPEDETAIL_H_

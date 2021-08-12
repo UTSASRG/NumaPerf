@@ -37,8 +37,6 @@
 // CHECK-DISABLE-UNROLL-NOT: fmul
 // CHECK-DISABLE-UNROLL-NOT: fadd
 // CHECK-DISABLE-UNROLL-NOT: store
-// Limit scope of checking so this does not match "fadd" within git version string
-// CHECK-DISABLE-UNROLL: !0 =
 
 int printf(const char * restrict format, ...);
 

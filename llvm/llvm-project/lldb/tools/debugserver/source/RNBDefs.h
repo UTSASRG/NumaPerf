@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBDEFS_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBDEFS_H
+#ifndef __RNBDefs_h__
+#define __RNBDefs_h__
 
 #include "DNBDefs.h"
 #include <memory>
@@ -50,6 +50,14 @@ extern "C" const double CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionNumber);
 
 #define RNB_ARCH "x86_64"
 
+#elif defined(__ppc64__)
+
+#define RNB_ARCH "ppc64"
+
+#elif defined(__powerpc__) || defined(__ppc__)
+
+#define RNB_ARCH "ppc"
+
 #elif defined(__arm64__) || defined(__aarch64__)
 
 #define RNB_ARCH "arm64"
@@ -87,4 +95,4 @@ enum rnb_err_t { rnb_success = 0, rnb_err = 1, rnb_not_connected = 2 };
 
 extern RNBRemoteSP g_remoteSP;
 
-#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBDEFS_H
+#endif // #ifndef __RNBDefs_h__

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEIOS_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEIOS_H
+#ifndef liblldb_PlatformRemoteiOS_h_
+#define liblldb_PlatformRemoteiOS_h_
 
 #include <string>
 
@@ -57,8 +57,7 @@ protected:
   std::string GetPlatformName () override;
 
 private:
-  PlatformRemoteiOS(const PlatformRemoteiOS &) = delete;
-  const PlatformRemoteiOS &operator=(const PlatformRemoteiOS &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteiOS);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEIOS_H
+#endif // liblldb_PlatformRemoteiOS_h_

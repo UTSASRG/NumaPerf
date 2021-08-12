@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj %s > %t
 
 # Single flags on a section with all flags:
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t %t.alloc
@@ -25,8 +25,6 @@
 # RUN: llvm-readobj --sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,share %t %t.share
 # RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,WRITE
-# RUN: llvm-objcopy --rename-section=.foo=.bar,exclude %t %t.exclude
-# RUN: llvm-readobj --sections %t.exclude | FileCheck %s --check-prefixes=CHECK,WRITE,EXCLUDE
 
 !ELF
 FileHeader:
@@ -61,7 +59,7 @@ Symbols:
 # CHECK-NEXT:   Flags [
 # ALLOC-NEXT:     SHF_ALLOC (0x2)
 # CHECK-NEXT:     SHF_COMPRESSED (0x800)
-# EXCLUDE-NEXT:   SHF_EXCLUDE (0x80000000)
+# CHECK-NEXT:     SHF_EXCLUDE (0x80000000)
 # EXEC-NEXT:      SHF_EXECINSTR (0x4)
 # CHECK-NEXT:     SHF_GROUP (0x200)
 # CHECK-NEXT:     SHF_INFO_LINK (0x40)
@@ -71,3 +69,5 @@ Symbols:
 # CHECK-NEXT:     SHF_TLS (0x400)
 # WRITE-NEXT:     SHF_WRITE (0x1)
 # CHECK-NEXT:   ]
+
+# BAD-FLAG: unrecognized section flag 'xyzzy'

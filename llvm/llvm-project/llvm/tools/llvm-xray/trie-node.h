@@ -48,7 +48,7 @@ template <typename T, typename Callable>
 TrieNode<T> *
 mergeTrieNodes(const TrieNode<T> &Left, const TrieNode<T> &Right,
                /*Non-deduced pointer type for nullptr compatibility*/
-               std::remove_reference_t<TrieNode<T> *> NewParent,
+               typename std::remove_reference<TrieNode<T> *>::type NewParent,
                std::forward_list<TrieNode<T>> &NodeStore,
                Callable &&MergeCallable) {
   llvm::function_ref<T(const T &, const T &)> MergeFn(

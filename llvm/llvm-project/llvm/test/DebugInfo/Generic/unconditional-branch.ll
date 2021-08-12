@@ -1,3 +1,4 @@
+; REQUIRES: object-emission
 ; PR 19261
 
 ; RUN: %llc_dwarf -fast-isel=false -O0 -filetype=obj %s -o %t

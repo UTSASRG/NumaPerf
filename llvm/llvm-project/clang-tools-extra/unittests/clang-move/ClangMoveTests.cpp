@@ -636,5 +636,5 @@ TEST(ClangMove, DumpDecls) {
 }
 
 } // namespace
-} // namespace move
+} // namespce move
 } // namespace clang

@@ -90,9 +90,7 @@ static inline ArrayRef<uint8_t> stabilize(BumpPtrAllocator &Alloc,
 TypeIndex MergingTypeTableBuilder::insertRecordAs(hash_code Hash,
                                                   ArrayRef<uint8_t> &Record) {
   assert(Record.size() < UINT32_MAX && "Record too big");
-  assert(Record.size() % 4 == 0 &&
-         "The type record size is not a multiple of 4 bytes which will cause "
-         "misalignment in the output TPI stream!");
+  assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
 
   LocallyHashedType WeakHash{Hash, Record};
   auto Result = HashedRecords.try_emplace(WeakHash, nextTypeIndex());

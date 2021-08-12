@@ -59,7 +59,7 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
   Builder.CreateCall(F, Args);
 }
 
-void ParallelLoopGeneratorKMP::deployParallelExecution(Function *SubFn,
+void ParallelLoopGeneratorKMP::deployParallelExecution(Value *SubFn,
                                                        Value *SubFnParam,
                                                        Value *LB, Value *UB,
                                                        Value *Stride) {
@@ -103,31 +103,28 @@ Function *ParallelLoopGeneratorKMP::prepareSubFnDefinition(Function *F) const {
 
 // Create a subfunction of the following (preliminary) structure:
 //
-//        PrevBB
-//           |
-//           v
-//        HeaderBB
-//       /   |    _____
-//      /    v   v     |
-//     / PreHeaderBB   |
-//    |      |         |
-//    |      v         |
-//    |  CheckNextBB   |
-//     \     |   \_____/
-//      \    |
-//       v   v
-//       ExitBB
+//    PrevBB
+//       |
+//       v
+//    HeaderBB
+//       |   _____
+//       v  v    |
+//   CheckNextBB  PreHeaderBB
+//       |\       |
+//       | \______/
+//       |
+//       v
+//     ExitBB
 //
 // HeaderBB will hold allocations, loading of variables and kmp-init calls.
-// CheckNextBB will check for more work (dynamic / static chunked) or will be
-// empty (static non chunked).
+// CheckNextBB will check for more work (dynamic) or will be "empty" (static).
 // If there is more work to do: go to PreHeaderBB, otherwise go to ExitBB.
 // PreHeaderBB loads the new boundaries (& will lead to the loop body later on).
-// Just like CheckNextBB: PreHeaderBB is (preliminary) empty in the static non
-// chunked scheduling case. ExitBB marks the end of the parallel execution.
+// Just like CheckNextBB: PreHeaderBB is empty in the static scheduling case.
+// ExitBB marks the end of the parallel execution.
 // The possibly empty BasicBlocks will automatically be removed.
 std::tuple<Value *, Function *>
-ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
+ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
                                       AllocaInst *StructData,
                                       SetVector<Value *> Data, ValueMapT &Map) {
   Function *SubFn = createSubFnDefinition();
@@ -179,7 +176,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   extractValuesFromStruct(Data, StructData->getAllocatedType(), UserContext,
                           Map);
 
-  const auto Alignment = llvm::Align(is64BitArch() ? 8 : 4);
+  const int Alignment = (is64BitArch()) ? 8 : 4;
   Value *ID =
       Builder.CreateAlignedLoad(IDPtr, Alignment, "polly.par.global_tid");
 
@@ -196,10 +193,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   Value *ChunkSize =
       ConstantInt::get(LongType, std::max<int>(PollyChunkSize, 1));
 
-  OMPGeneralSchedulingType Scheduling =
-      getSchedType(PollyChunkSize, PollyScheduling);
-
-  switch (Scheduling) {
+  switch (PollyScheduling) {
   case OMPGeneralSchedulingType::Dynamic:
   case OMPGeneralSchedulingType::Guided:
   case OMPGeneralSchedulingType::Runtime:
@@ -230,56 +224,24 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   case OMPGeneralSchedulingType::StaticNonChunked:
     // "STATIC" scheduling types are handled below
     {
-      Builder.CreateAlignedStore(AdjustedUB, UBPtr, Alignment);
       createCallStaticInit(ID, IsLastPtr, LBPtr, UBPtr, StridePtr, ChunkSize);
 
-      Value *ChunkedStride =
-          Builder.CreateAlignedLoad(StridePtr, Alignment, "polly.kmpc.stride");
-
       LB = Builder.CreateAlignedLoad(LBPtr, Alignment, "polly.indvar.LB");
-      UB = Builder.CreateAlignedLoad(UBPtr, Alignment, "polly.indvar.UB.temp");
+      UB = Builder.CreateAlignedLoad(UBPtr, Alignment, "polly.indvar.UB");
 
-      Value *UBInRange =
-          Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SLE, UB, AdjustedUB,
-                             "polly.indvar.UB.inRange");
-      UB = Builder.CreateSelect(UBInRange, UB, AdjustedUB, "polly.indvar.UB");
+      Value *AdjUBOutOfBounds =
+          Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SLT, UB, AdjustedUB,
+                             "polly.adjustedUBOutOfBounds");
+
+      UB = Builder.CreateSelect(AdjUBOutOfBounds, UB, AdjustedUB);
       Builder.CreateAlignedStore(UB, UBPtr, Alignment);
 
       Value *HasIteration = Builder.CreateICmp(
           llvm::CmpInst::Predicate::ICMP_SLE, LB, UB, "polly.hasIteration");
       Builder.CreateCondBr(HasIteration, PreHeaderBB, ExitBB);
 
-      if (Scheduling == OMPGeneralSchedulingType::StaticChunked) {
-        Builder.SetInsertPoint(PreHeaderBB);
-        LB = Builder.CreateAlignedLoad(LBPtr, Alignment,
-                                       "polly.indvar.LB.entry");
-        UB = Builder.CreateAlignedLoad(UBPtr, Alignment,
-                                       "polly.indvar.UB.entry");
-      }
-
       Builder.SetInsertPoint(CheckNextBB);
-
-      if (Scheduling == OMPGeneralSchedulingType::StaticChunked) {
-        Value *NextLB =
-            Builder.CreateAdd(LB, ChunkedStride, "polly.indvar.nextLB");
-        Value *NextUB = Builder.CreateAdd(UB, ChunkedStride);
-
-        Value *NextUBOutOfBounds =
-            Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SGT, NextUB,
-                               AdjustedUB, "polly.indvar.nextUB.outOfBounds");
-        NextUB = Builder.CreateSelect(NextUBOutOfBounds, AdjustedUB, NextUB,
-                                      "polly.indvar.nextUB");
-
-        Builder.CreateAlignedStore(NextLB, LBPtr, Alignment);
-        Builder.CreateAlignedStore(NextUB, UBPtr, Alignment);
-
-        Value *HasWork =
-            Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SLE, NextLB,
-                               AdjustedUB, "polly.hasWork");
-        Builder.CreateCondBr(HasWork, PreHeaderBB, ExitBB);
-      } else {
-        Builder.CreateBr(ExitBB);
-      }
+      Builder.CreateBr(ExitBB);
 
       Builder.SetInsertPoint(PreHeaderBB);
     }
@@ -289,7 +251,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   Builder.CreateBr(CheckNextBB);
   Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
   BasicBlock *AfterBB;
-  Value *IV = createLoop(LB, UB, SequentialLoopStride, Builder, LI, DT, AfterBB,
+  Value *IV = createLoop(LB, UB, Stride, Builder, LI, DT, AfterBB,
                          ICmpInst::ICMP_SLE, nullptr, true,
                          /* UseGuard */ false);
 
@@ -298,8 +260,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   // Add code to terminate this subfunction.
   Builder.SetInsertPoint(ExitBB);
   // Static (i.e. non-dynamic) scheduling types, are terminated with a fini-call
-  if (Scheduling == OMPGeneralSchedulingType::StaticChunked ||
-      Scheduling == OMPGeneralSchedulingType::StaticNonChunked) {
+  if (PollyScheduling == OMPGeneralSchedulingType::StaticChunked) {
     createCallStaticFini(ID);
   }
   Builder.CreateRetVoid();
@@ -507,7 +468,7 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
     // Global Variable Definitions
     GlobalVariable *StrVar = new GlobalVariable(
         *M, ArrayType, true, GlobalValue::PrivateLinkage, 0, ".str.ident");
-    StrVar->setAlignment(llvm::Align(1));
+    StrVar->setAlignment(llvm::Align::None());
 
     SourceLocDummy = new GlobalVariable(
         *M, IdentTy, true, GlobalValue::PrivateLinkage, nullptr, LocName);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_OPTIONGROUPUINT64_H
-#define LLDB_INTERPRETER_OPTIONGROUPUINT64_H
+#ifndef liblldb_OptionGroupUInt64_h_
+#define liblldb_OptionGroupUInt64_h_
 
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
@@ -46,4 +46,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_OPTIONGROUPUINT64_H
+#endif // liblldb_OptionGroupUInt64_h_

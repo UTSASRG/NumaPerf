@@ -119,9 +119,8 @@ namespace {
         ValueTy = lvalue.getType();
         ValueSizeInBits = C.getTypeSize(ValueTy);
         AtomicTy = ValueTy = CGF.getContext().getExtVectorType(
-            lvalue.getType(), cast<llvm::VectorType>(
-                                  lvalue.getExtVectorAddress().getElementType())
-                                  ->getNumElements());
+            lvalue.getType(), lvalue.getExtVectorAddress()
+                                  .getElementType()->getVectorNumElements());
         AtomicSizeInBits = C.getTypeSize(AtomicTy);
         AtomicAlign = ValueAlign = lvalue.getAlignment();
         LVal = lvalue;
@@ -1827,7 +1826,7 @@ void AtomicInfo::EmitAtomicUpdateOp(
   auto Failure = llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
 
   // Do the atomic load.
-  auto *OldVal = EmitAtomicLoadOp(Failure, IsVolatile);
+  auto *OldVal = EmitAtomicLoadOp(AO, IsVolatile);
   // For non-simple lvalues perform compare-and-swap procedure.
   auto *ContBB = CGF.createBasicBlock("atomic_cont");
   auto *ExitBB = CGF.createBasicBlock("atomic_exit");
@@ -1909,7 +1908,7 @@ void AtomicInfo::EmitAtomicUpdateOp(llvm::AtomicOrdering AO, RValue UpdateRVal,
   auto Failure = llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
 
   // Do the atomic load.
-  auto *OldVal = EmitAtomicLoadOp(Failure, IsVolatile);
+  auto *OldVal = EmitAtomicLoadOp(AO, IsVolatile);
   // For non-simple lvalues perform compare-and-swap procedure.
   auto *ContBB = CGF.createBasicBlock("atomic_cont");
   auto *ExitBB = CGF.createBasicBlock("atomic_exit");
@@ -2019,10 +2018,6 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
         intValue, addr.getElementType(), /*isSigned=*/false);
     llvm::StoreInst *store = Builder.CreateStore(intValue, addr);
 
-    if (AO == llvm::AtomicOrdering::Acquire)
-      AO = llvm::AtomicOrdering::Monotonic;
-    else if (AO == llvm::AtomicOrdering::AcquireRelease)
-      AO = llvm::AtomicOrdering::Release;
     // Initializations don't need to be atomic.
     if (!isInit)
       store->setAtomic(AO);

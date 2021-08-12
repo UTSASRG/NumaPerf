@@ -1,50 +1,29 @@
-set(LLVM_OPTIONAL_SOURCES
+add_llvm_library(MLIRAnalysis STATIC
   AffineAnalysis.cpp
   AffineStructures.cpp
   CallGraph.cpp
+  Dominance.cpp
+  InferTypeOpInterface.cpp
   Liveness.cpp
   LoopAnalysis.cpp
+  MemRefBoundCheck.cpp
   NestedMatcher.cpp
+  OpStats.cpp
   SliceAnalysis.cpp
+  TestMemRefDependenceCheck.cpp
+  TestParallelismDetection.cpp
   Utils.cpp
-  )
-
-add_mlir_library(MLIRAnalysis
-  CallGraph.cpp
-  Liveness.cpp
-  SliceAnalysis.cpp
+  VectorAnalysis.cpp
+  Verifier.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
-
-  DEPENDS
-  mlir-headers
-
-  LINK_LIBS PUBLIC
-  MLIRAffineOps
-  MLIRCallInterfaces
-  MLIRControlFlowInterfaces
-  MLIRInferTypeOpInterface
-  MLIRSCF
   )
-
-add_mlir_library(MLIRLoopAnalysis
-  AffineAnalysis.cpp
-  AffineStructures.cpp
-  LoopAnalysis.cpp
-  NestedMatcher.cpp
-  Utils.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
-
-  DEPENDS
-  mlir-headers
-
-  LINK_LIBS PUBLIC
+add_dependencies(MLIRAnalysis
   MLIRAffineOps
-  MLIRCallInterfaces
-  MLIRControlFlowInterfaces
-  MLIRInferTypeOpInterface
-  MLIRSCF
+  MLIRCallOpInterfacesIncGen
+  MLIRTypeInferOpInterfaceIncGen
+  MLIRLoopOps
+  MLIRVectorOps
   )
+target_link_libraries(MLIRAnalysis MLIRAffineOps MLIRLoopOps MLIRVectorOps)

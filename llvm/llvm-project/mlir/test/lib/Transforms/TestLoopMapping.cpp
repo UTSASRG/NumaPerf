@@ -1,17 +1,17 @@
 //===- TestLoopMapping.cpp --- Parametric loop mapping pass ---------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to parametrically map scf.for loops to virtual
+// This file implements a pass to parametrically map loop.for loops to virtual
 // processing element dimensions.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -22,8 +22,7 @@
 using namespace mlir;
 
 namespace {
-class TestLoopMappingPass
-    : public PassWrapper<TestLoopMappingPass, FunctionPass> {
+class TestLoopMappingPass : public FunctionPass<TestLoopMappingPass> {
 public:
   explicit TestLoopMappingPass() {}
 
@@ -41,9 +40,9 @@ public:
       numProcessors.push_back(op->getResult(1));
     });
 
-    func.walk([&processorIds, &numProcessors](scf::ForOp op) {
+    func.walk([&processorIds, &numProcessors](loop::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentRegion()->getParentOfType<scf::ForOp>())
+      if (op.getParentRegion()->getParentOfType<loop::ForOp>())
         return;
       mapLoopToProcessorIds(op, processorIds, numProcessors);
     });
@@ -51,10 +50,7 @@ public:
 };
 } // end namespace
 
-namespace mlir {
-void registerTestLoopMappingPass() {
-  PassRegistration<TestLoopMappingPass>(
-      "test-mapping-to-processing-elements",
-      "test mapping a single loop on a virtual processor grid");
-}
-} // namespace mlir
+static PassRegistration<TestLoopMappingPass>
+    reg("test-mapping-to-processing-elements",
+        "test mapping a single loop on a virtual processor grid",
+        [] { return std::make_unique<TestLoopMappingPass>(); });

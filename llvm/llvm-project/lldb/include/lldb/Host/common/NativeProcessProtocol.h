@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_COMMON_NATIVEPROCESSPROTOCOL_H
-#define LLDB_HOST_COMMON_NATIVEPROCESSPROTOCOL_H
+#ifndef liblldb_NativeProcessProtocol_h_
+#define liblldb_NativeProcessProtocol_h_
 
 #include "NativeBreakpointList.h"
 #include "NativeThreadProtocol.h"
@@ -379,10 +379,16 @@ public:
   /// \param[in] traceid
   ///     The user id of the tracing instance.
   ///
-  /// \param[out] config
-  ///     The configuration being used for tracing.
+  /// \param[in] config
+  ///     The thread id of the tracing instance, in case configuration
+  ///     for a specific thread is needed should be specified in the
+  ///     config.
   ///
-  /// \return A status indicating what went wrong.
+  /// \param[out] error
+  ///     Status indicates what went wrong.
+  ///
+  /// \param[out] config
+  ///     The actual configuration being used for tracing.
   virtual Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) {
     return Status("Not implemented");
   }
@@ -469,4 +475,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_HOST_COMMON_NATIVEPROCESSPROTOCOL_H
+#endif // #ifndef liblldb_NativeProcessProtocol_h_

@@ -12,7 +12,7 @@ using namespace llvm;
 
 void LanaiMachineFunctionInfo::anchor() {}
 
-Register LanaiMachineFunctionInfo::getGlobalBaseReg() {
+unsigned LanaiMachineFunctionInfo::getGlobalBaseReg() {
   // Return if it has already been initialized.
   if (GlobalBaseReg)
     return GlobalBaseReg;

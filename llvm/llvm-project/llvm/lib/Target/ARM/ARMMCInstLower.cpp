@@ -194,9 +194,9 @@ void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   //   BLX ip
   //   POP{ r0, lr }
   //
-  OutStreamer->emitCodeAlignment(4);
+  OutStreamer->EmitCodeAlignment(4);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitLabel(CurSled);
+  OutStreamer->EmitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
   // Emit "B #20" instruction, which jumps over the next 24 bytes (because
@@ -209,8 +209,8 @@ void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
 
   emitNops(NoopsInSledCount);
 
-  OutStreamer->emitLabel(Target);
-  recordSled(CurSled, MI, Kind, 2);
+  OutStreamer->EmitLabel(Target);
+  recordSled(CurSled, MI, Kind);
 }
 
 void ARMAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)

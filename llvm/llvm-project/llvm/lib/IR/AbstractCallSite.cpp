@@ -14,8 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -32,9 +33,9 @@ STATISTIC(NumInvalidAbstractCallSitesUnknownCallee,
 STATISTIC(NumInvalidAbstractCallSitesNoCallback,
           "Number of invalid abstract call sites created (no callback)");
 
-void AbstractCallSite::getCallbackUses(
-    const CallBase &CB, SmallVectorImpl<const Use *> &CallbackUses) {
-  const Function *Callee = CB.getCalledFunction();
+void AbstractCallSite::getCallbackUses(ImmutableCallSite ICS,
+                                       SmallVectorImpl<const Use *> &CBUses) {
+  const Function *Callee = ICS.getCalledFunction();
   if (!Callee)
     return;
 
@@ -47,58 +48,56 @@ void AbstractCallSite::getCallbackUses(
     auto *CBCalleeIdxAsCM = cast<ConstantAsMetadata>(OpMD->getOperand(0));
     uint64_t CBCalleeIdx =
         cast<ConstantInt>(CBCalleeIdxAsCM->getValue())->getZExtValue();
-    if (CBCalleeIdx < CB.arg_size())
-      CallbackUses.push_back(CB.arg_begin() + CBCalleeIdx);
+    CBUses.push_back(ICS.arg_begin() + CBCalleeIdx);
   }
 }
 
 /// Create an abstract call site from a use.
-AbstractCallSite::AbstractCallSite(const Use *U)
-    : CB(dyn_cast<CallBase>(U->getUser())) {
+AbstractCallSite::AbstractCallSite(const Use *U) : CS(U->getUser()) {
 
   // First handle unknown users.
-  if (!CB) {
+  if (!CS) {
 
     // If the use is actually in a constant cast expression which itself
     // has only one use, we look through the constant cast expression.
     // This happens by updating the use @p U to the use of the constant
-    // cast expression and afterwards re-initializing CB accordingly.
+    // cast expression and afterwards re-initializing CS accordingly.
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U->getUser()))
-      if (CE->hasOneUse() && CE->isCast()) {
+      if (CE->getNumUses() == 1 && CE->isCast()) {
         U = &*CE->use_begin();
-        CB = dyn_cast<CallBase>(U->getUser());
+        CS = CallSite(U->getUser());
       }
 
-    if (!CB) {
+    if (!CS) {
       NumInvalidAbstractCallSitesUnknownUse++;
       return;
     }
   }
 
   // Then handle direct or indirect calls. Thus, if U is the callee of the
-  // call site CB it is not a callback and we are done.
-  if (CB->isCallee(U)) {
+  // call site CS it is not a callback and we are done.
+  if (CS.isCallee(U)) {
     NumDirectAbstractCallSites++;
     return;
   }
 
   // If we cannot identify the broker function we cannot create a callback and
   // invalidate the abstract call site.
-  Function *Callee = CB->getCalledFunction();
+  Function *Callee = CS.getCalledFunction();
   if (!Callee) {
     NumInvalidAbstractCallSitesUnknownCallee++;
-    CB = nullptr;
+    CS = CallSite();
     return;
   }
 
   MDNode *CallbackMD = Callee->getMetadata(LLVMContext::MD_callback);
   if (!CallbackMD) {
     NumInvalidAbstractCallSitesNoCallback++;
-    CB = nullptr;
+    CS = CallSite();
     return;
   }
 
-  unsigned UseIdx = CB->getArgOperandNo(U);
+  unsigned UseIdx = CS.getArgumentNo(U);
   MDNode *CallbackEncMD = nullptr;
   for (const MDOperand &Op : CallbackMD->operands()) {
     MDNode *OpMD = cast<MDNode>(Op.get());
@@ -113,7 +112,7 @@ AbstractCallSite::AbstractCallSite(const Use *U)
 
   if (!CallbackEncMD) {
     NumInvalidAbstractCallSitesNoCallback++;
-    CB = nullptr;
+    CS = CallSite();
     return;
   }
 
@@ -121,7 +120,7 @@ AbstractCallSite::AbstractCallSite(const Use *U)
 
   assert(CallbackEncMD->getNumOperands() >= 2 && "Incomplete !callback metadata");
 
-  unsigned NumCallOperands = CB->getNumArgOperands();
+  unsigned NumCallOperands = CS.getNumArgOperands();
   // Skip the var-arg flag at the end when reading the metadata.
   for (unsigned u = 0, e = CallbackEncMD->getNumOperands() - 1; u < e; u++) {
     Metadata *OpAsM = CallbackEncMD->getOperand(u).get();

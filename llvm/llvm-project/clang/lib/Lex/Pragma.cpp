@@ -71,36 +71,31 @@ void EmptyPragmaHandler::HandlePragma(Preprocessor &PP,
 // PragmaNamespace Implementation.
 //===----------------------------------------------------------------------===//
 
+PragmaNamespace::~PragmaNamespace() {
+  llvm::DeleteContainerSeconds(Handlers);
+}
+
 /// FindHandler - Check to see if there is already a handler for the
 /// specified name.  If not, return the handler for the null identifier if it
 /// exists, otherwise return null.  If IgnoreNull is true (the default) then
 /// the null handler isn't returned on failure to match.
 PragmaHandler *PragmaNamespace::FindHandler(StringRef Name,
                                             bool IgnoreNull) const {
-  auto I = Handlers.find(Name);
-  if (I != Handlers.end())
-    return I->getValue().get();
-  if (IgnoreNull)
-    return nullptr;
-  I = Handlers.find(StringRef());
-  if (I != Handlers.end())
-    return I->getValue().get();
-  return nullptr;
+  if (PragmaHandler *Handler = Handlers.lookup(Name))
+    return Handler;
+  return IgnoreNull ? nullptr : Handlers.lookup(StringRef());
 }
 
 void PragmaNamespace::AddPragma(PragmaHandler *Handler) {
-  assert(!Handlers.count(Handler->getName()) &&
+  assert(!Handlers.lookup(Handler->getName()) &&
          "A handler with this name is already registered in this namespace");
-  Handlers[Handler->getName()].reset(Handler);
+  Handlers[Handler->getName()] = Handler;
 }
 
 void PragmaNamespace::RemovePragmaHandler(PragmaHandler *Handler) {
-  auto I = Handlers.find(Handler->getName());
-  assert(I != Handlers.end() &&
+  assert(Handlers.lookup(Handler->getName()) &&
          "Handler not registered in this namespace");
-  // Release ownership back to the caller.
-  I->getValue().release();
-  Handlers.erase(I);
+  Handlers.erase(Handler->getName());
 }
 
 void PragmaNamespace::HandlePragma(Preprocessor &PP,

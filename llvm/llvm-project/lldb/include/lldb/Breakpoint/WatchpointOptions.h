@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_BREAKPOINT_WATCHPOINTOPTIONS_H
-#define LLDB_BREAKPOINT_WATCHPOINTOPTIONS_H
+#ifndef liblldb_WatchpointOptions_h_
+#define liblldb_WatchpointOptions_h_
 
 #include <memory>
 #include <string>
@@ -198,4 +198,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_BREAKPOINT_WATCHPOINTOPTIONS_H
+#endif // liblldb_WatchpointOptions_h_

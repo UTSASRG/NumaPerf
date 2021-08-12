@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-void AVRMCELFStreamer::emitValueForModiferKind(
+void AVRMCELFStreamer::EmitValueForModiferKind(
     const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc,
     AVRMCExpr::VariantKind ModifierKind) {
   MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_AVR_NONE;
@@ -36,7 +36,7 @@ void AVRMCELFStreamer::emitValueForModiferKind(
     Kind = MCSymbolRefExpr::VK_AVR_HI8;
   else if (ModifierKind == AVRMCExpr::VK_AVR_HH8)
     Kind = MCSymbolRefExpr::VK_AVR_HLO8;
-  MCELFStreamer::emitValue(MCSymbolRefExpr::create(Sym, Kind, getContext()),
+  MCELFStreamer::EmitValue(MCSymbolRefExpr::create(Sym, Kind, getContext()),
                            SizeInBytes, Loc);
 }
 

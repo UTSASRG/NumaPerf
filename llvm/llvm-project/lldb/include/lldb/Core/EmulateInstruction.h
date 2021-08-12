@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_EMULATEINSTRUCTION_H
-#define LLDB_CORE_EMULATEINSTRUCTION_H
+#ifndef lldb_EmulateInstruction_h_
+#define lldb_EmulateInstruction_h_
 
 #include <string>
 
@@ -499,10 +499,9 @@ protected:
 
 private:
   // For EmulateInstruction only
-  EmulateInstruction(const EmulateInstruction &) = delete;
-  const EmulateInstruction &operator=(const EmulateInstruction &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(EmulateInstruction);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_EMULATEINSTRUCTION_H
+#endif // lldb_EmulateInstruction_h_

@@ -42,8 +42,7 @@ public:
   }
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override {
-    return std::string(
-        llvm::formatv("Dump {0} AST", Node->getNodeKind().asStringRef()));
+    return llvm::formatv("Dump {0} AST", Node->getNodeKind().asStringRef());
   }
   Intent intent() const override { return Info; }
   bool hidden() const override { return true; }
@@ -149,9 +148,9 @@ public:
     return Effect::showMessage(std::move(OS.str()));
   }
   std::string title() const override {
-    return std::string(llvm::formatv(
+    return llvm::formatv(
         "Show {0} layout",
-        TypeWithKeyword::getTagTypeKindName(Record->getTagKind())));
+        TypeWithKeyword::getTagTypeKindName(Record->getTagKind()));
   }
   Intent intent() const override { return Info; }
   // FIXME: this is interesting to most users. However:

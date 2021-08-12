@@ -29,24 +29,24 @@ class LanaiMachineFunctionInfo : public MachineFunctionInfo {
   // SRetReturnReg - Lanai ABI require that sret lowering includes
   // returning the value of the returned struct in a register. This field
   // holds the virtual register into which the sret argument is passed.
-  Register SRetReturnReg;
+  unsigned SRetReturnReg;
 
   // GlobalBaseReg - keeps track of the virtual register initialized for
   // use as the global base register. This is used for PIC in some PIC
   // relocation models.
-  Register GlobalBaseReg;
+  unsigned GlobalBaseReg;
 
   // VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex;
 
 public:
   explicit LanaiMachineFunctionInfo(MachineFunction &MF)
-      : MF(MF), VarArgsFrameIndex(0) {}
+      : MF(MF), SRetReturnReg(0), GlobalBaseReg(0), VarArgsFrameIndex(0) {}
 
-  Register getSRetReturnReg() const { return SRetReturnReg; }
-  void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
+  unsigned getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
-  Register getGlobalBaseReg();
+  unsigned getGlobalBaseReg();
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }

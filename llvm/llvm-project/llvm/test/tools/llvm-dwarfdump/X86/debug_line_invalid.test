@@ -3,19 +3,23 @@
 
 ## Show that a bad length stops parsing of the section.
 # RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_reserved_length.s -filetype=obj -o %t-reserved.o
-# RUN: llvm-dwarfdump -debug-line %t-reserved.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL,RESERVED
-# RUN: llvm-dwarfdump -debug-line %t-reserved.o -verbose 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL,RESERVED
+# RUN: llvm-dwarfdump -debug-line %t-reserved.o 2> %t-reserved.err \
+# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL
+# RUN: FileCheck %s --input-file=%t-reserved.err --check-prefix=RESERVED
+# RUN: llvm-dwarfdump -debug-line %t-reserved.o -verbose 2> %t-reserved-verbose.err \
+# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL
+# RUN: FileCheck %s --input-file=%t-reserved-verbose.err --check-prefix=RESERVED
 
 ## We only produce warnings for malformed tables after the specified unit if
 ## parsing can continue.
-# RUN: llvm-dwarfdump -debug-line=0 %t-reserved.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,NOLATER,RESERVED
+# RUN: llvm-dwarfdump -debug-line=0 %t-reserved.o 2> %t-reserved-off-first.err \
+# RUN:   | FileCheck %s --check-prefixes=FIRST,NOLATER
+# RUN: FileCheck %s --input-file=%t-reserved-off-first.err --check-prefix=RESERVED
 
 ## Stop looking for the specified unit, if a fatally-bad prologue is detected.
-# RUN: llvm-dwarfdump -debug-line=0x4b %t-reserved.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=NOFIRST,NOLATER,RESERVED
+# RUN: llvm-dwarfdump -debug-line=0x4b %t-reserved.o 2> %t-reserved-off-last.err \
+# RUN:   | FileCheck %s --check-prefixes=NOFIRST,NOLATER
+# RUN: FileCheck %s --input-file=%t-reserved-off-last.err --check-prefix=RESERVED
 
 ## Show that non-fatal errors do not prevent parsing the rest of the section.
 # RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_malformed.s -filetype=obj -o %t-malformed.o
@@ -23,8 +27,7 @@
 # RUN:   | FileCheck %s --check-prefixes=FIRST,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed.err --check-prefixes=ALL,OTHER
 # RUN: llvm-dwarfdump -debug-line %t-malformed.o -verbose 2> %t-malformed-verbose.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,VERBOSE,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]' \
-# RUN:       --implicit-check-not=' DW_LNS' --implicit-check-not=' DW_LNE' --implicit-check-not='address +='
+# RUN:   | FileCheck %s --check-prefixes=FIRST,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-verbose.err --check-prefixes=ALL,OTHER
 
 ## We should still produce warnings for malformed tables after the specified unit.
@@ -33,67 +36,44 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 ## Don't stop looking for the later unit if non-fatal issues are found.
-# RUN: llvm-dwarfdump -debug-line=0x419 %t-malformed.o 2> %t-malformed-off-last.err \
+# RUN: llvm-dwarfdump -debug-line=0x2af %t-malformed.o 2> %t-malformed-off-last.err \
 # RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
-# FIRST:        debug_line[0x00000000]
-# VERBOSE:      DW_LNE_set_address (0x000000000badbeef)
-# VERBOSE-NEXT: DW_LNE_end_sequence
-# FIRST:        0x000000000badbeef {{.*}} end_sequence
-# NOFIRST-NOT:  debug_line[0x00000000]
-# NOFIRST-NOT:  0x000000000badbeef {{.*}} end_sequence
-# NOLATER-NOT:  debug_line[{{.*}}]
-# NOLATER-NOT:  end_sequence
+# FIRST:       debug_line[0x00000000]
+# FIRST:       0x000000000badbeef {{.*}} end_sequence
+# NOFIRST-NOT: debug_line[0x00000000]
+# NOFIRST-NOT: 0x000000000badbeef {{.*}} end_sequence
+# NOLATER-NOT: debug_line[{{.*}}]
+# NOLATER-NOT: end_sequence
 
-## For fatal issues, the following table(s) should not be dumped:
+## For fatal issues, the following table(s) should not be dumped.
 # FATAL:      debug_line[0x00000048]
-# RESERVED-NOT: prologue
-# RESERVED: warning: parsing line table prologue at offset 0x00000048: unsupported reserved unit length of value 0xfffffffe
-# RESERVED-NOT: prologue
+# FATAL-NEXT: Line table prologue
+# FATAL-NEXT: total_length: 0xfffffffe
 # FATAL-NOT:  debug_line
 
-## For non-fatal issues, the table data should be dumped:
-
-## Version 0 table.
+## For non-fatal prologue issues, the table prologue should be dumped, and any
+## subsequent tables should also be.
+## Case 1: Version 0 table.
 # NONFATAL:      debug_line[0x00000048]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL-NEXT:    total_length: 0x00000002
-# NONFATAL-NEXT:          format: DWARF32
-# NONFATAL-NEXT:         version: 0
-# NONFATAL-NOT: prologue_length
+# NONFATAL-NOT:  Address
 
-## Version 1 table.
+## Case 2: Version 1 table.
 # NONFATAL:      debug_line[0x0000004e]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL-NEXT:    total_length: 0x00000002
-# NONFATAL-NEXT:          format: DWARF32
-# NONFATAL-NEXT:         version: 1
-# NONFATAL-NOT: prologue_length
+# NONFATAL-NOT:  Address
 
-## Malformed directory format with no path component.
+## Case 3: Malformed directory format with no path component.
 # NONFATAL:      debug_line[0x00000054]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL:      prologue_length: 0x00000013
 # NONFATAL-NOT:  include_directories
 # NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNE_set_address (0x8877665544332211)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NOT:  Address
 
-## Prologue with length shorter than parsed.
+## Case 4: Prologue with length shorter than parsed.
 # NONFATAL:      debug_line[0x00000081]
-# NONFATAL-NEXT: Line table prologue
-# NONFATAL:      file_names[  1]:
-# NONFATAL-NEXT:            name: "file1"
-# NONFATAL-NEXT:       dir_index: 1
-# NONFATAL-NEXT:        mod_time: 0x00000002
-# NONFATAL-NEXT:          length: 0x00000003
-# VERBOSE:       DW_LNS_negate_stmt
-# VERBOSE-NEXT:  DW_LNE_set_address (0x1122334455667788)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
-
-## Prologue with length longer than parsed.
-# NONFATAL:      debug_line[0x000000c8]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      file_names[  2]:
 # NONFATAL-NEXT:            name: "file2"
@@ -101,186 +81,87 @@
 # NONFATAL-NEXT:        mod_time: 0x00000002
 # NONFATAL-NEXT:          length: 0x00000003
 # NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNE_set_address (0x1111222233334444)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NOT:  Address
 
-## Extended opcode with incorrect length versus expected.
+## Case 5: Prologue with length longer than parsed.
+# NONFATAL:      debug_line[0x000000c9]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL:      file_names[  2]:
+# NONFATAL-NEXT:            name: "file2"
+# NONFATAL-NEXT:       dir_index: 1
+# NONFATAL-NEXT:        mod_time: 0x00000002
+# NONFATAL-NEXT:          length: 0x00000003
+# NONFATAL-NOT:  file_names
+# NONFATAL-NOT:  Address
+
+## Case 6: Extended opcode with incorrect length versus expected.
 # NONFATAL:      debug_line[0x00000111]
+## Dumping prints the line table prologue and any valid operations up to the
+## point causing the problem.
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL:      prologue_length: 0x00000030
-# VERBOSE:       DW_LNE_set_address (0x00000000abbadaba)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
-# VERBOSE:       DW_LNE_set_discriminator (10)
-# VERBOSE-NEXT:  DW_LNS_set_prologue_end
-# VERBOSE-NEXT:  DW_LNE_set_address (0x00000000babb1e45)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL:      0x00000000abbadaba {{.*}} end_sequence
+# NONFATAL-NOT:  is_stmt
 
-## No end of sequence.
-# NONFATAL:      debug_line[0x0000016c]
+## For minor issues, we can dump the whole table.
+## Case 7: No end of sequence.
+# NONFATAL:      debug_line[0x00000167]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL:      prologue_length: 0x00000030
-# VERBOSE:       DW_LNE_set_address (0x00000000deadfade)
-# VERBOSE-NEXT:  DW_LNS_copy
+# NONFATAL:      0x00000000deadfade {{.*}} is_stmt
+# NONFATAL-NOT:  end_sequence
 
-## Very short prologue length for V5 (ends during parameters).
-# NONFATAL:      debug_line[0x000001b2]
+## Case 8: Very short prologue length for V5 (ends during parameters).
+# NONFATAL:      debug_line[0x000001ad]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      standard_opcode_lengths[DW_LNS_set_isa] = 1
 # NONFATAL-NEXT: include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
-# NONFATAL-NEXT:            name: "xyz"
-# VERBOSE:       DW_LNE_end_sequence
-# VERBOSE:       DW_LNS_copy
-# VERBOSE:       DW_LNS_const_add_pc (0x0000000000000011)
-# VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       address += 2, line += 1
-# VERBOSE:       address += 7, line += 0
-# VERBOSE:       address += 6, line += 7
-# VERBOSE:       address += 7, line += -4
-# VERBOSE:       DW_LNE_end_sequence
-# VERBOSE:       DW_LNS_const_add_pc (0x0000000000000011)
-# VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       address += 7, line += 4
-# VERBOSE:       address += 7, line += 5
-# VERBOSE:       address += 7, line += 6
-# VERBOSE:       DW_LNE_set_address (0x0000babb1ebabb1e)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NEXT:            name: "a.c"
+# NONFATAL-NEXT:       dir_index: 1
+# NONFATAL-NOT:  Address
 
-## V5 prologue ends during file table.
-# NONFATAL:      debug_line[0x000001ee]
+## Case 9: V5 prologue ends during file table.
+# NONFATAL:      debug_line[0x000001ed]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
-# NONFATAL-NEXT:            name: "xyz"
+# NONFATAL-NEXT:            name: "a.c"
 # NONFATAL-NEXT:       dir_index: 1
-# VERBOSE:       DW_LNS_set_epilogue_begin
-# VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       address += 7, line += 4
-# VERBOSE:       address += 7, line += 5
-# VERBOSE:       address += 7, line += 6
-# VERBOSE:       DW_LNE_end_sequence
-# VERBOSE:       DW_LNE_set_address (0x00000ab4acadab4a)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NOT:  Address
 
-## V5 prologue ends during directory table.
-# NONFATAL:      debug_line[0x0000022f]
+## Case 10: V5 prologue ends during directory table.
+# NONFATAL:      debug_line[0x0000022d]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
-# NONFATAL-NEXT:            name: "xyz"
-# VERBOSE:       address += 2, line += 1
-# VERBOSE:       address += 7, line += 0
-# VERBOSE:       address += 6, line += 7
-# VERBOSE:       address += 7, line += -4
-# VERBOSE:       DW_LNE_end_sequence
-# VERBOSE:       DW_LNS_const_add_pc (0x0000000000000011)
-# VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       address += 7, line += 4
-# VERBOSE:       address += 7, line += 5
-# VERBOSE:       address += 7, line += 6
-# VERBOSE:       DW_LNE_set_address (0x4444333322221111)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NEXT:            name: "a.c"
+# NONFATAL-NEXT:       dir_index: 1
+# NONFATAL-NOT:  Address
 
-## V5 invalid MD5 hash form when there is still data to be read.
-# NONFATAL:      debug_line[0x0000026b]
+## Case 11: V5 invalid MD5 hash form.
+# NONFATAL:      debug_line[0x0000026d]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNE_set_address (0x1234123412341234)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NOT:  Address
 
-## V5 invalid MD5 hash form when data beyond the prologue length has
-## been read before the MD5 problem is identified.
-# NONFATAL:      debug_line[0x000002ae]
-# NONFATAL-NEXT: Line table prologue
-# NONFATAL:      include_directories[  0] = "/tmp"
-# NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNS_set_epilogue_begin
-# VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       address += 7, line += 4
-# VERBOSE:       address += 7, line += 5
-# VERBOSE:       address += 7, line += 6
-# VERBOSE:       DW_LNE_set_address (0x4321432143214321)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# LAST:          debug_line[0x000002af]
+# LAST:          0x00000000cafebabe {{.*}} end_sequence
 
-## V5 invalid directory content description has unsupported form.
-# NONFATAL:      debug_line[0x000002ec]
-# NONFATAL-NEXT: Line table prologue
-# NONFATAL:      include_directories[  0] = "/foo"
-# NONFATAL-NOT:  include_directories
-# NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNE_set_address (0xaaaabbbbccccdddd)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
-
-## Opcode base field of value zero.
-# NONFATAL:      debug_line[0x00000332]
-# NONFATAL-NEXT: Line table prologue
-# NONFATAL:      include_directories[  1] = "dir1"
-# NONFATAL-NEXT: file_names[  1]:
-# NONFATAL-NEXT:            name: "file1"
-# NONFATAL-NEXT:       dir_index: 1
-# NONFATAL-NEXT:        mod_time: 0x00000002
-# NONFATAL-NEXT:          length: 0x00000003
-# VERBOSE:       DW_LNE_set_address (0xffffeeeeddddcccc)
-# VERBOSE-NEXT:  address += 1, line += 0
-# VERBOSE:       DW_LNE_end_sequence
-
-## V4 table with unterminated include directory table.
-# NONFATAL:      debug_line[0x00000361]
-# NONFATAL-NEXT: Line table prologue
-# NONFATAL:      include_directories[  1] = "dir1"
-# NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNE_set_address (0xabcdef0123456789)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
-
-## V4 table with unterminated file name table.
-# NONFATAL:      debug_line[0x00000390]
-# NONFATAL-NEXT: Line table prologue
-# NONFATAL:      file_names[  1]:
-# NONFATAL-NEXT:            name: "foo.c"
-# NONFATAL-NEXT:       dir_index: 1
-# NONFATAL-NEXT:        mod_time: 0x00000002
-# NONFATAL-NEXT:          length: 0x00000003
-# NONFATAL-NOT:  file_names
-# VERBOSE:       DW_LNE_set_address (0xababcdcdefef0909)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
-
-## Table with extended opcode that overruns table end.
-# NONFATAL:      debug_line[0x000003c9]
-# NONFATAL-NEXT: Line table prologue
-# VERBOSE:       DW_LNE_set_address (0x00000000feedfeed)
-# VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       DW_LNE_set_address (0x0000000000000000)
-
-# LAST:          debug_line[0x00000419]
-# VERBOSE:       DW_LNE_set_address (0x00000000cafebabe)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
 
 # ALL-NOT:  warning:
-# ALL:      warning: parsing line table prologue at offset 0x00000048: unsupported version 0
-# ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e: unsupported version 1
+# ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0x00
+# ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 0x01
 # ALL-NEXT: warning: parsing line table prologue at 0x00000054 found an invalid directory or file table description at 0x00000073
 # ALL-NEXT: warning: failed to parse entry content descriptions because no path was found
-# ALL-NEXT: warning: parsing line table prologue at 0x00000081 found an invalid directory or file table description at 0x000000ba
-# ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
-# ALL-NEXT: warning: parsing line table prologue at 0x000000c8 should have ended at 0x00000103 but it ended at 0x00000102
+# FIXME - The latter offset in the next line should be 0xad. The filename parsing code does not notice a missing terminating byte.
+# ALL-NEXT: warning: parsing line table prologue at 0x00000081 should have ended at 0x000000b9 but it ended at 0x000000ba
+# ALL-NEXT: warning: parsing line table prologue at 0x000000c9 should have ended at 0x00000104 but it ended at 0x00000103
 # OTHER-NEXT: warning: unexpected line op length at offset 0x00000158 expected 0x02 found 0x01
-# OTHER-NEXT: warning: unexpected line op length at offset 0x0000015c expected 0x01 found 0x02
-# OTHER-NEXT: warning: last sequence in debug line table at offset 0x0000016c is not terminated
-# ALL-NEXT: warning: parsing line table prologue at 0x000001b2 should have ended at 0x000001ce but it ended at 0x000001e1
-# ALL-NEXT: warning: parsing line table prologue at 0x000001ee should have ended at 0x00000219 but it ended at 0x00000220
-# ALL-NEXT: warning: parsing line table prologue at 0x0000022f should have ended at 0x00000251 but it ended at 0x0000025e
-# ALL-NEXT: warning: parsing line table prologue at 0x0000026b found an invalid directory or file table description at 0x0000029f
+# OTHER-NEXT: warning: last sequence in debug line table at offset 0x00000167 is not terminated
+# ALL-NEXT: warning: parsing line table prologue at 0x000001ad should have ended at 0x000001c8 but it ended at 0x000001df
+# ALL-NEXT: warning: parsing line table prologue at 0x000001ed should have ended at 0x00000218 but it ended at 0x0000021f
+# ALL-NEXT: warning: parsing line table prologue at 0x0000022d should have ended at 0x0000024f but it ended at 0x0000025f
+# ALL-NEXT: warning: parsing line table prologue at 0x0000026d found an invalid directory or file table description at 0x000002a2
 # ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
-# ALL-NEXT: warning: parsing line table prologue at 0x000002ae found an invalid directory or file table description at 0x000002e0
-# ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
-# ALL-NEXT: warning: parsing line table prologue at 0x000002ec found an invalid directory or file table description at 0x00000315
-# ALL-NEXT: warning: failed to parse directory entry because skipping the form value failed.
-# ALL-NEXT: warning: parsing line table prologue at offset 0x00000332 found opcode base of 0. Assuming no standard opcodes
-# ALL-NEXT: warning: parsing line table prologue at 0x00000361 found an invalid directory or file table description at 0x00000383
-# ALL-NEXT: warning: include directories table was not null terminated before the end of the prologue
-# ALL-NEXT: warning: parsing line table prologue at 0x00000390 found an invalid directory or file table description at 0x000003bf
-# ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
-# OTHER-NEXT: warning: unexpected line op length at offset 0x00000411 expected 0x09 found 0x01
-# OTHER-NEXT: warning: last sequence in debug line table at offset 0x000003c9 is not terminated
 # ALL-NOT:  warning:

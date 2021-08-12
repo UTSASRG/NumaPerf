@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CLANGCOMMON_CLANGHIGHLIGHTER_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_CLANGCOMMON_CLANGHIGHLIGHTER_H
+#ifndef liblldb_ClangHighlighter_h_
+#define liblldb_ClangHighlighter_h_
 
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringSet.h"
@@ -34,4 +34,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CLANGCOMMON_CLANGHIGHLIGHTER_H
+#endif // liblldb_ClangHighlighter_h_

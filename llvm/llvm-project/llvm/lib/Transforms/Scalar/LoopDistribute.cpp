@@ -903,14 +903,15 @@ private:
   /// \p PtrToPartition contains the partition number for pointers.  Partition
   /// number -1 means that the pointer is used in multiple partitions.  In this
   /// case we can't safely omit the check.
-  SmallVector<RuntimePointerCheck, 4> includeOnlyCrossPartitionChecks(
-      const SmallVectorImpl<RuntimePointerCheck> &AllChecks,
+  SmallVector<RuntimePointerChecking::PointerCheck, 4>
+  includeOnlyCrossPartitionChecks(
+      const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &AllChecks,
       const SmallVectorImpl<int> &PtrToPartition,
       const RuntimePointerChecking *RtPtrChecking) {
-    SmallVector<RuntimePointerCheck, 4> Checks;
+    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
 
     copy_if(AllChecks, std::back_inserter(Checks),
-            [&](const RuntimePointerCheck &Check) {
+            [&](const RuntimePointerChecking::PointerCheck &Check) {
               for (unsigned PtrIdx1 : Check.first->Members)
                 for (unsigned PtrIdx2 : Check.second->Members)
                   // Only include this check if there is a pair of pointers

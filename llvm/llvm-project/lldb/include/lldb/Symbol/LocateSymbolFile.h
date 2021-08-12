@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_LOCATESYMBOLFILE_H
-#define LLDB_SYMBOL_LOCATESYMBOLFILE_H
+#ifndef liblldb_Symbols_h_
+#define liblldb_Symbols_h_
 
 #include <stdint.h>
 
@@ -55,4 +55,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_LOCATESYMBOLFILE_H
+#endif // liblldb_Symbols_h_

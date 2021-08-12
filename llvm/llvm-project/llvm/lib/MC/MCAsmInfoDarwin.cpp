@@ -29,10 +29,11 @@ bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
   if (SMO.getType() == MachO::S_CSTRING_LITERALS)
     return false;
 
-  if (SMO.getSegmentName() == "__DATA" && SMO.getName() == "__cfstring")
+  if (SMO.getSegmentName() == "__DATA" && SMO.getSectionName() == "__cfstring")
     return false;
 
-  if (SMO.getSegmentName() == "__DATA" && SMO.getName() == "__objc_classrefs")
+  if (SMO.getSegmentName() == "__DATA" &&
+      SMO.getSectionName() == "__objc_classrefs")
     return false;
 
   switch (SMO.getType()) {
@@ -90,5 +91,7 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   HasAltEntry = true;
 
   DwarfUsesRelocationsAcrossSections = false;
+
+  UseIntegratedAssembler = true;
   SetDirectiveSuppressesReloc = true;
 }

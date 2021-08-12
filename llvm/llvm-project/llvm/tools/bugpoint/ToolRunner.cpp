@@ -442,7 +442,7 @@ Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
     errs() << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  OutputAsmFile = std::string(UniqueFile.str());
+  OutputAsmFile = UniqueFile.str();
   std::vector<StringRef> LLCArgs;
   LLCArgs.push_back(LLCPath);
 
@@ -772,7 +772,7 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
     errs() << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  OutputFile = std::string(UniqueFilename.str());
+  OutputFile = UniqueFilename.str();
 
   std::vector<StringRef> CCArgs;
 

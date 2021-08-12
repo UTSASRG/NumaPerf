@@ -17,9 +17,6 @@
 #define BASE id
 #include <print_templ.c>
 #undef BASE
-#define BASE multi_id
-#include <print_templ.c>
-#undef BASE
 #define BASE val
 #include <print_templ.c>
 #undef BASE

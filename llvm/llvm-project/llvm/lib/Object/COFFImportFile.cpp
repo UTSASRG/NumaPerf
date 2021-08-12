@@ -600,7 +600,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
                                   : getNameType(SymbolName, E.Name,
                                                 Machine, MinGW);
     Expected<std::string> Name = E.ExtName.empty()
-                                     ? std::string(SymbolName)
+                                     ? SymbolName
                                      : replace(SymbolName, E.Name, E.ExtName);
 
     if (!Name)

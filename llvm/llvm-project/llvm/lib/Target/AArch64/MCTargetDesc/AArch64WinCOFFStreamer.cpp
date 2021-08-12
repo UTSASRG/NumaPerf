@@ -28,7 +28,7 @@ public:
 
   void EmitWinEHHandlerData(SMLoc Loc) override;
   void EmitWindowsUnwindTables() override;
-  void finishImpl() override;
+  void FinishImpl() override;
 };
 
 void AArch64WinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
@@ -45,11 +45,11 @@ void AArch64WinCOFFStreamer::EmitWindowsUnwindTables() {
   EHStreamer.Emit(*this);
 }
 
-void AArch64WinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+void AArch64WinCOFFStreamer::FinishImpl() {
+  EmitFrames(nullptr);
   EmitWindowsUnwindTables();
 
-  MCWinCOFFStreamer::finishImpl();
+  MCWinCOFFStreamer::FinishImpl();
 }
 } // end anonymous namespace
 
@@ -68,7 +68,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinUnwindCode(unsigned UnwindCode,
   WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
   if (!CurFrame)
     return;
-  MCSymbol *Label = S.emitCFILabel();
+  MCSymbol *Label = S.EmitCFILabel();
   auto Inst = WinEH::Instruction(UnwindCode, Label, Reg, Offset);
   if (InEpilogCFI)
     CurFrame->EpilogMap[CurrentEpilog].push_back(Inst);
@@ -158,7 +158,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIPrologEnd() {
   if (!CurFrame)
     return;
 
-  MCSymbol *Label = S.emitCFILabel();
+  MCSymbol *Label = S.EmitCFILabel();
   CurFrame->PrologEnd = Label;
   WinEH::Instruction Inst = WinEH::Instruction(Win64EH::UOP_End, Label, -1, 0);
   auto it = CurFrame->Instructions.begin();
@@ -172,7 +172,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogStart() {
     return;
 
   InEpilogCFI = true;
-  CurrentEpilog = S.emitCFILabel();
+  CurrentEpilog = S.EmitCFILabel();
 }
 
 void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogEnd() {
@@ -182,7 +182,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogEnd() {
     return;
 
   InEpilogCFI = false;
-  MCSymbol *Label = S.emitCFILabel();
+  MCSymbol *Label = S.EmitCFILabel();
   WinEH::Instruction Inst = WinEH::Instruction(Win64EH::UOP_End, Label, -1, 0);
   CurFrame->EpilogMap[CurrentEpilog].push_back(Inst);
   CurrentEpilog = nullptr;

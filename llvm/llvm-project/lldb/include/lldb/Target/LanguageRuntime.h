@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_LANGUAGERUNTIME_H
-#define LLDB_TARGET_LANGUAGERUNTIME_H
+#ifndef liblldb_LanguageRuntime_h_
+#define liblldb_LanguageRuntime_h_
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
@@ -20,6 +20,8 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+
+#include "clang/Basic/TargetOptions.h"
 
 namespace lldb_private {
 
@@ -51,7 +53,7 @@ protected:
   LanguageRuntime *m_language_runtime;
   lldb::SearchFilterSP m_filter_sp;
 
-  lldb::SearchFilterSP DoCreateCopy() override;
+  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
 
   void UpdateModuleListIfNeeded();
 };
@@ -134,8 +136,7 @@ public:
   virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   virtual lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) = 0;
+  CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) = 0;
 
   virtual lldb::SearchFilterSP CreateExceptionSearchFilter() {
     return m_process->GetTarget().GetSearchFilterForModule(nullptr);
@@ -161,6 +162,13 @@ public:
 
   virtual void ModulesDidLoad(const ModuleList &module_list) {}
 
+  // Called by the Clang expression evaluation engine to allow runtimes to
+  // alter the set of target options provided to the compiler. If the options
+  // prototype is modified, runtimes must return true, false otherwise.
+  virtual bool GetOverrideExprOptions(clang::TargetOptions &prototype) {
+    return false;
+  }
+
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is
   // assembled and run.
@@ -185,10 +193,9 @@ protected:
   Process *m_process;
 
 private:
-  LanguageRuntime(const LanguageRuntime &) = delete;
-  const LanguageRuntime &operator=(const LanguageRuntime &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_LANGUAGERUNTIME_H
+#endif // liblldb_LanguageRuntime_h_

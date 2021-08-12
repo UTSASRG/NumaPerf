@@ -47,7 +47,7 @@ void ento::registerDominatorsTreeDumper(CheckerManager &mgr) {
   mgr.registerChecker<DominatorsTreeDumper>();
 }
 
-bool ento::shouldRegisterDominatorsTreeDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterDominatorsTreeDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -73,7 +73,7 @@ void ento::registerPostDominatorsTreeDumper(CheckerManager &mgr) {
   mgr.registerChecker<PostDominatorsTreeDumper>();
 }
 
-bool ento::shouldRegisterPostDominatorsTreeDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterPostDominatorsTreeDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -98,7 +98,7 @@ void ento::registerControlDependencyTreeDumper(CheckerManager &mgr) {
   mgr.registerChecker<ControlDependencyTreeDumper>();
 }
 
-bool ento::shouldRegisterControlDependencyTreeDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterControlDependencyTreeDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -122,7 +122,7 @@ void ento::registerLiveVariablesDumper(CheckerManager &mgr) {
   mgr.registerChecker<LiveVariablesDumper>();
 }
 
-bool ento::shouldRegisterLiveVariablesDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterLiveVariablesDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -145,7 +145,7 @@ void ento::registerLiveStatementsDumper(CheckerManager &mgr) {
   mgr.registerChecker<LiveStatementsDumper>();
 }
 
-bool ento::shouldRegisterLiveStatementsDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterLiveStatementsDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -169,7 +169,7 @@ void ento::registerCFGViewer(CheckerManager &mgr) {
   mgr.registerChecker<CFGViewer>();
 }
 
-bool ento::shouldRegisterCFGViewer(const CheckerManager &mgr) {
+bool ento::shouldRegisterCFGViewer(const LangOptions &LO) {
   return true;
 }
 
@@ -199,7 +199,7 @@ void ento::registerCFGDumper(CheckerManager &mgr) {
   mgr.registerChecker<CFGDumper>();
 }
 
-bool ento::shouldRegisterCFGDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterCFGDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -223,7 +223,7 @@ void ento::registerCallGraphViewer(CheckerManager &mgr) {
   mgr.registerChecker<CallGraphViewer>();
 }
 
-bool ento::shouldRegisterCallGraphViewer(const CheckerManager &mgr) {
+bool ento::shouldRegisterCallGraphViewer(const LangOptions &LO) {
   return true;
 }
 
@@ -247,7 +247,7 @@ void ento::registerCallGraphDumper(CheckerManager &mgr) {
   mgr.registerChecker<CallGraphDumper>();
 }
 
-bool ento::shouldRegisterCallGraphDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterCallGraphDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -281,6 +281,8 @@ public:
       llvm::errs() << Keys[I]->getKey() << " = "
                    << (Keys[I]->second.empty() ? "\"\"" : Keys[I]->second)
                    << '\n';
+
+    llvm::errs() << "[stats]\n" << "num-entries = " << Keys.size() << '\n';
   }
 };
 }
@@ -289,7 +291,7 @@ void ento::registerConfigDumper(CheckerManager &mgr) {
   mgr.registerChecker<ConfigDumper>();
 }
 
-bool ento::shouldRegisterConfigDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterConfigDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -312,7 +314,7 @@ void ento::registerExplodedGraphViewer(CheckerManager &mgr) {
   mgr.registerChecker<ExplodedGraphViewer>();
 }
 
-bool ento::shouldRegisterExplodedGraphViewer(const CheckerManager &mgr) {
+bool ento::shouldRegisterExplodedGraphViewer(const LangOptions &LO) {
   return true;
 }
 
@@ -344,6 +346,6 @@ void ento::registerReportStmts(CheckerManager &mgr) {
   mgr.registerChecker<ReportStmts>();
 }
 
-bool ento::shouldRegisterReportStmts(const CheckerManager &mgr) {
+bool ento::shouldRegisterReportStmts(const LangOptions &LO) {
   return true;
 }

@@ -179,5 +179,5 @@ void addGOTPass(PassManager &pm, const MachOLinkingContext &ctx) {
   pm.add(std::make_unique<GOTPass>(ctx));
 }
 
-} // end namespace mach_o
-} // end namespace lld
+} // end namesapce mach_o
+} // end namesapce lld

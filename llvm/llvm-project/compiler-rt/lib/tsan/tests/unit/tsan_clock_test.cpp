@@ -108,31 +108,6 @@ TEST(Clock, RepeatedAcquire) {
   sync.Reset(&cache);
 }
 
-TEST(Clock, releaseStoreAcquire) {
-  ThreadClock thr0(0);
-  thr0.tick();
-  ThreadClock thr1(1);
-  thr1.tick();
-  SyncClock syncA;
-  SyncClock syncB;
-  ASSERT_EQ(syncA.size(), 0U);
-  ASSERT_EQ(syncB.size(), 0U);
-  thr1.releaseStoreAcquire(&cache, &syncB);
-  ASSERT_EQ(syncB.size(), 2U); // T0 and T1
-  // releaseStoreAcquire to an empty SyncClock
-  thr0.releaseStoreAcquire(&cache, &syncA);
-  ASSERT_EQ(syncA.size(), 1U);
-  // releaseStoreAcquire from a non-empty SyncClock
-  // T0 learns about T1
-  thr0.releaseStoreAcquire(&cache, &syncB);
-  // releaseStoreAcquire to the originally empty SyncClock
-  // T0 deposits info about T1 into syncA
-  thr0.releaseStoreAcquire(&cache, &syncA);
-  ASSERT_EQ(syncA.size(), 2U);
-  syncA.Reset(&cache);
-  syncB.Reset(&cache);
-}
-
 TEST(Clock, ManyThreads) {
   SyncClock chunked;
   for (unsigned i = 0; i < 200; i++) {
@@ -361,18 +336,6 @@ struct SimpleThreadClock {
       dst->clock[i] = max(dst->clock[i], clock[i]);
   }
 
-  void releaseStoreAcquire(SimpleSyncClock *sc) {
-    if (sc->size < size)
-      sc->size = size;
-    else
-      size = sc->size;
-    for (uptr i = 0; i < kThreads; i++) {
-      uptr tmp = clock[i];
-      clock[i] = max(sc->clock[i], clock[i]);
-      sc->clock[i] = tmp;
-    }
-  }
-
   void acq_rel(SimpleSyncClock *dst) {
     acquire(dst);
     release(dst);
@@ -427,7 +390,7 @@ static bool ClockFuzzer(bool printing) {
     thr0[tid]->tick();
     thr1[tid]->tick();
 
-    switch (rand() % 7) {
+    switch (rand() % 6) {
     case 0:
       if (printing)
         printf("acquire thr%d <- clk%d\n", tid, cid);
@@ -459,12 +422,6 @@ static bool ClockFuzzer(bool printing) {
       sync1[cid]->Reset(&cache);
       break;
     case 5:
-      if (printing)
-        printf("releaseStoreAcquire thr%d -> clk%d\n", tid, cid);
-      thr0[tid]->releaseStoreAcquire(sync0[cid]);
-      thr1[tid]->releaseStoreAcquire(&cache, sync1[cid]);
-      break;
-    case 6:
       if (printing)
         printf("reset thr%d\n", tid);
       u64 epoch = thr0[tid]->clock[tid] + 1;

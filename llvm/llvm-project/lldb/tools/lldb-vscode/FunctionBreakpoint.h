@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_VSCODE_FUNCTIONBREAKPOINT_H
-#define LLDB_TOOLS_LLDB_VSCODE_FUNCTIONBREAKPOINT_H
+#ifndef LLDBVSCODE_FUNCTIONBREAKPOINT_H_
+#define LLDBVSCODE_FUNCTIONBREAKPOINT_H_
 
 #include "BreakpointBase.h"
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_POSIX_PIPEPOSIX_H
-#define LLDB_HOST_POSIX_PIPEPOSIX_H
+#ifndef liblldb_Host_posix_PipePosix_h_
+#define liblldb_Host_posix_PipePosix_h_
 #if defined(__cplusplus)
 
 #include "lldb/Host/PipeBase.h"
@@ -77,4 +77,4 @@ private:
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)
-#endif // LLDB_HOST_POSIX_PIPEPOSIX_H
+#endif // liblldb_Host_posix_PipePosix_h_

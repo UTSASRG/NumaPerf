@@ -143,26 +143,18 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
   llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
       GroupedReplacements;
 
-  // Deduplicate identical replacements in diagnostics unless they are from the
-  // same TU.
+  // Deduplicate identical replacements in diagnostics.
   // FIXME: Find an efficient way to deduplicate on diagnostics level.
-  llvm::DenseMap<const FileEntry *,
-                 std::map<tooling::Replacement,
-                          const tooling::TranslationUnitDiagnostics *>>
+  llvm::DenseMap<const FileEntry *, std::set<tooling::Replacement>>
       DiagReplacements;
 
-  auto AddToGroup = [&](const tooling::Replacement &R,
-                        const tooling::TranslationUnitDiagnostics *SourceTU) {
+  auto AddToGroup = [&](const tooling::Replacement &R, bool FromDiag) {
     // Use the file manager to deduplicate paths. FileEntries are
     // automatically canonicalized.
     if (auto Entry = SM.getFileManager().getFile(R.getFilePath())) {
-      if (SourceTU) {
+      if (FromDiag) {
         auto &Replaces = DiagReplacements[*Entry];
-        auto It = Replaces.find(R);
-        if (It == Replaces.end())
-          Replaces.emplace(R, SourceTU);
-        else if (It->second != SourceTU)
-          // This replacement is a duplicate of one suggested by another TU.
+        if (!Replaces.insert(R).second)
           return;
       }
       GroupedReplacements[*Entry].push_back(R);
@@ -174,14 +166,14 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
 
   for (const auto &TU : TUs)
     for (const tooling::Replacement &R : TU.Replacements)
-      AddToGroup(R, nullptr);
+      AddToGroup(R, false);
 
   for (const auto &TU : TUDs)
     for (const auto &D : TU.Diagnostics)
       if (const auto *ChoosenFix = tooling::selectFirstFix(D)) {
         for (const auto &Fix : *ChoosenFix)
           for (const tooling::Replacement &R : Fix.second)
-            AddToGroup(R, &TU);
+            AddToGroup(R, true);
       }
 
   // Sort replacements per file to keep consistent behavior when

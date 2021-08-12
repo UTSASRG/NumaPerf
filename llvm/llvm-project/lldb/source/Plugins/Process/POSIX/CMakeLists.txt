@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginProcessPOSIX
+add_lldb_library(lldbPluginProcessPOSIX PLUGIN
   CrashReason.cpp
   NativeProcessELF.cpp
   ProcessMessage.cpp

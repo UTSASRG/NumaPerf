@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_PATHMAPPINGLIST_H
-#define LLDB_TARGET_PATHMAPPINGLIST_H
+#ifndef liblldb_PathMappingList_h_
+#define liblldb_PathMappingList_h_
 
 #include <map>
 #include <vector>
@@ -125,4 +125,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_PATHMAPPINGLIST_H
+#endif // liblldb_PathMappingList_h_

@@ -14,7 +14,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
-#include <cassert>
 
 using namespace llvm;
 

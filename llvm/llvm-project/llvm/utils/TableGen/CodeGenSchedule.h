@@ -58,7 +58,7 @@ struct CodeGenSchedRW {
       HasVariants(false), IsVariadic(false), IsSequence(false) {}
   CodeGenSchedRW(unsigned Idx, Record *Def)
     : Index(Idx), TheDef(Def), IsAlias(false), IsVariadic(false) {
-    Name = std::string(Def->getName());
+    Name = Def->getName();
     IsRead = Def->isSubClassOf("SchedRead");
     HasVariants = Def->isSubClassOf("SchedVariant");
     if (HasVariants)

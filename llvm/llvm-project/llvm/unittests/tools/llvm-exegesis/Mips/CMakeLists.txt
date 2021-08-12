@@ -15,7 +15,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(LLVMExegesisMipsTests
   BenchmarkResultTest.cpp
-  RegisterAliasingTest.cpp
   SnippetGeneratorTest.cpp
   TargetTest.cpp
   )

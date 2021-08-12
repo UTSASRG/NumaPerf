@@ -60,6 +60,10 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,
 } // namespace
 
 void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
+  // Forwarding references require C++11 or later.
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
   auto ForwardingRefParm =
       parmVarDecl(
           hasType(qualType(rValueReferenceType(),

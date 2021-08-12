@@ -21,7 +21,7 @@ entry:
 ; CHECK: andq $-32, %rsp
 ; CHECK: .cfi_offset %r14, -24
 
-; Restore %rsp from %rbp and subtract the total size of saved registers.
+; Restore %rsp from %rbp and subtract the total size of saved regsiters.
 ; CHECK: leaq -8(%rbp), %rsp
 
 ; Pop saved registers.

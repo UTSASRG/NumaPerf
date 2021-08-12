@@ -1,6 +1,6 @@
 //===- Canonicalizer.cpp - Canonicalize MLIR operations -------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,16 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
-
 using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
+struct Canonicalizer : public OperationPass<Canonicalizer> {
   void runOnOperation() override {
     OwningRewritePatternList patterns;
 
@@ -32,7 +31,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
       op->getCanonicalizationPatterns(patterns, context);
 
     Operation *op = getOperation();
-    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
+    applyPatternsGreedily(op->getRegions(), patterns);
   }
 };
 } // end anonymous namespace
@@ -41,3 +40,6 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
   return std::make_unique<Canonicalizer>();
 }
+
+static PassRegistration<Canonicalizer> pass("canonicalize",
+                                            "Canonicalize operations");

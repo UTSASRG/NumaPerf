@@ -31,7 +31,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -448,7 +447,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   TLI = ST.getTargetLowering();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
-  MBFIWrapper MBFI(getAnalysis<MachineBlockFrequencyInfo>());
+  BranchFolder::MBFIWrapper MBFI(getAnalysis<MachineBlockFrequencyInfo>());
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -971,11 +970,6 @@ bool IfConverter::ValidDiamond(
   Dups1 = Dups2 = 0;
   if (TrueBBI.IsBeingAnalyzed || TrueBBI.IsDone ||
       FalseBBI.IsBeingAnalyzed || FalseBBI.IsDone)
-    return false;
-
-  // If the True and False BBs are equal we're dealing with a degenerate case
-  // that we don't treat as a diamond.
-  if (TrueBBI.BB == FalseBBI.BB)
     return false;
 
   MachineBasicBlock *TT = TrueBBI.TrueBB;
@@ -1857,7 +1851,7 @@ bool IfConverter::IfConvertDiamondCommon(
   while (NumDups1 != 0) {
     // Since this instruction is going to be deleted, update call
     // site info state if the instruction is call instruction.
-    if (DI2->shouldUpdateCallSiteInfo())
+    if (DI2->isCall(MachineInstr::IgnoreBundle))
       MBB2.getParent()->eraseCallSiteInfo(&*DI2);
 
     ++DI2;
@@ -1906,7 +1900,7 @@ bool IfConverter::IfConvertDiamondCommon(
 
     // Since this instruction is going to be deleted, update call
     // site info state if the instruction is call instruction.
-    if (DI1->shouldUpdateCallSiteInfo())
+    if (DI1->isCall(MachineInstr::IgnoreBundle))
       MBB1.getParent()->eraseCallSiteInfo(&*DI1);
 
     // skip dbg_value instructions
@@ -2194,8 +2188,8 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
 
     MachineInstr *MI = MF.CloneMachineInstr(&I);
     // Make a copy of the call site info.
-    if (I.isCandidateForCallSiteEntry())
-      MF.copyCallSiteInfo(&I, MI);
+    if (MI->isCall(MachineInstr::IgnoreBundle))
+      MF.copyCallSiteInfo(&I,MI);
 
     ToBBI.BB->insert(ToBBI.BB->end(), MI);
     ToBBI.NonPredSize++;
@@ -2243,10 +2237,10 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
 }
 
 /// Move all instructions from FromBB to the end of ToBB.  This will leave
-/// FromBB as an empty block, so remove all of its successor edges and move it
-/// to the end of the function.  If AddEdges is true, i.e., when FromBBI's
-/// branch is being moved, add those successor edges to ToBBI and remove the old
-/// edge from ToBBI to FromBBI.
+/// FromBB as an empty block, so remove all of its successor edges except for
+/// the fall-through edge.  If AddEdges is true, i.e., when FromBBI's branch is
+/// being moved, add those successor edges to ToBBI and remove the old edge
+/// from ToBBI to FromBBI.
 void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   MachineBasicBlock &FromMBB = *FromBBI.BB;
   assert(!FromMBB.hasAddressTaken() &&
@@ -2286,10 +2280,8 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
 
   for (MachineBasicBlock *Succ : FromSuccs) {
     // Fallthrough edge can't be transferred.
-    if (Succ == FallThrough) {
-      FromMBB.removeSuccessor(Succ);
+    if (Succ == FallThrough)
       continue;
-    }
 
     auto NewProb = BranchProbability::getZero();
     if (AddEdges) {

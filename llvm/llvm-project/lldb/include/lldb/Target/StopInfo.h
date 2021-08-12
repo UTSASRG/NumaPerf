@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_STOPINFO_H
-#define LLDB_TARGET_STOPINFO_H
+#ifndef liblldb_StopInfo_h_
+#define liblldb_StopInfo_h_
 
 #include <string>
 
@@ -183,10 +183,9 @@ protected:
 private:
   friend class Thread;
 
-  StopInfo(const StopInfo &) = delete;
-  const StopInfo &operator=(const StopInfo &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(StopInfo);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_STOPINFO_H
+#endif // liblldb_StopInfo_h_

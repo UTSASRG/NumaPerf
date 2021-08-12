@@ -1715,9 +1715,8 @@ class TemplateDiff {
                              bool FromDefault, bool ToDefault, bool Same) {
     assert((FromTD || ToTD) && "Only one template argument may be missing.");
 
-    std::string FromName =
-        std::string(FromTD ? FromTD->getName() : "(no argument)");
-    std::string ToName = std::string(ToTD ? ToTD->getName() : "(no argument)");
+    std::string FromName = FromTD ? FromTD->getName() : "(no argument)";
+    std::string ToName = ToTD ? ToTD->getName() : "(no argument)";
     if (FromTD && ToTD && FromName == ToName) {
       FromName = FromTD->getQualifiedNameAsString();
       ToName = ToTD->getQualifiedNameAsString();

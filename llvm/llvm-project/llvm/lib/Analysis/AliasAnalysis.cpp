@@ -196,7 +196,8 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   // Try to refine the mod-ref info further using other API entry points to the
   // aggregate set of AA results.
   auto MRB = getModRefBehavior(Call);
-  if (onlyAccessesInaccessibleMem(MRB))
+  if (MRB == FMRB_DoesNotAccessMemory ||
+      MRB == FMRB_OnlyAccessesInaccessibleMem)
     return ModRefInfo::NoModRef;
 
   if (onlyReadsMemory(MRB))
@@ -630,14 +631,16 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
 
 /// Return information about whether a particular call site modifies
 /// or reads the specified memory location \p MemLoc before instruction \p I
-/// in a BasicBlock.
+/// in a BasicBlock. An ordered basic block \p OBB can be used to speed up
+/// instruction-ordering queries inside the BasicBlock containing \p I.
 /// FIXME: this is really just shoring-up a deficiency in alias analysis.
 /// BasicAA isn't willing to spend linear time determining whether an alloca
 /// was captured before or after this particular call, while we are. However,
 /// with a smarter AA in place, this test is just wasting compile time.
 ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
                                          const MemoryLocation &MemLoc,
-                                         DominatorTree *DT) {
+                                         DominatorTree *DT,
+                                         OrderedBasicBlock *OBB) {
   if (!DT)
     return ModRefInfo::ModRef;
 
@@ -653,7 +656,8 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
 
   if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
                                  /* StoreCaptures */ true, I, DT,
-                                 /* include Object */ true))
+                                 /* include Object */ true,
+                                 /* OrderedBasicBlock */ OBB))
     return ModRefInfo::ModRef;
 
   unsigned ArgNo = 0;

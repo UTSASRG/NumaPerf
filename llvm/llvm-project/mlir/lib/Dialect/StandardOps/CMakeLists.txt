@@ -1,21 +1,14 @@
-add_mlir_dialect_library(MLIRStandardOps
-  IR/Ops.cpp
-  EDSC/Builders.cpp
-  EDSC/Intrinsics.cpp
+file(GLOB globbed *.c *.cpp)
+add_llvm_library(MLIRStandardOps
+  ${globbed}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/StandardOps
-
-  DEPENDS
-  MLIRStandardOpsIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRCallInterfaces
-  MLIRControlFlowInterfaces
-  MLIREDSC
-  MLIRIR
-  MLIRSideEffectInterfaces
-  MLIRViewLikeInterface
   )
-
-add_subdirectory(Transforms)
+add_dependencies(MLIRStandardOps
+  MLIRCallOpInterfacesIncGen
+  MLIRStandardOpsIncGen
+  MLIRIR
+  LLVMSupport
+  )
+target_link_libraries(MLIRStandardOps MLIRIR LLVMSupport)

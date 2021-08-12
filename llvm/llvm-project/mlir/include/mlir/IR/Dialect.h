@@ -1,6 +1,6 @@
 //===- Dialect.h - IR Dialect Description -----------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -28,7 +28,6 @@ using DialectConstantFoldHook = std::function<LogicalResult(
     Operation *, ArrayRef<Attribute>, SmallVectorImpl<Attribute> &)>;
 using DialectExtractElementHook =
     std::function<Attribute(const OpaqueElementsAttr, ArrayRef<uint64_t>)>;
-using DialectAllocatorFunction = std::function<void(MLIRContext *)>;
 
 /// Dialects are groups of MLIR operations and behavior associated with the
 /// entire group.  For example, hooks into other systems for constant folding,
@@ -160,7 +159,7 @@ public:
 
   /// Lookup an interface for the given ID if one is registered, otherwise
   /// nullptr.
-  const DialectInterface *getRegisteredInterface(TypeID interfaceID) {
+  const DialectInterface *getRegisteredInterface(ClassID *interfaceID) {
     auto it = registeredInterfaces.find(interfaceID);
     return it != registeredInterfaces.end() ? it->getSecond().get() : nullptr;
   }
@@ -182,21 +181,56 @@ protected:
   /// This method is used by derived classes to add their operations to the set.
   ///
   template <typename... Args> void addOperations() {
-    (void)std::initializer_list<int>{
-        0, (addOperation(AbstractOperation::get<Args>(*this)), 0)...};
+    VariadicOperationAdder<Args...>::addToSet(*this);
   }
+
+  // It would be nice to define this as variadic functions instead of a nested
+  // variadic type, but we can't do that: function template partial
+  // specialization is not allowed, and we can't define an overload set because
+  // we don't have any arguments of the types we are pushing around.
+  template <typename First, typename... Rest> class VariadicOperationAdder {
+  public:
+    static void addToSet(Dialect &dialect) {
+      dialect.addOperation(AbstractOperation::get<First>(dialect));
+      VariadicOperationAdder<Rest...>::addToSet(dialect);
+    }
+  };
+
+  template <typename First> class VariadicOperationAdder<First> {
+  public:
+    static void addToSet(Dialect &dialect) {
+      dialect.addOperation(AbstractOperation::get<First>(dialect));
+    }
+  };
 
   void addOperation(AbstractOperation opInfo);
 
   /// This method is used by derived classes to add their types to the set.
   template <typename... Args> void addTypes() {
-    (void)std::initializer_list<int>{0, (addSymbol(Args::getTypeID()), 0)...};
+    VariadicSymbolAdder<Args...>::addToSet(*this);
   }
 
   /// This method is used by derived classes to add their attributes to the set.
   template <typename... Args> void addAttributes() {
-    (void)std::initializer_list<int>{0, (addSymbol(Args::getTypeID()), 0)...};
+    VariadicSymbolAdder<Args...>::addToSet(*this);
   }
+
+  // It would be nice to define this as variadic functions instead of a nested
+  // variadic type, but we can't do that: function template partial
+  // specialization is not allowed, and we can't define an overload set
+  // because we don't have any arguments of the types we are pushing around.
+  template <typename First, typename... Rest> struct VariadicSymbolAdder {
+    static void addToSet(Dialect &dialect) {
+      VariadicSymbolAdder<First>::addToSet(dialect);
+      VariadicSymbolAdder<Rest...>::addToSet(dialect);
+    }
+  };
+
+  template <typename First> struct VariadicSymbolAdder<First> {
+    static void addToSet(Dialect &dialect) {
+      dialect.addSymbol(First::getClassID());
+    }
+  };
 
   /// Enable support for unregistered operations.
   void allowUnknownOperations(bool allow = true) { unknownOpsAllowed = allow; }
@@ -208,14 +242,17 @@ protected:
   void addInterface(std::unique_ptr<DialectInterface> interface);
 
   /// Register a set of dialect interfaces with this dialect instance.
-  template <typename... Args> void addInterfaces() {
-    (void)std::initializer_list<int>{
-        0, (addInterface(std::make_unique<Args>(this)), 0)...};
+  template <typename T, typename T2, typename... Tys> void addInterfaces() {
+    addInterfaces<T>();
+    addInterfaces<T2, Tys...>();
+  }
+  template <typename T> void addInterfaces() {
+    addInterface(std::make_unique<T>(this));
   }
 
 private:
   // Register a symbol(e.g. type) with its given unique class identifier.
-  void addSymbol(TypeID typeID);
+  void addSymbol(const ClassID *const classID);
 
   Dialect(const Dialect &) = delete;
   void operator=(Dialect &) = delete;
@@ -241,31 +278,25 @@ private:
   bool unknownTypesAllowed = false;
 
   /// A collection of registered dialect interfaces.
-  DenseMap<TypeID, std::unique_ptr<DialectInterface>> registeredInterfaces;
-
-  /// Registers a specific dialect creation function with the global registry.
-  /// Used through the registerDialect template.
-  /// Registrations are deduplicated by dialect TypeID and only the first
-  /// registration will be used.
-  static void
-  registerDialectAllocator(TypeID typeID,
-                           const DialectAllocatorFunction &function);
-  template <typename ConcreteDialect>
-  friend void registerDialect();
+  DenseMap<ClassID *, std::unique_ptr<DialectInterface>> registeredInterfaces;
 };
-/// Registers all dialects and hooks from the global registries with the
-/// specified MLIRContext.
+
+using DialectAllocatorFunction = std::function<void(MLIRContext *)>;
+
+/// Registers a specific dialect creation function with the system, typically
+/// used through the DialectRegistration template.
+void registerDialectAllocator(const DialectAllocatorFunction &function);
+
+/// Registers all dialects with the specified MLIRContext.
 void registerAllDialects(MLIRContext *context);
 
 /// Utility to register a dialect. Client can register their dialect with the
 /// global registry by calling registerDialect<MyDialect>();
 template <typename ConcreteDialect> void registerDialect() {
-  Dialect::registerDialectAllocator(TypeID::get<ConcreteDialect>(),
-                                    [](MLIRContext *ctx) {
-                                      // Just allocate the dialect, the context
-                                      // takes ownership of it.
-                                      new ConcreteDialect(ctx);
-                                    });
+  registerDialectAllocator([](MLIRContext *ctx) {
+    // Just allocate the dialect, the context takes ownership of it.
+    new ConcreteDialect(ctx);
+  });
 }
 
 /// DialectRegistration provides a global initializer that registers a Dialect
@@ -280,15 +311,5 @@ template <typename ConcreteDialect> struct DialectRegistration {
 };
 
 } // namespace mlir
-
-namespace llvm {
-/// Provide isa functionality for Dialects.
-template <typename T>
-struct isa_impl<T, ::mlir::Dialect> {
-  static inline bool doit(const ::mlir::Dialect &dialect) {
-    return T::getDialectNamespace() == dialect.getNamespace();
-  }
-};
-} // namespace llvm
 
 #endif

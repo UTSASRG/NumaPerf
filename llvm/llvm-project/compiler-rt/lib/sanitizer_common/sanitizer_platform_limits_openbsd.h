@@ -50,7 +50,6 @@ extern unsigned struct_timezone_sz;
 extern unsigned struct_tms_sz;
 extern unsigned struct_itimerspec_sz;
 extern unsigned struct_sigevent_sz;
-extern unsigned struct_stack_t_sz;
 extern unsigned struct_statfs_sz;
 extern unsigned struct_sockaddr_sz;
 

@@ -57,7 +57,7 @@
 _start:
  nop
 
-.section .eh_frame,"a",@unwind
+.section .eh_frame, "a"
   .long 16   # Size
   .long 0x00 # ID
   .byte 0x01 # Version.

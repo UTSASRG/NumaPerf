@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXSIGNALS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXSIGNALS_H
+#ifndef liblldb_LinuxSignals_H_
+#define liblldb_LinuxSignals_H_
 
 #include "lldb/Target/UnixSignals.h"
 
@@ -24,4 +24,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXSIGNALS_H
+#endif // liblldb_LinuxSignals_H_

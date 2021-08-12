@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODEFORWARD_H
-#define LLDB_TOOLS_LLDB_VSCODE_VSCODEFORWARD_H
+#ifndef LLDBVSCODE_VSCODEFORWARD_H_
+#define LLDBVSCODE_VSCODEFORWARD_H_
+
 
 namespace lldb_vscode {
 struct BreakpointBase;

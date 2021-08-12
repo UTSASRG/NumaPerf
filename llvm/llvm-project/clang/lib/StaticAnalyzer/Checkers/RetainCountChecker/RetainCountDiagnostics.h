@@ -26,7 +26,7 @@ namespace retaincountchecker {
 
 class RefCountBug : public BugType {
 public:
-  enum RefCountBugKind {
+  enum RefCountBugType {
     UseAfterRelease,
     ReleaseNotOwned,
     DeallocNotOwned,
@@ -36,14 +36,21 @@ public:
     LeakWithinFunction,
     LeakAtReturn,
   };
-  RefCountBug(CheckerNameRef Checker, RefCountBugKind BT);
+  RefCountBug(const CheckerBase *checker, RefCountBugType BT);
   StringRef getDescription() const;
 
-  RefCountBugKind getBugType() const { return BT; }
+  RefCountBugType getBugType() const {
+    return BT;
+  }
+
+  const CheckerBase *getChecker() const {
+    return Checker;
+  }
 
 private:
-  RefCountBugKind BT;
-  static StringRef bugTypeToName(RefCountBugKind BT);
+  RefCountBugType BT;
+  const CheckerBase *Checker;
+  static StringRef bugTypeToName(RefCountBugType BT);
 };
 
 class RefCountReport : public PathSensitiveBugReport {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSER_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSER_H
+#ifndef SymbolFileDWARF_DWARFASTParser_h_
+#define SymbolFileDWARF_DWARFASTParser_h_
 
 #include "DWARFDefines.h"
 #include "lldb/Core/PluginInterface.h"
@@ -55,4 +55,4 @@ public:
                       const lldb_private::ExecutionContext *exe_ctx = nullptr);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSER_H
+#endif // SymbolFileDWARF_DWARFASTParser_h_

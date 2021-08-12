@@ -94,19 +94,6 @@ void GlobalValue::eraseFromParent() {
   llvm_unreachable("not a global");
 }
 
-bool GlobalValue::isInterposable() const {
-  if (isInterposableLinkage(getLinkage()))
-    return true;
-  return getParent() && getParent()->getSemanticInterposition() &&
-         !isDSOLocal();
-}
-
-bool GlobalValue::canBenefitFromLocalAlias() const {
-  // See AsmPrinter::getSymbolPreferLocal().
-  return GlobalObject::isExternalLinkage(getLinkage()) && !isDeclaration() &&
-         !isa<GlobalIFunc>(this) && !hasComdat();
-}
-
 unsigned GlobalValue::getAlignment() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
@@ -126,8 +113,12 @@ unsigned GlobalValue::getAddressSpace() const {
   return PtrTy->getAddressSpace();
 }
 
+void GlobalObject::setAlignment(unsigned Align) {
+  setAlignment(MaybeAlign(Align));
+}
+
 void GlobalObject::setAlignment(MaybeAlign Align) {
-  assert((!Align || *Align <= MaximumAlignment) &&
+  assert((!Align || Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   unsigned AlignmentData = encode(Align);
   unsigned OldData = getGlobalValueSubClassData();
@@ -152,7 +143,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   if (Name[0] == '\1')
     Name = Name.substr(1);
 
-  std::string NewName = std::string(Name);
+  std::string NewName = Name;
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
     // For local symbols, prepend the main file name to distinguish them.
     // Do not include the full path in the file name since there's no guarantee

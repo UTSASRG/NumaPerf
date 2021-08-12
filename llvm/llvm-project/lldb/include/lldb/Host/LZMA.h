@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_LZMA_H
-#define LLDB_HOST_LZMA_H
+#ifndef liblldb_Host_LZMA_h_
+#define liblldb_Host_LZMA_h_
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -31,4 +31,4 @@ llvm::Error uncompress(llvm::ArrayRef<uint8_t> InputBuffer,
 
 } // End of namespace lldb_private
 
-#endif // LLDB_HOST_LZMA_H
+#endif // liblldb_Host_LZMA_h_

@@ -1,6 +1,6 @@
 //===- ShapeInferencePass.cpp - Shape Inference ---------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -44,8 +44,7 @@ namespace {
 ///     d) infer the shape of its output from the argument types.
 ///   3) If the worklist is empty, the algorithm succeeded.
 ///
-class ShapeInferencePass
-    : public mlir::PassWrapper<ShapeInferencePass, FunctionPass> {
+class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
 public:
   void runOnFunction() override {
     auto f = getFunction();
@@ -63,7 +62,7 @@ public:
     while (!opWorklist.empty()) {
       // Find the next operation ready for inference, that is an operation
       // with all operands already resolved (non-generic).
-      auto nextop = llvm::find_if(opWorklist, allOperandsInferred);
+      auto nextop = llvm::find_if(opWorklist, returnsDynamicShape);
       if (nextop == opWorklist.end())
         break;
 
@@ -87,14 +86,6 @@ public:
           << opWorklist.size() << " operations couldn't be inferred\n";
       signalPassFailure();
     }
-  }
-
-  /// A utility method that returns if the given operation has all of its
-  /// operands inferred.
-  static bool allOperandsInferred(Operation *op) {
-    return llvm::all_of(op->getOperandTypes(), [](Type operandType) {
-      return operandType.isa<RankedTensorType>();
-    });
   }
 
   /// A utility method that returns if the given operation has a dynamically

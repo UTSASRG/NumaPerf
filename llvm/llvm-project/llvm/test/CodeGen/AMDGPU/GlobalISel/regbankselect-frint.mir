@@ -11,8 +11,7 @@ body: |
     liveins: $sgpr0
     ; CHECK-LABEL: name: frint_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[FRINT:%[0-9]+]]:vgpr(s32) = G_FRINT [[COPY1]]
+    ; CHECK: [[FRINT_:%[0-9]+]]:vgpr(s32) = G_FRINT [[COPY]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_FRINT %0
 ...
@@ -26,7 +25,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: frint_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[FRINT:%[0-9]+]]:vgpr(s32) = G_FRINT [[COPY]]
+    ; CHECK: [[FRINT_:%[0-9]+]]:vgpr(s32) = G_FRINT [[COPY]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FRINT %0
 ...

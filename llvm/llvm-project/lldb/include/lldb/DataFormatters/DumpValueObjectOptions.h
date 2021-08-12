@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DATAFORMATTERS_DUMPVALUEOBJECTOPTIONS_H
-#define LLDB_DATAFORMATTERS_DUMPVALUEOBJECTOPTIONS_H
+#ifndef lldb_DumpValueObjectOptions_h_
+#define lldb_DumpValueObjectOptions_h_
 
 #include <string>
 
@@ -157,4 +157,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_DATAFORMATTERS_DUMPVALUEOBJECTOPTIONS_H
+#endif // lldb_DumpValueObjectOptions_h_

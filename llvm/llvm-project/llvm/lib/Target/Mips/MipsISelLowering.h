@@ -306,7 +306,7 @@ class TargetRegisterClass;
     /// Return the correct alignment for the current calling convention.
     Align getABIAlignmentForCallingConv(Type *ArgTy,
                                         DataLayout DL) const override {
-      const Align ABIAlign = DL.getABITypeAlign(ArgTy);
+      const Align ABIAlign(DL.getABITypeAlignment(ArgTy));
       if (ArgTy->isVectorTy())
         return std::min(ABIAlign, Align(8));
       return ABIAlign;
@@ -353,14 +353,14 @@ class TargetRegisterClass;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    Register
+    unsigned
     getExceptionPointerRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    Register
+    unsigned
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
@@ -669,7 +669,10 @@ class TargetRegisterClass;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
+                            unsigned SrcAlign,
+                            bool IsMemset, bool ZeroMemset,
+                            bool MemcpyStrSrc,
                             const AttributeList &FuncAttributes) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
@@ -706,10 +709,6 @@ class TargetRegisterClass;
                                         bool isFPCmp, unsigned Opc) const;
     MachineBasicBlock *emitPseudoD_SELECT(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitLDR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitLDR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitSTR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitSTR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
   };
 
   /// Create MipsTargetLowering objects.

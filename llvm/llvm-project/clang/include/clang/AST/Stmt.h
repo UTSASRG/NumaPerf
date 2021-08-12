@@ -14,14 +14,12 @@
 #define LLVM_CLANG_AST_STMT_H
 
 #include "clang/AST/DeclGroup.h"
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -100,8 +98,14 @@ protected:
 
     /// The statement class.
     unsigned sClass : 8;
+
+    /// This bit is set only for the Stmts that are the structured-block of
+    /// OpenMP executable directives. Directives that have a structured block
+    /// are called "non-standalone" directives.
+    /// I.e. those returned by OMPExecutableDirective::getStructuredBlock().
+    unsigned IsOMPStructuredBlock : 1;
   };
-  enum { NumStmtBits = 8 };
+  enum { NumStmtBits = 9 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;
@@ -311,9 +315,12 @@ protected:
 
     unsigned ValueKind : 2;
     unsigned ObjectKind : 3;
-    unsigned /*ExprDependence*/ Dependent : llvm::BitWidth<ExprDependence>;
+    unsigned TypeDependent : 1;
+    unsigned ValueDependent : 1;
+    unsigned InstantiationDependent : 1;
+    unsigned ContainsUnexpandedParameterPack : 1;
   };
-  enum { NumExprBits = NumStmtBits + 5 + llvm::BitWidth<ExprDependence> };
+  enum { NumExprBits = NumStmtBits + 9 };
 
   class ConstantExprBitfields {
     friend class ASTStmtReader;
@@ -340,9 +347,6 @@ protected:
     /// When ResultKind == RSK_APValue. Wether the ASTContext will cleanup the
     /// destructor on the trail-allocated APValue.
     unsigned HasCleanup : 1;
-
-    /// Whether this ConstantExpr was created for immediate invocation.
-    unsigned IsImmediateInvocation : 1;
   };
 
   class PredefinedExprBitfields {
@@ -427,11 +431,6 @@ protected:
 
     unsigned Opc : 5;
     unsigned CanOverflow : 1;
-    //
-    /// This is only meaningful for operations on floating point
-    /// types when additional values need to be in trailing storage.
-    /// It is 0 otherwise.
-    unsigned HasFPFeatures : 1;
 
     SourceLocation Loc;
   };
@@ -445,9 +444,8 @@ protected:
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };
 
-  class ArrayOrMatrixSubscriptExprBitfields {
+  class ArraySubscriptExprBitfields {
     friend class ArraySubscriptExpr;
-    friend class MatrixSubscriptExpr;
 
     unsigned : NumExprBits;
 
@@ -531,9 +529,8 @@ protected:
     unsigned Opc : 6;
 
     /// This is only meaningful for operations on floating point
-    /// types when additional values need to be in trailing storage.
-    /// It is 0 otherwise.
-    unsigned HasFPFeatures : 1;
+    /// types and 0 otherwise.
+    unsigned FPFeatures : 3;
 
     SourceLocation OpLoc;
   };
@@ -616,7 +613,7 @@ protected:
     unsigned OperatorKind : 6;
 
     // Only meaningful for floating point types.
-    unsigned FPFeatures : 14;
+    unsigned FPFeatures : 3;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {
@@ -1000,7 +997,7 @@ protected:
     CharacterLiteralBitfields CharacterLiteralBits;
     UnaryOperatorBitfields UnaryOperatorBits;
     UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
-    ArrayOrMatrixSubscriptExprBitfields ArrayOrMatrixSubscriptExprBits;
+    ArraySubscriptExprBitfields ArraySubscriptExprBits;
     CallExprBitfields CallExprBits;
     MemberExprBitfields MemberExprBits;
     CastExprBitfields CastExprBits;
@@ -1120,6 +1117,7 @@ public:
     static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
     StmtBits.sClass = SC;
+    StmtBits.IsOMPStructuredBlock = false;
     if (StatisticsEnabled) Stmt::addStmtClass(SC);
   }
 
@@ -1128,6 +1126,11 @@ public:
   }
 
   const char *getStmtClassName() const;
+
+  bool isOMPStructuredBlock() const { return StmtBits.IsOMPStructuredBlock; }
+  void setIsOMPStructuredBlock(bool IsOMPStructuredBlock) {
+    StmtBits.IsOMPStructuredBlock = IsOMPStructuredBlock;
+  }
 
   /// SourceLocation tokens are not useful in isolation - they are low level
   /// value objects created/interpreted by SourceManager. We assume AST
@@ -3041,7 +3044,7 @@ public:
   }
 
   IdentifierInfo *getLabelIdentifier(unsigned i) const {
-    return Names[i + NumOutputs + NumInputs];
+    return Names[i + NumInputs];
   }
 
   AddrLabelExpr *getLabelExpr(unsigned i) const;
@@ -3052,11 +3055,11 @@ public:
   using labels_const_range = llvm::iterator_range<const_labels_iterator>;
 
   labels_iterator begin_labels() {
-    return &Exprs[0] + NumOutputs + NumInputs;
+    return &Exprs[0] + NumInputs;
   }
 
   labels_iterator end_labels() {
-    return &Exprs[0] + NumOutputs + NumInputs + NumLabels;
+    return &Exprs[0] + NumInputs + NumLabels;
   }
 
   labels_range labels() {
@@ -3064,11 +3067,11 @@ public:
   }
 
   const_labels_iterator begin_labels() const {
-    return &Exprs[0] + NumOutputs + NumInputs;
+    return &Exprs[0] + NumInputs;
   }
 
   const_labels_iterator end_labels() const {
-    return &Exprs[0] + NumOutputs + NumInputs + NumLabels;
+    return &Exprs[0] + NumInputs + NumLabels;
   }
 
   labels_const_range labels() const {

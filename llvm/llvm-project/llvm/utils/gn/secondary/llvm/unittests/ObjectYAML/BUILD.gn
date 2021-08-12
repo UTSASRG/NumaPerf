@@ -7,7 +7,6 @@ unittest("ObjectYAMLTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
-    "ELFYAMLTest.cpp",
     "MinidumpYAMLTest.cpp",
     "YAML2ObjTest.cpp",
     "YAMLTest.cpp",

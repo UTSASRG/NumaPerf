@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// WebAssembly reference type operand codegen constructs.
+/// WebAssembly refence type operand codegen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

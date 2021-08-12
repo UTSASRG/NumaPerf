@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -23,6 +23,7 @@
 //   — data(cont) and size(cont) are both well-formed, and
 //   — remove_pointer_t<decltype(data(cont))>(*)[] is convertible to ElementType(*)[].
 //
+
 
 #include <span>
 #include <cassert>
@@ -62,10 +63,6 @@ private:
     const T *data() const {return nullptr;}
 };
 
-template<class T, size_t extent, class container>
-std::span<T, extent> createImplicitSpan(container c) {
-    return {c}; // expected-error {{chosen constructor is explicit in copy-initialization}}
-}
 
 int main(int, char**)
 {
@@ -109,14 +106,12 @@ int main(int, char**)
     std::span<      volatile int> s7{cv};   // expected-error {{no matching constructor for initialization of 'std::span<volatile int>'}}
     }
 
-// explicit constructor necessary
+//  statically sized
     {
-    IsAContainer<int> c;
-    const IsAContainer<int> cc;
-
-    createImplicitSpan<int, 1>(c);
-    createImplicitSpan<int, 1>(cc);
+	IsAContainer<int> c;
+    std::span<int,1> s1{c}; // expected-error {{no matching constructor for initialization of 'std::span<int, 1>'}}
     }
+
 
   return 0;
 }

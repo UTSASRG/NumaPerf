@@ -187,12 +187,7 @@ public:
     Cache.initLinkerInitialized();
   }
   void init(uptr Size, uptr CacheSize) {
-    CacheMutex.init();
-    Cache.init();
-    RecycleMutex.init();
-    MinSize = {};
-    MaxSize = {};
-    MaxCacheSize = {};
+    memset(this, 0, sizeof(*this));
     initLinkerInitialized(Size, CacheSize);
   }
 

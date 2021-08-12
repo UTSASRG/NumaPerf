@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_SOCKETADDRESS_H
-#define LLDB_HOST_SOCKETADDRESS_H
+#ifndef liblldb_SocketAddress_h_
+#define liblldb_SocketAddress_h_
 
 #include <stdint.h>
 
@@ -185,4 +185,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_SOCKETADDRESS_H
+#endif // liblldb_SocketAddress_h_

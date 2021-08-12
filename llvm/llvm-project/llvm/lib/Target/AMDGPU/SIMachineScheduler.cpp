@@ -269,8 +269,8 @@ SUnit* SIScheduleBlock::pickNode() {
     // Predict register usage after this instruction.
     TryCand.SU = SU;
     TopRPTracker.getDownwardPressure(SU->getInstr(), pressure, MaxPressure);
-    TryCand.SGPRUsage = pressure[AMDGPU::RegisterPressureSets::SReg_32];
-    TryCand.VGPRUsage = pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+    TryCand.SGPRUsage = pressure[DAG->getSGPRSetID()];
+    TryCand.VGPRUsage = pressure[DAG->getVGPRSetID()];
     TryCand.IsLowLatency = DAG->IsLowLatencySU[SU->NodeNum];
     TryCand.LowLatencyOffset = DAG->LowLatencyOffset[SU->NodeNum];
     TryCand.HasLowLatencyNonWaitedParent =
@@ -595,12 +595,10 @@ void SIScheduleBlock::printDebug(bool full) {
   }
 
   if (Scheduled) {
-    dbgs() << "LiveInPressure "
-           << LiveInPressure[AMDGPU::RegisterPressureSets::SReg_32] << ' '
-           << LiveInPressure[AMDGPU::RegisterPressureSets::VGPR_32] << '\n';
-    dbgs() << "LiveOutPressure "
-           << LiveOutPressure[AMDGPU::RegisterPressureSets::SReg_32] << ' '
-           << LiveOutPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n\n";
+    dbgs() << "LiveInPressure " << LiveInPressure[DAG->getSGPRSetID()] << ' '
+           << LiveInPressure[DAG->getVGPRSetID()] << '\n';
+    dbgs() << "LiveOutPressure " << LiveOutPressure[DAG->getSGPRSetID()] << ' '
+           << LiveOutPressure[DAG->getVGPRSetID()] << "\n\n";
     dbgs() << "LiveIns:\n";
     for (unsigned Reg : LiveInRegs)
       dbgs() << printVRegOrUnit(Reg, DAG->getTRI()) << ' ';
@@ -1639,7 +1637,7 @@ SIScheduleBlock *SIScheduleBlockScheduler::pickBlock() {
     TryCand.IsHighLatency = TryCand.Block->isHighLatencyBlock();
     TryCand.VGPRUsageDiff =
       checkRegUsageImpact(TryCand.Block->getInRegs(),
-          TryCand.Block->getOutRegs())[AMDGPU::RegisterPressureSets::VGPR_32];
+                          TryCand.Block->getOutRegs())[DAG->getVGPRSetID()];
     TryCand.NumSuccessors = TryCand.Block->getSuccs().size();
     TryCand.NumHighLatencySuccessors =
       TryCand.Block->getNumHighLatencySuccessors();
@@ -1798,6 +1796,9 @@ SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
   ScheduleDAGMILive(C, std::make_unique<GenericScheduler>(C)) {
   SITII = static_cast<const SIInstrInfo*>(TII);
   SITRI = static_cast<const SIRegisterInfo*>(TRI);
+
+  VGPRSetID = SITRI->getVGPRPressureSet();
+  SGPRSetID = SITRI->getSGPRPressureSet();
 }
 
 SIScheduleDAGMI::~SIScheduleDAGMI() = default;
@@ -1908,9 +1909,9 @@ SIScheduleDAGMI::fillVgprSgprCost(_Iterator First, _Iterator End,
       continue;
     PSetIterator PSetI = MRI.getPressureSets(Reg);
     for (; PSetI.isValid(); ++PSetI) {
-      if (*PSetI == AMDGPU::RegisterPressureSets::VGPR_32)
+      if (*PSetI == VGPRSetID)
         VgprUsage += PSetI.getWeight();
-      else if (*PSetI == AMDGPU::RegisterPressureSets::SReg_32)
+      else if (*PSetI == SGPRSetID)
         SgprUsage += PSetI.getWeight();
     }
   }
@@ -1951,11 +1952,10 @@ void SIScheduleDAGMI::schedule()
     int64_t OffLatReg;
     if (SITII->isLowLatencyInstruction(*SU->getInstr())) {
       IsLowLatencySU[i] = 1;
-      bool OffsetIsScalable;
       if (SITII->getMemOperandWithOffset(*SU->getInstr(), BaseLatOp, OffLatReg,
-                                         OffsetIsScalable, TRI))
+                                         TRI))
         LowLatencyOffset[i] = OffLatReg;
-    } else if (SITII->isHighLatencyDef(SU->getInstr()->getOpcode()))
+    } else if (SITII->isHighLatencyInstruction(*SU->getInstr()))
       IsHighLatencySU[i] = 1;
   }
 

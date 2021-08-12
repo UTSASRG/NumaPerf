@@ -534,12 +534,9 @@ bool MachThread::RestoreRegisterState(uint32_t save_id) {
   return m_arch_up->RestoreRegisterState(save_id);
 }
 
-uint32_t MachThread::EnableHardwareBreakpoint(const DNBBreakpoint *bp,
-                                              bool also_set_on_task) {
-  if (bp != NULL && bp->IsBreakpoint()) {
-    return m_arch_up->EnableHardwareBreakpoint(bp->Address(), bp->ByteSize(),
-                                               also_set_on_task);
-  }
+uint32_t MachThread::EnableHardwareBreakpoint(const DNBBreakpoint *bp) {
+  if (bp != NULL && bp->IsBreakpoint())
+    return m_arch_up->EnableHardwareBreakpoint(bp->Address(), bp->ByteSize());
   return INVALID_NUB_HW_INDEX;
 }
 
@@ -558,12 +555,9 @@ bool MachThread::RollbackTransForHWP() {
 
 bool MachThread::FinishTransForHWP() { return m_arch_up->FinishTransForHWP(); }
 
-bool MachThread::DisableHardwareBreakpoint(const DNBBreakpoint *bp,
-                                           bool also_set_on_task) {
-  if (bp != NULL && bp->IsHardware()) {
-    return m_arch_up->DisableHardwareBreakpoint(bp->GetHardwareIndex(),
-                                                also_set_on_task);
-  }
+bool MachThread::DisableHardwareBreakpoint(const DNBBreakpoint *bp) {
+  if (bp != NULL && bp->IsHardware())
+    return m_arch_up->DisableHardwareBreakpoint(bp->GetHardwareIndex());
   return false;
 }
 

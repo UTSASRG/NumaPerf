@@ -340,7 +340,9 @@ public:
       return InstalledDir.c_str();
     return Dir.c_str();
   }
-  void setInstalledDir(StringRef Value) { InstalledDir = std::string(Value); }
+  void setInstalledDir(StringRef Value) {
+    InstalledDir = Value;
+  }
 
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }

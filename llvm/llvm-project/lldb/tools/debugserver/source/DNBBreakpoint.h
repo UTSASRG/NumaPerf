@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBBREAKPOINT_H
-#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBBREAKPOINT_H
+#ifndef __DNBBreakpoint_h__
+#define __DNBBreakpoint_h__
 
 #include <mach/mach.h>
 

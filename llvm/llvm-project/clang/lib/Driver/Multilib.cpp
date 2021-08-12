@@ -46,7 +46,7 @@ static void normalizePathSegment(std::string &Segment) {
   if (seg.front() != '/') {
     Segment = "/" + seg.str();
   } else {
-    Segment = std::string(seg);
+    Segment = seg;
   }
 }
 
@@ -60,19 +60,19 @@ Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
 }
 
 Multilib &Multilib::gccSuffix(StringRef S) {
-  GCCSuffix = std::string(S);
+  GCCSuffix = S;
   normalizePathSegment(GCCSuffix);
   return *this;
 }
 
 Multilib &Multilib::osSuffix(StringRef S) {
-  OSSuffix = std::string(S);
+  OSSuffix = S;
   normalizePathSegment(OSSuffix);
   return *this;
 }
 
 Multilib &Multilib::includeSuffix(StringRef S) {
-  IncludeSuffix = std::string(S);
+  IncludeSuffix = S;
   normalizePathSegment(IncludeSuffix);
   return *this;
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_TARGETLIST_H
-#define LLDB_TARGET_TARGETLIST_H
+#ifndef liblldb_TargetList_h_
+#define liblldb_TargetList_h_
 
 #include <mutex>
 #include <vector>
@@ -206,10 +206,9 @@ private:
                               lldb::PlatformSP &platform_sp,
                               lldb::TargetSP &target_sp, bool is_dummy_target);
 
-  TargetList(const TargetList &) = delete;
-  const TargetList &operator=(const TargetList &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(TargetList);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_TARGETLIST_H
+#endif // liblldb_TargetList_h_

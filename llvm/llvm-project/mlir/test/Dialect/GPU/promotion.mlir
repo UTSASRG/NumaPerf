@@ -1,7 +1,6 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-gpu-memory-promotion -pass-pipeline='gpu.module(gpu.func(test-gpu-memory-promotion))' -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-gpu-memory-promotion -split-input-file %s | FileCheck %s
 
-gpu.module @foo {
-
+module @foo attributes {gpu.kernel_module} {
   // Verify that the attribution was indeed introduced
   // CHECK-LABEL: @memref3d
   // CHECK-SAME: (%[[arg:.*]]: memref<5x4xf32>
@@ -21,9 +20,9 @@ gpu.module @foo {
     // Verify that loops for the copy are emitted. We only check the number of
     // loops here since their bounds are produced by mapLoopToProcessorIds,
     // tested separately.
-    // CHECK: scf.for %[[i0:.*]] =
-    // CHECK:   scf.for %[[i1:.*]] =
-    // CHECK:     scf.for %[[i2:.*]] =
+    // CHECK: loop.for %[[i0:.*]] =
+    // CHECK:   loop.for %[[i1:.*]] =
+    // CHECK:     loop.for %[[i2:.*]] =
 
     // Verify that the copy is emitted and uses only the last two loops.
     // CHECK:       %[[v:.*]] = load %[[arg]][%[[i1]], %[[i2]]]
@@ -37,9 +36,9 @@ gpu.module @foo {
     // Verify that loops for the copy are emitted. We only check the number of
     // loops here since their bounds are produced by mapLoopToProcessorIds,
     // tested separately.
-    // CHECK: scf.for %[[i0:.*]] =
-    // CHECK:   scf.for %[[i1:.*]] =
-    // CHECK:     scf.for %[[i2:.*]] =
+    // CHECK: loop.for %[[i0:.*]] =
+    // CHECK:   loop.for %[[i1:.*]] =
+    // CHECK:     loop.for %[[i2:.*]] =
 
     // Verify that the copy is emitted and uses only the last two loops.
     // CHECK:       %[[v:.*]] = load %[[promoted]][%[[i1]], %[[i2]]]
@@ -50,8 +49,7 @@ gpu.module @foo {
 
 // -----
 
-gpu.module @foo {
-
+module @foo attributes {gpu.kernel_module} {
   // Verify that the attribution was indeed introduced
   // CHECK-LABEL: @memref5d
   // CHECK-SAME: (%[[arg:.*]]: memref<8x7x6x5x4xf32>
@@ -73,11 +71,11 @@ gpu.module @foo {
     // CHECK-DAG: %[[bdz:.*]] = "gpu.block_dim"() {dimension = "z"}
 
     // Verify that loops for the copy are emitted.
-    // CHECK: scf.for %[[i0:.*]] =
-    // CHECK:   scf.for %[[i1:.*]] =
-    // CHECK:     scf.for %[[i2:.*]] =
-    // CHECK:       scf.for %[[i3:.*]] =
-    // CHECK:         scf.for %[[i4:.*]] =
+    // CHECK: loop.for %[[i0:.*]] =
+    // CHECK:   loop.for %[[i1:.*]] =
+    // CHECK:     loop.for %[[i2:.*]] =
+    // CHECK:       loop.for %[[i3:.*]] =
+    // CHECK:         loop.for %[[i4:.*]] =
 
     // Verify that the copy is emitted.
     // CHECK:           %[[v:.*]] = load %[[arg]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
@@ -88,11 +86,11 @@ gpu.module @foo {
     "use"(%arg0) : (memref<8x7x6x5x4xf32>) -> ()
 
     // Verify that loop loops for the copy are emitted.
-    // CHECK: scf.for %[[i0:.*]] =
-    // CHECK:   scf.for %[[i1:.*]] =
-    // CHECK:     scf.for %[[i2:.*]] =
-    // CHECK:       scf.for %[[i3:.*]] =
-    // CHECK:         scf.for %[[i4:.*]] =
+    // CHECK: loop.for %[[i0:.*]] =
+    // CHECK:   loop.for %[[i1:.*]] =
+    // CHECK:     loop.for %[[i2:.*]] =
+    // CHECK:       loop.for %[[i3:.*]] =
+    // CHECK:         loop.for %[[i4:.*]] =
 
     // Verify that the copy is emitted.
     // CHECK:           %[[v:.*]] = load %[[promoted]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
@@ -103,8 +101,7 @@ gpu.module @foo {
 
 // -----
 
-gpu.module @foo {
-
+module @foo attributes {gpu.kernel_module} {
   // Check that attribution insertion works fine.
   // CHECK-LABEL: @insert
   // CHECK-SAME: (%{{.*}}: memref<4xf32>

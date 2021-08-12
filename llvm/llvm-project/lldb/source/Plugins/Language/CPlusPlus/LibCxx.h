@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
+#ifndef liblldb_LibCxx_h_
+#define liblldb_LibCxx_h_
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -42,10 +42,6 @@ bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
         &options); // libc++ std::shared_ptr<> and std::weak_ptr<>
-
-// libc++ std::unique_ptr<>
-bool LibcxxUniquePointerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                        const TypeSummaryOptions &options);
 
 bool LibcxxFunctionSummaryProvider(
     ValueObject &valobj, Stream &stream,
@@ -111,36 +107,12 @@ private:
   lldb::ByteOrder m_byte_order;
 };
 
-class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
-public:
-  LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  size_t CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-
-  bool Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
-  ~LibcxxUniquePtrSyntheticFrontEnd() override;
-
-private:
-  lldb::ValueObjectSP m_compressed_pair_sp;
-};
-
 SyntheticChildrenFrontEnd *
 LibcxxBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibcxxSharedPtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                        lldb::ValueObjectSP);
-
-SyntheticChildrenFrontEnd *
-LibcxxUniquePtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
@@ -184,4 +156,4 @@ LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
+#endif // liblldb_LibCxx_h_

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_EXPRESSION_IRMEMORYMAP_H
-#define LLDB_EXPRESSION_IRMEMORYMAP_H
+#ifndef lldb_IRMemoryMap_h_
+#define lldb_IRMemoryMap_h_
 
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/UserID.h"
@@ -107,8 +107,7 @@ private:
                size_t size, uint32_t permissions, uint8_t alignment,
                AllocationPolicy m_policy);
 
-    Allocation(const Allocation &) = delete;
-    const Allocation &operator=(const Allocation &) = delete;
+    DISALLOW_COPY_AND_ASSIGN(Allocation);
   };
 
   static_assert(sizeof(Allocation) <=

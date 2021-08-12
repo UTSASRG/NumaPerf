@@ -14,8 +14,8 @@
 // array of load addresses for solibs loaded and unloaded.  The SPI will tell us
 // about both dyld and the executable, in addition to all of the usual solibs.
 
-#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H
-#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H
+#ifndef liblldb_DynamicLoaderMacOS_h_
+#define liblldb_DynamicLoaderMacOS_h_
 
 #include <mutex>
 #include <vector>
@@ -105,8 +105,7 @@ protected:
                                             // the "reason:exec" annotation.
 
 private:
-  DynamicLoaderMacOS(const DynamicLoaderMacOS &) = delete;
-  const DynamicLoaderMacOS &operator=(const DynamicLoaderMacOS &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderMacOS);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H
+#endif // liblldb_DynamicLoaderMacOS_h_

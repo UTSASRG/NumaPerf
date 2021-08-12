@@ -81,9 +81,6 @@ void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
       if (!MCSubRegIterator(*SRI, &RI).isValid())
         // Skip super-registers used indirectly.
         Uses.insert(*SRI);
-
-  if (HexagonMCInstrInfo::IsReverseVecRegPair(R))
-    ReversePairs.insert(R);
 }
 
 void HexagonMCChecker::init(MCInst const &MCI) {
@@ -135,9 +132,6 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     // taking into account its subregisters.
     if (R == Hexagon::C8)
       R = Hexagon::USR;
-
-    if (HexagonMCInstrInfo::IsReverseVecRegPair(R))
-      ReversePairs.insert(R);
 
     // Note register definitions, direct ones as well as indirect side-effects.
     // Super-registers are not tracked directly, but their components.
@@ -198,7 +192,7 @@ HexagonMCChecker::HexagonMCChecker(MCContext &Context, MCInstrInfo const &MCII,
                                    MCSubtargetInfo const &STI, MCInst &mcb,
                                    MCRegisterInfo const &ri, bool ReportErrors)
     : Context(Context), MCB(mcb), RI(ri), MCII(MCII), STI(STI),
-      ReportErrors(ReportErrors), ReversePairs() {
+      ReportErrors(ReportErrors) {
   init();
 }
 
@@ -206,10 +200,7 @@ HexagonMCChecker::HexagonMCChecker(HexagonMCChecker const &Other,
                                    MCSubtargetInfo const &STI,
                                    bool CopyReportErrors)
     : Context(Other.Context), MCB(Other.MCB), RI(Other.RI), MCII(Other.MCII),
-      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false),
-      ReversePairs() {
-  init();
-}
+      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false) {}
 
 bool HexagonMCChecker::check(bool FullCheck) {
   bool chkP = checkPredicates();
@@ -227,9 +218,8 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkAXOK = checkAXOK();
   bool chkCofMax1 = checkCOFMax1();
   bool chkHWLoop = checkHWLoop();
-  bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
-             chkAXOK && chkCofMax1 && chkHWLoop && chkLegalVecRegPair;
+             chkAXOK && chkCofMax1 && chkHWLoop;
 
   return chk;
 }
@@ -391,7 +381,7 @@ bool HexagonMCChecker::checkPredicates() {
   for (const auto &I : NewPreds) {
     unsigned P = I;
 
-    if (!Defs.count(P) || LatePreds.count(P) || Defs.count(Hexagon::P3_0)) {
+    if (!Defs.count(P) || LatePreds.count(P)) {
       // Error out if the new predicate register is not defined,
       // or defined "late"
       // (e.g., "{ if (p3.new)... ; p3 = sp1loop0(#r7:2, Rs) }").
@@ -738,17 +728,4 @@ void HexagonMCChecker::reportNote(SMLoc Loc, llvm::Twine const &Msg) {
 void HexagonMCChecker::reportWarning(Twine const &Msg) {
   if (ReportErrors)
     Context.reportWarning(MCB.getLoc(), Msg);
-}
-
-bool HexagonMCChecker::checkLegalVecRegPair() {
-  const bool IsPermitted = STI.getFeatureBits()[Hexagon::ArchV67];
-  const bool HasReversePairs = ReversePairs.size() != 0;
-
-  if (!IsPermitted && HasReversePairs) {
-    for (auto R : ReversePairs)
-      reportError("register pair `" + Twine(RI.getName(R)) +
-                  "' is not permitted for this architecture");
-    return false;
-  }
-  return true;
 }

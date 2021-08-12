@@ -169,8 +169,3 @@ def : Pat<(i64 (int_ppc_ttest)),
                    36, 28)>;
 
 } // [HasHTM]
-
-def : InstAlias<"tend.", (TEND 0)>, Requires<[HasHTM]>;
-def : InstAlias<"tendall.", (TEND 1)>, Requires<[HasHTM]>;
-def : InstAlias<"tsuspend.", (TSR 0)>, Requires<[HasHTM]>;
-def : InstAlias<"tresume.", (TSR 1)>, Requires<[HasHTM]>;

@@ -16,7 +16,6 @@
 #define LLVM_CLANG_AST_ASTTYPETRAITS_H
 
 #include "clang/AST/ASTFwd.h"
-#include "clang/AST/DeclCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -33,6 +32,8 @@ class raw_ostream;
 namespace clang {
 
 struct PrintingPolicy;
+
+namespace ast_type_traits {
 
 /// Defines how we descend a level in the AST when we pass
 /// through expressions.
@@ -137,7 +138,6 @@ private:
     NKI_QualType,
     NKI_TypeLoc,
     NKI_LastKindWithoutPointerIdentity = NKI_TypeLoc,
-    NKI_CXXBaseSpecifier,
     NKI_CXXCtorInitializer,
     NKI_NestedNameSpecifier,
     NKI_Decl,
@@ -150,8 +150,8 @@ private:
 #define TYPE(DERIVED, BASE) NKI_##DERIVED##Type,
 #include "clang/AST/TypeNodes.inc"
     NKI_OMPClause,
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) NKI_##Class,
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define OPENMP_CLAUSE(TextualSpelling, Class) NKI_##Class,
+#include "clang/Basic/OpenMPKinds.def"
     NKI_NumberOfKinds
   };
 
@@ -200,15 +200,14 @@ KIND_TO_KIND_ID(Decl)
 KIND_TO_KIND_ID(Stmt)
 KIND_TO_KIND_ID(Type)
 KIND_TO_KIND_ID(OMPClause)
-KIND_TO_KIND_ID(CXXBaseSpecifier)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
 #include "clang/AST/StmtNodes.inc"
 #define TYPE(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Type)
 #include "clang/AST/TypeNodes.inc"
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) KIND_TO_KIND_ID(Class)
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define OPENMP_CLAUSE(TextualSpelling, Class) KIND_TO_KIND_ID(Class)
+#include "clang/Basic/OpenMPKinds.def"
 #undef KIND_TO_KIND_ID
 
 inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
@@ -466,22 +465,22 @@ private:
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, std::enable_if_t<std::is_base_of<Decl, T>::value>>
+    T, typename std::enable_if<std::is_base_of<Decl, T>::value>::type>
     : public DynCastPtrConverter<T, Decl> {};
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, std::enable_if_t<std::is_base_of<Stmt, T>::value>>
+    T, typename std::enable_if<std::is_base_of<Stmt, T>::value>::type>
     : public DynCastPtrConverter<T, Stmt> {};
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, std::enable_if_t<std::is_base_of<Type, T>::value>>
+    T, typename std::enable_if<std::is_base_of<Type, T>::value>::type>
     : public DynCastPtrConverter<T, Type> {};
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, std::enable_if_t<std::is_base_of<OMPClause, T>::value>>
+    T, typename std::enable_if<std::is_base_of<OMPClause, T>::value>::type>
     : public DynCastPtrConverter<T, OMPClause> {};
 
 template <>
@@ -513,10 +512,6 @@ template <>
 struct DynTypedNode::BaseConverter<
     TypeLoc, void> : public ValueConverter<TypeLoc> {};
 
-template <>
-struct DynTypedNode::BaseConverter<CXXBaseSpecifier, void>
-    : public PtrConverter<CXXBaseSpecifier> {};
-
 // The only operation we allow on unsupported types is \c get.
 // This allows to conveniently use \c DynTypedNode when having an arbitrary
 // AST node that is not supported, but prevents misuse - a user cannot create
@@ -527,29 +522,18 @@ template <typename T, typename EnablerT> struct DynTypedNode::BaseConverter {
   }
 };
 
-// Previously these types were defined in the clang::ast_type_traits namespace.
-// Provide typedefs so that legacy code can be fixed asynchronously.
-namespace ast_type_traits {
-using DynTypedNode = ::clang::DynTypedNode;
-using ASTNodeKind = ::clang::ASTNodeKind;
-using TraversalKind = ::clang::TraversalKind;
-
-constexpr TraversalKind TK_AsIs = ::clang::TK_AsIs;
-constexpr TraversalKind TK_IgnoreImplicitCastsAndParentheses =
-    ::clang::TK_IgnoreImplicitCastsAndParentheses;
-constexpr TraversalKind TK_IgnoreUnlessSpelledInSource =
-    ::clang::TK_IgnoreUnlessSpelledInSource;
-} // namespace ast_type_traits
-
+} // end namespace ast_type_traits
 } // end namespace clang
 
 namespace llvm {
 
 template <>
-struct DenseMapInfo<clang::ASTNodeKind> : clang::ASTNodeKind::DenseMapInfo {};
+struct DenseMapInfo<clang::ast_type_traits::ASTNodeKind>
+    : clang::ast_type_traits::ASTNodeKind::DenseMapInfo {};
 
 template <>
-struct DenseMapInfo<clang::DynTypedNode> : clang::DynTypedNode::DenseMapInfo {};
+struct DenseMapInfo<clang::ast_type_traits::DynTypedNode>
+    : clang::ast_type_traits::DynTypedNode::DenseMapInfo {};
 
 }  // end namespace llvm
 

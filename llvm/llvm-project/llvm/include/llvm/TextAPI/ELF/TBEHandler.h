@@ -24,6 +24,7 @@ namespace llvm {
 class raw_ostream;
 class Error;
 class StringRef;
+class VersionTuple;
 
 namespace elfabi {
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBLINEENTRY_H
-#define LLDB_API_SBLINEENTRY_H
+#ifndef LLDB_SBLineEntry_h_
+#define LLDB_SBLineEntry_h_
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDefines.h"
@@ -75,4 +75,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBLINEENTRY_H
+#endif // LLDB_SBLineEntry_h_

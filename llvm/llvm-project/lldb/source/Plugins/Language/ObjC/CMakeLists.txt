@@ -11,7 +11,6 @@ endif ()
 add_lldb_library(lldbPluginObjCLanguage PLUGIN
   ObjCLanguage.cpp
   CF.cpp
-  CFBasicHash.cpp
   Cocoa.cpp
   CoreMedia.cpp
   NSArray.cpp
@@ -32,7 +31,6 @@ add_lldb_library(lldbPluginObjCLanguage PLUGIN
     lldbUtility
     lldbPluginAppleObjCRuntime
     lldbPluginClangCommon
-    lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
 

@@ -1,4 +1,4 @@
-//===-- ValueObjectPrinter.cpp --------------------------------------------===//
+//===-- ValueObjectPrinter.cpp -----------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -266,13 +266,15 @@ void ValueObjectPrinter::PrintDecl() {
 
   StreamString varName;
 
-  if (!m_options.m_hide_name) {
-    if (m_options.m_flat_output)
-      m_valobj->GetExpressionPath(varName);
-    else {
-      const char *name_cstr = GetRootNameForDisplay("");
-      varName.Printf("%s", name_cstr);
+  if (m_options.m_flat_output) {
+    // If we are showing types, also qualify the C++ base classes
+    const bool qualify_cxx_base_classes = show_type;
+    if (!m_options.m_hide_name) {
+      m_valobj->GetExpressionPath(varName, qualify_cxx_base_classes);
     }
+  } else if (!m_options.m_hide_name) {
+    const char *name_cstr = GetRootNameForDisplay("");
+    varName.Printf("%s", name_cstr);
   }
 
   bool decl_printed = false;

@@ -8,7 +8,7 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// ALLOW_RETRIES: 2
+// FLAKY_TEST.
 
 // <mutex>
 

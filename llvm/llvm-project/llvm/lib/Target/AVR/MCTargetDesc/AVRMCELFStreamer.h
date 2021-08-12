@@ -41,7 +41,7 @@ public:
                       std::move(Emitter)),
         MCII(createAVRMCInstrInfo()) {}
 
-  void emitValueForModiferKind(
+  void EmitValueForModiferKind(
       const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc = SMLoc(),
       AVRMCExpr::VariantKind ModifierKind = AVRMCExpr::VK_AVR_None);
 };

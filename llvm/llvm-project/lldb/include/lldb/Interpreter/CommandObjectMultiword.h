@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_COMMANDOBJECTMULTIWORD_H
-#define LLDB_INTERPRETER_COMMANDOBJECTMULTIWORD_H
+#ifndef liblldb_CommandObjectMultiword_h_
+#define liblldb_CommandObjectMultiword_h_
 
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -131,4 +131,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_COMMANDOBJECTMULTIWORD_H
+#endif // liblldb_CommandObjectMultiword_h_

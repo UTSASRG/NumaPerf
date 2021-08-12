@@ -1,7 +1,7 @@
 add_lldb_unittest(SymbolTests
   LocateSymbolFileTest.cpp
   PostfixExpressionTest.cpp
-  TestTypeSystemClang.cpp
+  TestClangASTContext.cpp
   TestClangASTImporter.cpp
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
@@ -15,7 +15,6 @@ add_lldb_unittest(SymbolTests
     lldbPluginObjectFileMachO
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
-    lldbPluginTypeSystemClang
     LLVMTestingSupport
   )
 

@@ -77,12 +77,10 @@ TEST(LegacyRTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   LLVMContext Context;
   auto M = std::make_unique<Module>("", Context);
   M->setTargetTriple("x86_64-unknown-linux-gnu");
-  Constant *StrConstant = ConstantDataArray::getString(Context, "forty-two");
-  auto *GV =
-      new GlobalVariable(*M, StrConstant->getType(), true,
-                         GlobalValue::ExternalLinkage, StrConstant, "foo");
-  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(Align(1));
+  Type *Int32Ty = IntegerType::get(Context, 32);
+  GlobalVariable *GV =
+    new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 42), "foo");
 
   GV->setSection(".debug_str");
 
@@ -187,7 +185,7 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   cantFail(ObjLayer.addObject(K1, std::move(Obj1)));
 
   auto K2 = ES.allocateVModule();
-  auto LegacyLookup = [&](StringRef Name) {
+  auto LegacyLookup = [&](const std::string &Name) {
     return ObjLayer.findSymbol(Name, true);
   };
 

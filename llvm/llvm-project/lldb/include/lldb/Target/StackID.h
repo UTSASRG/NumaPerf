@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_STACKID_H
-#define LLDB_TARGET_STACKID_H
+#ifndef liblldb_StackID_h_
+#define liblldb_StackID_h_
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/lldb-private.h"
@@ -96,4 +96,4 @@ bool operator<(const StackID &lhs, const StackID &rhs);
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_STACKID_H
+#endif // liblldb_StackID_h_

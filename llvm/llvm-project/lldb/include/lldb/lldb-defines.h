@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_LLDB_DEFINES_H
-#define LLDB_LLDB_DEFINES_H
+#ifndef LLDB_lldb_defines_h_
+#define LLDB_lldb_defines_h_
 
 #include "lldb/lldb-types.h"
 
@@ -133,4 +133,15 @@
 
 #define UNUSED_IF_ASSERT_DISABLED(x) ((void)(x))
 
-#endif // LLDB_LLDB_DEFINES_H
+#if defined(__cplusplus)
+
+/// \def DISALLOW_COPY_AND_ASSIGN(TypeName)
+///     Macro definition for easily disallowing copy constructor and
+///     assignment operators in C++ classes.
+#define DISALLOW_COPY_AND_ASSIGN(TypeName)                                     \
+  TypeName(const TypeName &) = delete;                                         \
+  const TypeName &operator=(const TypeName &) = delete
+
+#endif // #if defined(__cplusplus)
+
+#endif // LLDB_lldb_defines_h_

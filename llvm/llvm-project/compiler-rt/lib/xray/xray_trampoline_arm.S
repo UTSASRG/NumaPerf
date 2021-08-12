@@ -10,7 +10,6 @@
     .p2align 2
     @ Let C/C++ see the symbol
     .global __xray_FunctionEntry
-    .hidden __xray_FunctionEntry
     @ It preserves all registers except r0, r12(ip), r14(lr) and r15(pc)
     @ Assume that "q" part of the floating-point registers is not used
     @   for passing parameters to C/C++ functions.
@@ -21,9 +20,9 @@ __xray_FunctionEntry:
     PUSH {r1-r3,lr}
     @ Save floating-point parameters of the instrumented function
     VPUSH {d0-d7}
-    MOVW r1, #:lower16:_ZN6__xray19XRayPatchedFunctionE - (. + 16)
-    MOVT r1, #:upper16:_ZN6__xray19XRayPatchedFunctionE - (. + 12)
-    LDR r2, [pc, r1]
+    MOVW r1,#:lower16:_ZN6__xray19XRayPatchedFunctionE
+    MOVT r1,#:upper16:_ZN6__xray19XRayPatchedFunctionE
+    LDR r2, [r1]
     @ Handler address is nullptr if handler is not set
     CMP r2, #0
     BEQ FunctionEntry_restore
@@ -41,7 +40,6 @@ FunctionEntry_restore:
     .p2align 2
     @ Let C/C++ see the symbol
 	.global __xray_FunctionExit
-	.hidden __xray_FunctionExit
 	@ Assume that d1-d7 are not used for the return value.
     @ Assume that "q" part of the floating-point registers is not used for the
     @   return value in C/C++.
@@ -53,9 +51,9 @@ __xray_FunctionExit:
     @ Save the floating-point return value of the instrumented function
     VPUSH {d0}
     @ Load the handler address
-    MOVW r1, #:lower16:_ZN6__xray19XRayPatchedFunctionE - (. + 16)
-    MOVT r1, #:upper16:_ZN6__xray19XRayPatchedFunctionE - (. + 12)
-    LDR r2, [pc, r1]
+    MOVW r1,#:lower16:_ZN6__xray19XRayPatchedFunctionE
+    MOVT r1,#:upper16:_ZN6__xray19XRayPatchedFunctionE
+    LDR r2, [r1]
     @ Handler address is nullptr if handler is not set
     CMP r2, #0
     BEQ FunctionExit_restore
@@ -73,7 +71,6 @@ FunctionExit_restore:
     .p2align 2
     @ Let C/C++ see the symbol
     .global __xray_FunctionTailExit
-    .hidden __xray_FunctionTailExit
     @ It preserves all registers except r0, r12(ip), r14(lr) and r15(pc)
     @ Assume that "q" part of the floating-point registers is not used
     @   for passing parameters to C/C++ functions.
@@ -84,9 +81,9 @@ __xray_FunctionTailExit:
     PUSH {r1-r3,lr}
     @ Save floating-point parameters of the instrumented function
     VPUSH {d0-d7}
-    MOVW r1, #:lower16:_ZN6__xray19XRayPatchedFunctionE - (. + 16)
-    MOVT r1, #:upper16:_ZN6__xray19XRayPatchedFunctionE - (. + 12)
-    LDR r2, [pc, r1]
+    MOVW r1,#:lower16:_ZN6__xray19XRayPatchedFunctionE
+    MOVT r1,#:upper16:_ZN6__xray19XRayPatchedFunctionE
+    LDR r2, [r1]
     @ Handler address is nullptr if handler is not set
     CMP r2, #0
     BEQ FunctionTailExit_restore

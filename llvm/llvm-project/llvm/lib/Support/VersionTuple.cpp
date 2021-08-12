@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
 
 using namespace llvm;
 

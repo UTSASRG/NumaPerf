@@ -602,13 +602,13 @@ std::string clang::ento::getVariableName(const FieldDecl *Field) {
     llvm_unreachable("No other capture type is expected!");
   }
 
-  return std::string(Field->getName());
+  return Field->getName();
 }
 
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   auto Chk = Mgr.registerChecker<UninitializedObjectChecker>();
 
-  const AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
+  AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
   ChOpts.IsPedantic = AnOpts.getCheckerBooleanOption(Chk, "Pedantic");
@@ -617,7 +617,7 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
       Chk, "CheckPointeeInitialization");
   ChOpts.IgnoredRecordsWithFieldPattern =
-      std::string(AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField"));
+      AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField");
   ChOpts.IgnoreGuardedFields =
       AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields");
 
@@ -628,6 +628,6 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
         "\"" + ErrorMsg + "\"");
 }
 
-bool ento::shouldRegisterUninitializedObjectChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {
   return true;
 }

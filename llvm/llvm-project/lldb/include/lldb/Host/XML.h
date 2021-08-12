@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_XML_H
-#define LLDB_HOST_XML_H
+#ifndef liblldb_XML_h_
+#define liblldb_XML_h_
 
 #include "lldb/Host/Config.h"
 
@@ -179,4 +179,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_HOST_XML_H
+#endif // liblldb_XML_h_

@@ -15,6 +15,3 @@ def d : Flag<["-"], "d">,
 def S : Flag<["-"], "S">,
         Alias<strip_debug>,
         HelpText<"Alias for --strip-debug">;
-
-def strip_swift_symbols : Flag<["-"], "T">,
-                          HelpText<"Remove Swift symbols">;

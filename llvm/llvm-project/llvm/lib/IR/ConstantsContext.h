@@ -26,7 +26,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -147,24 +146,21 @@ public:
 /// shufflevector constant exprs.
 class ShuffleVectorConstantExpr : public ConstantExpr {
 public:
-  ShuffleVectorConstantExpr(Constant *C1, Constant *C2, ArrayRef<int> Mask)
-      : ConstantExpr(VectorType::get(
-                         cast<VectorType>(C1->getType())->getElementType(),
-                         Mask.size(), isa<ScalableVectorType>(C1->getType())),
-                     Instruction::ShuffleVector, &Op<0>(), 2) {
-    assert(ShuffleVectorInst::isValidOperands(C1, C2, Mask) &&
-           "Invalid shuffle vector instruction operands!");
+  ShuffleVectorConstantExpr(Constant *C1, Constant *C2, Constant *C3)
+  : ConstantExpr(VectorType::get(
+                   cast<VectorType>(C1->getType())->getElementType(),
+                   cast<VectorType>(C3->getType())->getElementCount()),
+                 Instruction::ShuffleVector,
+                 &Op<0>(), 3) {
     Op<0>() = C1;
     Op<1>() = C2;
-    ShuffleMask.assign(Mask.begin(), Mask.end());
-    ShuffleMaskForBitcode =
-        ShuffleVectorInst::convertShuffleMaskForBitcode(Mask, getType());
+    Op<2>() = C3;
   }
 
-  SmallVector<int, 4> ShuffleMask;
-  Constant *ShuffleMaskForBitcode;
-
-  void *operator new(size_t s) { return User::operator new(s, 2); }
+  // allocate space for exactly three operands
+  void *operator new(size_t s) {
+    return User::operator new(s, 3);
+  }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -323,7 +319,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementConstantExpr, Value)
 
 template <>
 struct OperandTraits<ShuffleVectorConstantExpr>
-    : public FixedNumOperandTraits<ShuffleVectorConstantExpr, 2> {};
+    : public FixedNumOperandTraits<ShuffleVectorConstantExpr, 3> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorConstantExpr, Value)
 
 template <>
@@ -458,64 +454,42 @@ struct InlineAsmKeyType {
 
   InlineAsm *create(TypeClass *Ty) const {
     assert(PointerType::getUnqual(FTy) == Ty);
-    return new InlineAsm(FTy, std::string(AsmString), std::string(Constraints),
-                         HasSideEffects, IsAlignStack, AsmDialect);
+    return new InlineAsm(FTy, AsmString, Constraints, HasSideEffects,
+                         IsAlignStack, AsmDialect);
   }
 };
 
 struct ConstantExprKeyType {
-private:
   uint8_t Opcode;
   uint8_t SubclassOptionalData;
   uint16_t SubclassData;
   ArrayRef<Constant *> Ops;
   ArrayRef<unsigned> Indexes;
-  ArrayRef<int> ShuffleMask;
   Type *ExplicitTy;
 
-  static ArrayRef<int> getShuffleMaskIfValid(const ConstantExpr *CE) {
-    if (CE->getOpcode() == Instruction::ShuffleVector)
-      return CE->getShuffleMask();
-    return None;
-  }
-
-  static ArrayRef<unsigned> getIndicesIfValid(const ConstantExpr *CE) {
-    if (CE->hasIndices())
-      return CE->getIndices();
-    return None;
-  }
-
-  static Type *getSourceElementTypeIfValid(const ConstantExpr *CE) {
-    if (auto *GEPCE = dyn_cast<GetElementPtrConstantExpr>(CE))
-      return GEPCE->getSourceElementType();
-    return nullptr;
-  }
-
-public:
   ConstantExprKeyType(unsigned Opcode, ArrayRef<Constant *> Ops,
                       unsigned short SubclassData = 0,
                       unsigned short SubclassOptionalData = 0,
                       ArrayRef<unsigned> Indexes = None,
-                      ArrayRef<int> ShuffleMask = None,
                       Type *ExplicitTy = nullptr)
       : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData),
         SubclassData(SubclassData), Ops(Ops), Indexes(Indexes),
-        ShuffleMask(ShuffleMask), ExplicitTy(ExplicitTy) {}
+        ExplicitTy(ExplicitTy) {}
 
   ConstantExprKeyType(ArrayRef<Constant *> Operands, const ConstantExpr *CE)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0), Ops(Operands),
-        Indexes(getIndicesIfValid(CE)), ShuffleMask(getShuffleMaskIfValid(CE)),
-        ExplicitTy(getSourceElementTypeIfValid(CE)) {}
+        Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()),
+        ExplicitTy(nullptr) {}
 
   ConstantExprKeyType(const ConstantExpr *CE,
                       SmallVectorImpl<Constant *> &Storage)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0),
-        Indexes(getIndicesIfValid(CE)), ShuffleMask(getShuffleMaskIfValid(CE)),
-        ExplicitTy(getSourceElementTypeIfValid(CE)) {
+        Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()),
+        ExplicitTy(nullptr) {
     assert(Storage.empty() && "Expected empty storage");
     for (unsigned I = 0, E = CE->getNumOperands(); I != E; ++I)
       Storage.push_back(CE->getOperand(I));
@@ -525,8 +499,7 @@ public:
   bool operator==(const ConstantExprKeyType &X) const {
     return Opcode == X.Opcode && SubclassData == X.SubclassData &&
            SubclassOptionalData == X.SubclassOptionalData && Ops == X.Ops &&
-           Indexes == X.Indexes && ShuffleMask == X.ShuffleMask &&
-           ExplicitTy == X.ExplicitTy;
+           Indexes == X.Indexes;
   }
 
   bool operator==(const ConstantExpr *CE) const {
@@ -541,21 +514,15 @@ public:
     for (unsigned I = 0, E = Ops.size(); I != E; ++I)
       if (Ops[I] != CE->getOperand(I))
         return false;
-    if (Indexes != getIndicesIfValid(CE))
-      return false;
-    if (ShuffleMask != getShuffleMaskIfValid(CE))
-      return false;
-    if (ExplicitTy != getSourceElementTypeIfValid(CE))
+    if (Indexes != (CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()))
       return false;
     return true;
   }
 
   unsigned getHash() const {
-    return hash_combine(
-        Opcode, SubclassOptionalData, SubclassData,
-        hash_combine_range(Ops.begin(), Ops.end()),
-        hash_combine_range(Indexes.begin(), Indexes.end()),
-        hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
+    return hash_combine(Opcode, SubclassOptionalData, SubclassData,
+                        hash_combine_range(Ops.begin(), Ops.end()),
+                        hash_combine_range(Indexes.begin(), Indexes.end()));
   }
 
   using TypeClass = ConstantInfo<ConstantExpr>::TypeClass;
@@ -579,14 +546,17 @@ public:
     case Instruction::InsertElement:
       return new InsertElementConstantExpr(Ops[0], Ops[1], Ops[2]);
     case Instruction::ShuffleVector:
-      return new ShuffleVectorConstantExpr(Ops[0], Ops[1], ShuffleMask);
+      return new ShuffleVectorConstantExpr(Ops[0], Ops[1], Ops[2]);
     case Instruction::InsertValue:
       return new InsertValueConstantExpr(Ops[0], Ops[1], Indexes, Ty);
     case Instruction::ExtractValue:
       return new ExtractValueConstantExpr(Ops[0], Indexes, Ty);
     case Instruction::GetElementPtr:
-      return GetElementPtrConstantExpr::Create(ExplicitTy, Ops[0], Ops.slice(1),
-                                               Ty, SubclassOptionalData);
+      return GetElementPtrConstantExpr::Create(
+          ExplicitTy ? ExplicitTy
+                     : cast<PointerType>(Ops[0]->getType()->getScalarType())
+                           ->getElementType(),
+          Ops[0], Ops.slice(1), Ty, SubclassOptionalData);
     case Instruction::ICmp:
       return new CompareConstantExpr(Ty, Instruction::ICmp, SubclassData,
                                      Ops[0], Ops[1]);

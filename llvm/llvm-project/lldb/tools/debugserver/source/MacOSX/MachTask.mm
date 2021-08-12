@@ -69,8 +69,7 @@ extern "C" {
 //----------------------------------------------------------------------
 MachTask::MachTask(MachProcess *process)
     : m_process(process), m_task(TASK_NULL), m_vm_memory(),
-      m_exception_thread(0), m_exception_port(MACH_PORT_NULL),
-      m_exec_will_be_suspended(false), m_do_double_resume(false) {
+      m_exception_thread(0), m_exception_port(MACH_PORT_NULL) {
   memset(&m_exc_port_info, 0, sizeof(m_exc_port_info));
 }
 
@@ -104,14 +103,6 @@ kern_return_t MachTask::Resume() {
   err = BasicInfo(task, &task_info);
 
   if (err.Success()) {
-    if (m_do_double_resume && task_info.suspend_count == 2) {
-      err = ::task_resume(task);
-      if (DNBLogCheckLogBit(LOG_TASK) || err.Fail())
-        err.LogThreaded("::task_resume double-resume after exec-start-stopped "
-                        "( target_task = 0x%4.4x )", task);
-    }
-    m_do_double_resume = false;
-      
     // task_resume isn't counted like task_suspend calls are, are, so if the
     // task is not suspended, don't try and resume it since it is already
     // running
@@ -144,8 +135,6 @@ void MachTask::Clear() {
   m_task = TASK_NULL;
   m_exception_thread = 0;
   m_exception_port = MACH_PORT_NULL;
-  m_exec_will_be_suspended = false;
-  m_do_double_resume = false;
 }
 
 //----------------------------------------------------------------------
@@ -662,9 +651,6 @@ kern_return_t MachTask::ShutDownExcecptionThread() {
     err.LogThreaded("::mach_port_deallocate ( task = 0x%4.4x, name = 0x%4.4x )",
                     task_self, exception_port);
 
-  m_exec_will_be_suspended = false;
-  m_do_double_resume = false;
-
   return err.Status();
 }
 
@@ -974,14 +960,4 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
 void MachTask::TaskPortChanged(task_t task)
 {
   m_task = task;
-
-  // If we've just exec'd to a new process, and it
-  // is started suspended, we'll need to do two
-  // task_resume's to get the inferior process to
-  // continue.
-  if (m_exec_will_be_suspended)
-    m_do_double_resume = true;
-  else
-    m_do_double_resume = false;
-  m_exec_will_be_suspended = false;
 }

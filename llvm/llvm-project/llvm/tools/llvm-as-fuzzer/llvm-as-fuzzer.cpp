@@ -70,7 +70,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (!M.get())
     return 0;
 
-  if (verifyModule(*M.get(), &errs()))
-    report_fatal_error("Broken module");
+  verifyModule(*M.get());
   return 0;
 }

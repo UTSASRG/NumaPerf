@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBDEFINES_H
-#define LLDB_API_SBDEFINES_H
+#ifndef LLDB_SBDefines_h_
+#define LLDB_SBDefines_h_
+
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -28,7 +29,6 @@ class LLDB_API SBBroadcaster;
 class LLDB_API SBCommand;
 class LLDB_API SBCommandInterpreter;
 class LLDB_API SBCommandInterpreterRunOptions;
-class LLDB_API SBCommandInterpreterRunResult;
 class LLDB_API SBCommandPluginInterface;
 class LLDB_API SBCommandReturnObject;
 class LLDB_API SBCommunication;
@@ -36,7 +36,6 @@ class LLDB_API SBCompileUnit;
 class LLDB_API SBData;
 class LLDB_API SBDebugger;
 class LLDB_API SBDeclaration;
-class LLDB_API SBEnvironment;
 class LLDB_API SBError;
 class LLDB_API SBEvent;
 class LLDB_API SBEventList;
@@ -100,4 +99,4 @@ typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,
                                         lldb::SBBreakpointLocation &location);
 }
 
-#endif // LLDB_API_SBDEFINES_H
+#endif // LLDB_SBDefines_h_

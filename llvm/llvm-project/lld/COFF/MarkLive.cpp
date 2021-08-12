@@ -28,12 +28,10 @@ void markLive(ArrayRef<Chunk *> chunks) {
   // as we push, so sections never appear twice in the list.
   SmallVector<SectionChunk *, 256> worklist;
 
-  // COMDAT section chunks are dead by default. Add non-COMDAT chunks. Do not
-  // traverse DWARF sections. They are live, but they should not keep other
-  // sections alive.
+  // COMDAT section chunks are dead by default. Add non-COMDAT chunks.
   for (Chunk *c : chunks)
     if (auto *sc = dyn_cast<SectionChunk>(c))
-      if (sc->live && !sc->isDWARF())
+      if (sc->live)
         worklist.push_back(sc);
 
   auto enqueue = [&](SectionChunk *c) {

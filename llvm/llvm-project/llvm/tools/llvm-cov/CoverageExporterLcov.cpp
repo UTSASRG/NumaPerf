@@ -78,11 +78,10 @@ void renderLineSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
 
 void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                 const std::string &Filename,
-                const FileCoverageSummary &FileReport, bool ExportSummaryOnly,
-                bool SkipFunctions) {
+                const FileCoverageSummary &FileReport, bool ExportSummaryOnly) {
   OS << "SF:" << Filename << '\n';
 
-  if (!ExportSummaryOnly && !SkipFunctions) {
+  if (!ExportSummaryOnly) {
     renderFunctions(OS, Coverage.getCoveredFunctions(Filename));
   }
   renderFunctionSummary(OS, FileReport);
@@ -100,10 +99,9 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
 void renderFiles(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                  ArrayRef<std::string> SourceFiles,
                  ArrayRef<FileCoverageSummary> FileReports,
-                 bool ExportSummaryOnly, bool SkipFunctions) {
+                 bool ExportSummaryOnly) {
   for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I)
-    renderFile(OS, Coverage, SourceFiles[I], FileReports[I], ExportSummaryOnly,
-               SkipFunctions);
+    renderFile(OS, Coverage, SourceFiles[I], FileReports[I], ExportSummaryOnly);
 }
 
 } // end anonymous namespace
@@ -121,6 +119,6 @@ void CoverageExporterLcov::renderRoot(ArrayRef<std::string> SourceFiles) {
   FileCoverageSummary Totals = FileCoverageSummary("Totals");
   auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
                                                         SourceFiles, Options);
-  renderFiles(OS, Coverage, SourceFiles, FileReports, Options.ExportSummaryOnly,
-              Options.SkipFunctions);
+  renderFiles(OS, Coverage, SourceFiles, FileReports,
+              Options.ExportSummaryOnly);
 }

@@ -133,7 +133,6 @@ public:
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   MCStreamer &Streamer;
-  Triple::OSType Os;
 
   void EmitNote(StringRef Name, const MCExpr *DescSize, unsigned NoteType,
                 function_ref<void(MCELFStreamer &)> EmitDesc);

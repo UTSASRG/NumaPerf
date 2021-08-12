@@ -8,18 +8,12 @@ define void @foo() #0 {
     ret void
 }
 
-define void @qux() #1 {
-    ret void
-}
-
 define void @_start() {
     call void @foo()
     ret void
 }
 
 attributes #0 = { "wasm-export-name"="bar" }
-
-attributes #1 = { "wasm-export-name"="" }
 
 ; CHECK:       - Type:            EXPORT
 ; CHECK-NEXT:    Exports:
@@ -29,9 +23,6 @@ attributes #1 = { "wasm-export-name"="" }
 ; CHECK-NEXT:      - Name:            bar
 ; CHECK-NEXT:        Kind:            FUNCTION
 ; CHECK-NEXT:        Index:           0
-; CHECK-NEXT:      - Name:            ''
-; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           1
 ; CHECK-NEXT:      - Name:            _start
 ; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           2
+; CHECK-NEXT:        Index:           1

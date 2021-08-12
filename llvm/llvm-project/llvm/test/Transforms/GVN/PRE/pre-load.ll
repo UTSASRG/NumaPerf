@@ -1,5 +1,4 @@
 ; RUN: opt < %s -basicaa -gvn -enable-load-pre -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline=basic-aa -passes="gvn<load-pre>" -enable-load-pre=false -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
 define i32 @test1(i32* %p, i1 %C) {
@@ -507,7 +506,7 @@ follow_2:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) %x, i32* noalias nocapture %r, i32 %a) {
 
 ; CHECK-LABEL: @test15
 ; CHECK: entry:
@@ -548,7 +547,7 @@ if.end:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) %x, i32* noalias nocapture %r, i32 %a) {
 
 ; CHECK-LABEL: @test16(
 ; CHECK: entry:

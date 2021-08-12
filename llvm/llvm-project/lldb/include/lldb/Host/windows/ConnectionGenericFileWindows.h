@@ -56,9 +56,7 @@ private:
 
   std::string m_uri;
 
-  ConnectionGenericFile(const ConnectionGenericFile &) = delete;
-  const ConnectionGenericFile &
-  operator=(const ConnectionGenericFile &) = delete;
+  DISALLOW_COPY_AND_ASSIGN(ConnectionGenericFile);
 };
 }
 

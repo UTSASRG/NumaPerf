@@ -3,8 +3,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -o - -amdgpu-lower-kernel-arguments %s | FileCheck -check-prefix=HSA %s
 ; RUN: opt -mtriple=amdgcn-- -S -o - -amdgpu-lower-kernel-arguments %s | FileCheck -check-prefix=MESA %s
 
-target datalayout = "A5"
-
 define amdgpu_kernel void @kern_noargs() {
 ; HSA-LABEL: @kern_noargs(
 ; HSA-NEXT:    ret void
@@ -246,7 +244,7 @@ define amdgpu_kernel void @kern_i24(i24 %arg0) {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i24
-; HSA-NEXT:    store i24 [[TMP2]], i24 addrspace(1)* undef, align 4
+; HSA-NEXT:    store i24 [[TMP2]], i24 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_i24(
@@ -255,7 +253,7 @@ define amdgpu_kernel void @kern_i24(i24 %arg0) {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]] to i32 addrspace(4)*
 ; MESA-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i24
-; MESA-NEXT:    store i24 [[TMP2]], i24 addrspace(1)* undef, align 4
+; MESA-NEXT:    store i24 [[TMP2]], i24 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store i24 %arg0, i24 addrspace(1)* undef
@@ -268,7 +266,7 @@ define amdgpu_kernel void @kern_i32(i32 %arg0) {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_I32_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_i32(
@@ -276,7 +274,7 @@ define amdgpu_kernel void @kern_i32(i32 %arg0) {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_I32_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
+; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store i32 %arg0, i32 addrspace(1)* undef
@@ -289,7 +287,7 @@ define amdgpu_kernel void @kern_f32(float %arg0) {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_F32_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to float addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load float, float addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store float [[ARG0_LOAD]], float addrspace(1)* undef, align 4
+; HSA-NEXT:    store float [[ARG0_LOAD]], float addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_f32(
@@ -297,7 +295,7 @@ define amdgpu_kernel void @kern_f32(float %arg0) {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_F32_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to float addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load float, float addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store float [[ARG0_LOAD]], float addrspace(1)* undef, align 4
+; MESA-NEXT:    store float [[ARG0_LOAD]], float addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store float %arg0, float addrspace(1)* undef
@@ -309,8 +307,8 @@ define amdgpu_kernel void @kern_v3i32(<3 x i32> %arg0) {
 ; HSA-NEXT:    [[KERN_V3I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V3I32_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
-; HSA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; HSA-NEXT:    [[TMP:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
 ; HSA-NEXT:    store <3 x i32> [[ARG0_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; HSA-NEXT:    ret void
 ;
@@ -318,8 +316,8 @@ define amdgpu_kernel void @kern_v3i32(<3 x i32> %arg0) {
 ; MESA-NEXT:    [[KERN_V3I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(52) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V3I32_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
-; MESA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; MESA-NEXT:    [[TMP:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
 ; MESA-NEXT:    store <3 x i32> [[ARG0_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; MESA-NEXT:    ret void
 ;
@@ -333,7 +331,7 @@ define amdgpu_kernel void @kern_v8i32(<8 x i32> %arg) #0 {
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V8I32_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG_KERNARG_OFFSET]] to <8 x i32> addrspace(4)*
 ; HSA-NEXT:    [[ARG_LOAD:%.*]] = load <8 x i32>, <8 x i32> addrspace(4)* [[ARG_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store <8 x i32> [[ARG_LOAD]], <8 x i32> addrspace(1)* undef, align 32
+; HSA-NEXT:    store <8 x i32> [[ARG_LOAD]], <8 x i32> addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_v8i32(
@@ -341,7 +339,7 @@ define amdgpu_kernel void @kern_v8i32(<8 x i32> %arg) #0 {
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V8I32_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG_KERNARG_OFFSET]] to <8 x i32> addrspace(4)*
 ; MESA-NEXT:    [[ARG_LOAD:%.*]] = load <8 x i32>, <8 x i32> addrspace(4)* [[ARG_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store <8 x i32> [[ARG_LOAD]], <8 x i32> addrspace(1)* undef, align 32
+; MESA-NEXT:    store <8 x i32> [[ARG_LOAD]], <8 x i32> addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store <8 x i32> %arg, <8 x i32> addrspace(1)* undef
@@ -354,7 +352,7 @@ define amdgpu_kernel void @kern_v8i64(<8 x i64> %arg) #0 {
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V8I64_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG_KERNARG_OFFSET]] to <8 x i64> addrspace(4)*
 ; HSA-NEXT:    [[ARG_LOAD:%.*]] = load <8 x i64>, <8 x i64> addrspace(4)* [[ARG_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store <8 x i64> [[ARG_LOAD]], <8 x i64> addrspace(1)* undef, align 64
+; HSA-NEXT:    store <8 x i64> [[ARG_LOAD]], <8 x i64> addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_v8i64(
@@ -362,7 +360,7 @@ define amdgpu_kernel void @kern_v8i64(<8 x i64> %arg) #0 {
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V8I64_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG_KERNARG_OFFSET]] to <8 x i64> addrspace(4)*
 ; MESA-NEXT:    [[ARG_LOAD:%.*]] = load <8 x i64>, <8 x i64> addrspace(4)* [[ARG_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store <8 x i64> [[ARG_LOAD]], <8 x i64> addrspace(1)* undef, align 64
+; MESA-NEXT:    store <8 x i64> [[ARG_LOAD]], <8 x i64> addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store <8 x i64> %arg, <8 x i64> addrspace(1)* undef
@@ -375,7 +373,7 @@ define amdgpu_kernel void @kern_v16i64(<16 x i64> %arg) #0 {
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V16I64_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG_KERNARG_OFFSET]] to <16 x i64> addrspace(4)*
 ; HSA-NEXT:    [[ARG_LOAD:%.*]] = load <16 x i64>, <16 x i64> addrspace(4)* [[ARG_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store <16 x i64> [[ARG_LOAD]], <16 x i64> addrspace(1)* undef, align 128
+; HSA-NEXT:    store <16 x i64> [[ARG_LOAD]], <16 x i64> addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_v16i64(
@@ -383,7 +381,7 @@ define amdgpu_kernel void @kern_v16i64(<16 x i64> %arg) #0 {
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V16I64_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG_KERNARG_OFFSET]] to <16 x i64> addrspace(4)*
 ; MESA-NEXT:    [[ARG_LOAD:%.*]] = load <16 x i64>, <16 x i64> addrspace(4)* [[ARG_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store <16 x i64> [[ARG_LOAD]], <16 x i64> addrspace(1)* undef, align 128
+; MESA-NEXT:    store <16 x i64> [[ARG_LOAD]], <16 x i64> addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store <16 x i64> %arg, <16 x i64> addrspace(1)* undef
@@ -398,9 +396,9 @@ define amdgpu_kernel void @kern_i32_v3i32(i32 %arg0, <3 x i32> %arg1) {
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_I32_V3I32_KERNARG_SEGMENT]], i64 16
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
-; HSA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    [[TMP:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef
 ; HSA-NEXT:    store <3 x i32> [[ARG1_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; HSA-NEXT:    ret void
 ;
@@ -411,9 +409,9 @@ define amdgpu_kernel void @kern_i32_v3i32(i32 %arg0, <3 x i32> %arg1) {
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_I32_V3I32_KERNARG_SEGMENT]], i64 52
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
-; MESA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
+; MESA-NEXT:    [[TMP:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef
 ; MESA-NEXT:    store <3 x i32> [[ARG1_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; MESA-NEXT:    ret void
 ;
@@ -431,7 +429,7 @@ define amdgpu_kernel void @kern_struct_a(%struct.a %arg0) {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_A_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_A:%.*]] addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_A]], [[STRUCT_A]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store [[STRUCT_A]] %arg0.load, [[STRUCT_A]] addrspace(1)* undef, align 4
+; HSA-NEXT:    store [[STRUCT_A]] %arg0.load, [[STRUCT_A]] addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_struct_a(
@@ -439,7 +437,7 @@ define amdgpu_kernel void @kern_struct_a(%struct.a %arg0) {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_A_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_A:%.*]] addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_A]], [[STRUCT_A]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store [[STRUCT_A]] %arg0.load, [[STRUCT_A]] addrspace(1)* undef, align 4
+; MESA-NEXT:    store [[STRUCT_A]] %arg0.load, [[STRUCT_A]] addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store %struct.a %arg0, %struct.a addrspace(1)* undef
@@ -452,7 +450,7 @@ define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) #0 {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_B_PACKED_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_B_PACKED:%.*]] addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_B_PACKED]], [[STRUCT_B_PACKED]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store [[STRUCT_B_PACKED]] %arg0.load, [[STRUCT_B_PACKED]] addrspace(1)* undef, align 16
+; HSA-NEXT:    store [[STRUCT_B_PACKED]] %arg0.load, [[STRUCT_B_PACKED]] addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_struct_b_packed(
@@ -460,7 +458,7 @@ define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) #0 {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_B_PACKED_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_B_PACKED:%.*]] addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_B_PACKED]], [[STRUCT_B_PACKED]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store [[STRUCT_B_PACKED]] %arg0.load, [[STRUCT_B_PACKED]] addrspace(1)* undef, align 16
+; MESA-NEXT:    store [[STRUCT_B_PACKED]] %arg0.load, [[STRUCT_B_PACKED]] addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store %struct.b.packed %arg0, %struct.b.packed addrspace(1)* undef
@@ -473,7 +471,7 @@ define amdgpu_kernel void @kern_implicit_arg_num_bytes(i32 %arg0) #1 {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_IMPLICIT_ARG_NUM_BYTES_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_implicit_arg_num_bytes(
@@ -481,7 +479,7 @@ define amdgpu_kernel void @kern_implicit_arg_num_bytes(i32 %arg0) #1 {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_IMPLICIT_ARG_NUM_BYTES_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
+; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store i32 %arg0, i32 addrspace(1)* undef
@@ -494,7 +492,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align(<16 x i32>, i32 %a
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERNEL_IMPLICITARG_NO_STRUCT_ALIGN_KERNARG_SEGMENT]], i64 64
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[ARG1_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kernel_implicitarg_no_struct_align(
@@ -502,7 +500,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align(<16 x i32>, i32 %a
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERNEL_IMPLICITARG_NO_STRUCT_ALIGN_KERNARG_SEGMENT]], i64 100
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; MESA-NEXT:    [[ARG1_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef, align 4
+; MESA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store i32 %arg1, i32 addrspace(1)* undef
@@ -560,8 +558,8 @@ define amdgpu_kernel void @kern_realign_i8_i8(i8 %arg0, i8 %arg1) #0 {
 ; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 8
 ; HSA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
-; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i8_i8(
@@ -575,8 +573,8 @@ define amdgpu_kernel void @kern_realign_i8_i8(i8 %arg0, i8 %arg1) #0 {
 ; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 8
 ; MESA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
-; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 %arg0, i8 addrspace(1)* undef
@@ -601,9 +599,9 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2) #
 ; HSA-NEXT:    [[TMP6:%.*]] = load i32, i32 addrspace(4)* [[ARG2_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
 ; HSA-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
-; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i8_i8_i8(
@@ -622,9 +620,9 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2) #
 ; MESA-NEXT:    [[TMP6:%.*]] = load i32, i32 addrspace(4)* [[ARG2_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
 ; MESA-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
-; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 %arg0, i8 addrspace(1)* undef
@@ -655,10 +653,10 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2
 ; HSA-NEXT:    [[TMP9:%.*]] = load i32, i32 addrspace(4)* [[ARG3_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 24
 ; HSA-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i8
-; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i8_i8_i8_i8(
@@ -682,10 +680,10 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8_i8(i8 %arg0, i8 %arg1, i8 %arg2
 ; MESA-NEXT:    [[TMP9:%.*]] = load i32, i32 addrspace(4)* [[ARG3_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 24
 ; MESA-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i8
-; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 %arg0, i8 addrspace(1)* undef
@@ -707,8 +705,8 @@ define amdgpu_kernel void @kern_realign_i8_v3i8(i8 %arg0, <3 x i8> %arg1) #0 {
 ; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; HSA-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i24
 ; HSA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i24 [[TMP4]] to <3 x i8>
-; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile <3 x i8> [[ARG1_LOAD]], <3 x i8> addrspace(1)* undef, align 4
+; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile <3 x i8> [[ARG1_LOAD]], <3 x i8> addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i8_v3i8(
@@ -722,8 +720,8 @@ define amdgpu_kernel void @kern_realign_i8_v3i8(i8 %arg0, <3 x i8> %arg1) #0 {
 ; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 8, !invariant.load !0
 ; MESA-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i24
 ; MESA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i24 [[TMP4]] to <3 x i8>
-; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile <3 x i8> [[ARG1_LOAD]], <3 x i8> addrspace(1)* undef, align 4
+; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile <3 x i8> [[ARG1_LOAD]], <3 x i8> addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 %arg0, i8 addrspace(1)* undef
@@ -743,8 +741,8 @@ define amdgpu_kernel void @kern_realign_i8_i16(i8 %arg0, i16 %arg1) #0 {
 ; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; HSA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
-; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef, align 2
+; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i8_i16(
@@ -758,8 +756,8 @@ define amdgpu_kernel void @kern_realign_i8_i16(i8 %arg0, i16 %arg1) #0 {
 ; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; MESA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
-; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef, align 2
+; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 %arg0, i8 addrspace(1)* undef
@@ -779,8 +777,8 @@ define amdgpu_kernel void @kern_realign_i1_i1(i1 %arg0, i1 %arg1) #0 {
 ; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 8
 ; HSA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i1
-; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i1_i1(
@@ -794,8 +792,8 @@ define amdgpu_kernel void @kern_realign_i1_i1(i1 %arg0, i1 %arg1) #0 {
 ; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 8
 ; MESA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i1
-; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i1 %arg0, i1 addrspace(1)* undef
@@ -820,9 +818,9 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2) #
 ; HSA-NEXT:    [[TMP6:%.*]] = load i32, i32 addrspace(4)* [[ARG2_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
 ; HSA-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i1
-; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i1_i1_i1(
@@ -841,9 +839,9 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2) #
 ; MESA-NEXT:    [[TMP6:%.*]] = load i32, i32 addrspace(4)* [[ARG2_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
 ; MESA-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i1
-; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i1 %arg0, i1 addrspace(1)* undef
@@ -874,10 +872,10 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2
 ; HSA-NEXT:    [[TMP9:%.*]] = load i32, i32 addrspace(4)* [[ARG3_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 24
 ; HSA-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i1
-; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i1 [[TMP11]], i1 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i1 [[TMP11]], i1 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i1_i1_i1_i1(
@@ -901,10 +899,10 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2
 ; MESA-NEXT:    [[TMP9:%.*]] = load i32, i32 addrspace(4)* [[ARG3_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP9]], 24
 ; MESA-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i1
-; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i1 [[TMP11]], i1 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i1 [[TMP5]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i1 [[TMP8]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i1 [[TMP11]], i1 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i1 %arg0, i1 addrspace(1)* undef
@@ -926,8 +924,8 @@ define amdgpu_kernel void @kern_realign_i1_v3i1(i1 %arg0, <3 x i1> %arg1) #0 {
 ; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; HSA-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i3
 ; HSA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i3 [[TMP4]] to <3 x i1>
-; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef, align 4
+; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i1_v3i1(
@@ -941,8 +939,8 @@ define amdgpu_kernel void @kern_realign_i1_v3i1(i1 %arg0, <3 x i1> %arg1) #0 {
 ; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 8, !invariant.load !0
 ; MESA-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i3
 ; MESA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i3 [[TMP4]] to <3 x i1>
-; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef, align 4
+; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i1 %arg0, i1 addrspace(1)* undef
@@ -962,8 +960,8 @@ define amdgpu_kernel void @kern_realign_i1_i16(i1 %arg0, i16 %arg1) #0 {
 ; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; HSA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
-; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef, align 2
+; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; HSA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i1_i16(
@@ -977,8 +975,8 @@ define amdgpu_kernel void @kern_realign_i1_i16(i1 %arg0, i16 %arg1) #0 {
 ; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; MESA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
-; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef, align 2
+; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef
+; MESA-NEXT:    store volatile i16 [[TMP5]], i16 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i1 %arg0, i1 addrspace(1)* undef
@@ -1023,13 +1021,13 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(i8 %arg0, i8 %ar
 ; HSA-NEXT:    [[TMP18:%.*]] = load i32, i32 addrspace(4)* [[ARG7_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; HSA-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP18]], 24
 ; HSA-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i8
-; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP14]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP17]], i8 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile i8 [[TMP20]], i8 addrspace(1)* undef, align 1
+; HSA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP14]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP17]], i8 addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 [[TMP20]], i8 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(
@@ -1068,13 +1066,13 @@ define amdgpu_kernel void @kern_realign_i8_i8_i8_i8_i8_i8_i8_i8(i8 %arg0, i8 %ar
 ; MESA-NEXT:    [[TMP18:%.*]] = load i32, i32 addrspace(4)* [[ARG7_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 8, !invariant.load !0
 ; MESA-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP18]], 24
 ; MESA-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i8
-; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP14]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP17]], i8 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile i8 [[TMP20]], i8 addrspace(1)* undef, align 1
+; MESA-NEXT:    store volatile i8 [[TMP2]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP5]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP8]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP11]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP14]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP17]], i8 addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 [[TMP20]], i8 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 %arg0, i8 addrspace(1)* undef
@@ -1101,8 +1099,8 @@ define amdgpu_kernel void @kern_realign_f16_f16(half %arg0, half %arg1) #0 {
 ; HSA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; HSA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
 ; HSA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i16 [[TMP5]] to half
-; HSA-NEXT:    store volatile half [[ARG0_LOAD]], half addrspace(1)* undef, align 2
-; HSA-NEXT:    store volatile half [[ARG1_LOAD]], half addrspace(1)* undef, align 2
+; HSA-NEXT:    store volatile half [[ARG0_LOAD]], half addrspace(1)* undef
+; HSA-NEXT:    store volatile half [[ARG1_LOAD]], half addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_f16_f16(
@@ -1118,8 +1116,8 @@ define amdgpu_kernel void @kern_realign_f16_f16(half %arg0, half %arg1) #0 {
 ; MESA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; MESA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
 ; MESA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i16 [[TMP5]] to half
-; MESA-NEXT:    store volatile half [[ARG0_LOAD]], half addrspace(1)* undef, align 2
-; MESA-NEXT:    store volatile half [[ARG1_LOAD]], half addrspace(1)* undef, align 2
+; MESA-NEXT:    store volatile half [[ARG0_LOAD]], half addrspace(1)* undef
+; MESA-NEXT:    store volatile half [[ARG1_LOAD]], half addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile half %arg0, half addrspace(1)* undef
@@ -1133,7 +1131,7 @@ define amdgpu_kernel void @kern_global_ptr(i8 addrspace(1)* %ptr) #0 {
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; HSA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_global_ptr(
@@ -1141,7 +1139,7 @@ define amdgpu_kernel void @kern_global_ptr(i8 addrspace(1)* %ptr) #0 {
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; MESA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr, i8 addrspace(1)* addrspace(1)* undef
@@ -1154,7 +1152,7 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable(i8 addrspace(1)* deref
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; HSA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0, !dereferenceable !1
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_global_ptr_dereferencable(
@@ -1162,7 +1160,7 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable(i8 addrspace(1)* deref
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; MESA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0, !dereferenceable !1
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr, i8 addrspace(1)* addrspace(1)* undef
@@ -1175,7 +1173,7 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable_or_null(i8 addrspace(1
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; HSA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0, !dereferenceable_or_null !2
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_global_ptr_dereferencable_or_null(
@@ -1183,7 +1181,7 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable_or_null(i8 addrspace(1
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; MESA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0, !dereferenceable_or_null !2
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr, i8 addrspace(1)* addrspace(1)* undef
@@ -1196,7 +1194,7 @@ define amdgpu_kernel void @kern_nonnull_global_ptr(i8 addrspace(1)* nonnull %ptr
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_NONNULL_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; HSA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0, !nonnull !0
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_nonnull_global_ptr(
@@ -1204,7 +1202,7 @@ define amdgpu_kernel void @kern_nonnull_global_ptr(i8 addrspace(1)* nonnull %ptr
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_NONNULL_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; MESA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0, !nonnull !0
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr, i8 addrspace(1)* addrspace(1)* undef
@@ -1217,7 +1215,7 @@ define amdgpu_kernel void @kern_align32_global_ptr(i8 addrspace(1)* align 1024 %
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; HSA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0, !align !3
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_align32_global_ptr(
@@ -1225,7 +1223,7 @@ define amdgpu_kernel void @kern_align32_global_ptr(i8 addrspace(1)* align 1024 %
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[PTR_KERNARG_OFFSET]] to i8 addrspace(1)* addrspace(4)*
 ; MESA-NEXT:    [[PTR_LOAD:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* [[PTR_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0, !align !3
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR_LOAD]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr, i8 addrspace(1)* addrspace(1)* undef
@@ -1235,12 +1233,12 @@ define amdgpu_kernel void @kern_align32_global_ptr(i8 addrspace(1)* align 1024 %
 define amdgpu_kernel void @kern_noalias_global_ptr(i8 addrspace(1)* noalias %ptr) #0 {
 ; HSA-LABEL: @kern_noalias_global_ptr(
 ; HSA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(8) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR:%.*]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR:%.*]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_noalias_global_ptr(
 ; MESA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(44) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR:%.*]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR:%.*]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr, i8 addrspace(1)* addrspace(1)* undef
@@ -1250,14 +1248,14 @@ define amdgpu_kernel void @kern_noalias_global_ptr(i8 addrspace(1)* noalias %ptr
 define amdgpu_kernel void @kern_noalias_global_ptr_x2(i8 addrspace(1)* noalias %ptr0, i8 addrspace(1)* noalias %ptr1) #0 {
 ; HSA-LABEL: @kern_noalias_global_ptr_x2(
 ; HSA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR0:%.*]], i8 addrspace(1)* addrspace(1)* undef, align 8
-; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR1:%.*]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR0:%.*]], i8 addrspace(1)* addrspace(1)* undef
+; HSA-NEXT:    store volatile i8 addrspace(1)* [[PTR1:%.*]], i8 addrspace(1)* addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_noalias_global_ptr_x2(
 ; MESA-NEXT:    [[KERN_NOALIAS_GLOBAL_PTR_X2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(52) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR0:%.*]], i8 addrspace(1)* addrspace(1)* undef, align 8
-; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR1:%.*]], i8 addrspace(1)* addrspace(1)* undef, align 8
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR0:%.*]], i8 addrspace(1)* addrspace(1)* undef
+; MESA-NEXT:    store volatile i8 addrspace(1)* [[PTR1:%.*]], i8 addrspace(1)* addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store volatile i8 addrspace(1)* %ptr0, i8 addrspace(1)* addrspace(1)* undef
@@ -1414,7 +1412,7 @@ define amdgpu_kernel void @empty_struct_with_other({} %empty, i32 %arg1) #0 {
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[EMPTY_STRUCT_WITH_OTHER_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[ARG1_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @empty_struct_with_other(
@@ -1422,67 +1420,10 @@ define amdgpu_kernel void @empty_struct_with_other({} %empty, i32 %arg1) #0 {
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[EMPTY_STRUCT_WITH_OTHER_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to i32 addrspace(4)*
 ; MESA-NEXT:    [[ARG1_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef, align 4
+; MESA-NEXT:    store i32 [[ARG1_LOAD]], i32 addrspace(1)* undef
 ; MESA-NEXT:    ret void
 ;
   store i32 %arg1, i32 addrspace(1)* undef
-  ret void
-}
-
-; Should insert code after the allocas
-define amdgpu_kernel void @static_alloca_kern_i32(i32 %arg0) {
-; HSA-LABEL: @static_alloca_kern_i32(
-; HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; HSA-NEXT:    [[STATIC_ALLOCA_KERN_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(4) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[STATIC_ALLOCA_KERN_I32_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to i32 addrspace(4)*
-; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store volatile i32 [[ARG0_LOAD]], i32 addrspace(5)* [[ALLOCA]], align 4
-; HSA-NEXT:    ret void
-;
-; MESA-LABEL: @static_alloca_kern_i32(
-; MESA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; MESA-NEXT:    [[STATIC_ALLOCA_KERN_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[STATIC_ALLOCA_KERN_I32_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to i32 addrspace(4)*
-; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store volatile i32 [[ARG0_LOAD]], i32 addrspace(5)* [[ALLOCA]], align 4
-; MESA-NEXT:    ret void
-;
-  %alloca = alloca i32, addrspace(5)
-  store volatile i32 %arg0, i32 addrspace(5)* %alloca
-  ret void
-}
-
-; Make sure we don't break the IR if an alloca depends on the
-; kernargs.
-define amdgpu_kernel void @dyn_alloca_kernarg_i32(i32 %n) {
-; HSA-LABEL: @dyn_alloca_kernarg_i32(
-; HSA-NEXT:    [[ALLOCA0:%.*]] = alloca i32, align 4, addrspace(5)
-; HSA-NEXT:    [[DYN_ALLOCA_KERNARG_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(4) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; HSA-NEXT:    [[N_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[DYN_ALLOCA_KERNARG_I32_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[N_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[N_KERNARG_OFFSET]] to i32 addrspace(4)*
-; HSA-NEXT:    [[N_LOAD:%.*]] = load i32, i32 addrspace(4)* [[N_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    [[ALLOCA1:%.*]] = alloca i32, i32 [[N_LOAD]], align 4, addrspace(5)
-; HSA-NEXT:    store volatile i32 0, i32 addrspace(5)* [[ALLOCA0]], align 4
-; HSA-NEXT:    store volatile i32 1, i32 addrspace(5)* [[ALLOCA1]], align 4
-; HSA-NEXT:    ret void
-;
-; MESA-LABEL: @dyn_alloca_kernarg_i32(
-; MESA-NEXT:    [[ALLOCA0:%.*]] = alloca i32, align 4, addrspace(5)
-; MESA-NEXT:    [[DYN_ALLOCA_KERNARG_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; MESA-NEXT:    [[N_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[DYN_ALLOCA_KERNARG_I32_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[N_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[N_KERNARG_OFFSET]] to i32 addrspace(4)*
-; MESA-NEXT:    [[N_LOAD:%.*]] = load i32, i32 addrspace(4)* [[N_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    [[ALLOCA1:%.*]] = alloca i32, i32 [[N_LOAD]], align 4, addrspace(5)
-; MESA-NEXT:    store volatile i32 0, i32 addrspace(5)* [[ALLOCA0]], align 4
-; MESA-NEXT:    store volatile i32 1, i32 addrspace(5)* [[ALLOCA1]], align 4
-; MESA-NEXT:    ret void
-;
-  %alloca0 = alloca i32, addrspace(5)
-  %alloca1 = alloca i32, i32 %n, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca0
-  store volatile i32 1, i32 addrspace(5)* %alloca1
   ret void
 }
 

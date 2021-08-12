@@ -25,9 +25,6 @@ namespace misc {
 class StaticAssertCheck : public ClangTidyCheck {
 public:
   StaticAssertCheck(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11 || LangOpts.C11;
-  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 

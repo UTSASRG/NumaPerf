@@ -13,16 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopVersioning.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 
@@ -45,8 +44,9 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
   }
 }
 
-void LoopVersioning::setAliasChecks(ArrayRef<RuntimePointerCheck> Checks) {
-  AliasChecks = {Checks.begin(), Checks.end()};
+void LoopVersioning::setAliasChecks(
+    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks) {
+  AliasChecks = std::move(Checks);
 }
 
 void LoopVersioning::setSCEVChecks(SCEVUnionPredicate Check) {
@@ -62,10 +62,8 @@ void LoopVersioning::versionLoop(
 
   // Add the memcheck in the original preheader (this is empty initially).
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
-  const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
   std::tie(FirstCheckInst, MemRuntimeCheck) =
-      addRuntimeChecks(RuntimeCheckBB->getTerminator(), VersionedLoop,
-                       AliasChecks, RtPtrChecking.getSE());
+      LAI.addRuntimeChecks(RuntimeCheckBB->getTerminator(), AliasChecks);
 
   const SCEVUnionPredicate &Pred = LAI.getPSE().getUnionPredicate();
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),
@@ -196,7 +194,8 @@ void LoopVersioning::prepareNoAliasMetadata() {
 
   // Go through the checks and for each pointer group, collect the scopes for
   // each non-aliasing pointer group.
-  DenseMap<const RuntimeCheckingPtrGroup *, SmallVector<Metadata *, 4>>
+  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *,
+           SmallVector<Metadata *, 4>>
       GroupToNonAliasingScopes;
 
   for (const auto &Check : AliasChecks)

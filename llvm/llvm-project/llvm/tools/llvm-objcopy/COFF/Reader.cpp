@@ -57,10 +57,9 @@ Error COFFReader::readSections(Object &Obj) const {
   std::vector<Section> Sections;
   // Section indexing starts from 1.
   for (size_t I = 1, E = COFFObj.getNumberOfSections(); I <= E; I++) {
-    Expected<const coff_section *> SecOrErr = COFFObj.getSection(I);
-    if (!SecOrErr)
-      return SecOrErr.takeError();
-    const coff_section *Sec = *SecOrErr;
+    const coff_section *Sec;
+    if (auto EC = COFFObj.getSection(I, Sec))
+      return errorCodeToError(EC);
     Sections.push_back(Section());
     Section &S = Sections.back();
     S.Header = *Sec;
@@ -100,10 +99,8 @@ Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
     else
       copySymbol(Sym.Sym,
                  *reinterpret_cast<const coff_symbol16 *>(SymRef.getRawPtr()));
-    auto NameOrErr = COFFObj.getSymbolName(SymRef);
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-    Sym.Name = *NameOrErr;
+    if (auto EC = COFFObj.getSymbolName(SymRef, Sym.Name))
+      return errorCodeToError(EC);
 
     ArrayRef<uint8_t> AuxData = COFFObj.getSymbolAuxData(SymRef);
     size_t SymSize = IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16);

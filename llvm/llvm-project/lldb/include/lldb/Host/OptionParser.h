@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_OPTIONPARSER_H
-#define LLDB_HOST_OPTIONPARSER_H
+#ifndef liblldb_OptionParser_h_
+#define liblldb_OptionParser_h_
 
 #include <mutex>
 #include <string>
@@ -51,4 +51,4 @@ public:
 };
 }
 
-#endif // LLDB_HOST_OPTIONPARSER_H
+#endif // liblldb_OptionParser_h_

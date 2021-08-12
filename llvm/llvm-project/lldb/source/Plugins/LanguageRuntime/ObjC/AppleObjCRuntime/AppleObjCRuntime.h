@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIME_H
-#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIME_H
+#ifndef liblldb_AppleObjCRuntime_h_
+#define liblldb_AppleObjCRuntime_h_
 
 #include "llvm/ADT/Optional.h"
 
@@ -30,10 +30,6 @@ public:
   // you can't make an instance of this generic runtime.
 
   static char ID;
-
-  static void Initialize();
-
-  static void Terminate();
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || ObjCLanguageRuntime::isA(ClassID);
@@ -88,7 +84,7 @@ public:
   bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) override;
 
   lldb::SearchFilterSP CreateExceptionSearchFilter() override;
-
+  
   static std::tuple<FileSpec, ConstString> GetExceptionThrowLocation();
 
   lldb::ValueObjectSP GetExceptionObjectForThread(
@@ -101,7 +97,7 @@ public:
 
   virtual void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                             lldb::addr_t &cf_false);
-
+                                            
   virtual bool IsTaggedPointer (lldb::addr_t addr) { return false; }
 
 protected:
@@ -132,4 +128,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCRUNTIME_H
+#endif // liblldb_AppleObjCRuntime_h_

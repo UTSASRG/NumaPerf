@@ -115,7 +115,6 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(Elaborated);
     TKCASE(Pipe);
     TKCASE(Attributed);
-    TKCASE(Atomic);
     default:
       return CXType_Unexposed;
   }
@@ -617,7 +616,6 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(OCLEvent);
     TKIND(OCLQueue);
     TKIND(OCLReserveID);
-    TKIND(Atomic);
   }
 #undef TKIND
   return cxstring::createRef(s);
@@ -1319,14 +1317,4 @@ enum CXTypeNullabilityKind clang_Type_getNullability(CXType CT) {
     }
   }
   return CXTypeNullability_Invalid;
-}
-
-CXType clang_Type_getValueType(CXType CT) {
-  QualType T = GetQualType(CT);
-
-  if (T.isNull() || !T->isAtomicType())
-      return MakeCXType(QualType(), GetTU(CT));
-
-  const auto *AT = T->castAs<AtomicType>();
-  return MakeCXType(AT->getValueType(), GetTU(CT));
 }

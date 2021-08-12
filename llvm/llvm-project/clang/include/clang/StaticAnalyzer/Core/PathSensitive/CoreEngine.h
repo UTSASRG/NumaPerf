@@ -41,7 +41,7 @@ class LabelDecl;
 namespace ento {
 
 class FunctionSummariesTy;
-class ExprEngine;
+class SubEngine;
 
 //===----------------------------------------------------------------------===//
 /// CoreEngine - Implements the core logic of the graph-reachability
@@ -69,7 +69,7 @@ public:
       std::vector<std::pair<const CFGBlock *, const ExplodedNode *>>;
 
 private:
-  ExprEngine &ExprEng;
+  SubEngine &SubEng;
 
   /// G - The simulation graph.  Each node is a (location,state) pair.
   mutable ExplodedGraph G;
@@ -129,7 +129,7 @@ private:
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
-  CoreEngine(ExprEngine &exprengine,
+  CoreEngine(SubEngine &subengine,
              FunctionSummariesTy *FS,
              AnalyzerOptions &Opts);
 

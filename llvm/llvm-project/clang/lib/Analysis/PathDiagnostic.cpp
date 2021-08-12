@@ -20,7 +20,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
@@ -910,7 +909,7 @@ static void describeClass(raw_ostream &Out, const CXXRecordDecl *D,
   Out << Prefix << '\'' << *D;
   if (const auto T = dyn_cast<ClassTemplateSpecializationDecl>(D))
     describeTemplateParameters(Out, T->getTemplateArgs().asArray(),
-                               D->getLangOpts(), "<", ">");
+                               D->getASTContext().getLangOpts(), "<", ">");
 
   Out << '\'';
 }
@@ -976,8 +975,8 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
   if (const auto FD = dyn_cast<FunctionDecl>(D))
     if (const TemplateArgumentList *TAList =
                                     FD->getTemplateSpecializationArgs())
-      describeTemplateParameters(Out, TAList->asArray(), FD->getLangOpts(), "<",
-                                 ">");
+      describeTemplateParameters(Out, TAList->asArray(),
+                                 FD->getASTContext().getLangOpts(), "<", ">");
 
   Out << '\'';
   return true;

@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
+  support
   )
 
 get_filename_component(INCLUDE_FIXER_SOURCE_DIR

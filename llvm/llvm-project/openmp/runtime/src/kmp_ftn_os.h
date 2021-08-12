@@ -133,7 +133,6 @@
 #define FTN_PAUSE_RESOURCE omp_pause_resource
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels
-#define FTN_DISPLAY_ENV omp_display_env
 #define FTN_FULFILL_EVENT omp_fulfill_event
 
 #endif /* KMP_FTN_PLAIN */
@@ -257,7 +256,6 @@
 #define FTN_PAUSE_RESOURCE omp_pause_resource_
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all_
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels_
-#define FTN_DISPLAY_ENV omp_display_env_
 #define FTN_FULFILL_EVENT omp_fulfill_event_
 
 #endif /* KMP_FTN_APPEND */
@@ -379,7 +377,6 @@
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS
-#define FTN_DISPLAY_ENV OMP_DISPLAY_ENV
 #define FTN_FULFILL_EVENT OMP_FULFILL_EVENT
 
 #endif /* KMP_FTN_UPPER */
@@ -503,7 +500,6 @@
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE_
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL_
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS_
-#define FTN_DISPLAY_ENV OMP_DISPLAY_ENV_
 #define FTN_FULFILL_EVENT OMP_FULFILL_EVENT_
 
 #endif /* KMP_FTN_UAPPEND */

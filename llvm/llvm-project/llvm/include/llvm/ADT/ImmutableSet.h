@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
@@ -170,7 +169,7 @@ public:
   bool contains(key_type_ref K) { return (bool) find(K); }
 
   /// foreach - A member template the accepts invokes operator() on a functor
-  ///  object (specified by Callback) for every node/subtree in the tree.
+  ///  object (specifed by Callback) for every node/subtree in the tree.
   ///  Nodes are visited using an inorder traversal.
   template <typename Callback>
   void foreach(Callback& C) {
@@ -184,7 +183,7 @@ public:
   }
 
   /// validateTree - A utility method that checks that the balancing and
-  ///  ordering invariants of the tree are satisfied.  It is a recursive
+  ///  ordering invariants of the tree are satisifed.  It is a recursive
   ///  method that returns the height of the tree, which is then consumed
   ///  by the enclosing validateTree call.  External callers should ignore the
   ///  return value.  An invalid tree will cause an assertion to fire in
@@ -358,12 +357,6 @@ public:
   }
 };
 
-template <typename ImutInfo>
-struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo>> {
-  static void retain(ImutAVLTree<ImutInfo> *Tree) { Tree->retain(); }
-  static void release(ImutAVLTree<ImutInfo> *Tree) { Tree->release(); }
-};
-
 //===----------------------------------------------------------------------===//
 // Immutable AVL-Tree Factory class.
 //===----------------------------------------------------------------------===//
@@ -457,7 +450,7 @@ protected:
 
   //===--------------------------------------------------===//
   // "createNode" is used to generate new tree roots that link
-  // to other trees.  The function may also simply move links
+  // to other trees.  The functon may also simply move links
   // in an existing root if that root is still marked mutable.
   // This is necessary because otherwise our balancing code
   // would leak memory as it would create nodes that are
@@ -968,14 +961,33 @@ public:
   using TreeTy = ImutAVLTree<ValInfo>;
 
 private:
-  IntrusiveRefCntPtr<TreeTy> Root;
+  TreeTy *Root;
 
 public:
   /// Constructs a set from a pointer to a tree root.  In general one
   /// should use a Factory object to create sets instead of directly
   /// invoking the constructor, but there are cases where make this
   /// constructor public is useful.
-  explicit ImmutableSet(TreeTy *R) : Root(R) {}
+  explicit ImmutableSet(TreeTy* R) : Root(R) {
+    if (Root) { Root->retain(); }
+  }
+
+  ImmutableSet(const ImmutableSet &X) : Root(X.Root) {
+    if (Root) { Root->retain(); }
+  }
+
+  ~ImmutableSet() {
+    if (Root) { Root->release(); }
+  }
+
+  ImmutableSet &operator=(const ImmutableSet &X) {
+    if (Root != X.Root) {
+      if (X.Root) { X.Root->retain(); }
+      if (Root) { Root->release(); }
+      Root = X.Root;
+    }
+    return *this;
+  }
 
   class Factory {
     typename TreeTy::Factory F;
@@ -1004,7 +1016,7 @@ public:
     ///  The memory allocated to represent the set is released when the
     ///  factory object that created the set is destroyed.
     LLVM_NODISCARD ImmutableSet add(ImmutableSet Old, value_type_ref V) {
-      TreeTy *NewT = F.add(Old.Root.get(), V);
+      TreeTy *NewT = F.add(Old.Root, V);
       return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
     }
 
@@ -1016,7 +1028,7 @@ public:
     ///  The memory allocated to represent the set is released when the
     ///  factory object that created the set is destroyed.
     LLVM_NODISCARD ImmutableSet remove(ImmutableSet Old, value_type_ref V) {
-      TreeTy *NewT = F.remove(Old.Root.get(), V);
+      TreeTy *NewT = F.remove(Old.Root, V);
       return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
     }
 
@@ -1035,20 +1047,21 @@ public:
   }
 
   bool operator==(const ImmutableSet &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
+    return Root && RHS.Root ? Root->isEqual(*RHS.Root) : Root == RHS.Root;
   }
 
   bool operator!=(const ImmutableSet &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
-                            : Root != RHS.Root;
+    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root) : Root != RHS.Root;
   }
 
   TreeTy *getRoot() {
     if (Root) { Root->retain(); }
-    return Root.get();
+    return Root;
   }
 
-  TreeTy *getRootWithoutRetain() const { return Root.get(); }
+  TreeTy *getRootWithoutRetain() const {
+    return Root;
+  }
 
   /// isEmpty - Return true if the set contains no elements.
   bool isEmpty() const { return !Root; }
@@ -1069,7 +1082,7 @@ public:
 
   using iterator = ImutAVLValueIterator<ImmutableSet>;
 
-  iterator begin() const { return iterator(Root.get()); }
+  iterator begin() const { return iterator(Root); }
   iterator end() const { return iterator(); }
 
   //===--------------------------------------------------===//
@@ -1079,7 +1092,7 @@ public:
   unsigned getHeight() const { return Root ? Root->getHeight() : 0; }
 
   static void Profile(FoldingSetNodeID &ID, const ImmutableSet &S) {
-    ID.AddPointer(S.Root.get());
+    ID.AddPointer(S.Root);
   }
 
   void Profile(FoldingSetNodeID &ID) const { return Profile(ID, *this); }
@@ -1101,7 +1114,7 @@ public:
   using FactoryTy = typename TreeTy::Factory;
 
 private:
-  IntrusiveRefCntPtr<TreeTy> Root;
+  TreeTy *Root;
   FactoryTy *Factory;
 
 public:
@@ -1109,18 +1122,42 @@ public:
   /// should use a Factory object to create sets instead of directly
   /// invoking the constructor, but there are cases where make this
   /// constructor public is useful.
-  ImmutableSetRef(TreeTy *R, FactoryTy *F) : Root(R), Factory(F) {}
+  explicit ImmutableSetRef(TreeTy* R, FactoryTy *F)
+    : Root(R),
+      Factory(F) {
+    if (Root) { Root->retain(); }
+  }
+
+  ImmutableSetRef(const ImmutableSetRef &X)
+    : Root(X.Root),
+      Factory(X.Factory) {
+    if (Root) { Root->retain(); }
+  }
+
+  ~ImmutableSetRef() {
+    if (Root) { Root->release(); }
+  }
+
+  ImmutableSetRef &operator=(const ImmutableSetRef &X) {
+    if (Root != X.Root) {
+      if (X.Root) { X.Root->retain(); }
+      if (Root) { Root->release(); }
+      Root = X.Root;
+      Factory = X.Factory;
+    }
+    return *this;
+  }
 
   static ImmutableSetRef getEmptySet(FactoryTy *F) {
     return ImmutableSetRef(0, F);
   }
 
   ImmutableSetRef add(value_type_ref V) {
-    return ImmutableSetRef(Factory->add(Root.get(), V), Factory);
+    return ImmutableSetRef(Factory->add(Root, V), Factory);
   }
 
   ImmutableSetRef remove(value_type_ref V) {
-    return ImmutableSetRef(Factory->remove(Root.get(), V), Factory);
+    return ImmutableSetRef(Factory->remove(Root, V), Factory);
   }
 
   /// Returns true if the set contains the specified value.
@@ -1129,19 +1166,20 @@ public:
   }
 
   ImmutableSet<ValT> asImmutableSet(bool canonicalize = true) const {
-    return ImmutableSet<ValT>(
-        canonicalize ? Factory->getCanonicalTree(Root.get()) : Root.get());
+    return ImmutableSet<ValT>(canonicalize ?
+                              Factory->getCanonicalTree(Root) : Root);
   }
 
-  TreeTy *getRootWithoutRetain() const { return Root.get(); }
+  TreeTy *getRootWithoutRetain() const {
+    return Root;
+  }
 
   bool operator==(const ImmutableSetRef &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
+    return Root && RHS.Root ? Root->isEqual(*RHS.Root) : Root == RHS.Root;
   }
 
   bool operator!=(const ImmutableSetRef &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
-                            : Root != RHS.Root;
+    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root) : Root != RHS.Root;
   }
 
   /// isEmpty - Return true if the set contains no elements.
@@ -1157,7 +1195,7 @@ public:
 
   using iterator = ImutAVLValueIterator<ImmutableSetRef>;
 
-  iterator begin() const { return iterator(Root.get()); }
+  iterator begin() const { return iterator(Root); }
   iterator end() const { return iterator(); }
 
   //===--------------------------------------------------===//
@@ -1167,7 +1205,7 @@ public:
   unsigned getHeight() const { return Root ? Root->getHeight() : 0; }
 
   static void Profile(FoldingSetNodeID &ID, const ImmutableSetRef &S) {
-    ID.AddPointer(S.Root.get());
+    ID.AddPointer(S.Root);
   }
 
   void Profile(FoldingSetNodeID &ID) const { return Profile(ID, *this); }

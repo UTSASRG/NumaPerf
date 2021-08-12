@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADLIST_H
-#define LLDB_TARGET_THREADLIST_H
+#ifndef liblldb_ThreadList_h_
+#define liblldb_ThreadList_h_
 
 #include <mutex>
 #include <vector>
@@ -156,4 +156,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADLIST_H
+#endif // liblldb_ThreadList_h_
